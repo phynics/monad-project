@@ -1,50 +1,53 @@
 import Foundation
 
 /// Tool to edit an existing memory
-class EditMemoryTool: Tool, @unchecked Sendable {
-    let id = "edit_memory"
-    let name = "Edit Memory"
-    let description = "Edit an existing memory entry"
-    let requiresPermission = false
+public class EditMemoryTool: Tool, @unchecked Sendable {
+    public let id = "edit_memory"
+    public let name = "Edit Memory"
+    public let description = "Edit an existing memory entry"
+    public let requiresPermission = false
 
     private let persistenceManager: PersistenceManager
 
-    init(persistenceManager: PersistenceManager) {
+    public init(persistenceManager: PersistenceManager) {
         self.persistenceManager = persistenceManager
     }
 
-    func canExecute() async -> Bool {
+    public func canExecute() async -> Bool {
         return true
     }
 
-    var parametersSchema: [String: Any] {
+    public var parametersSchema: [String: Any] {
         return [
             "type": "object",
             "properties": [
                 "memory_id": [
                     "type": "string",
-                    "description": "ID of the memory to edit"
+                    "description": "ID of the memory to edit",
                 ],
                 "title": [
                     "type": "string",
-                    "description": "New title (optional)"
+                    "description": "New title (optional)",
                 ],
                 "content": [
                     "type": "string",
-                    "description": "New content (optional). If line_index is provided, replaces line or appends."
+                    "description":
+                        "New content (optional). If line_index is provided, replaces line or appends.",
                 ],
                 "line_index": [
                     "type": "integer",
-                    "description": "Line number to replace (0-indexed). Use -1 to append. Default: full replace."
-                ]
+                    "description":
+                        "Line number to replace (0-indexed). Use -1 to append. Default: full replace.",
+                ],
             ],
-            "required": ["memory_id"]
+            "required": ["memory_id"],
         ]
     }
 
-    func execute(parameters: [String: Any]) async throws -> ToolResult {
+    public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let memoryIdString = parameters["memory_id"] as? String,
-              let memoryId = UUID(uuidString: memoryIdString) else {
+            let memoryId = UUID(uuidString: memoryIdString)
+        else {
             return .failure("Invalid or missing parameter: memory_id")
         }
 
@@ -67,7 +70,9 @@ class EditMemoryTool: Tool, @unchecked Sendable {
         // Update Content
         if let newContent = parameters["content"] as? String {
             do {
-                if try updateContent(memory: &updatedMemory, newContent: newContent, parameters: parameters) {
+                if try updateContent(
+                    memory: &updatedMemory, newContent: newContent, parameters: parameters)
+                {
                     changesMade = true
                 }
             } catch {
@@ -105,14 +110,19 @@ class EditMemoryTool: Tool, @unchecked Sendable {
                     memory.content = lines.joined(separator: "\n")
                     return true
                 } else {
-                    throw NSError(domain: "EditMemoryTool", code: 1, userInfo: [
-                        NSLocalizedDescriptionKey: "Line index \(lineIndex) out of bounds (count: \(lines.count))"
-                    ])
+                    throw NSError(
+                        domain: "EditMemoryTool", code: 1,
+                        userInfo: [
+                            NSLocalizedDescriptionKey:
+                                "Line index \(lineIndex) out of bounds (count: \(lines.count))"
+                        ])
                 }
             } else {
-                throw NSError(domain: "EditMemoryTool", code: 2, userInfo: [
-                    NSLocalizedDescriptionKey: "Invalid line_index: \(lineIndex)"
-                ])
+                throw NSError(
+                    domain: "EditMemoryTool", code: 2,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "Invalid line_index: \(lineIndex)"
+                    ])
             }
         } else {
             // Full replacement

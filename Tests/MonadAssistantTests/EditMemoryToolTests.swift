@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import Shared
 import Testing
 
 @testable import MonadAssistant
@@ -29,13 +30,10 @@ struct EditMemoryToolTests {
 
         let result = try await tool.execute(parameters: [
             "memory_id": memory.id.uuidString,
-            "title": "New Title"
+            "title": "New Title",
         ])
 
-        guard case .success = result else {
-            Issue.record("Tool execution failed")
-            return
-        }
+        #expect(result.success, "Tool execution should succeed")
 
         let updated = try await persistenceManager.fetchMemory(id: memory.id)
         #expect(updated?.title == "New Title")
@@ -49,13 +47,10 @@ struct EditMemoryToolTests {
 
         let result = try await tool.execute(parameters: [
             "memory_id": memory.id.uuidString,
-            "content": "New Content"
+            "content": "New Content",
         ])
 
-        guard case .success = result else {
-            Issue.record("Tool execution failed")
-            return
-        }
+        #expect(result.success, "Tool execution should succeed")
 
         let updated = try await persistenceManager.fetchMemory(id: memory.id)
         #expect(updated?.content == "New Content")
@@ -69,13 +64,10 @@ struct EditMemoryToolTests {
         let result = try await tool.execute(parameters: [
             "memory_id": memory.id.uuidString,
             "content": "Line 2",
-            "line_index": -1
+            "line_index": -1,
         ])
 
-        guard case .success = result else {
-            Issue.record("Tool execution failed")
-            return
-        }
+        #expect(result.success, "Tool execution should succeed")
 
         let updated = try await persistenceManager.fetchMemory(id: memory.id)
         #expect(updated?.content == "Line 1\nLine 2")
@@ -89,13 +81,10 @@ struct EditMemoryToolTests {
         let result = try await tool.execute(parameters: [
             "memory_id": memory.id.uuidString,
             "content": "Modified Line 2",
-            "line_index": 1
+            "line_index": 1,
         ])
 
-        guard case .success = result else {
-            Issue.record("Tool execution failed")
-            return
-        }
+        #expect(result.success, "Tool execution should succeed")
 
         let updated = try await persistenceManager.fetchMemory(id: memory.id)
         #expect(updated?.content == "Line 1\nModified Line 2\nLine 3")
@@ -109,14 +98,11 @@ struct EditMemoryToolTests {
         let result = try await tool.execute(parameters: [
             "memory_id": memory.id.uuidString,
             "content": "Too far",
-            "line_index": 5
+            "line_index": 5,
         ])
 
-        if case .failure(let error) = result {
-             #expect(error.contains("out of bounds"))
-        } else {
-            Issue.record("Expected failure for out of bounds index")
-        }
+        #expect(!result.success, "Expected failure for out of bounds index")
+        #expect(result.error?.contains("out of bounds") == true)
 
         // Ensure no change
         let notUpdated = try await persistenceManager.fetchMemory(id: memory.id)
