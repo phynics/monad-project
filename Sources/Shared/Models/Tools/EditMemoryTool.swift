@@ -6,17 +6,17 @@ class EditMemoryTool: Tool, @unchecked Sendable {
     let name = "Edit Memory"
     let description = "Edit an existing memory entry"
     let requiresPermission = false
-    
+
     private let persistenceManager: PersistenceManager
-    
+
     init(persistenceManager: PersistenceManager) {
         self.persistenceManager = persistenceManager
     }
-    
+
     func canExecute() async -> Bool {
         return true
     }
-    
+
     var parametersSchema: [String: Any] {
         return [
             "type": "object",
@@ -31,19 +31,96 @@ class EditMemoryTool: Tool, @unchecked Sendable {
                 ],
                 "content": [
                     "type": "string",
-                    "description": "New content (optional)"
+                    "description": "New content (optional). If line_index is provided, replaces line or appends."
+                ],
+                "line_index": [
+                    "type": "integer",
+                    "description": "Line number to replace (0-indexed). Use -1 to append. Default: full replace."
                 ]
             ],
             "required": ["memory_id"]
         ]
     }
-    
+
     func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let memoryId = parameters["memory_id"] as? String else {
-            return .failure("Missing required parameter: memory_id")
+        guard let memoryIdString = parameters["memory_id"] as? String,
+              let memoryId = UUID(uuidString: memoryIdString) else {
+            return .failure("Invalid or missing parameter: memory_id")
         }
-        
-        // TODO: Implement memory editing when memory system is ready
-        return .success("Memory '\(memoryId)' updated - Feature coming soon")
+
+        guard let memory = try await persistenceManager.fetchMemory(id: memoryId) else {
+            return .failure("Memory not found with ID: \(memoryIdString)")
+        }
+
+        var updatedMemory = memory
+        var changesMade = false
+
+        // Update Title
+        if let newTitle = parameters["title"] as? String {
+            let trimmedTitle = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedTitle.isEmpty && trimmedTitle != updatedMemory.title {
+                updatedMemory.title = trimmedTitle
+                changesMade = true
+            }
+        }
+
+        // Update Content
+        if let newContent = parameters["content"] as? String {
+            do {
+                if try updateContent(memory: &updatedMemory, newContent: newContent, parameters: parameters) {
+                    changesMade = true
+                }
+            } catch {
+                return .failure(error.localizedDescription)
+            }
+        }
+
+        if changesMade {
+            updatedMemory.updatedAt = Date()
+            try await persistenceManager.saveMemory(updatedMemory)
+            return .success("Memory '\(updatedMemory.title)' updated successfully.")
+        } else {
+            return .success("No changes made to memory '\(updatedMemory.title)'.")
+        }
+    }
+
+    private func updateContent(
+        memory: inout Memory,
+        newContent: String,
+        parameters: [String: Any]
+    ) throws -> Bool {
+        if let lineIndex = parameters["line_index"] as? Int {
+            // Line-based editing
+            var lines = memory.content.components(separatedBy: .newlines)
+
+            if lineIndex == -1 {
+                // Append
+                lines.append(newContent)
+                memory.content = lines.joined(separator: "\n")
+                return true
+            } else if lineIndex >= 0 {
+                // Replace line
+                if lineIndex < lines.count {
+                    lines[lineIndex] = newContent
+                    memory.content = lines.joined(separator: "\n")
+                    return true
+                } else {
+                    throw NSError(domain: "EditMemoryTool", code: 1, userInfo: [
+                        NSLocalizedDescriptionKey: "Line index \(lineIndex) out of bounds (count: \(lines.count))"
+                    ])
+                }
+            } else {
+                throw NSError(domain: "EditMemoryTool", code: 2, userInfo: [
+                    NSLocalizedDescriptionKey: "Invalid line_index: \(lineIndex)"
+                ])
+            }
+        } else {
+            // Full replacement
+            if newContent != memory.content {
+                memory.content = newContent
+                return true
+            }
+        }
+        return false
     }
 }
