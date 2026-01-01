@@ -18,9 +18,12 @@ class ChatViewModel {
     private var toolManager: SessionToolManager?
 
     // Service dependencies
-    private let streamingCoordinator: StreamingCoordinator
-    private var toolExecutor: ToolExecutor?
-    private let conversationArchiver: ConversationArchiver
+    // These must be preserved!
+    let streamingCoordinator: StreamingCoordinator
+    var toolExecutor: ToolExecutor?
+    let conversationArchiver: ConversationArchiver
+
+    private let logger = Logger.chat
 
     init(llmService: LLMService, persistenceManager: PersistenceManager) {
         self.llmService = llmService
@@ -68,6 +71,7 @@ class ChatViewModel {
         inputText = ""
         isLoading = true
         errorMessage = nil
+        logger.debug("Starting message generation for prompt length: \(prompt.count)")
 
         currentTask = Task {
             do {
@@ -92,7 +96,9 @@ class ChatViewModel {
             } catch is CancellationError {
                 handleCancellation()
             } catch {
-                errorMessage = "Failed to get response: \(error.localizedDescription)"
+                let msg = "Failed to get response: \(error.localizedDescription)"
+                logger.error("\(msg)")
+                errorMessage = msg
                 streamingCoordinator.stopStreaming()
                 isLoading = false
                 currentTask = nil
@@ -101,6 +107,7 @@ class ChatViewModel {
     }
 
     private func runConversationLoop(userPrompt: String?, initialRawPrompt: String?) async throws {
+        // 1. Add user message to history if provided
         if let prompt = userPrompt {
             let userMessage = Message(
                 content: prompt,
@@ -112,12 +119,22 @@ class ChatViewModel {
         }
 
         var shouldContinue = true
+        var turnCount = 0
+
         while shouldContinue {
+            turnCount += 1
+            if turnCount > 10 {
+                logger.warning("Conversation loop exceeded max turns (10). Breaking.")
+                shouldContinue = false
+                break
+            }
+
             let contextNotes = try await persistenceManager.fetchAlwaysAppendNotes()
             let enabledTools = tools.getEnabledTools()
 
+            // 2. Call LLM with empty userQuery, relying on chatHistory (which now includes the user message)
             let (stream, _) = await llmService.chatStreamWithContext(
-                userQuery: userPrompt ?? "",  // Only used for first turn usually, builder handles history
+                userQuery: "",
                 contextNotes: contextNotes,
                 chatHistory: messages,
                 tools: enabledTools
@@ -158,12 +175,11 @@ class ChatViewModel {
                 if let toolCalls = assistantMessage.toolCalls, !toolCalls.isEmpty,
                     let executor = toolExecutor
                 {
+                    logger.info("Executing \(toolCalls.count) tool calls")
                     let toolResults = await executor.executeAll(toolCalls)
                     messages.append(contentsOf: toolResults)
 
-                    // Clear userPrompt after first turn
-                    // (History now includes the user message and tool results)
-                    // The prompt builder uses the messages array.
+                    // Continue loop to send tool results back to LLM
                     shouldContinue = true
                 } else {
                     // No more tool calls, we are done
@@ -179,6 +195,7 @@ class ChatViewModel {
     }
 
     private func handleCancellation() {
+        logger.notice("Generation cancelled by user")
         if !streamingCoordinator.streamingContent.isEmpty {
             let assistantMessage = Message(
                 content: streamingCoordinator.streamingContent + "\n\n[Generation cancelled]",
@@ -203,16 +220,20 @@ class ChatViewModel {
         Task {
             do {
                 try await conversationArchiver.archive(messages: messages)
+                logger.info("Conversation archived")
                 messages = []
                 errorMessage = nil
                 confirmationDismiss()
             } catch {
-                errorMessage = "Failed to archive: \(error.localizedDescription)"
+                let msg = "Failed to archive: \(error.localizedDescription)"
+                logger.error("\(msg)")
+                errorMessage = msg
             }
         }
     }
 
     func clearConversation() {
+        logger.debug("Clearing conversation")
         messages = []
         errorMessage = nil
     }

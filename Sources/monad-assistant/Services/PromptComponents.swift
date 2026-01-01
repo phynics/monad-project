@@ -100,6 +100,7 @@ struct UserQueryComponent: PromptSection {
     let query: String
 
     func generateContent() async -> String? {
+        guard !query.isEmpty else { return nil }
         return query
     }
 

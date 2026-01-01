@@ -4,11 +4,6 @@ import OpenAI
 import OpenAIClient
 import os.log
 
-extension Logger {
-    static let llm = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "com.monad.assistant", category: "LLMService")
-}
-
 /// Service for managing LLM interactions with configuration support
 @MainActor
 @Observable

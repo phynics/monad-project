@@ -108,6 +108,11 @@ actor PromptBuilder {
                 continue
             }
 
+            if component.sectionId == "user_query" {
+                // User query is added as a separate message
+                continue
+            }
+
             if let content = await component.generateContent() {
                 systemParts.append(content)
             }
@@ -160,7 +165,9 @@ actor PromptBuilder {
         }
 
         // User query
-        messages.append(.user(.init(content: .string(userQuery), name: nil)))
+        if !userQuery.isEmpty {
+            messages.append(.user(.init(content: .string(userQuery), name: nil)))
+        }
 
         return messages
     }
