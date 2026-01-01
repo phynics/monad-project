@@ -12,7 +12,7 @@ public struct MessageBubble: View {
     public let streamingThinking: String
     public let streamingContent: String
 
-    @State private var isThinkingExpanded = true
+    @State private var isThinkingExpanded = false
     @State private var showingDebugInfo = false
 
     public init(message: Message) {
@@ -75,7 +75,7 @@ public struct MessageBubble: View {
                                     .foregroundColor(.secondary)
                                     .opacity(0.8)
                                     .padding(.horizontal, 12)
-                                    .padding(.bottom, 6)
+                                    .padding(.bottom, 2)
                             }
                         }
 
@@ -112,12 +112,28 @@ public struct MessageBubble: View {
 
                         VStack(alignment: .leading, spacing: 8) {
                             ForEach(toolCalls) { toolCall in
-                                HStack {
-                                    Image(systemName: "wrench.and.screwdriver.fill")
-                                        .font(.caption)
-                                    Text("Tool Used: \(toolCall.name)")
-                                        .font(.caption)
-                                        .bold()
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Image(systemName: "wrench.and.screwdriver.fill")
+                                            .font(.caption)
+                                        Text("Tool Used: \(toolCall.name)")
+                                            .font(.caption)
+                                            .bold()
+                                    }
+
+                                    if !toolCall.arguments.isEmpty {
+                                        ForEach(
+                                            toolCall.arguments.sorted(by: { $0.key < $1.key }),
+                                            id: \.key
+                                        ) { key, value in
+                                            Text("\(key): \(value)")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                                .monospaced()
+                                                .lineLimit(1)
+                                        }
+                                        .padding(.leading, 20)
+                                    }
                                 }
                                 .foregroundColor(.secondary)
                                 .padding(.horizontal, 12)

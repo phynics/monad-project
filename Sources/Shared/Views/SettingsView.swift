@@ -261,24 +261,24 @@ public struct SettingsView<PlatformContent: View>: View {
             }
 
             LabeledContent("API Key") {
-                SecureField("sk-...", text: $apiKey)
+                SecureField("", text: $apiKey)
                     .textFieldStyle(.roundedBorder)
             }
 
             LabeledContent("API Endpoint") {
-                TextField("https://api.openai.com", text: $endpoint)
+                TextField("", text: $endpoint)
                     .textFieldStyle(.roundedBorder)
                     .foregroundColor(.secondary)
             }
 
         case .openAICompatible:
             LabeledContent("API Endpoint") {
-                TextField("https://api.deepseek.com", text: $endpoint)
+                TextField("", text: $endpoint)
                     .textFieldStyle(.roundedBorder)
             }
 
             LabeledContent("Model Name") {
-                TextField("deepseek-coder", text: $modelName)
+                TextField("", text: $modelName)
                     .textFieldStyle(.roundedBorder)
             }
 
@@ -290,7 +290,7 @@ public struct SettingsView<PlatformContent: View>: View {
         case .ollama:
             LabeledContent("API Endpoint") {
                 HStack {
-                    TextField("http://localhost:11434", text: $endpoint)
+                    TextField("", text: $endpoint)
                         .textFieldStyle(.roundedBorder)
 
                     Button("Fetch Models") {
@@ -301,7 +301,7 @@ public struct SettingsView<PlatformContent: View>: View {
 
             LabeledContent("Model Name") {
                 if ollamaModels.isEmpty {
-                    TextField("llama3", text: $modelName)
+                    TextField("", text: $modelName)
                         .textFieldStyle(.roundedBorder)
                 } else {
                     Picker("", selection: $modelName) {
