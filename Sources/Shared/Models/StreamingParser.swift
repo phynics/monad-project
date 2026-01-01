@@ -4,7 +4,11 @@ import OSLog
 ///
 /// Handles streaming responses that contain `<think>...</think>` blocks,
 /// separating reasoning from main content in real-time.
-class StreamingParser {
+/// Parser for streaming LLM responses with Chain of Thought support
+///
+/// Handles streaming responses that contain `<think>...</think>` blocks,
+/// separating reasoning from main content in real-time.
+public class StreamingParser {
     private var buffer = ""
     private var thinkingBuffer = ""
     private var contentBuffer = ""
@@ -12,8 +16,12 @@ class StreamingParser {
     private var insideCodeBlock = false
     private var rawBuffer = ""  // Keep original for debugging
 
+    public init() {}
+
     /// - Returns: Tuple with updated thinking and content (only new text since last call) and a flag indicating if state was reclassified
-    func process(_ chunk: String) -> (thinking: String?, content: String?, isReclassified: Bool) {
+    public func process(_ chunk: String) -> (
+        thinking: String?, content: String?, isReclassified: Bool
+    ) {
         buffer += chunk
         rawBuffer += chunk  // Keep raw for debugging
 
@@ -78,7 +86,7 @@ class StreamingParser {
 
     /// Get final thinking and content after stream completes
     /// - Returns: Complete thinking (optional) and content strings
-    func finalize() -> (thinking: String?, content: String) {
+    public func finalize() -> (thinking: String?, content: String) {
         print("🧠 [Parser] Finalizing - buffer: '\(buffer.prefix(100))'")
         print("🧠 [Parser] Raw buffer length: \(rawBuffer.count)")
         print("🧠 [Parser] Thinking buffer length: \(thinkingBuffer.count)")
@@ -109,7 +117,7 @@ class StreamingParser {
     }
 
     /// Reset parser state for new message
-    func reset() {
+    public func reset() {
         buffer = ""
         thinkingBuffer = ""
         contentBuffer = ""

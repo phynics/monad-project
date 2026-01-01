@@ -22,7 +22,7 @@ public struct ContentView: View {
                 llmService: llmService, persistenceManager: persistenceManager))
     }
 
-    var body: some View {
+    public var body: some View {
         VStack(spacing: 0) {
             ChatHeaderView(
                 llmService: llmService,

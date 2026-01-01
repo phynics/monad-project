@@ -5,30 +5,53 @@ import Shared
 
 // MARK: - JSON RPC Models
 
-struct JSONRPCRequest: Codable {
-    var jsonrpc: String = "2.0"
-    let id: Int
-    let method: String
-    let params: AnyCodable?
+public struct JSONRPCRequest: Codable {
+    public var jsonrpc: String = "2.0"
+    public let id: Int
+    public let method: String
+    public let params: AnyCodable?
+
+    public init(id: Int, method: String, params: AnyCodable?) {
+        self.id = id
+        self.method = method
+        self.params = params
+    }
 }
 
-struct JSONRPCNotification: Codable {
-    var jsonrpc: String = "2.0"
-    let method: String
-    let params: AnyCodable?
+public struct JSONRPCNotification: Codable {
+    public var jsonrpc: String = "2.0"
+    public let method: String
+    public let params: AnyCodable?
+
+    public init(method: String, params: AnyCodable?) {
+        self.method = method
+        self.params = params
+    }
 }
 
-struct JSONRPCResponse: Codable {
-    var jsonrpc: String = "2.0"
-    let id: Int
-    let result: AnyCodable?
-    let error: JSONRPCError?
+public struct JSONRPCResponse: Codable {
+    public var jsonrpc: String = "2.0"
+    public let id: Int
+    public let result: AnyCodable?
+    public let error: JSONRPCError?
+
+    public init(id: Int, result: AnyCodable?, error: JSONRPCError?) {
+        self.id = id
+        self.result = result
+        self.error = error
+    }
 }
 
-struct JSONRPCError: Codable, Error {
-    let code: Int
-    let message: String
-    let data: AnyCodable?
+public struct JSONRPCError: Codable, Error {
+    public let code: Int
+    public let message: String
+    public let data: AnyCodable?
+
+    public init(code: Int, message: String, data: AnyCodable?) {
+        self.code = code
+        self.message = message
+        self.data = data
+    }
 
     enum CodingKeys: String, CodingKey {
         case code, message, data

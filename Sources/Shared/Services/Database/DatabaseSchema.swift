@@ -2,10 +2,10 @@ import Foundation
 import GRDB
 
 /// Database schema definitions and migrations
-enum DatabaseSchema {
+public enum DatabaseSchema {
 
     /// Register all migrations
-    static func registerMigrations(in migrator: inout DatabaseMigrator) {
+    public static func registerMigrations(in migrator: inout DatabaseMigrator) {
         // v1: Baseline schema (consolidated v1 and v2)
         migrator.registerMigration("v1") { db in
             try createConversationTables(in: db)
@@ -96,7 +96,7 @@ enum DatabaseSchema {
     // MARK: - Default Notes
 
     /// Create default context notes
-    static func createDefaultNotes(in db: Database) throws {
+    public static func createDefaultNotes(in db: Database) throws {
         let now = Date()
 
         // System Note (Readonly, Always Append)
@@ -160,7 +160,7 @@ enum DatabaseSchema {
             updatedAt: now
         )
         try humanNote.insert(db)
-        
+
         // Scratchpad Note (Editable, Always Append)
         let scratchpadNote = Note(
             name: "Scratchpad",

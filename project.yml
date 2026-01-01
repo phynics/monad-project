@@ -170,6 +170,7 @@ targets:
       - path: Tests/MonadAssistantTests
     dependencies:
       - target: Shared
+      - target: MonadMCP
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.assistant-tests

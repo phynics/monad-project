@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import Shared
 import Testing
 
 @testable import MonadAssistant
@@ -156,7 +157,8 @@ struct PersistenceTests {
 
     @Test("Test memory persistence and retrieval")
     func memoryPersistence() async throws {
-        let memory = Memory(title: "Test Memory", content: "This is a test memory", tags: ["test", "memory"])
+        let memory = Memory(
+            title: "Test Memory", content: "This is a test memory", tags: ["test", "memory"])
         try await persistence.saveMemory(memory)
 
         let fetched = try await persistence.fetchMemory(id: memory.id)

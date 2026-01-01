@@ -1,3 +1,5 @@
+import MonadMCP
+import Shared
 import XCTest
 
 @testable import MonadAssistant
