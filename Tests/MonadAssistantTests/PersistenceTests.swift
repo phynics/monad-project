@@ -153,4 +153,20 @@ struct PersistenceTests {
         let partialSearch = try await persistence.searchNotes(query: "ing")
         #expect(partialSearch.count >= 2)
     }
+
+    @Test("Test memory persistence and retrieval")
+    func memoryPersistence() async throws {
+        let memory = Memory(title: "Test Memory", content: "This is a test memory", tags: ["test", "memory"])
+        try await persistence.saveMemory(memory)
+
+        let fetched = try await persistence.fetchMemory(id: memory.id)
+        #expect(fetched != nil)
+        #expect(fetched?.title == "Test Memory")
+        #expect(fetched?.content == "This is a test memory")
+        #expect(fetched?.tagArray.contains("test") == true)
+        #expect(fetched?.tagArray.contains("memory") == true)
+
+        let allMemories = try await persistence.fetchAllMemories()
+        #expect(allMemories.contains { $0.id == memory.id })
+    }
 }

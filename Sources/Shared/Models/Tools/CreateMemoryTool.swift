@@ -45,7 +45,14 @@ class CreateMemoryTool: Tool, @unchecked Sendable {
             return .failure("Missing required parameters: title and content")
         }
         
-        // TODO: Implement memory creation when memory system is ready
-        return .success("Memory '\(title)' created - Feature coming soon")
+        let tags = parameters["tags"] as? [String] ?? []
+        let memory = Memory(title: title, content: content, tags: tags)
+
+        do {
+            try await persistenceManager.saveMemory(memory)
+            return .success("Memory '\(title)' created successfully.")
+        } catch {
+            return .failure("Failed to create memory: \(error.localizedDescription)")
+        }
     }
 }
