@@ -4,7 +4,6 @@ import Observation
 import SwiftUI
 
 /// Main actor wrapper for PersistenceService that works with SwiftUI
-/// Main actor wrapper for PersistenceService that works with SwiftUI
 @MainActor
 @Observable
 public final class PersistenceManager {

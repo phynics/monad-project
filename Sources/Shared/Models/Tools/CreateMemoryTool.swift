@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 /// Tool to create a new memory
 public final class CreateMemoryTool: Tool, @unchecked Sendable {
@@ -8,6 +9,7 @@ public final class CreateMemoryTool: Tool, @unchecked Sendable {
     public let requiresPermission = false
 
     private let persistenceManager: PersistenceManager
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.monad.shared", category: "CreateMemoryTool")
 
     public init(persistenceManager: PersistenceManager) {
         self.persistenceManager = persistenceManager
@@ -47,12 +49,16 @@ public final class CreateMemoryTool: Tool, @unchecked Sendable {
         }
 
         let tags = parameters["tags"] as? [String] ?? []
+        logger.info("Creating memory: \(title) with \(tags.count) tags")
+
         let memory = Memory(title: title, content: content, tags: tags)
 
         do {
             try await persistenceManager.saveMemory(memory)
+            logger.info("Successfully created memory: \(title)")
             return .success("Memory '\(title)' created successfully.")
         } catch {
+            logger.error("Failed to create memory: \(error.localizedDescription)")
             return .failure("Failed to create memory: \(error.localizedDescription)")
         }
     }
