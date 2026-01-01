@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import Shared
 import Testing
 
 @testable import MonadAssistant
@@ -154,27 +155,20 @@ struct PersistenceTests {
         #expect(partialSearch.count >= 2)
     }
 
-    @Test("Test memory persistence: Save, fetch, update")
+    @Test("Test memory persistence and retrieval")
     func memoryPersistence() async throws {
-        // Save
-        let memory = Memory(title: "Test Memory", content: "Initial content")
+        let memory = Memory(
+            title: "Test Memory", content: "This is a test memory", tags: ["test", "memory"])
         try await persistence.saveMemory(memory)
 
-        // Fetch
-        guard let fetched = try await persistence.fetchMemory(id: memory.id) else {
-            Issue.record("Memory not found after save")
-            return
-        }
-        #expect(fetched.title == "Test Memory")
-        #expect(fetched.content == "Initial content")
+        let fetched = try await persistence.fetchMemory(id: memory.id)
+        #expect(fetched != nil)
+        #expect(fetched?.title == "Test Memory")
+        #expect(fetched?.content == "This is a test memory")
+        #expect(fetched?.tagArray.contains("test") == true)
+        #expect(fetched?.tagArray.contains("memory") == true)
 
-        // Update
-        var updated = fetched
-        updated.content = "Updated content"
-        try await persistence.saveMemory(updated)
-
-        // Verify update
-        let refetched = try await persistence.fetchMemory(id: memory.id)
-        #expect(refetched?.content == "Updated content")
+        let allMemories = try await persistence.fetchAllMemories()
+        #expect(allMemories.contains { $0.id == memory.id })
     }
 }

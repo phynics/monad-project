@@ -108,6 +108,31 @@ public final class PersistenceManager {
         currentSession = updatedSession
     }
 
+    // MARK: - Memory Management
+
+    public func saveMemory(_ memory: Memory) async throws {
+        logger.info("Saving memory: \(memory.title)")
+        try await persistence.saveMemory(memory)
+    }
+
+    public func fetchMemory(id: UUID) async throws -> Memory? {
+        try await persistence.fetchMemory(id: id)
+    }
+
+    public func fetchAllMemories() async throws -> [Memory] {
+        try await persistence.fetchAllMemories()
+    }
+
+    public func searchMemories(query: String) async throws -> [Memory] {
+        logger.info("Searching memories for: \(query)")
+        return try await persistence.searchMemories(query: query)
+    }
+
+    public func deleteMemory(id: UUID) async throws {
+        logger.warning("Deleting memory: \(id.uuidString)")
+        try await persistence.deleteMemory(id: id)
+    }
+
     // MARK: - List Management
 
     public func loadActiveSessions() async {

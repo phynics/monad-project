@@ -3,7 +3,6 @@ import OSLog
 
 /// Executes tool calls and manages tool results
 @MainActor
-@MainActor
 public final class ToolExecutor {
     private let toolManager: SessionToolManager
     private let logger = Logger.tools

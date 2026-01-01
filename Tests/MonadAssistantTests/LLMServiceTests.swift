@@ -1,4 +1,5 @@
 import OpenAI
+import Shared
 import Testing
 
 @testable import MonadAssistant
