@@ -56,7 +56,7 @@ public struct ContextNotesComponent: PromptSection {
         let notesText = notes.map { $0.promptString }.joined(separator: "\n\n")
 
         return """
-            # Context Notes
+            _These are notes that you use keep track of important information. These context notes are the ones that are marked "Always Append", there could be more notes you could use to tools to search. You can also edit these notes using edit_note tool. Make sure to use notes for their purpose, and be brief in what you put in your notes. 'Human' note should only include information about the user, 'Persona' block should include information about yourself, etc. This self-editing function will help you grow recursively._
 
             \(notesText)
             """

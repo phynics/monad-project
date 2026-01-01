@@ -5,9 +5,6 @@ import OSLog
 /// Handles streaming responses that contain `<think>...</think>` blocks,
 /// separating reasoning from main content in real-time.
 /// Parser for streaming LLM responses with Chain of Thought support
-///
-/// Handles streaming responses that contain `<think>...</think>` blocks,
-/// separating reasoning from main content in real-time.
 public class StreamingParser {
     private var buffer = ""
     private var thinkingBuffer = ""
