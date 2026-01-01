@@ -1,7 +1,7 @@
+import OSLog
 import Observation
 import OpenAI
 import SwiftUI
-import os.log
 
 @MainActor
 @Observable

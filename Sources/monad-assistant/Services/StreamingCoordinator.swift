@@ -1,7 +1,7 @@
 import Foundation
+import OSLog
 import Observation
 import OpenAI
-import os.log
 
 @MainActor
 @Observable
@@ -11,7 +11,7 @@ class StreamingCoordinator {
     // Core state
     var streamingContent: String = ""
     var streamingThinking: String = ""
-    var isStreaming = false
+    var isStreaming: Bool = false
 
     // Accumulators
     private var accumulatedToolCalls: [Int: ToolCallAccumulator] = [:]
@@ -25,11 +25,11 @@ class StreamingCoordinator {
 
     func startStreaming() {
         // Reset state
-        isStreaming = true
         streamingContent = ""
         streamingThinking = ""
         accumulatedToolCalls = [:]
         currentToolCallIndex = nil
+        isStreaming = true
         parser.reset()
         logger.debug("Started streaming")
     }

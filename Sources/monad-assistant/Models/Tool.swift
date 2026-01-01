@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import Observation
 import OpenAI
 
@@ -151,8 +152,9 @@ struct ToolConfiguration: Codable, Identifiable {
 }
 
 /// Session-specific tool settings
-class SessionToolManager: ObservableObject {
-    @Published var enabledTools: Set<String> = []
+@Observable
+class SessionToolManager {
+    var enabledTools: Set<String> = []
 
     /// Available tools in the system
     private let availableTools: [Tool]

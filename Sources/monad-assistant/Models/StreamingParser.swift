@@ -1,10 +1,4 @@
-import Foundation
-import os.log
-
-extension Logger {
-    static let parser = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "com.monad.assistant", category: "Parser")
-}
+import OSLog
 
 /// Parser for streaming LLM responses with Chain of Thought support
 ///

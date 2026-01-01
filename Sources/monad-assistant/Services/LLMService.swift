@@ -1,8 +1,8 @@
 import Foundation
+import OSLog
 import Observation
 import OpenAI
 import OpenAIClient
-import os.log
 
 /// Service for managing LLM interactions with configuration support
 @MainActor
@@ -14,6 +14,7 @@ final class LLMService {
     private var client: OpenAIClient?
     private let storage: ConfigurationStorage
     let promptBuilder: PromptBuilder
+    private let logger = Logger.llm
 
     /// Internal helper to get client if configured
     func getClient() -> OpenAIClient? {
@@ -46,13 +47,17 @@ final class LLMService {
         self.isConfigured = config.isValid
 
         if config.isValid {
+            logger.info("Loaded configuration for model: \(config.modelName)")
             updateClient(with: config)
+        } else {
+            logger.notice("LLM service not yet configured")
         }
     }
 
     /// Restore configuration from backup
     func restoreFromBackup() async throws {
         if let restored = try await storage.restoreFromBackup() {
+            logger.info("Restored configuration from backup")
             self.configuration = restored
             self.isConfigured = restored.isValid
 
@@ -69,12 +74,14 @@ final class LLMService {
 
     /// Import configuration
     func importConfiguration(from data: Data) async throws {
+        logger.info("Importing configuration")
         try await storage.importConfiguration(from: data)
         await loadConfiguration()
     }
 
     /// Update configuration and persist
     func updateConfiguration(_ config: LLMConfiguration) async throws {
+        logger.info("Updating configuration to model: \(config.modelName)")
         try await storage.save(config)
         self.configuration = config
         self.isConfigured = config.isValid
@@ -88,6 +95,7 @@ final class LLMService {
 
     /// Clear configuration
     func clearConfiguration() async {
+        logger.warning("Clearing configuration")
         await storage.clear()
         self.configuration = .openAI
         self.isConfigured = false
@@ -108,6 +116,7 @@ final class LLMService {
             port: components.port,
             scheme: components.scheme
         )
+        logger.debug("OpenAI client updated for \(config.endpoint)")
     }
 
     /// Parse endpoint URL into components (host, port, scheme)
@@ -116,8 +125,10 @@ final class LLMService {
     /// - Note: Supports custom ports for local LLM servers like Ollama (11434), LM Studio (1234), etc.
     private func parseEndpoint(_ endpoint: String) -> (host: String, port: Int, scheme: String) {
         guard let url = URL(string: endpoint) else {
+            logger.error("Invalid endpoint URL: \(endpoint)")
             return ("api.openai.com", 443, "https")
         }
+        // ...
 
         let host = url.host ?? "api.openai.com"
         let scheme = url.scheme ?? "https"

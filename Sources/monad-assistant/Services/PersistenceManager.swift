@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import Observation
 import SwiftUI
 
@@ -12,6 +13,7 @@ final class PersistenceManager {
     private(set) var activeSessions: [ConversationSession] = []
 
     private let persistence: PersistenceService
+    private let logger = Logger.database
 
     init(persistence: PersistenceService) {
         self.persistence = persistence
@@ -20,6 +22,7 @@ final class PersistenceManager {
     // MARK: - Session Management
 
     func createNewSession(title: String = "New Conversation") async throws {
+        logger.info("Creating new session: \(title)")
         let session = ConversationSession(title: title)
         try await persistence.saveSession(session)
         currentSession = session
@@ -27,7 +30,9 @@ final class PersistenceManager {
     }
 
     func loadSession(id: UUID) async throws {
+        logger.info("Loading session: \(id.uuidString)")
         guard let session = try await persistence.fetchSession(id: id) else {
+            logger.error("Session not found: \(id.uuidString)")
             throw PersistenceError.sessionNotFound
         }
         currentSession = session
@@ -35,6 +40,7 @@ final class PersistenceManager {
     }
 
     func updateSession(_ session: ConversationSession) async throws {
+        logger.debug("Updating session: \(session.id.uuidString)")
         try await persistence.saveSession(session)
 
         // Update local state if it's the current session
@@ -45,9 +51,11 @@ final class PersistenceManager {
 
     func archiveCurrentSession() async throws {
         guard var session = currentSession else {
+            logger.warning("Attempted to archive session but none is active")
             throw PersistenceError.noActiveSession
         }
 
+        logger.info("Archiving current session: \(session.id.uuidString)")
         session.isArchived = true
         session.updatedAt = Date()
         try await persistence.saveSession(session)
@@ -62,6 +70,7 @@ final class PersistenceManager {
     }
 
     func deleteSession(id: UUID) async throws {
+        logger.warning("Deleting session: \(id.uuidString)")
         try await persistence.deleteSession(id: id)
 
         // Clear if current
@@ -75,6 +84,7 @@ final class PersistenceManager {
 
     func addMessage(role: ConversationMessage.MessageRole, content: String) async throws {
         guard let session = currentSession else {
+            logger.error("Attempted to add message but no active session")
             throw PersistenceError.noActiveSession
         }
 
@@ -84,6 +94,7 @@ final class PersistenceManager {
             content: content
         )
 
+        logger.debug("Saving message for session \(session.id.uuidString)")
         try await persistence.saveMessage(message)
 
         // Update local state
@@ -101,8 +112,9 @@ final class PersistenceManager {
     func loadActiveSessions() async {
         do {
             activeSessions = try await persistence.fetchAllSessions(includeArchived: false)
+            logger.debug("Loaded \(self.activeSessions.count) active sessions")
         } catch {
-            print("Failed to load active sessions: \(error)")
+            logger.error("Failed to load active sessions: \(error.localizedDescription)")
         }
     }
 
@@ -110,18 +122,21 @@ final class PersistenceManager {
         do {
             let allSessions = try await persistence.fetchAllSessions(includeArchived: true)
             archivedSessions = allSessions.filter { $0.isArchived }
+            logger.debug("Loaded \(self.archivedSessions.count) archived sessions")
         } catch {
-            print("Failed to load archived sessions: \(error)")
+            logger.error("Failed to load archived sessions: \(error.localizedDescription)")
         }
     }
 
     func searchArchivedSessions(query: String) async throws -> [ConversationSession] {
-        try await persistence.searchArchivedSessions(query: query)
+        logger.info("Searching archived sessions for: \(query)")
+        return try await persistence.searchArchivedSessions(query: query)
     }
 
     // MARK: - Notes Management
 
     func saveNote(_ note: Note) async throws {
+        logger.info("Saving note: \(note.name)")
         try await persistence.saveNote(note)
     }
 
@@ -138,10 +153,12 @@ final class PersistenceManager {
     }
 
     func searchNotes(query: String) async throws -> [Note] {
-        try await persistence.searchNotes(query: query)
+        logger.info("Searching notes for: \(query)")
+        return try await persistence.searchNotes(query: query)
     }
 
     func deleteNote(id: UUID) async throws {
+        logger.warning("Deleting note: \(id.uuidString)")
         try await persistence.deleteNote(id: id)
     }
 
@@ -152,6 +169,7 @@ final class PersistenceManager {
     // MARK: - Database Reset
 
     func resetDatabase() async throws {
+        logger.warning("Resetting database to defaults")
         try await persistence.resetDatabase()
 
         // Clear in-memory state

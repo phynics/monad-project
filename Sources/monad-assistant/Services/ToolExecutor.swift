@@ -1,10 +1,11 @@
 import Foundation
-import os.log
+import OSLog
 
 /// Executes tool calls and manages tool results
 @MainActor
 class ToolExecutor {
     private let toolManager: SessionToolManager
+    private let logger = Logger.tools
 
     init(toolManager: SessionToolManager) {
         self.toolManager = toolManager
@@ -13,7 +14,7 @@ class ToolExecutor {
     /// Execute a single tool call
     func execute(_ toolCall: ToolCall) async throws -> Message {
         guard let tool = toolManager.getTool(id: toolCall.name) else {
-            Logger.ui.error("Tool not found: \(toolCall.name)")
+            logger.error("Tool not found: \(toolCall.name)")
             return Message(
                 content: "Error: Tool '\(toolCall.name)' not found",
                 role: .tool,
@@ -21,11 +22,7 @@ class ToolExecutor {
             )
         }
 
-        // Check permissions
-        if tool.requiresPermission {
-            Logger.ui.info("Tool \(tool.name) requires permission")
-            // TODO: Implement permission UI
-        }
+        logger.info("Executing tool: \(tool.name)")
 
         // Convert [String: String] to [String: Any] for tool execution
         var anyArgs: [String: Any] = [:]
@@ -40,12 +37,19 @@ class ToolExecutor {
                 ? result.output
                 : "Error: \(result.error ?? "Unknown error")"
 
+            if result.success {
+                logger.info("Tool \(tool.name) executed successfully")
+            } else {
+                logger.error("Tool \(tool.name) failed: \(result.error ?? "Unknown error")")
+            }
+
             return Message(
                 content: responseContent,
                 role: .tool,
                 think: nil
             )
         } catch {
+            logger.error("Error executing tool \(tool.name): \(error.localizedDescription)")
             return Message(
                 content: "Failed to execute tool \(tool.name): \(error.localizedDescription)",
                 role: .tool,
@@ -56,7 +60,9 @@ class ToolExecutor {
 
     /// Execute multiple tool calls sequentially
     func executeAll(_ toolCalls: [ToolCall]) async -> [Message] {
+        logger.debug("Executing \(toolCalls.count) tool calls sequentially")
         var results: [Message] = []
+        // ...
 
         for toolCall in toolCalls {
             do {

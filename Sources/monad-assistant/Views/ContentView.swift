@@ -1,11 +1,6 @@
+import OSLog
 import OpenAI
 import SwiftUI
-import os.log
-
-extension Logger {
-    static let ui = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "com.monad.assistant", category: "UI")
-}
 
 struct ContentView: View {
     @State private var viewModel: ChatViewModel
