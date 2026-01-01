@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(**)",
+      "Bash(swift build)",
+      "Bash(cat:*)",
+      "Bash(cd /Volumes/Development/monad-project/Sources/monad-assistant && mkdir -p Views Models Services)"
+    ]
+  }
+}

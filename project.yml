@@ -1,0 +1,120 @@
+name: MonadAssistant
+options:
+  bundleIdPrefix: com.monad
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+  generateEmptyDirectories: true
+
+packages:
+  OpenAI:
+    url: https://github.com/MacPaw/OpenAI.git
+    branch: main
+  GRDB:
+    url: https://github.com/groue/GRDB.swift.git
+    from: 7.0.0
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    COMBINE_HIDPI_IMAGES: YES
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 0.1.0
+    GENERATE_INFOPLIST_FILE: YES
+  debug:
+    ENABLE_HARDENED_RUNTIME: NO
+    CODE_SIGN_IDENTITY: "-"
+  release:
+    ENABLE_HARDENED_RUNTIME: YES
+
+targets:
+  # Main Application
+  MonadAssistant:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/monad-assistant
+        excludes:
+          - "**/.DS_Store"
+    dependencies:
+      - target: OpenAIClient
+      - package: OpenAI
+        product: OpenAI
+      - package: GRDB
+        product: GRDB
+    settings:
+      base:
+        PRODUCT_NAME: MonadAssistant
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.assistant
+        INFOPLIST_KEY_CFBundleDisplayName: Monad Assistant
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSHumanReadableCopyright: Copyright © 2025 Monad. All rights reserved.
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
+        ENABLE_PREVIEWS: YES
+        SWIFT_EMIT_LOC_STRINGS: YES
+      debug:
+        SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+      release:
+        SWIFT_OPTIMIZATION_LEVEL: "-O"
+        CODE_SIGN_ENTITLEMENTS: Sources/monad-assistant/MonadAssistant.entitlements
+        CODE_SIGN_STYLE: Automatic
+
+  # Unit Tests
+  MonadAssistantTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/MonadAssistantTests
+    dependencies:
+      - target: MonadAssistant
+      - package: OpenAI
+        product: OpenAI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.assistant-tests
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+
+  # OpenAI Client Library
+  OpenAIClient:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/OpenAIClient
+        excludes:
+          - "**/.DS_Store"
+          - "README.md"
+    dependencies:
+      - package: OpenAI
+        product: OpenAI
+    settings:
+      base:
+        PRODUCT_NAME: OpenAIClient
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.openai-client
+        SKIP_INSTALL: YES
+        INSTALL_PATH: "@rpath"
+        DEFINES_MODULE: YES
+        SWIFT_EMIT_LOC_STRINGS: YES
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 1.0.0
+
+schemes:
+  MonadAssistant:
+    build:
+      targets:
+        MonadAssistant: all
+    test:
+      targets:
+        - MonadAssistantTests
+    run:
+      executable: MonadAssistant
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
