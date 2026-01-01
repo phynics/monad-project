@@ -35,7 +35,17 @@ class SearchMemoriesTool: Tool, @unchecked Sendable {
             return .failure("Missing required parameter: query")
         }
         
-        // TODO: Implement memory search when memory system is ready
-        return .success("Memory search for '\(query)' - Feature coming soon")
+        do {
+            let memories = try await persistenceManager.searchMemories(query: query)
+
+            if memories.isEmpty {
+                return .success("No memories found matching '\(query)'")
+            }
+
+            let formattedResults = memories.map { $0.promptString }.joined(separator: "\n\n---\n\n")
+            return .success("Found \(memories.count) memories for '\(query)':\n\n\(formattedResults)")
+        } catch {
+            return .failure("Search failed: \(error.localizedDescription)")
+        }
     }
 }
