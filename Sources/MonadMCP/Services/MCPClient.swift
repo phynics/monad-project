@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 import OSLog
-import Shared
+import MonadCore
 
 // MARK: - JSON RPC Models
 

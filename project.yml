@@ -29,7 +29,28 @@ settings:
     ENABLE_HARDENED_RUNTIME: YES
 
 targets:
-  # Core Shared Logic & UI - macOS
+  # Core Pure Logic - Cross Platform (macOS, iOS, Linux compatible)
+  MonadCore:
+    type: framework
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadCore
+    dependencies:
+      - package: OpenAI
+        product: OpenAI
+      - package: GRDB
+        product: GRDB
+    settings:
+      base:
+        PRODUCT_NAME: MonadCore
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.core
+        SKIP_INSTALL: YES
+        INSTALL_PATH: "@rpath"
+        DEFINES_MODULE: YES
+
+  # Core Shared UI & Glue - macOS
   Shared:
     type: framework
     platform: macOS
@@ -40,6 +61,7 @@ targets:
         excludes:
           - "**/.DS_Store"
     dependencies:
+      - target: MonadCore
       - package: OpenAI
         product: OpenAI
       - package: GRDB
@@ -53,7 +75,7 @@ targets:
         DEFINES_MODULE: YES
         SWIFT_EMIT_LOC_STRINGS: YES
 
-  # Core Shared Logic & UI - iOS
+  # Core Shared UI & Glue - iOS
   Shared-iOS:
     type: framework
     platform: iOS
@@ -64,6 +86,7 @@ targets:
         excludes:
           - "**/.DS_Store"
     dependencies:
+      - target: MonadCore
       - package: OpenAI
         product: OpenAI
       - package: GRDB
@@ -88,7 +111,7 @@ targets:
         excludes:
           - "**/.DS_Store"
     dependencies:
-      - target: Shared
+      - target: MonadCore
     settings:
       base:
         PRODUCT_NAME: MonadMCP
@@ -110,6 +133,7 @@ targets:
     dependencies:
       - target: Shared
       - target: MonadMCP
+      - target: MonadCore
     settings:
       base:
         PRODUCT_NAME: MonadAssistant
@@ -143,6 +167,7 @@ targets:
           - "**/.DS_Store"
     dependencies:
       - target: Shared-iOS
+      - target: MonadCore
     settings:
       base:
         PRODUCT_NAME: MonadAssistant
@@ -171,6 +196,7 @@ targets:
     dependencies:
       - target: Shared
       - target: MonadMCP
+      - target: MonadCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.assistant-tests
@@ -182,6 +208,7 @@ schemes:
         MonadAssistant: all
         Shared: all
         MonadMCP: all
+        MonadCore: all
     test:
       targets:
         - MonadAssistantTests
@@ -199,6 +226,7 @@ schemes:
       targets:
         MonadAssistant-iOS: all
         Shared-iOS: all
+        MonadCore: all
     run:
       executable: MonadAssistant-iOS
     profile:

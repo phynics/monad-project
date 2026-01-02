@@ -1,23 +1,23 @@
 import Foundation
 
 /// Tool to search memories
-class SearchMemoriesTool: Tool, @unchecked Sendable {
-    let id = "search_memories"
-    let name = "Search Memories"
-    let description = "Search through stored memories to find relevant information"
-    let requiresPermission = false
+public class SearchMemoriesTool: Tool, @unchecked Sendable {
+    public let id = "search_memories"
+    public let name = "Search Memories"
+    public let description = "Search through stored memories to find relevant information"
+    public let requiresPermission = false
     
-    private let persistenceManager: PersistenceManager
+    private let persistenceService: PersistenceService
     
-    init(persistenceManager: PersistenceManager) {
-        self.persistenceManager = persistenceManager
+    public init(persistenceService: PersistenceService) {
+        self.persistenceService = persistenceService
     }
     
-    func canExecute() async -> Bool {
+    public func canExecute() async -> Bool {
         return true
     }
     
-    var parametersSchema: [String: Any] {
+    public var parametersSchema: [String: Any] {
         return [
             "type": "object",
             "properties": [
@@ -30,13 +30,13 @@ class SearchMemoriesTool: Tool, @unchecked Sendable {
         ]
     }
     
-    func execute(parameters: [String: Any]) async throws -> ToolResult {
+    public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let query = parameters["query"] as? String else {
             return .failure("Missing required parameter: query")
         }
         
         do {
-            let memories = try await persistenceManager.searchMemories(query: query)
+            let memories = try await persistenceService.searchMemories(query: query)
 
             if memories.isEmpty {
                 return .success("No memories found matching '\(query)'")

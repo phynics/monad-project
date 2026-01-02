@@ -7,10 +7,10 @@ public class EditMemoryTool: Tool, @unchecked Sendable {
     public let description = "Edit an existing memory entry"
     public let requiresPermission = false
 
-    private let persistenceManager: PersistenceManager
+    private let persistenceService: PersistenceService
 
-    public init(persistenceManager: PersistenceManager) {
-        self.persistenceManager = persistenceManager
+    public init(persistenceService: PersistenceService) {
+        self.persistenceService = persistenceService
     }
 
     public func canExecute() async -> Bool {
@@ -51,7 +51,7 @@ public class EditMemoryTool: Tool, @unchecked Sendable {
             return .failure("Invalid or missing parameter: memory_id")
         }
 
-        guard let memory = try await persistenceManager.fetchMemory(id: memoryId) else {
+        guard let memory = try await persistenceService.fetchMemory(id: memoryId) else {
             return .failure("Memory not found with ID: \(memoryIdString)")
         }
 
@@ -82,7 +82,7 @@ public class EditMemoryTool: Tool, @unchecked Sendable {
 
         if changesMade {
             updatedMemory.updatedAt = Date()
-            try await persistenceManager.saveMemory(updatedMemory)
+            try await persistenceService.saveMemory(updatedMemory)
             return .success("Memory '\(updatedMemory.title)' updated successfully.")
         } else {
             return .success("No changes made to memory '\(updatedMemory.title)'.")

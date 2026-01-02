@@ -1,23 +1,23 @@
 import Foundation
 
 /// Tool to edit a context note (only if not readonly)
-class EditNoteTool: Tool, @unchecked Sendable {
-    let id = "edit_note"
-    let name = "Edit Note"
-    let description = "Edit a context note's content (only non-readonly notes)"
-    let requiresPermission = false
+public class EditNoteTool: Tool, @unchecked Sendable {
+    public let id = "edit_note"
+    public let name = "Edit Note"
+    public let description = "Edit a context note's content (only non-readonly notes)"
+    public let requiresPermission = false
     
-    private let persistenceManager: PersistenceManager
+    private let persistenceService: PersistenceService
     
-    init(persistenceManager: PersistenceManager) {
-        self.persistenceManager = persistenceManager
+    public init(persistenceService: PersistenceService) {
+        self.persistenceService = persistenceService
     }
     
-    func canExecute() async -> Bool {
+    public func canExecute() async -> Bool {
         return true
     }
     
-    var parametersSchema: [String: Any] {
+    public var parametersSchema: [String: Any] {
         return [
             "type": "object",
             "properties": [
@@ -38,14 +38,14 @@ class EditNoteTool: Tool, @unchecked Sendable {
         ]
     }
     
-    func execute(parameters: [String: Any]) async throws -> ToolResult {
+    public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let noteName = parameters["note_name"] as? String,
               let newContent = parameters["content"] as? String else {
             return .failure("Missing required parameters: note_name and content")
         }
         
         // Search for note by name
-        let notes = try await persistenceManager.searchNotes(query: noteName)
+        let notes = try await persistenceService.searchNotes(query: noteName)
         guard let note = notes.first(where: { $0.name == noteName }) else {
             return .failure("Note '\(noteName)' not found")
         }
@@ -63,7 +63,7 @@ class EditNoteTool: Tool, @unchecked Sendable {
         }
         updatedNote.updatedAt = Date()
         
-        try await persistenceManager.saveNote(updatedNote)
+        try await persistenceService.saveNote(updatedNote)
         
         return .success("Note '\(noteName)' updated successfully")
     }

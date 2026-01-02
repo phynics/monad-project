@@ -2,6 +2,7 @@ import OSLog
 import Observation
 import OpenAI
 import SwiftUI
+import MonadCore
 
 @MainActor
 @Observable
@@ -11,7 +12,7 @@ public final class ChatViewModel {
     public var isLoading = false
     public var errorMessage: String?
 
-    public let llmService: LLMService
+    public let llmServiceViewModel: LLMServiceViewModel
     public let persistenceManager: PersistenceManager
 
     private var currentTask: Task<Void, Never>?
@@ -23,13 +24,23 @@ public final class ChatViewModel {
     public var toolExecutor: ToolExecutor?
     public let conversationArchiver: ConversationArchiver
 
+    // Core Engine
+    private let chatEngine: ChatEngine
+
     private let logger = Logger.chat
 
-    public init(llmService: LLMService, persistenceManager: PersistenceManager) {
-        self.llmService = llmService
+    public init(llmServiceViewModel: LLMServiceViewModel, persistenceManager: PersistenceManager) {
+        self.llmServiceViewModel = llmServiceViewModel
         self.persistenceManager = persistenceManager
         self.streamingCoordinator = StreamingCoordinator()
         self.conversationArchiver = ConversationArchiver(persistenceManager: persistenceManager)
+
+        // Initialize ChatEngine
+        // Note: ChatEngine is an actor.
+        self.chatEngine = ChatEngine(
+            llmService: llmServiceViewModel.coreService,
+            persistenceService: persistenceManager.persistence
+        )
     }
 
     public var tools: SessionToolManager {
@@ -37,17 +48,25 @@ public final class ChatViewModel {
             return existing
         }
 
+        // Initialize tools with PersistenceService from PersistenceManager
+        let persistenceService = persistenceManager.persistence
+
         let availableTools: [Tool] = [
-            SearchArchivedChatsTool(persistenceManager: persistenceManager),
-            SearchMemoriesTool(persistenceManager: persistenceManager),
-            CreateMemoryTool(persistenceManager: persistenceManager),
-            EditMemoryTool(persistenceManager: persistenceManager),
-            SearchNotesTool(persistenceManager: persistenceManager),
-            EditNoteTool(persistenceManager: persistenceManager),
+            SearchArchivedChatsTool(persistenceService: persistenceService),
+            SearchMemoriesTool(persistenceService: persistenceService),
+            CreateMemoryTool(persistenceService: persistenceService),
+            EditMemoryTool(persistenceService: persistenceService),
+            SearchNotesTool(persistenceService: persistenceService),
+            EditNoteTool(persistenceService: persistenceService),
         ]
         let manager = SessionToolManager(availableTools: availableTools)
         self.toolManager = manager
-        self.toolExecutor = ToolExecutor(toolManager: manager)
+        // ToolExecutor is now in Core and transiently used by ChatEngine,
+        // but we keep it here if UI needs it or for legacy reasons?
+        // Actually ChatViewModel previously used it.
+        // We can create one for local use if needed, but ChatEngine handles execution now.
+        // We'll keep the property as optional but maybe unused.
+        self.toolExecutor = ToolExecutor(tools: availableTools)
         return manager
     }
 
@@ -65,7 +84,7 @@ public final class ChatViewModel {
     }
 
     public func sendMessage() {
-        guard !inputText.isEmpty, llmService.isConfigured else { return }
+        guard !inputText.isEmpty, llmServiceViewModel.isConfigured else { return }
 
         let prompt = inputText
         inputText = ""
@@ -73,25 +92,57 @@ public final class ChatViewModel {
         errorMessage = nil
         logger.debug("Starting message generation for prompt length: \(prompt.count)")
 
+        // Ensure tools are initialized
+        let enabledTools = tools.getEnabledTools()
+
         currentTask = Task {
             do {
-                // For the very first turn, we need to get the raw prompt to attach to the user message.
-                // Subsequent turns in the loop will use the chat history.
-                let contextNotes = try await persistenceManager.fetchAlwaysAppendNotes()
-                let enabledTools = tools.getEnabledTools()
-
-                // Perform an initial call to get the raw prompt for the user message debug info
-                // This stream won't be processed, it's just to get the raw prompt builder output
-                let (_, initialRawPrompt) = await llmService.chatStreamWithContext(
-                    userQuery: prompt,
-                    contextNotes: contextNotes,
-                    chatHistory: messages,
+                let stream = await chatEngine.run(
+                    userPrompt: prompt,
+                    history: messages,
                     tools: enabledTools
                 )
 
-                // Start the conversation loop
-                try await runConversationLoop(
-                    userPrompt: prompt, initialRawPrompt: initialRawPrompt)
+                // Add user message optimistically?
+                // ChatEngine adds it to history internally but we need to update UI.
+                // We'll construct it here for UI.
+                // Wait, ChatEngine emits messages. We should wait for that?
+                // But we want immediate feedback.
+                let userMsg = Message(content: prompt, role: .user)
+                messages.append(userMsg)
+
+                for try await event in stream {
+                    switch event {
+                    case .streamStart:
+                        streamingCoordinator.startStreaming()
+                        isLoading = false // It's streaming now
+
+                    case .chunk(let delta):
+                        streamingCoordinator.processChunk(delta)
+
+                    case .thinking(let delta):
+                        // StreamingCoordinator handles parsing tags, but if ChatEngine emits explicit thinking...
+                        // Our ChatEngine implementation currently only emits .chunk from delta.
+                        // So we just rely on .chunk handling in coordinator.
+                        break
+
+                    case .toolCall:
+                        // Logic handled inside engine/coordinator mostly
+                        break
+
+                    case .streamEnd:
+                        streamingCoordinator.stopStreaming()
+
+                    case .message(let message):
+                        messages.append(message)
+
+                    case .error(let msg):
+                        errorMessage = msg
+                    }
+                }
+
+                isLoading = false
+                currentTask = nil
 
             } catch is CancellationError {
                 handleCancellation()
@@ -104,94 +155,6 @@ public final class ChatViewModel {
                 currentTask = nil
             }
         }
-    }
-
-    private func runConversationLoop(userPrompt: String?, initialRawPrompt: String?) async throws {
-        // 1. Add user message to history if provided
-        if let prompt = userPrompt {
-            let userMessage = Message(
-                content: prompt,
-                role: .user,
-                think: nil,
-                debugInfo: initialRawPrompt.map { .userMessage(rawPrompt: $0) }
-            )
-            messages.append(userMessage)
-        }
-
-        var shouldContinue = true
-        var turnCount = 0
-
-        while shouldContinue {
-            turnCount += 1
-            if turnCount > 10 {
-                logger.warning("Conversation loop exceeded max turns (10). Breaking.")
-                shouldContinue = false
-                break
-            }
-
-            let contextNotes = try await persistenceManager.fetchAlwaysAppendNotes()
-            let enabledTools = tools.getEnabledTools()
-
-            // 2. Call LLM with empty userQuery, relying on chatHistory (which now includes the user message)
-            let (stream, _) = await llmService.chatStreamWithContext(
-                userQuery: "",
-                contextNotes: contextNotes,
-                chatHistory: messages,
-                tools: enabledTools
-            )
-
-            streamingCoordinator.startStreaming()
-            isLoading = false
-
-            for try await result in stream {
-                if Task.isCancelled { break }
-
-                streamingCoordinator.updateMetadata(from: result)
-
-                if let delta = result.choices.first?.delta.content {
-                    streamingCoordinator.processChunk(delta)
-                }
-
-                // Process tool calls from delta
-                if let toolCalls = result.choices.first?.delta.toolCalls {
-                    streamingCoordinator.processToolCalls(toolCalls)
-                }
-            }
-
-            let assistantMessage = streamingCoordinator.finalize(wasCancelled: Task.isCancelled)
-            streamingCoordinator.stopStreaming()
-
-            if Task.isCancelled {
-                shouldContinue = false
-                break
-            }
-
-            if !assistantMessage.content.isEmpty || assistantMessage.think != nil
-                || assistantMessage.toolCalls != nil
-            {
-                messages.append(assistantMessage)
-
-                // Execute tool calls if present
-                if let toolCalls = assistantMessage.toolCalls, !toolCalls.isEmpty,
-                    let executor = toolExecutor
-                {
-                    logger.info("Executing \(toolCalls.count) tool calls")
-                    let toolResults = await executor.executeAll(toolCalls)
-                    messages.append(contentsOf: toolResults)
-
-                    // Continue loop to send tool results back to LLM
-                    shouldContinue = true
-                } else {
-                    // No more tool calls, we are done
-                    shouldContinue = false
-                }
-            } else {
-                shouldContinue = false
-            }
-        }
-
-        currentTask = nil
-        isLoading = false
     }
 
     private func handleCancellation() {

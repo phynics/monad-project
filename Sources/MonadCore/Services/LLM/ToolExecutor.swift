@@ -1,19 +1,18 @@
 import Foundation
 import OSLog
 
-/// Executes tool calls and manages tool results
-@MainActor
+/// Executes tool calls and manages tool results (Pure Logic)
 public final class ToolExecutor {
-    private let toolManager: SessionToolManager
-    private let logger = Logger.tools
+    private let tools: [Tool]
+    private let logger = Logger(subsystem: "com.monad.core", category: "tool-executor")
 
-    public init(toolManager: SessionToolManager) {
-        self.toolManager = toolManager
+    public init(tools: [Tool]) {
+        self.tools = tools
     }
 
     /// Execute a single tool call
     public func execute(_ toolCall: ToolCall) async throws -> Message {
-        guard let tool = toolManager.getTool(id: toolCall.name) else {
+        guard let tool = tools.first(where: { $0.id == toolCall.name }) else {
             logger.error("Tool not found: \(toolCall.name)")
             return Message(
                 content: "Error: Tool '\(toolCall.name)' not found",

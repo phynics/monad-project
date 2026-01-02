@@ -1,6 +1,5 @@
 import Foundation
 import OSLog
-import Observation
 import OpenAI
 
 /// Protocol for LLM Clients
@@ -13,16 +12,14 @@ public protocol LLMClientProtocol: Sendable {
     func sendMessage(_ content: String) async throws -> String
 }
 
-// Conform OpenAIClient (Retroactive - now in same module)
+// Conform OpenAIClient (Retroactive - now in same module or accessible)
 extension OpenAIClient: LLMClientProtocol {}
 
 // Conform OllamaClient
 extension OllamaClient: LLMClientProtocol {}
 
-/// Service for managing LLM interactions with configuration support
-@MainActor
-@Observable
-public final class LLMService {
+/// Service for managing LLM interactions with configuration support (Pure Logic)
+public actor LLMService {
     public var configuration: LLMConfiguration
     public var isConfigured: Bool
 
@@ -32,7 +29,7 @@ public final class LLMService {
     private var client: (any LLMClientProtocol)?
     private let storage: ConfigurationStorage
     public let promptBuilder: PromptBuilder
-    private let logger = Logger.llm
+    private let logger = Logger(subsystem: "com.monad.core", category: "llm-service")
 
     /// Internal helper to get client if configured
     public func getClient() -> (any LLMClientProtocol)? {
@@ -45,17 +42,18 @@ public final class LLMService {
     ) {
         self.storage = storage
         self.promptBuilder = promptBuilder
-        // Load synchronously on main actor during init
         self.configuration = .openAI
         self.isConfigured = false
 
-        Task {
-            // Migrate configuration if needed
-            await storage.migrateIfNeeded()
+        // Configuration loading must be called explicitly or via a setup method since we are in an actor
+    }
 
-            // Load configuration
-            await loadConfiguration()
-        }
+    public func initialize() async {
+        // Migrate configuration if needed
+        await storage.migrateIfNeeded()
+
+        // Load configuration
+        await loadConfiguration()
     }
 
     /// Register a tool provider (e.g. MCPClient)
@@ -151,22 +149,15 @@ public final class LLMService {
     }
 
     /// Parse endpoint URL into components (host, port, scheme)
-    /// - Parameter endpoint: Full endpoint URL (e.g., "http://localhost:11434")
-    /// - Returns: Tuple with host, port, and scheme
-    /// - Note: Supports custom ports for local LLM servers like Ollama (11434), LM Studio (1234), etc.
     private func parseEndpoint(_ endpoint: String) -> (host: String, port: Int, scheme: String) {
         guard let url = URL(string: endpoint) else {
             logger.error("Invalid endpoint URL: \(endpoint)")
             return ("api.openai.com", 443, "https")
         }
 
-        // For OpenAI default, ignore endpoint parsing if it's the default one being passed around
-        // largely legacy behavior, can clean up later if needed.
-
         let host = url.host ?? "api.openai.com"
         let scheme = url.scheme ?? "https"
 
-        // Extract port or use default based on scheme
         let port: Int
         if let urlPort = url.port {
             port = urlPort

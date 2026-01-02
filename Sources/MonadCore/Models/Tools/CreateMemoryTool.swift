@@ -8,11 +8,11 @@ public final class CreateMemoryTool: Tool, @unchecked Sendable {
     public let description = "Create a new memory entry to remember important information"
     public let requiresPermission = false
 
-    private let persistenceManager: PersistenceManager
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.monad.shared", category: "CreateMemoryTool")
+    private let persistenceService: PersistenceService
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.monad.core", category: "CreateMemoryTool")
 
-    public init(persistenceManager: PersistenceManager) {
-        self.persistenceManager = persistenceManager
+    public init(persistenceService: PersistenceService) {
+        self.persistenceService = persistenceService
     }
 
     public func canExecute() async -> Bool {
@@ -54,7 +54,7 @@ public final class CreateMemoryTool: Tool, @unchecked Sendable {
         let memory = Memory(title: title, content: content, tags: tags)
 
         do {
-            try await persistenceManager.saveMemory(memory)
+            try await persistenceService.saveMemory(memory)
             logger.info("Successfully created memory: \(title)")
             return .success("Memory '\(title)' created successfully.")
         } catch {

@@ -1,23 +1,23 @@
 import Foundation
 
 /// Tool to search archived conversations
-class SearchArchivedChatsTool: Tool, @unchecked Sendable {
-    let id = "search_archived_chats"
-    let name = "Search Archived Chats"
-    let description = "Search through archived conversation history to find past discussions"
-    let requiresPermission = false
+public class SearchArchivedChatsTool: Tool, @unchecked Sendable {
+    public let id = "search_archived_chats"
+    public let name = "Search Archived Chats"
+    public let description = "Search through archived conversation history to find past discussions"
+    public let requiresPermission = false
     
-    private let persistenceManager: PersistenceManager
+    private let persistenceService: PersistenceService
     
-    init(persistenceManager: PersistenceManager) {
-        self.persistenceManager = persistenceManager
+    public init(persistenceService: PersistenceService) {
+        self.persistenceService = persistenceService
     }
     
-    func canExecute() async -> Bool {
+    public func canExecute() async -> Bool {
         return true
     }
     
-    var parametersSchema: [String: Any] {
+    public var parametersSchema: [String: Any] {
         return [
             "type": "object",
             "properties": [
@@ -30,12 +30,12 @@ class SearchArchivedChatsTool: Tool, @unchecked Sendable {
         ]
     }
     
-    func execute(parameters: [String: Any]) async throws -> ToolResult {
+    public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let query = parameters["query"] as? String else {
             return .failure("Missing required parameter: query")
         }
         
-        let sessions = try await persistenceManager.searchArchivedSessions(query: query)
+        let sessions = try await persistenceService.searchArchivedSessions(query: query)
         
         if sessions.isEmpty {
             return .success("No archived conversations found matching '\(query)'")

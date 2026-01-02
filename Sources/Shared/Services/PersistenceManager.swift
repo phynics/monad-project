@@ -2,6 +2,7 @@ import Foundation
 import OSLog
 import Observation
 import SwiftUI
+import MonadCore
 
 /// Main actor wrapper for PersistenceService that works with SwiftUI
 @MainActor
@@ -12,8 +13,9 @@ public final class PersistenceManager {
     public private(set) var archivedSessions: [ConversationSession] = []
     public private(set) var activeSessions: [ConversationSession] = []
 
-    private let persistence: PersistenceService
-    private let logger = Logger.database
+    // Expose the core service for other components
+    public let persistence: PersistenceService
+    private let logger = Logger(subsystem: "com.monad.shared", category: "database")
 
     public init(persistence: PersistenceService) {
         self.persistence = persistence

@@ -1,23 +1,23 @@
 import Foundation
 
 /// Tool to search context notes
-class SearchNotesTool: Tool, @unchecked Sendable {
-    let id = "search_notes"
-    let name = "Search Notes"
-    let description = "Search through context notes to find relevant information"
-    let requiresPermission = false
+public class SearchNotesTool: Tool, @unchecked Sendable {
+    public let id = "search_notes"
+    public let name = "Search Notes"
+    public let description = "Search through context notes to find relevant information"
+    public let requiresPermission = false
     
-    private let persistenceManager: PersistenceManager
+    private let persistenceService: PersistenceService
     
-    init(persistenceManager: PersistenceManager) {
-        self.persistenceManager = persistenceManager
+    public init(persistenceService: PersistenceService) {
+        self.persistenceService = persistenceService
     }
     
-    func canExecute() async -> Bool {
+    public func canExecute() async -> Bool {
         return true
     }
     
-    var parametersSchema: [String: Any] {
+    public var parametersSchema: [String: Any] {
         return [
             "type": "object",
             "properties": [
@@ -30,12 +30,12 @@ class SearchNotesTool: Tool, @unchecked Sendable {
         ]
     }
     
-    func execute(parameters: [String: Any]) async throws -> ToolResult {
+    public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let query = parameters["query"] as? String else {
             return .failure("Missing required parameter: query")
         }
         
-        let notes = try await persistenceManager.searchNotes(query: query)
+        let notes = try await persistenceService.searchNotes(query: query)
         
         if notes.isEmpty {
             return .success("No notes found matching '\(query)'")
