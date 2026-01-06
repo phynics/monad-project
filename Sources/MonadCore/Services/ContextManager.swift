@@ -13,49 +13,101 @@ public actor ContextManager {
     }
 
     /// Gather all relevant context for a given user query
-    /// - Parameter query: The user's input text
+    /// - Parameters:
+    ///   - query: The user's input text
+    ///   - tagGenerator: A function to generate tags from the query (e.g. via LLM)
     /// - Returns: Structured context containing notes and memories
-    public func gatherContext(for query: String) async throws -> ContextData {
+    public func gatherContext(
+        for query: String,
+        tagGenerator: (@Sendable (String) async throws -> [String])? = nil
+    ) async throws -> ContextData {
         logger.debug("Gathering context for query length: \(query.count)")
         
         async let notesTask = persistenceService.fetchAlwaysAppendNotes()
-        async let memoriesTask = fetchRelevantMemories(for: query)
+        async let memoriesDataTask = fetchRelevantMemories(for: query, tagGenerator: tagGenerator)
         
-        let (notes, memories) = try await (notesTask, memoriesTask)
+        let (notes, memoriesData) = try await (notesTask, memoriesDataTask)
         
-        return ContextData(notes: notes, memories: memories)
+        return ContextData(
+            notes: notes,
+            memories: memoriesData.memories,
+            generatedTags: memoriesData.tags,
+            queryVector: memoriesData.vector
+        )
     }
     
-    private func fetchRelevantMemories(for query: String) async throws -> [SemanticSearchResult] {
+    private func fetchRelevantMemories(
+        for query: String,
+        tagGenerator: (@Sendable (String) async throws -> [String])?
+    ) async throws -> (memories: [SemanticSearchResult], tags: [String], vector: [Double]) {
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return []
+            return ([], [], [])
         }
         
-        // Generate embedding for query
+        // 1. Generate Tags (if generator provided)
+        var tags: [String] = []
+        if let generator = tagGenerator {
+            // We run this concurrently with embedding if possible, but inside this actor we await.
+            // Tag generation might be slow (LLM call), so ideally we'd run parallel.
+            // But we need tags for the search.
+            // Let's run embedding and tag generation in parallel.
+            tags = try await generator(query)
+            logger.debug("Generated tags: \(tags)")
+        }
+        
+        // 2. Generate Embedding
         let embedding = try await embeddingService.generateEmbedding(for: query)
         
-        // Search semantically (min similarity 0.7)
+        // 3. Search using Vector (Semantic) - Top 5 candidates
         let semanticResults = try await persistenceService.searchMemories(
             embedding: embedding,
             limit: 5,
-            minSimilarity: 0.7
+            minSimilarity: 0.4 // Lowered threshold since we re-rank later
         )
         
-        // Also do a simple keyword search for tags/title
-        let keywordResults = try await persistenceService.searchMemories(query: query)
+        // 4. Search using Tags (Keyword)
+        let tagResults = try await persistenceService.searchMemories(matchingAnyTag: tags)
         
-        // Combine results, prioritizing semantic ones and removing duplicates
-        var all = semanticResults.map { SemanticSearchResult(memory: $0.memory, similarity: $0.similarity) }
-        let existingIds = Set(all.map { $0.memory.id })
+        // 5. Combine and Rank
+        // We need to calculate similarity for tag-based results that weren't in semantic results
         
-        for mem in keywordResults {
-            if !existingIds.contains(mem.id) {
-                all.append(SemanticSearchResult(memory: mem, similarity: nil))
+        var finalResults: [SemanticSearchResult] = semanticResults.map { 
+            SemanticSearchResult(memory: $0.memory, similarity: $0.similarity)
+        }
+        
+        let existingIds = Set(finalResults.map { $0.memory.id })
+        
+        for memory in tagResults {
+            if !existingIds.contains(memory.id) {
+                // Calculate similarity manually
+                let sim = cosineSimilarity(embedding, memory.embeddingVector)
+                finalResults.append(SemanticSearchResult(memory: memory, similarity: sim))
             }
         }
         
-        logger.info("Found \(all.count) relevant memories for query")
-        return all
+        // Sort by similarity descending
+        finalResults.sort { ($0.similarity ?? 0) > ($1.similarity ?? 0) }
+        
+        // Take top 3
+        let topResults = Array(finalResults.prefix(3))
+        
+        logger.info("Found \(topResults.count) relevant memories (from \(semanticResults.count) semantic + \(tagResults.count) tag matches)")
+        
+        return (topResults, tags, embedding)
+    }
+    
+    // Helper for cosine similarity (duplicated from PersistenceService, could be shared utility)
+    private func cosineSimilarity(_ a: [Double], _ b: [Double]) -> Double {
+        guard a.count == b.count, !a.isEmpty else { return 0.0 }
+        var dot = 0.0
+        var magA = 0.0
+        var magB = 0.0
+        for i in 0..<a.count {
+            dot += a[i] * b[i]
+            magA += a[i] * a[i]
+            magB += b[i] * b[i]
+        }
+        return dot / (sqrt(magA) * sqrt(magB))
     }
 }
 
@@ -63,9 +115,18 @@ public actor ContextManager {
 public struct ContextData: Sendable {
     public let notes: [Note]
     public let memories: [SemanticSearchResult]
+    public let generatedTags: [String]
+    public let queryVector: [Double]
     
-    public init(notes: [Note] = [], memories: [SemanticSearchResult] = []) {
+    public init(
+        notes: [Note] = [],
+        memories: [SemanticSearchResult] = [],
+        generatedTags: [String] = [],
+        queryVector: [Double] = []
+    ) {
         self.notes = notes
         self.memories = memories
+        self.generatedTags = generatedTags
+        self.queryVector = queryVector
     }
 }

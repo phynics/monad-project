@@ -32,6 +32,47 @@ struct MessageDebugView: View {
 
                     // User message: Raw prompt
                     if let rawPrompt = debugInfo.rawPrompt {
+                        
+                        // Context Generation Info
+                        if let tags = debugInfo.generatedTags, !tags.isEmpty {
+                            Section {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Generated Tags:")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    
+                                    FlowLayout(spacing: 4) {
+                                        ForEach(tags, id: \.self) { tag in
+                                            Text(tag)
+                                                .font(.caption)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Color.orange.opacity(0.1))
+                                                .foregroundColor(.orange)
+                                                .cornerRadius(4)
+                                        }
+                                    }
+                                    
+                                    if let vector = debugInfo.queryVector, !vector.isEmpty {
+                                        Divider()
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Query Embedding Vector (\(vector.count) dims):")
+                                                .font(.system(size: 10))
+                                                .foregroundStyle(.secondary)
+                                            Text(vector.prefix(8).map { String(format: "%.3f", $0) }.joined(separator: ", ") + "...")
+                                                .font(.system(size: 10, design: .monospaced))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                                .padding(8)
+                            } header: {
+                                SectionHeader(title: "Debug: Context Generation")
+                            }
+                            
+                            Divider()
+                        }
+                        
                         // Context Memories Section
                         if let results = debugInfo.contextMemories, !results.isEmpty {
                             Section {

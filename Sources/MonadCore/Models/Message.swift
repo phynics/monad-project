@@ -88,10 +88,18 @@ public struct MessageDebugInfo: Equatable, Sendable {
     
     /// For user messages: relevant memories found for this message with similarity info
     public var contextMemories: [SemanticSearchResult]?
+    
+    /// For user messages: tags generated for search
+    public var generatedTags: [String]?
+    
+    /// For user messages: query embedding vector
+    public var queryVector: [Double]?
 
     public static func userMessage(
         rawPrompt: String,
-        contextMemories: [SemanticSearchResult]? = nil
+        contextMemories: [SemanticSearchResult]? = nil,
+        generatedTags: [String]? = nil,
+        queryVector: [Double]? = nil
     ) -> MessageDebugInfo {
         MessageDebugInfo(
             rawPrompt: rawPrompt,
@@ -100,7 +108,9 @@ public struct MessageDebugInfo: Equatable, Sendable {
             parsedContent: nil,
             parsedThinking: nil,
             parsedToolCalls: nil,
-            contextMemories: contextMemories
+            contextMemories: contextMemories,
+            generatedTags: generatedTags,
+            queryVector: queryVector
         )
     }
 
@@ -118,7 +128,9 @@ public struct MessageDebugInfo: Equatable, Sendable {
             parsedContent: parsed,
             parsedThinking: thinking,
             parsedToolCalls: toolCalls,
-            contextMemories: nil
+            contextMemories: nil,
+            generatedTags: nil,
+            queryVector: nil
         )
     }
 }

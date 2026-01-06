@@ -94,7 +94,13 @@ public final class ChatViewModel {
         currentTask = Task {
             do {
                 // 1. Gather Context via ContextManager
-                let contextData = try await contextManager.gatherContext(for: prompt)
+                // Define tag generator closure
+                let service = llmService
+                let tagGenerator: @Sendable (String) async throws -> [String] = { text in
+                    try await service.generateTags(for: text)
+                }
+                
+                let contextData = try await contextManager.gatherContext(for: prompt, tagGenerator: tagGenerator)
                 let enabledTools = tools.getEnabledTools()
                 
                 // 2. Perform an initial call to get the raw prompt for the user message debug info
@@ -110,7 +116,7 @@ public final class ChatViewModel {
                 try await runConversationLoop(
                     userPrompt: prompt, 
                     initialRawPrompt: initialRawPrompt,
-                    initialMemories: contextData.memories
+                    contextData: contextData
                 )
 
             } catch is CancellationError {
@@ -131,7 +137,7 @@ public final class ChatViewModel {
     private func runConversationLoop(
         userPrompt: String?, 
         initialRawPrompt: String?,
-        initialMemories: [SemanticSearchResult] = []
+        contextData: ContextData
     ) async throws {
         // 1. Add user message to history if provided
         if let prompt = userPrompt {
@@ -139,14 +145,21 @@ public final class ChatViewModel {
                 content: prompt,
                 role: .user,
                 think: nil,
-                debugInfo: initialRawPrompt.map { .userMessage(rawPrompt: $0, contextMemories: initialMemories) }
+                debugInfo: initialRawPrompt.map { 
+                    .userMessage(
+                        rawPrompt: $0, 
+                        contextMemories: contextData.memories,
+                        generatedTags: contextData.generatedTags,
+                        queryVector: contextData.queryVector
+                    ) 
+                }
             )
             messages.append(userMessage)
         }
 
         var shouldContinue = true
         var turnCount = 0
-        var currentMemories = initialMemories.map { $0.memory }
+        let currentMemories = contextData.memories.map { $0.memory }
 
         while shouldContinue {
             turnCount += 1
