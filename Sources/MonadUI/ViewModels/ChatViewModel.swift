@@ -90,6 +90,9 @@ public final class ChatViewModel {
         isLoading = true
         errorMessage = nil
         logger.debug("Starting message generation for prompt length: \(prompt.count)")
+        
+        // Reset loop detection for the new interaction
+        toolExecutor?.reset()
 
         currentTask = Task {
             do {

@@ -49,7 +49,7 @@ public struct Message: Identifiable, Equatable, Sendable {
 // MARK: - Tool Call
 
 /// Represents a tool call from the LLM
-public struct ToolCall: Identifiable, Equatable, Codable, Sendable {
+public struct ToolCall: Identifiable, Equatable, Codable, Sendable, Hashable {
     public let id = UUID()
     public let name: String
     public let arguments: [String: AnyCodable]
@@ -61,6 +61,11 @@ public struct ToolCall: Identifiable, Equatable, Codable, Sendable {
 
     public static func == (lhs: ToolCall, rhs: ToolCall) -> Bool {
         lhs.name == rhs.name && lhs.arguments == rhs.arguments
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(arguments)
     }
 }
 

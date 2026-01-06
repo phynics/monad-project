@@ -1,7 +1,7 @@
 import Foundation
 
 /// Helper for Codable 'Any' types, often used in JSON-RPC and dynamic tool arguments.
-public struct AnyCodable: Codable, @unchecked Sendable, Equatable, CustomStringConvertible {
+public struct AnyCodable: Codable, @unchecked Sendable, Equatable, CustomStringConvertible, Hashable {
     public let value: Any
 
     public init(_ value: Any) {
@@ -10,6 +10,30 @@ public struct AnyCodable: Codable, @unchecked Sendable, Equatable, CustomStringC
 
     public var description: String {
         "\(value)"
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        switch value {
+        case let x as Int: hasher.combine(x)
+        case let x as Double: hasher.combine(x)
+        case let x as Bool: hasher.combine(x)
+        case let x as String: hasher.combine(x)
+        case let x as [AnyCodable]: hasher.combine(x)
+        case let x as [String: AnyCodable]: hasher.combine(x)
+        case let x as [Any]:
+            hasher.combine(x.count)
+            for element in x { hasher.combine(AnyCodable(element)) }
+        case let x as [String: Any]:
+            hasher.combine(x.count)
+            for (key, val) in x.sorted(by: { $0.key < $1.key }) {
+                hasher.combine(key)
+                hasher.combine(AnyCodable(val))
+            }
+        case is NSNull: hasher.combine(0)
+        default: 
+            // Fallback for other types - use string description as a coarse hash
+            hasher.combine(String(describing: value))
+        }
     }
 
     public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
