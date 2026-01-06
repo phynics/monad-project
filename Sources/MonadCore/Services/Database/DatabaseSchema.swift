@@ -22,6 +22,15 @@ public enum DatabaseSchema {
                 }
             }
         }
+        
+        // v3: Retry adding embedding column if missing (for dev state consistency)
+        migrator.registerMigration("v3") { db in
+            if try !db.columns(in: "memory").contains(where: { $0.name == "embedding" }) {
+                try db.alter(table: "memory") { t in
+                    t.add(column: "embedding", .text).notNull().defaults(to: "[]")
+                }
+            }
+        }
     }
 
     // MARK: - Conversation Tables
