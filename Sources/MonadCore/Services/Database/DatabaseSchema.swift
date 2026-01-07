@@ -31,6 +31,15 @@ public enum DatabaseSchema {
                 }
             }
         }
+
+        // v4: Add recalledMemories to conversationMessage
+        migrator.registerMigration("v4") { db in
+            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "recalledMemories" }) {
+                try db.alter(table: "conversationMessage") { t in
+                    t.add(column: "recalledMemories", .text).notNull().defaults(to: "[]")
+                }
+            }
+        }
     }
 
     // MARK: - Conversation Tables

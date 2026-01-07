@@ -7,10 +7,11 @@ import OpenAI
 public protocol LLMClientProtocol: Sendable {
     func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
-        tools: [ChatQuery.ChatCompletionToolParam]?
+        tools: [ChatQuery.ChatCompletionToolParam]?,
+        responseFormat: ChatQuery.ResponseFormat?
     ) async -> AsyncThrowingStream<ChatStreamResult, Error>
 
-    func sendMessage(_ content: String) async throws -> String
+    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?) async throws -> String
 }
 
 // Conform OpenAIClient (Retroactive - now in same module)
@@ -193,7 +194,7 @@ public final class LLMService {
             throw LLMServiceError.notConfigured
         }
 
-        return try await client.sendMessage(content)
+        return try await client.sendMessage(content, responseFormat: nil)
     }
     
     /// Generate tags/keywords for a given text using the LLM
@@ -204,34 +205,36 @@ public final class LLMService {
         
         let prompt = """
         Extract 3-5 relevant keywords or tags from the following text.
-        Return ONLY a JSON array of strings. Do not include any other text or markdown formatting.
+        Return ONLY a JSON object with a key "tags" containing an array of strings.
         
         Text:
         \(text)
         """
         
         do {
-            // Using a simple non-streaming call if available, but our protocol only exposes chatStream and sendMessage.
-            // sendMessage accumulates the stream, which is fine for this short response.
-            let response = try await client.sendMessage(prompt)
+            let response = try await client.sendMessage(prompt, responseFormat: .jsonObject)
             
-            // Clean up response (remove potential markdown code blocks)
-            var cleanJson = response.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Clean up response (some models might still include markdown)
+            var cleanJson = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
             if cleanJson.hasPrefix("```json") {
                 cleanJson = cleanJson.replacingOccurrences(of: "```json", with: "")
             }
             if cleanJson.hasPrefix("```") {
                 cleanJson = cleanJson.replacingOccurrences(of: "```", with: "")
             }
-            cleanJson = cleanJson.trimmingCharacters(in: .whitespacesAndNewlines)
+            cleanJson = cleanJson.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
             
-            guard let data = cleanJson.data(using: .utf8),
-                  let tags = try? JSONDecoder().decode([String].self, from: data) else {
+            struct TagResponse: Codable {
+                let tags: [String]
+            }
+
+            guard let data = cleanJson.data(using: String.Encoding.utf8),
+                  let tagResponse = try? JSONDecoder().decode(TagResponse.self, from: data) else {
                 logger.warning("Failed to parse tags from LLM response: \(response)")
                 return []
             }
             
-            return tags.map { $0.lowercased() }
+            return tagResponse.tags.map { $0.lowercased() }
         } catch {
             logger.error("Failed to generate tags: \(error.localizedDescription)")
             return []
@@ -263,30 +266,28 @@ public final class LLMService {
         TRANSCRIPT:
         \(transcript)
 
-        Return ONLY a JSON object where keys are memory IDs and values are helpfulness scores:
+        Return ONLY a JSON object where keys are memory IDs and values are helpfulness scores (numbers between -1.0 and 1.0):
         1.0: Extremely helpful, directly used to answer.
         0.5: Somewhat helpful, provided good context.
         0.0: Neutral, didn't hurt but wasn't used.
         -0.5: Irrelevant, slightly off-topic.
         -1.0: Completely irrelevant or misleading.
-
-        Do not include any other text or markdown formatting.
         """
 
         do {
-            let response = try await client.sendMessage(prompt)
+            let response = try await client.sendMessage(prompt, responseFormat: .jsonObject)
             
             // Clean up response
-            var cleanJson = response.trimmingCharacters(in: .whitespacesAndNewlines)
+            var cleanJson = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
             if cleanJson.hasPrefix("```json") {
                 cleanJson = cleanJson.replacingOccurrences(of: "```json", with: "")
             }
             if cleanJson.hasPrefix("```") {
                 cleanJson = cleanJson.replacingOccurrences(of: "```", with: "")
             }
-            cleanJson = cleanJson.trimmingCharacters(in: .whitespacesAndNewlines)
+            cleanJson = cleanJson.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
             
-            guard let data = cleanJson.data(using: .utf8),
+            guard let data = cleanJson.data(using: String.Encoding.utf8),
                   let scores = try? JSONDecoder().decode([String: Double].self, from: data) else {
                 logger.warning("Failed to parse recall evaluation from LLM response: \(response)")
                 return [:]

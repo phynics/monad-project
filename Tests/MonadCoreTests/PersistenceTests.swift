@@ -48,6 +48,33 @@ struct PersistenceTests {
         #expect(messages.first?.content == "Hello World")
     }
 
+    @Test("Test message persistence with recalled memories")
+    func messagePersistenceWithMemories() async throws {
+        let session = ConversationSession(title: "Test Session")
+        try await persistence.saveSession(session)
+
+        let memories = [
+            Memory(title: "Memory 1", content: "Content 1"),
+            Memory(title: "Memory 2", content: "Content 2")
+        ]
+        let memoriesJson = String(data: try JSONEncoder().encode(memories), encoding: .utf8)!
+
+        let message = ConversationMessage(
+            sessionId: session.id,
+            role: .user,
+            content: "Message with memories",
+            recalledMemories: memoriesJson
+        )
+        try await persistence.saveMessage(message)
+
+        let fetchedMessages = try await persistence.fetchMessages(for: session.id)
+        #expect(fetchedMessages.count == 1)
+        
+        let uiMessage = fetchedMessages[0].toMessage()
+        #expect(uiMessage.recalledMemories?.count == 2)
+        #expect(uiMessage.recalledMemories?[0].title == "Memory 1")
+    }
+
     @Test("Test cascading deletes: Deleting a session removes its messages")
     func cascadingDeletes() async throws {
         let session = ConversationSession(title: "Test Session")

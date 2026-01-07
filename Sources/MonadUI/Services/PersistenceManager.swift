@@ -14,6 +14,10 @@ public final class PersistenceManager {
     public private(set) var activeSessions: [ConversationSession] = []
     public var errorMessage: String?
 
+    public var uiMessages: [Message] {
+        currentMessages.map { $0.toMessage() }
+    }
+
     public let persistence: PersistenceService
     private let logger = Logger.database
 
@@ -84,16 +88,26 @@ public final class PersistenceManager {
 
     // MARK: - Message Management
 
-    public func addMessage(role: ConversationMessage.MessageRole, content: String) async throws {
+    public func addMessage(role: ConversationMessage.MessageRole, content: String, recalledMemories: [Memory]? = nil) async throws {
         guard let session = currentSession else {
             logger.error("Attempted to add message but no active session")
             throw PersistenceError.noActiveSession
         }
 
+        let memoriesJson: String
+        if let memories = recalledMemories,
+           let data = try? JSONEncoder().encode(memories),
+           let str = String(data: data, encoding: .utf8) {
+            memoriesJson = str
+        } else {
+            memoriesJson = "[]"
+        }
+
         let message = ConversationMessage(
             sessionId: session.id,
             role: role,
-            content: content
+            content: content,
+            recalledMemories: memoriesJson
         )
 
         logger.debug("Saving message for session \(session.id.uuidString)")

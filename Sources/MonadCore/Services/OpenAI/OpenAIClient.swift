@@ -26,11 +26,13 @@ public actor OpenAIClient {
     /// Stream chat responses
     public func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
-        tools: [ChatQuery.ChatCompletionToolParam]? = nil
+        tools: [ChatQuery.ChatCompletionToolParam]? = nil,
+        responseFormat: ChatQuery.ResponseFormat? = nil
     ) -> AsyncThrowingStream<ChatStreamResult, Error> {
         let query = ChatQuery(
             messages: messages,
             model: modelName,
+            responseFormat: responseFormat,
             tools: tools
         )
 
@@ -54,13 +56,13 @@ public actor OpenAIClient {
 
 extension OpenAIClient {
     /// Simple helper to send a user message via stream (collects all content)
-    public func sendMessage(_ content: String) async throws -> String {
+    public func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat? = nil) async throws -> String {
         let messages: [ChatQuery.ChatCompletionMessageParam] = [
             .user(.init(content: .string(content)))
         ]
 
         var fullContent = ""
-        for try await result in chatStream(messages: messages) {
+        for try await result in chatStream(messages: messages, responseFormat: responseFormat) {
             if let delta = result.choices.first?.delta.content {
                 fullContent += delta
             }

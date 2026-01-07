@@ -35,7 +35,8 @@ public final class ConversationArchiver {
         for message in messages {
             try await persistenceManager.addMessage(
                 role: ConversationMessage.MessageRole(rawValue: message.role.rawValue) ?? .user,
-                content: message.content
+                content: message.content,
+                recalledMemories: message.recalledMemories
             )
         }
 

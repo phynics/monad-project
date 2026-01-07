@@ -84,13 +84,31 @@ struct ArchivedConversationsView: View {
             }
 
             // Content
-            if filteredSessions.isEmpty {
-                emptyStateView
-            } else {
-                conversationsList
+            HStack(spacing: 0) {
+                if filteredSessions.isEmpty {
+                    emptyStateView
+                } else {
+                    conversationsList
+                        .frame(width: 300)
+                    
+                    Divider()
+                    
+                    if let session = selectedSession {
+                        archivedMessagesView(for: session)
+                    } else {
+                        VStack {
+                            Image(systemName: "message")
+                                .font(.system(size: 48))
+                                .foregroundColor(.secondary)
+                            Text("Select a conversation to view messages")
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
             }
         }
-        .frame(minWidth: 700, minHeight: 500)
+        .frame(minWidth: 900, minHeight: 600)
         .alert("Delete Conversation?", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) {
                 sessionToDelete = nil
@@ -144,7 +162,12 @@ struct ArchivedConversationsView: View {
                     ConversationRow(
                         session: session,
                         isSelected: selectedSession?.id == session.id,
-                        onSelect: { selectedSession = session },
+                        onSelect: { 
+                            selectedSession = session
+                            Task {
+                                try? await persistenceManager.loadSession(id: session.id)
+                            }
+                        },
                         onUnarchive: { unarchiveSession(session) },
                         onDelete: {
                             sessionToDelete = session
@@ -155,6 +178,19 @@ struct ArchivedConversationsView: View {
             }
             .padding()
         }
+    }
+
+    private func archivedMessagesView(for session: ConversationSession) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(persistenceManager.uiMessages) { message in
+                    MessageBubble(message: message)
+                }
+            }
+            .padding()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.gray.opacity(0.02))
     }
 
     // MARK: - Actions

@@ -30,10 +30,14 @@ public struct Message: Identifiable, Equatable, Sendable {
     /// Current progress of context gathering (only for user messages)
     public var gatheringProgress: ContextGatheringProgress?
 
+    /// Memories that were provided as context for this message
+    public var recalledMemories: [Memory]?
+
     public init(
         content: String, role: MessageRole, think: String? = nil, toolCalls: [ToolCall]? = nil,
         debugInfo: MessageDebugInfo? = nil,
-        gatheringProgress: ContextGatheringProgress? = nil
+        gatheringProgress: ContextGatheringProgress? = nil,
+        recalledMemories: [Memory]? = nil
     ) {
         self.content = content
         self.role = role
@@ -41,6 +45,7 @@ public struct Message: Identifiable, Equatable, Sendable {
         self.toolCalls = toolCalls
         self.debugInfo = debugInfo
         self.gatheringProgress = gatheringProgress
+        self.recalledMemories = recalledMemories
     }
 
     public enum MessageRole: String, Sendable {

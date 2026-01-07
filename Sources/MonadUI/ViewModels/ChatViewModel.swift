@@ -135,6 +135,7 @@ public final class ChatViewModel {
                 )
 
                 // Update debug info for the user message
+                messages[userMessageIndex].recalledMemories = contextData.memories.map { $0.memory }
                 messages[userMessageIndex].debugInfo = .userMessage(
                     rawPrompt: initialRawPrompt, 
                     contextMemories: contextData.memories,

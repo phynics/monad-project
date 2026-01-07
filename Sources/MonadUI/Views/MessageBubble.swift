@@ -15,6 +15,7 @@ public struct MessageBubble: View {
 
     @State private var isThinkingExpanded = false
     @State private var showingDebugInfo = false
+    @State private var selectedMemory: Memory?
 
     public init(message: Message) {
         self.message = message
@@ -110,6 +111,30 @@ public struct MessageBubble: View {
                                     .padding(.vertical, 2)
                                     .background(Color.black.opacity(0.2))
                                     .cornerRadius(4)
+                                    .padding(.top, 4)
+                                }
+
+                                // Memories section for user messages
+                                if let recalled = message?.recalledMemories, !recalled.isEmpty {
+                                    HStack(spacing: 4) {
+                                        ForEach(recalled) { memory in
+                                            Button(action: { selectedMemory = memory }) {
+                                                HStack(spacing: 3) {
+                                                    Image(systemName: "brain.head.profile")
+                                                        .font(.system(size: 7))
+                                                    Text(memory.title)
+                                                        .font(.system(size: 8, weight: .bold))
+                                                        .lineLimit(1)
+                                                }
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 3)
+                                                .background(role == .user ? Color.white.opacity(0.2) : Color.blue.opacity(0.1))
+                                                .foregroundColor(role == .user ? .white : .blue)
+                                                .cornerRadius(4)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
                                     .padding(.top, 4)
                                 }
                             }
@@ -226,6 +251,9 @@ public struct MessageBubble: View {
             if let message = message, let debugInfo = message.debugInfo {
                 MessageDebugView(message: message, debugInfo: debugInfo)
             }
+        }
+        .sheet(item: $selectedMemory) { memory in
+            MemoryDetailView(memory: memory)
         }
     }
 

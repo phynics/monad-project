@@ -10,7 +10,8 @@ extension LLMService {
         memories: [Memory] = [],
         chatHistory: [Message],
         tools: [Tool] = [],
-        systemInstructions: String? = nil
+        systemInstructions: String? = nil,
+        responseFormat: ChatQuery.ResponseFormat? = nil
     ) async -> (stream: AsyncThrowingStream<ChatStreamResult, Error>, rawPrompt: String) {
         guard let client = getClient() else {
             let stream = AsyncThrowingStream<ChatStreamResult, Error> { continuation in
@@ -31,14 +32,15 @@ extension LLMService {
 
         // Delegate to client for streaming
         let toolParams = tools.isEmpty ? nil : tools.map { $0.toToolParam() }
-        let stream = await client.chatStream(messages: messages, tools: toolParams)
+        let stream = await client.chatStream(messages: messages, tools: toolParams, responseFormat: responseFormat)
 
         return (stream, rawPrompt)
     }
 
     /// Stream chat responses (low-level API)
     func chatStream(
-        messages: [ChatQuery.ChatCompletionMessageParam]
+        messages: [ChatQuery.ChatCompletionMessageParam],
+        responseFormat: ChatQuery.ResponseFormat? = nil
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
         guard let client = getClient() else {
             return AsyncThrowingStream { continuation in
@@ -46,6 +48,6 @@ extension LLMService {
             }
         }
 
-        return await client.chatStream(messages: messages, tools: nil)
+        return await client.chatStream(messages: messages, tools: nil, responseFormat: responseFormat)
     }
 }

@@ -17,12 +17,13 @@ public actor OllamaClient {
 
     public func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
-        tools: [ChatQuery.ChatCompletionToolParam]? = nil
+        tools: [ChatQuery.ChatCompletionToolParam]? = nil,
+        responseFormat: ChatQuery.ResponseFormat? = nil
     ) -> AsyncThrowingStream<ChatStreamResult, Error> {
         return AsyncThrowingStream { continuation in
             Task {
                 do {
-                    let request = try buildRequest(messages: messages, tools: tools)
+                    let request = try buildRequest(messages: messages, tools: tools, responseFormat: responseFormat)
 
                     let (stream, response) = try await URLSession.shared.bytes(for: request)
 
@@ -56,7 +57,8 @@ public actor OllamaClient {
 
     private func buildRequest(
         messages: [ChatQuery.ChatCompletionMessageParam],
-        tools: [ChatQuery.ChatCompletionToolParam]?
+        tools: [ChatQuery.ChatCompletionToolParam]?,
+        responseFormat: ChatQuery.ResponseFormat?
     ) throws -> URLRequest {
         let chatURL = endpoint.appendingPathComponent("api/chat")
         var request = URLRequest(url: chatURL)
@@ -115,12 +117,24 @@ public actor OllamaClient {
             return OllamaMessage(role: role, content: content)
         }
 
-        // ... (request payload building) ...
+        // Map responseFormat to Ollama's format parameter
+        var format: String? = nil
+        if let responseFormat = responseFormat {
+            switch responseFormat {
+            case .jsonObject, .jsonSchema:
+                format = "json"
+            case .text:
+                format = nil
+            @unknown default:
+                format = nil
+            }
+        }
 
         let payload = OllamaChatRequest(
             model: modelName,
             messages: ollamaMessages,
-            stream: true
+            stream: true,
+            format: format
         )
 
         request.httpBody = try JSONEncoder().encode(payload)
@@ -159,13 +173,13 @@ public actor OllamaClient {
     }
 
     // Simple helper
-    public func sendMessage(_ content: String) async throws -> String {
+    public func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat? = nil) async throws -> String {
         let messages: [ChatQuery.ChatCompletionMessageParam] = [
             .user(.init(content: .string(content)))
         ]
 
         var fullContent = ""
-        for try await result in chatStream(messages: messages) {
+        for try await result in chatStream(messages: messages, responseFormat: responseFormat) {
             if let delta = result.choices.first?.delta.content {
                 fullContent += delta
             }
@@ -180,6 +194,7 @@ struct OllamaChatRequest: Codable {
     let model: String
     let messages: [OllamaMessage]
     let stream: Bool
+    let format: String?
 }
 
 struct OllamaMessage: Codable {
