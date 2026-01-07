@@ -1,7 +1,24 @@
 import MonadCore
 import SwiftUI
 import RegexBuilder
-import MarkdownUI
+@preconcurrency import MarkdownUI
+
+private extension Theme {
+    @MainActor
+    static let chatTheme = Theme.gitHub
+        .code {
+            FontFamilyVariant(.monospaced)
+            FontSize(.em(0.85))
+            BackgroundColor(Color.primary.opacity(0.05))
+        }
+        .codeBlock { configuration in
+            configuration.label
+                .padding(.all, 8)
+                .markdownMargin(top: .em(1), bottom: .em(1))
+                .background(Color.primary.opacity(0.05))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+}
 
 #if os(macOS)
     import AppKit
@@ -111,7 +128,8 @@ public struct MessageBubble: View {
                             HStack(alignment: .bottom, spacing: 0) {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Markdown(displayContent)
-                                        .markdownTheme(.gitHub)
+                                        .markdownTheme(.chatTheme)
+                                        .background(Color.clear)
                                         .textSelection(.enabled)
                                     
                                     // Subagent Context Bling
