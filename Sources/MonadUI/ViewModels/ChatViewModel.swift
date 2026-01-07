@@ -35,7 +35,11 @@ public final class ChatViewModel {
             embeddingService: llmService.embeddingService
         )
         self.streamingCoordinator = StreamingCoordinator()
-        self.conversationArchiver = ConversationArchiver(persistenceManager: persistenceManager)
+        self.conversationArchiver = ConversationArchiver(
+            persistenceManager: persistenceManager,
+            llmService: llmService,
+            contextManager: contextManager
+        )
     }
 
     public var tools: SessionToolManager {
@@ -157,7 +161,10 @@ public final class ChatViewModel {
                         rawPrompt: $0, 
                         contextMemories: contextData.memories,
                         generatedTags: contextData.generatedTags,
-                        queryVector: contextData.queryVector
+                        queryVector: contextData.queryVector,
+                        augmentedQuery: contextData.augmentedQuery,
+                        semanticResults: contextData.semanticResults,
+                        tagResults: contextData.tagResults
                     ) 
                 }
             )

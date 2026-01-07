@@ -237,6 +237,67 @@ public final class LLMService {
             return []
         }
     }
+
+    /// Evaluate which recalled memories were actually helpful in the conversation
+    /// - Parameters:
+    ///   - transcript: The conversation text
+    ///   - recalledMemories: The memories that were injected as context
+    /// - Returns: A dictionary mapping memory ID strings to a helpfulness score (-1.0 to 1.0)
+    public func evaluateRecallPerformance(
+        transcript: String,
+        recalledMemories: [Memory]
+    ) async throws -> [String: Double] {
+        guard let client = client, !recalledMemories.isEmpty else {
+            return [:]
+        }
+
+        let memoriesText = recalledMemories.map { "- ID: \($0.id.uuidString)\n  Title: \($0.title)\n  Content: \($0.content)" }.joined(separator: "\n\n")
+
+        let prompt = """
+        Analyze the following conversation transcript and the list of recalled memories that were provided to you as context.
+        Determine for EACH memory if it was actually useful for answering the user's questions or providing relevant context.
+
+        RECALLED MEMORIES:
+        \(memoriesText)
+
+        TRANSCRIPT:
+        \(transcript)
+
+        Return ONLY a JSON object where keys are memory IDs and values are helpfulness scores:
+        1.0: Extremely helpful, directly used to answer.
+        0.5: Somewhat helpful, provided good context.
+        0.0: Neutral, didn't hurt but wasn't used.
+        -0.5: Irrelevant, slightly off-topic.
+        -1.0: Completely irrelevant or misleading.
+
+        Do not include any other text or markdown formatting.
+        """
+
+        do {
+            let response = try await client.sendMessage(prompt)
+            
+            // Clean up response
+            var cleanJson = response.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cleanJson.hasPrefix("```json") {
+                cleanJson = cleanJson.replacingOccurrences(of: "```json", with: "")
+            }
+            if cleanJson.hasPrefix("```") {
+                cleanJson = cleanJson.replacingOccurrences(of: "```", with: "")
+            }
+            cleanJson = cleanJson.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            guard let data = cleanJson.data(using: .utf8),
+                  let scores = try? JSONDecoder().decode([String: Double].self, from: data) else {
+                logger.warning("Failed to parse recall evaluation from LLM response: \(response)")
+                return [:]
+            }
+            
+            return scores
+        } catch {
+            logger.error("Failed to evaluate recall: \(error.localizedDescription)")
+            return [:]
+        }
+    }
 }
 
 // MARK: - Error Types

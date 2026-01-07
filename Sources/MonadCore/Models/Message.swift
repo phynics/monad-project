@@ -120,11 +120,23 @@ public struct MessageDebugInfo: Equatable, Sendable {
     /// For user messages: query embedding vector
     public var queryVector: [Double]?
 
+    /// For user messages: the query after history augmentation
+    public var augmentedQuery: String?
+
+    /// For user messages: top semantic search candidates before ranking
+    public var semanticResults: [SemanticSearchResult]?
+
+    /// For user messages: keyword/tag search matches
+    public var tagResults: [Memory]?
+
     public static func userMessage(
         rawPrompt: String,
         contextMemories: [SemanticSearchResult]? = nil,
         generatedTags: [String]? = nil,
-        queryVector: [Double]? = nil
+        queryVector: [Double]? = nil,
+        augmentedQuery: String? = nil,
+        semanticResults: [SemanticSearchResult]? = nil,
+        tagResults: [Memory]? = nil
     ) -> MessageDebugInfo {
         MessageDebugInfo(
             rawPrompt: rawPrompt,
@@ -135,7 +147,10 @@ public struct MessageDebugInfo: Equatable, Sendable {
             parsedToolCalls: nil,
             contextMemories: contextMemories,
             generatedTags: generatedTags,
-            queryVector: queryVector
+            queryVector: queryVector,
+            augmentedQuery: augmentedQuery,
+            semanticResults: semanticResults,
+            tagResults: tagResults
         )
     }
 
@@ -155,7 +170,10 @@ public struct MessageDebugInfo: Equatable, Sendable {
             parsedToolCalls: toolCalls,
             contextMemories: nil,
             generatedTags: nil,
-            queryVector: nil
+            queryVector: nil,
+            augmentedQuery: nil,
+            semanticResults: nil,
+            tagResults: nil
         )
     }
 }

@@ -54,16 +54,25 @@ public actor ContextManager {
             notes: notes,
             memories: memoriesData.memories,
             generatedTags: memoriesData.tags,
-            queryVector: memoriesData.vector
+            queryVector: memoriesData.vector,
+            augmentedQuery: augmentedQuery,
+            semanticResults: memoriesData.semanticResults,
+            tagResults: memoriesData.tagResults
         )
     }
     
     private func fetchRelevantMemories(
         for query: String,
         tagGenerator: (@Sendable (String) async throws -> [String])?
-    ) async throws -> (memories: [SemanticSearchResult], tags: [String], vector: [Double]) {
+    ) async throws -> (
+        memories: [SemanticSearchResult], 
+        tags: [String], 
+        vector: [Double],
+        semanticResults: [SemanticSearchResult],
+        tagResults: [Memory]
+    ) {
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return ([], [], [])
+            return ([], [], [], [], [])
         }
         
         // 1. Generate Tags (if generator provided)
@@ -115,7 +124,7 @@ public actor ContextManager {
         
         logger.info("Found \(topResults.count) relevant memories (from \(semanticResults.count) semantic + \(tagResults.count) tag matches)")
         
-        return (topResults, tags, embedding)
+        return (topResults, tags, embedding, semanticResults.map { SemanticSearchResult(memory: $0.memory, similarity: $0.similarity) }, tagResults)
     }
     
     // Helper for cosine similarity (duplicated from PersistenceService, could be shared utility)
@@ -131,6 +140,64 @@ public actor ContextManager {
         }
         return dot / (sqrt(magA) * sqrt(magB))
     }
+
+    /// Adjust memory embeddings based on helpfulness scores
+    /// - Parameters:
+    ///   - evaluations: Dictionary of memory ID to helpfulness score (-1.0 to 1.0)
+    ///   - queryVectors: The vectors of the queries that triggered these recalls
+    public func adjustEmbeddings(
+        evaluations: [String: Double],
+        queryVectors: [[Double]]
+    ) async throws {
+        guard !evaluations.isEmpty, !queryVectors.isEmpty else { return }
+        
+        let learningRate = 0.05 // Small step size
+        
+        for (idString, score) in evaluations {
+            guard let id = UUID(uuidString: idString), score != 0 else { continue }
+            
+            // Fetch current memory
+            guard let memory = try await persistenceService.fetchMemory(id: id) else { continue }
+            let currentVector = memory.embeddingVector
+            guard !currentVector.isEmpty else { continue }
+            
+            // Average the query vectors that might have triggered this (simplified)
+            // Ideally we'd map specific turns to specific memories, but for now we'll push/pull 
+            // relative to all queries in the session if the memory was recalled.
+            
+            var targetVector = [Double](repeating: 0, count: currentVector.count)
+            for qv in queryVectors {
+                guard qv.count == currentVector.count else { continue }
+                for i in 0..<currentVector.count {
+                    targetVector[i] += qv[i]
+                }
+            }
+            
+            // Normalize averaged target
+            targetVector = normalize(targetVector)
+            
+            // Calculate adjustment
+            // V' = V + score * learningRate * (Target - V)
+            var newVector = currentVector
+            for i in 0..<currentVector.count {
+                let delta = targetVector[i] - currentVector[i]
+                newVector[i] += score * learningRate * delta
+            }
+            
+            // Re-normalize to keep on unit hypersphere
+            newVector = normalize(newVector)
+            
+            // Save back
+            try await persistenceService.updateMemoryEmbedding(id: id, newEmbedding: newVector)
+            logger.info("Adjusted embedding for memory '\(memory.title)' with score \(score)")
+        }
+    }
+    
+    private func normalize(_ v: [Double]) -> [Double] {
+        let mag = sqrt(v.reduce(0) { $0 + $1 * $1 })
+        guard mag > 0 else { return v }
+        return v.map { $0 / mag }
+    }
 }
 
 /// Structured context data
@@ -139,16 +206,25 @@ public struct ContextData: Sendable {
     public let memories: [SemanticSearchResult]
     public let generatedTags: [String]
     public let queryVector: [Double]
+    public let augmentedQuery: String?
+    public let semanticResults: [SemanticSearchResult]
+    public let tagResults: [Memory]
     
     public init(
         notes: [Note] = [],
         memories: [SemanticSearchResult] = [],
         generatedTags: [String] = [],
-        queryVector: [Double] = []
+        queryVector: [Double] = [],
+        augmentedQuery: String? = nil,
+        semanticResults: [SemanticSearchResult] = [],
+        tagResults: [Memory] = []
     ) {
         self.notes = notes
         self.memories = memories
         self.generatedTags = generatedTags
         self.queryVector = queryVector
+        self.augmentedQuery = augmentedQuery
+        self.semanticResults = semanticResults
+        self.tagResults = tagResults
     }
 }

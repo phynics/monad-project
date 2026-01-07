@@ -229,6 +229,20 @@ public actor PersistenceService {
         }
     }
 
+    public func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) throws {
+        try dbQueue.write { db in
+            guard var memory = try Memory.fetchOne(db, key: ["id": id]) else { return }
+            
+            // Re-encode embedding array
+            if let data = try? JSONEncoder().encode(newEmbedding), 
+               let str = String(data: data, encoding: .utf8) {
+                memory.embedding = str
+                memory.updatedAt = Date()
+                try memory.save(db)
+            }
+        }
+    }
+
     // MARK: - Notes
 
     /// Save a note (create or update)

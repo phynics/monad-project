@@ -4,7 +4,7 @@ import OpenAI
 import SwiftUI
 
 public struct ContentView: View {
-    @State public var viewModel: ChatViewModel
+    @Bindable public var viewModel: ChatViewModel
     public var llmService: LLMService
     public var persistenceManager: PersistenceManager
 
@@ -16,12 +16,10 @@ public struct ContentView: View {
 
     @Environment(\.openWindow) private var openWindow
 
-    public init(llmService: LLMService, persistenceManager: PersistenceManager) {
+    public init(viewModel: ChatViewModel, llmService: LLMService, persistenceManager: PersistenceManager) {
+        self.viewModel = viewModel
         self.llmService = llmService
         self.persistenceManager = persistenceManager
-        _viewModel = State(
-            wrappedValue: ChatViewModel(
-                llmService: llmService, persistenceManager: persistenceManager))
     }
 
     public var body: some View {

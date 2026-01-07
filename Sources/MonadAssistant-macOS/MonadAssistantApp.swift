@@ -7,13 +7,21 @@ import SwiftUI
 struct MonadAssistantApp: App {
     @State private var llmService = LLMService()
     @State private var persistenceManager: PersistenceManager
+    @State private var chatViewModel: ChatViewModel
     @State private var mcpTransport: StdioTransport
     @State private var mcpClient: MCPClient
+    
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         let persistence = try! PersistenceService.create()
         let manager = PersistenceManager(persistence: persistence)
         self._persistenceManager = State(initialValue: manager)
+        
+        let llm = LLMService()
+        self._llmService = State(initialValue: llm)
+        
+        self._chatViewModel = State(initialValue: ChatViewModel(llmService: llm, persistenceManager: manager))
 
         // Setup MCP (macOS only)
         let transport = StdioTransport(
@@ -23,15 +31,22 @@ struct MonadAssistantApp: App {
         self._mcpClient = State(initialValue: client)
 
         // Register MCP as a tool provider
-        llmService.registerToolProvider(client)
+        llm.registerToolProvider(client)
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView(
+                viewModel: chatViewModel,
                 llmService: llmService,
                 persistenceManager: persistenceManager
             )
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .background || newPhase == .inactive {
+                // Auto-archive when app is closing or moving to background
+                chatViewModel.archiveConversation { }
+            }
         }
 
         // Separate Settings Window - works better on macOS for text field focus
