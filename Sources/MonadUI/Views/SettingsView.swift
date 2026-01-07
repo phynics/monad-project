@@ -526,9 +526,14 @@ public struct SettingsView<PlatformContent: View>: View {
     }
 
     private func fetchOllamaModels() {
+        let currentEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !currentEndpoint.isEmpty else { return }
+        
         Task {
             do {
-                if let names = try await llmService.fetchAvailableModels() {
+                // Create a temporary client with the current input endpoint to fetch models
+                let tempClient = OllamaClient(endpoint: currentEndpoint, modelName: "temp")
+                if let names = try await tempClient.fetchAvailableModels() {
                     await MainActor.run {
                         self.ollamaModels = names
                         if !names.contains(modelName) && !names.isEmpty {
