@@ -1,8 +1,8 @@
 import Foundation
 
 /// State of a loaded document in the context
-public struct DocumentContext: Identifiable, Sendable, Codable {
-    public let id = UUID()
+public struct DocumentContext: Identifiable, Sendable, Codable, Equatable {
+    public var id = UUID()
     public let path: String
     public let content: String
     public let fileSize: Int

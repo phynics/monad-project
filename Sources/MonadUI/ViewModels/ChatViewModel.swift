@@ -257,6 +257,7 @@ public final class ChatViewModel {
 
                 // Update debug info for the user message
                 messages[userMessageIndex].recalledMemories = contextMemories // Log what was actually injected
+                messages[userMessageIndex].recalledDocuments = contextDocuments
                 messages[userMessageIndex].debugInfo = .userMessage(
                     rawPrompt: initialRawPrompt, 
                     contextMemories: contextData.memories,

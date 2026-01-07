@@ -18,6 +18,7 @@ public struct MessageBubble: View {
     @State private var showingDebugInfo = false
     @State private var showingSubagentInfo = false
     @State private var selectedMemory: Memory?
+    @State private var selectedDocument: DocumentContext?
 
     public init(message: Message) {
         self.message = message
@@ -148,10 +149,10 @@ public struct MessageBubble: View {
                                         .padding(.top, 4)
                                     }
 
-                                    // Memories section for user messages
-                                    if let recalled = message?.recalledMemories, !recalled.isEmpty {
-                                        HStack(spacing: 4) {
-                                            ForEach(recalled) { memory in
+                                    // Context section for user messages
+                                    if let memories = message?.recalledMemories, !memories.isEmpty {
+                                        FlowLayout(spacing: 4) {
+                                            ForEach(memories) { memory in
                                                 Button(action: { selectedMemory = memory }) {
                                                     HStack(spacing: 3) {
                                                         Image(systemName: "brain.head.profile")
@@ -170,6 +171,29 @@ public struct MessageBubble: View {
                                             }
                                         }
                                         .padding(.top, 4)
+                                    }
+
+                                    if let docs = message?.recalledDocuments, !docs.isEmpty {
+                                        FlowLayout(spacing: 4) {
+                                            ForEach(docs) { doc in
+                                                Button(action: { selectedDocument = doc }) {
+                                                    HStack(spacing: 3) {
+                                                        Image(systemName: "doc.text.fill")
+                                                            .font(.system(size: 7))
+                                                        Text(doc.path.split(separator: "/").last?.description ?? doc.path)
+                                                            .font(.system(size: 8, weight: .bold))
+                                                            .lineLimit(1)
+                                                    }
+                                                    .padding(.horizontal, 6)
+                                                    .padding(.vertical, 3)
+                                                    .background(role == .user ? Color.white.opacity(0.2) : Color.blue.opacity(0.1))
+                                                    .foregroundColor(role == .user ? .white : .blue)
+                                                    .cornerRadius(4)
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
+                                        }
+                                        .padding(.top, 2)
                                     }
                                 }
                                 .padding(12)
@@ -348,6 +372,9 @@ public struct MessageBubble: View {
             .sheet(item: $selectedMemory) { memory in
                 MemoryDetailView(memory: memory)
             }
+            .sheet(item: $selectedDocument) { doc in
+                DocumentContextDetailView(document: doc)
+            }
         }
     }
 
@@ -504,5 +531,55 @@ struct SubagentContextView: View {
                 }
             }
         }
+    }
+}
+
+// Document Context Detail View
+struct DocumentContextDetailView: View {
+    let document: DocumentContext
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Path") {
+                    Text(document.path)
+                        .font(.body)
+                        .monospaced()
+                }
+                
+                Section("Status") {
+                    LabeledContent("View Mode", value: document.viewMode.rawValue.capitalized)
+                    LabeledContent("Size", value: ByteCountFormatter.string(fromByteCount: Int64(document.fileSize), countStyle: .file))
+                    if document.viewMode == .excerpt {
+                        LabeledContent("Offset", value: "\(document.excerptOffset)")
+                        LabeledContent("Length", value: "\(document.excerptLength)")
+                    }
+                    LabeledContent("Pinned", value: document.isPinned ? "Yes" : "No")
+                }
+                
+                if let summary = document.summary {
+                    Section("Summary") {
+                        Text(summary)
+                            .font(.body)
+                    }
+                }
+                
+                Section("Content (\(document.viewMode.rawValue.capitalized))") {
+                    Text(document.visibleContent)
+                        .font(.system(.caption, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .navigationTitle("Document Context")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .frame(minWidth: 500, minHeight: 400)
     }
 }
