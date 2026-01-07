@@ -66,12 +66,12 @@ public struct Message: Identifiable, Equatable, Sendable {
 
     /// Content cleaned for UI display (removes <tool_call> tags)
     public var displayContent: String {
-        // Pattern to match <tool_call>...</tool_call> tags
-        let pattern = "<tool_call>(.*?)</tool_call>"
+        // Pattern to match <tool_call>...</tool_call> tags, optionally wrapped in code blocks
+        let pattern = "(?:```(?:xml)?\\s*)?<tool_call>(.*?)</tool_call>(?:\\s*```)?"
 
         guard
             let regex = try? NSRegularExpression(
-                pattern: pattern, options: .dotMatchesLineSeparators)
+                pattern: pattern, options: [.dotMatchesLineSeparators, .caseInsensitive])
         else {
             return content
         }

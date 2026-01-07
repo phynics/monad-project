@@ -288,8 +288,8 @@ public struct MessageBubble: View {
     private var displayContent: String {
         if isStreaming {
             // Clean up tool call tags from streaming content
-            let pattern = "<tool_call>(.*?)</tool_call>|<tool_call>(.*)"
-            guard let regex = try? NSRegularExpression(pattern: pattern, options: .dotMatchesLineSeparators) else {
+            let pattern = "(?:```(?:xml)?\\s*)?<tool_call>(.*?)</tool_call>(?:\\s*```)?|<tool_call>(.*)"
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators, .caseInsensitive]) else {
                 return streamingContent
             }
             let nsString = streamingContent as NSString

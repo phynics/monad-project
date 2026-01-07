@@ -273,13 +273,17 @@ public class StreamingParser {
         var cleanText = text
         var toolCalls: [ToolCall] = []
 
-        // Match <tool_call>...</tool_call> blocks
-        // Note: Using a simpler regex that works with dotMatchesLineSeparators
-        let pattern = "<tool_call>(.*?)</tool_call>"
+        // Match <tool_call>...</tool_call> blocks, optionally wrapped in markdown code blocks
+        // The pattern handles:
+        // 1. Optional opening code fence (e.g. ```xml)
+        // 2. The <tool_call>...</tool_call> block
+        // 3. Optional closing code fence (```)
+        // We use non-greedy matching .*? for content
+        let pattern = "(?:```(?:xml)?\\s*)?<tool_call>(.*?)</tool_call>(?:\\s*```)?"
 
         guard
             let regex = try? NSRegularExpression(
-                pattern: pattern, options: [.dotMatchesLineSeparators])
+                pattern: pattern, options: [.dotMatchesLineSeparators, .caseInsensitive])
         else {
             return (text, [])
         }
@@ -290,6 +294,7 @@ public class StreamingParser {
         // Iterate matches in reverse to replace content without messing up ranges
         for match in matches.reversed() {
             let fullRange = match.range
+            // Group 1 captures the content inside <tool_call>...</tool_call>
             let contentRange = match.range(at: 1)
 
             let jsonString = nsString.substring(with: contentRange).trimmingCharacters(
@@ -303,7 +308,7 @@ public class StreamingParser {
                 Logger.parser.error("Failed to parse tool call JSON: \(jsonString)")
             }
 
-            // Remove the tool call block from the text
+            // Remove the tool call block (including surrounding code blocks) from the text
             cleanText = (cleanText as NSString).replacingCharacters(in: fullRange, with: "")
         }
 
