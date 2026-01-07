@@ -13,7 +13,7 @@ struct PromptBuilderRegressionTests {
         let builder = PromptBuilder()
         let history = [Message(content: "Hello", role: .user)]
 
-        let (messages, _) = await builder.buildPrompt(
+        let (messages, _, _) = await builder.buildPrompt(
             contextNotes: [],
             chatHistory: history,
             userQuery: ""
@@ -39,7 +39,7 @@ struct PromptBuilderRegressionTests {
         let builder = PromptBuilder()
         let history = [Message(content: "Hello", role: .user)]
 
-        let (messages, _) = await builder.buildPrompt(
+        let (messages, _, _) = await builder.buildPrompt(
             contextNotes: [],
             chatHistory: history,
             userQuery: "World"
@@ -59,7 +59,7 @@ struct PromptBuilderRegressionTests {
         let history = [Message(content: "Hi", role: .user)]
         let query = "UNIQUE_QUERY_STRING"
 
-        let (messages, _) = await builder.buildPrompt(
+        let (messages, _, _) = await builder.buildPrompt(
             contextNotes: [],
             chatHistory: history,
             userQuery: query

@@ -78,7 +78,7 @@ public struct LaunchSubagentTool: Tool, @unchecked Sendable {
         
         // Execute subagent call
         // We use chatStreamWithContext but with a fresh history and only these documents
-        let (stream, _) = await llmService.chatStreamWithContext(
+        let (stream, _, _) = await llmService.chatStreamWithContext(
             userQuery: prompt,
             contextNotes: [], // Subagent starts fresh? Or should it inherit notes? Let's say fresh for "focused" task.
             documents: subagentDocs,

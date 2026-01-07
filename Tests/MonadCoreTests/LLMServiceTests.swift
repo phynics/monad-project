@@ -36,7 +36,7 @@ struct LLMServiceTests {
             Message(content: "Previous user message", role: .user)
         ]
 
-        let (messages, rawPrompt) = await promptBuilder.buildPrompt(
+        let (messages, rawPrompt, _) = await promptBuilder.buildPrompt(
             systemInstructions: "System rules",
             contextNotes: notes,
             tools: [],
@@ -65,7 +65,7 @@ struct LLMServiceTests {
                 role: .user)
         }
 
-        let (messages, _) = await promptBuilder.buildPrompt(
+        let (messages, _, _) = await promptBuilder.buildPrompt(
             contextNotes: [],
             chatHistory: largeHistory,
             userQuery: "Trigger truncation"

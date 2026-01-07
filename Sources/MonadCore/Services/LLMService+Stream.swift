@@ -14,18 +14,22 @@ extension LLMService {
         systemInstructions: String? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil,
         useFastModel: Bool = false
-    ) async -> (stream: AsyncThrowingStream<ChatStreamResult, Error>, rawPrompt: String) {
+    ) async -> (
+        stream: AsyncThrowingStream<ChatStreamResult, Error>, 
+        rawPrompt: String,
+        structuredContext: [String: String]
+    ) {
         let clientToUse = useFastModel ? (getFastClient() ?? getClient()) : getClient()
         
         guard let client = clientToUse else {
             let stream = AsyncThrowingStream<ChatStreamResult, Error> { continuation in
                 continuation.finish(throwing: LLMServiceError.notConfigured)
             }
-            return (stream, "Error: Not configured")
+            return (stream, "Error: Not configured", [:])
         }
 
         // Build prompt with all components
-        let (messages, rawPrompt) = await promptBuilder.buildPrompt(
+        let (messages, rawPrompt, structuredContext) = await promptBuilder.buildPrompt(
             systemInstructions: systemInstructions,
             contextNotes: contextNotes,
             documents: documents,
@@ -39,7 +43,7 @@ extension LLMService {
         let toolParams = tools.isEmpty ? nil : tools.map { $0.toToolParam() }
         let stream = await client.chatStream(messages: messages, tools: toolParams, responseFormat: responseFormat)
 
-        return (stream, rawPrompt)
+        return (stream, rawPrompt, structuredContext)
     }
 
     /// Stream chat responses (low-level API)

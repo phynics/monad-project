@@ -245,7 +245,7 @@ public final class ChatViewModel {
                 let contextMemories = injectedMemories
                 
                 // 2. Perform an initial call to get the raw prompt for the user message debug info
-                let (_, initialRawPrompt) = await llmService.chatStreamWithContext(
+                let (_, initialRawPrompt, structuredContext) = await llmService.chatStreamWithContext(
                     userQuery: prompt,
                     contextNotes: contextData.notes,
                     documents: contextDocuments,
@@ -263,7 +263,8 @@ public final class ChatViewModel {
                     queryVector: contextData.queryVector,
                     augmentedQuery: contextData.augmentedQuery,
                     semanticResults: contextData.semanticResults,
-                    tagResults: contextData.tagResults
+                    tagResults: contextData.tagResults,
+                    structuredContext: structuredContext
                 )
 
                 // 3. Start the conversation loop
@@ -289,7 +290,7 @@ public final class ChatViewModel {
     // Removed fetchRelevantMemories as it is now in ContextManager
 
     private func runConversationLoop(
-        userPrompt: String?, 
+        userPrompt: String?,
         initialRawPrompt: String?,
         contextData: ContextData
     ) async throws {
@@ -327,7 +328,7 @@ public final class ChatViewModel {
             let contextMemories = injectedMemories
 
             // 2. Call LLM with empty userQuery, relying on chatHistory
-            let (stream, _) = await llmService.chatStreamWithContext(
+            let (stream, _, _) = await llmService.chatStreamWithContext(
                 userQuery: "",
                 contextNotes: contextNotes,
                 documents: contextDocuments,
@@ -389,3 +390,48 @@ public final class ChatViewModel {
         currentTask = nil
         isLoading = false
     }
+
+    private func handleCancellation() {
+        logger.notice("Generation cancelled by user")
+        if !streamingCoordinator.streamingContent.isEmpty {
+            let assistantMessage = Message(
+                content: streamingCoordinator.streamingContent + "\n\n[Generation cancelled]",
+                role: .assistant,
+                think: streamingCoordinator.streamingThinking.isEmpty
+                    ? nil
+                    : streamingCoordinator.streamingThinking
+            )
+            messages.append(assistantMessage)
+        }
+        streamingCoordinator.stopStreaming()
+        currentTask = nil
+        isLoading = false
+    }
+
+    public func cancelGeneration() {
+        currentTask?.cancel()
+        currentTask = nil
+    }
+
+    public func archiveConversation(confirmationDismiss: @escaping () -> Void) {
+        Task {
+            do {
+                try await conversationArchiver.archive(messages: messages)
+                logger.info("Conversation archived")
+                messages = []
+                errorMessage = nil
+                confirmationDismiss()
+            } catch {
+                let msg = "Failed to archive: \(error.localizedDescription)"
+                logger.error("\(msg)")
+                errorMessage = msg
+            }
+        }
+    }
+
+    public func clearConversation() {
+        logger.debug("Clearing conversation")
+        messages = []
+        errorMessage = nil
+    }
+}

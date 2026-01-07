@@ -35,13 +35,20 @@ public struct Message: Identifiable, Equatable, Sendable {
     
     /// Context used for subagent execution (if applicable)
     public var subagentContext: SubagentContext?
+    
+    /// For user messages: structured map of prompt sections (e.g. "system" -> content)
+    public var structuredContext: [String: String]?
+    
+    /// Whether this message is a system summary/truncation notice
+    public var isSummary: Bool
 
     public init(
         content: String, role: MessageRole, think: String? = nil, toolCalls: [ToolCall]? = nil,
         debugInfo: MessageDebugInfo? = nil,
         gatheringProgress: ContextGatheringProgress? = nil,
         recalledMemories: [Memory]? = nil,
-        subagentContext: SubagentContext? = nil
+        subagentContext: SubagentContext? = nil,
+        isSummary: Bool = false
     ) {
         self.content = content
         self.role = role
@@ -51,6 +58,7 @@ public struct Message: Identifiable, Equatable, Sendable {
         self.gatheringProgress = gatheringProgress
         self.recalledMemories = recalledMemories
         self.subagentContext = subagentContext
+        self.isSummary = isSummary
     }
 
     public enum MessageRole: String, Sendable {
@@ -170,6 +178,9 @@ public struct MessageDebugInfo: Equatable, Sendable {
     
     /// Subagent context info
     public var subagentContext: SubagentContext?
+    
+    /// For user messages: structured map of prompt sections (e.g. "system" -> content)
+    public var structuredContext: [String: String]?
 
     public static func userMessage(
         rawPrompt: String,
@@ -178,7 +189,8 @@ public struct MessageDebugInfo: Equatable, Sendable {
         queryVector: [Double]? = nil,
         augmentedQuery: String? = nil,
         semanticResults: [SemanticSearchResult]? = nil,
-        tagResults: [Memory]? = nil
+        tagResults: [Memory]? = nil,
+        structuredContext: [String: String]? = nil
     ) -> MessageDebugInfo {
         MessageDebugInfo(
             rawPrompt: rawPrompt,
@@ -192,7 +204,8 @@ public struct MessageDebugInfo: Equatable, Sendable {
             queryVector: queryVector,
             augmentedQuery: augmentedQuery,
             semanticResults: semanticResults,
-            tagResults: tagResults
+            tagResults: tagResults,
+            structuredContext: structuredContext
         )
     }
 
@@ -217,7 +230,8 @@ public struct MessageDebugInfo: Equatable, Sendable {
             augmentedQuery: nil,
             semanticResults: nil,
             tagResults: nil,
-            subagentContext: subagentContext
+            subagentContext: subagentContext,
+            structuredContext: nil
         )
     }
 }

@@ -1,5 +1,6 @@
 import MonadCore
 import SwiftUI
+import RegexBuilder
 
 #if os(macOS)
     import AppKit
@@ -15,6 +16,7 @@ public struct MessageBubble: View {
 
     @State private var isThinkingExpanded = false
     @State private var showingDebugInfo = false
+    @State private var showingSubagentInfo = false
     @State private var selectedMemory: Memory?
 
     public init(message: Message) {
@@ -32,249 +34,287 @@ public struct MessageBubble: View {
     }
 
     public var body: some View {
-        HStack {
-            if role == .user {
+        if message?.isSummary == true {
+            HStack {
+                Spacer()
+                Text(message?.content ?? "")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(8)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+                    .multilineTextAlignment(.center)
                 Spacer()
             }
+            .padding(.vertical, 4)
+        } else {
+            HStack {
+                if role == .user {
+                    Spacer()
+                }
 
-            VStack(alignment: role == .user ? .trailing : .leading, spacing: 4) {
-                VStack(alignment: .leading, spacing: 0) {
-                    // Thinking section
-                    if hasThinking {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Button(action: { withAnimation { isThinkingExpanded.toggle() } }) {
-                                HStack(spacing: 3) {
-                                    Image(
-                                        systemName: isThinkingExpanded
-                                            ? "chevron.down" : "chevron.right"
-                                    )
-                                    .font(.system(size: 8))
-                                    if isStreaming && !isThinkingFinished {
-                                        ProgressView()
-                                            .scaleEffect(0.3)
-                                            .frame(width: 8, height: 8)
+                VStack(alignment: role == .user ? .trailing : .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        // Thinking section
+                        if hasThinking {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Button(action: { withAnimation { isThinkingExpanded.toggle() } }) {
+                                    HStack(spacing: 3) {
+                                        Image(
+                                            systemName: isThinkingExpanded
+                                                ? "chevron.down" : "chevron.right"
+                                        )
+                                        .font(.system(size: 8))
+                                        if isStreaming && !isThinkingFinished {
+                                            ProgressView()
+                                                .scaleEffect(0.3)
+                                                .frame(width: 8, height: 8)
+                                        }
+                                        Image(systemName: "brain")
+                                            .font(.system(size: 9))
+                                        Text(
+                                            isStreaming && !isThinkingFinished
+                                                ? "Thinking..." : "Thinking"
+                                        )
+                                        .font(.system(size: 10))
+                                        Spacer()
                                     }
-                                    Image(systemName: "brain")
-                                        .font(.system(size: 9))
-                                    Text(
-                                        isStreaming && !isThinkingFinished
-                                            ? "Thinking..." : "Thinking"
-                                    )
-                                    .font(.system(size: 10))
-                                    Spacer()
-                                }
-                                .foregroundColor(.secondary)
-                                .opacity(0.5)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 4)
-
-                            if isThinkingExpanded {
-                                Text(displayThinking)
-                                    .font(.system(size: 10))
                                     .foregroundColor(.secondary)
-                                    .opacity(0.8)
-                                    .padding(.horizontal, 12)
-                                    .padding(.bottom, 2)
-                            }
-                        }
-
-                        if hasContent {
-                            Divider()
-                                .padding(.horizontal, 8)
-                                .opacity(0.2)
-                        }
-                    }
-
-                    // Main content
-                    if hasContent {
-                        HStack(alignment: .bottom, spacing: 0) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(displayContent)
-                                
-                                // Context gathering progress for user messages
-                                if role == .user, let progress = message?.gatheringProgress, progress != .complete {
-                                    HStack(spacing: 4) {
-                                        ProgressView()
-                                            .scaleEffect(0.4)
-                                            .frame(width: 10, height: 10)
-                                            .tint(.white)
-                                        
-                                        Text(progress.rawValue)
-                                            .font(.system(size: 8, weight: .medium, design: .monospaced))
-                                            .textCase(.uppercase)
-                                            .opacity(0.8)
-                                    }
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.black.opacity(0.2))
-                                    .cornerRadius(4)
-                                    .padding(.top, 4)
+                                    .opacity(0.5)
+                                    .contentShape(Rectangle())
                                 }
+                                .buttonStyle(.plain)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
 
-                                // Memories section for user messages
-                                if let recalled = message?.recalledMemories, !recalled.isEmpty {
-                                    HStack(spacing: 4) {
-                                        ForEach(recalled) { memory in
-                                            Button(action: { selectedMemory = memory }) {
-                                                HStack(spacing: 3) {
-                                                    Image(systemName: "brain.head.profile")
-                                                        .font(.system(size: 7))
-                                                    Text(memory.title)
-                                                        .font(.system(size: 8, weight: .bold))
-                                                        .lineLimit(1)
-                                                }
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 3)
-                                                .background(role == .user ? Color.white.opacity(0.2) : Color.blue.opacity(0.1))
-                                                .foregroundColor(role == .user ? .white : .blue)
-                                                .cornerRadius(4)
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
-                                    }
-                                    .padding(.top, 4)
+                                if isThinkingExpanded {
+                                    Text(displayThinking)
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.secondary)
+                                        .opacity(0.8)
+                                        .padding(.horizontal, 12)
+                                        .padding(.bottom, 2)
                                 }
                             }
-                            .padding(12)
 
-                            if isStreaming {
-                                Text("▋")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.blue)
-                                    .padding(.bottom, 12)
-                                    .padding(.trailing, 8)
-                                    .opacity(0.7)
-                                    .modifier(BlinkingModifier())
+                            if hasContent {
+                                Divider()
+                                    .padding(.horizontal, 8)
+                                    .opacity(0.2)
                             }
                         }
-                    }
 
-                    // Tool Calls
-                    if let toolCalls = message?.toolCalls, !toolCalls.isEmpty {
+                        // Main content
                         if hasContent {
-                            Divider().padding(.horizontal, 8).opacity(0.2)
-                        }
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(toolCalls) { toolCall in
+                            HStack(alignment: .bottom, spacing: 0) {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Image(systemName: "wrench.and.screwdriver.fill")
-                                            .font(.caption)
-                                        Text("Tool Used: \(toolCall.name)")
-                                            .font(.caption)
-                                            .bold()
-                                    }
-
-                                    if !toolCall.arguments.isEmpty {
-                                        ForEach(
-                                            toolCall.arguments.sorted(by: { $0.key < $1.key }),
-                                            id: \.key
-                                        ) { key, value in
-                                            Text("\(key): \(String(describing: value))")
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
-                                                .monospaced()
-                                                .lineLimit(1)
-                                        }
-                                        .padding(.leading, 20)
-                                    }
+                                    Text(displayContent)
                                     
-                                    // UI Bling: Show in Finder for filesystem paths
-                                    if (toolCall.name == "ls" || toolCall.name == "find"),
-                                       let path = toolCall.arguments["path"]?.value as? String {
-                                        Button(action: {
-                                            #if os(macOS)
-                                            let url = URL(fileURLWithPath: path)
-                                            NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
-                                            #endif
-                                        }) {
+                                    // Subagent Context Bling
+                                    if let _ = message?.subagentContext {
+                                        Button(action: { showingSubagentInfo = true }) {
                                             HStack(spacing: 4) {
-                                                Image(systemName: "folder.fill")
-                                                Text("Show in Finder")
+                                                Image(systemName: "person.2.fill")
+                                                Text("Subagent Context")
                                             }
                                             .font(.caption2)
-                                            .foregroundColor(.blue)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(Color.purple.opacity(0.1))
+                                            .foregroundColor(.purple)
+                                            .cornerRadius(8)
                                         }
                                         .buttonStyle(.plain)
-                                        .padding(.leading, 20)
+                                        .padding(.top, 4)
+                                    }
+                                    
+                                    // Context gathering progress for user messages
+                                    if role == .user, let progress = message?.gatheringProgress, progress != .complete {
+                                        HStack(spacing: 4) {
+                                            ProgressView()
+                                                .scaleEffect(0.4)
+                                                .frame(width: 10, height: 10)
+                                                .tint(.white)
+                                            
+                                            Text(progress.rawValue)
+                                                .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                                .textCase(.uppercase)
+                                                .opacity(0.8)
+                                        }
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.black.opacity(0.2))
+                                        .cornerRadius(4)
+                                        .padding(.top, 4)
+                                    }
+
+                                    // Memories section for user messages
+                                    if let recalled = message?.recalledMemories, !recalled.isEmpty {
+                                        HStack(spacing: 4) {
+                                            ForEach(recalled) { memory in
+                                                Button(action: { selectedMemory = memory }) {
+                                                    HStack(spacing: 3) {
+                                                        Image(systemName: "brain.head.profile")
+                                                            .font(.system(size: 7))
+                                                        Text(memory.title)
+                                                            .font(.system(size: 8, weight: .bold))
+                                                            .lineLimit(1)
+                                                    }
+                                                    .padding(.horizontal, 6)
+                                                    .padding(.vertical, 3)
+                                                    .background(role == .user ? Color.white.opacity(0.2) : Color.blue.opacity(0.1))
+                                                    .foregroundColor(role == .user ? .white : .blue)
+                                                    .cornerRadius(4)
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
+                                        }
                                         .padding(.top, 4)
                                     }
                                 }
-                                .foregroundColor(.secondary)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.secondary.opacity(0.1))
-                                .cornerRadius(8)
+                                .padding(12)
+
+                                if isStreaming {
+                                    Text("▋")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(.blue)
+                                        .padding(.bottom, 12)
+                                        .padding(.trailing, 8)
+                                        .opacity(0.7)
+                                        .modifier(BlinkingModifier())
+                                }
                             }
                         }
-                        .padding(8)
-                    }
 
-                    if isStreaming && !hasThinking && !hasContent {
-                        // Loading state
-                        HStack(spacing: 8) {
-                            ProgressView()
-                                .scaleEffect(0.7)
-                            Text("Monad is thinking...")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                        // Tool Calls
+                        if let toolCalls = message?.toolCalls, !toolCalls.isEmpty {
+                            if hasContent {
+                                Divider().padding(.horizontal, 8).opacity(0.2)
+                            }
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(toolCalls) { toolCall in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack {
+                                            Image(systemName: "wrench.and.screwdriver.fill")
+                                                .font(.caption)
+                                            Text("Tool Used: \(toolCall.name)")
+                                                .font(.caption)
+                                                .bold()
+                                        }
+
+                                        if !toolCall.arguments.isEmpty {
+                                            ForEach(
+                                                toolCall.arguments.sorted(by: { $0.key < $1.key }),
+                                                id: \.key
+                                            ) { key, value in
+                                                Text("\(key): \(String(describing: value))")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.secondary)
+                                                    .monospaced()
+                                                    .lineLimit(1)
+                                            }
+                                            .padding(.leading, 20)
+                                        }
+                                        
+                                        // UI Bling: Show in Finder for filesystem paths
+                                        if (toolCall.name == "ls" || toolCall.name == "find"),
+                                           let path = toolCall.arguments["path"]?.value as? String {
+                                            Button(action: {
+                                                #if os(macOS)
+                                                let url = URL(fileURLWithPath: path)
+                                                NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
+                                                #endif
+                                            }) {
+                                                HStack(spacing: 4) {
+                                                    Image(systemName: "folder.fill")
+                                                    Text("Show in Finder")
+                                                }
+                                                .font(.caption2)
+                                                .foregroundColor(.blue)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .padding(.leading, 20)
+                                            .padding(.top, 4)
+                                        }
+                                    }
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.secondary.opacity(0.1))
+                                    .cornerRadius(8)
+                                }
+                            }
+                            .padding(8)
                         }
-                        .padding(16)
+
+                        if isStreaming && !hasThinking && !hasContent {
+                            // Loading state
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                Text("Monad is thinking...")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(16)
+                        }
+                    }
+                    .background(backgroundColor)
+                    .foregroundColor(textColor)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isStreaming ? Color.blue.opacity(0.1) : Color.clear, lineWidth: 1)
+                    )
+
+                    if let timestamp = message?.timestamp {
+                        Text(timestamp, style: .time)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    } else if isStreaming {
+                        Text("Streaming...")
+                            .font(.caption2)
+                            .foregroundColor(.blue.opacity(0.6))
+                            .padding(.leading, 4)
                     }
                 }
-                .background(backgroundColor)
-                .foregroundColor(textColor)
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isStreaming ? Color.blue.opacity(0.1) : Color.clear, lineWidth: 1)
-                )
 
-                if let timestamp = message?.timestamp {
-                    Text(timestamp, style: .time)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                } else if isStreaming {
-                    Text("Streaming...")
-                        .font(.caption2)
-                        .foregroundColor(.blue.opacity(0.6))
-                        .padding(.leading, 4)
+                if role == .assistant {
+                    Spacer()
                 }
             }
+            .contextMenu {
+                if let message = message {
+                    if message.debugInfo != nil {
+                        Button("Show Debug Info") {
+                            showingDebugInfo = true
+                        }
+                    }
 
-            if role == .assistant {
-                Spacer()
-            }
-        }
-        .contextMenu {
-            if let message = message {
-                if message.debugInfo != nil {
-                    Button("Show Debug Info") {
-                        showingDebugInfo = true
+                    Button("Copy Content") {
+                        #if os(macOS)
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(message.content, forType: .string)
+                        #else
+                            UIPasteboard.general.string = message.content
+                        #endif
                     }
                 }
-
-                Button("Copy Content") {
-                    #if os(macOS)
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(message.content, forType: .string)
-                    #else
-                        UIPasteboard.general.string = message.content
-                    #endif
+            }
+            .sheet(isPresented: $showingDebugInfo) {
+                if let message = message, let debugInfo = message.debugInfo {
+                    MessageDebugView(message: message, debugInfo: debugInfo)
                 }
             }
-        }
-        .sheet(isPresented: $showingDebugInfo) {
-            if let message = message, let debugInfo = message.debugInfo {
-                MessageDebugView(message: message, debugInfo: debugInfo)
+            .sheet(isPresented: $showingSubagentInfo) {
+                if let context = message?.subagentContext {
+                    SubagentContextView(context: context)
+                }
             }
-        }
-        .sheet(item: $selectedMemory) { memory in
-            MemoryDetailView(memory: memory)
+            .sheet(item: $selectedMemory) { memory in
+                MemoryDetailView(memory: memory)
+            }
         }
     }
 
@@ -308,17 +348,35 @@ public struct MessageBubble: View {
 
     private var displayContent: String {
         if isStreaming {
-            // Clean up tool call tags from streaming content
-            let pattern = "(?:```(?:xml)?\\s*)?<tool_call>(.*?)</tool_call>(?:\\s*```)?|<tool_call>(.*)"
-            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators, .caseInsensitive]) else {
-                return streamingContent
+            // Regex for <tool_call>...content...</tool_call>
+            // Handling potential code blocks around it
+            let toolCallPattern = Regex {
+                Optionally {
+                    "```"
+                    Optionally("xml")
+                    ZeroOrMore(.whitespace)
+                }
+                "<tool_call>"
+                ZeroOrMore(.any, .reluctant)
+                "</tool_call>"
+                Optionally {
+                    ZeroOrMore(.whitespace)
+                    "```"
+                }
             }
-            let nsString = streamingContent as NSString
-            return regex.stringByReplacingMatches(
-                in: streamingContent,
-                range: NSRange(location: 0, length: nsString.length),
-                withTemplate: ""
-            ).trimmingCharacters(in: .whitespacesAndNewlines)
+            .dotMatchesNewlines()
+            
+            // Regex for open <tool_call>... (at the end)
+            let openToolCallPattern = Regex {
+                "<tool_call>"
+                ZeroOrMore(.any)
+            }
+            .dotMatchesNewlines()
+
+            return streamingContent
+                .replacing(toolCallPattern, with: "")
+                .replacing(openToolCallPattern, with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return message?.displayContent ?? ""
     }
@@ -366,5 +424,52 @@ struct BlinkingModifier: ViewModifier {
                     isVisible.toggle()
                 }
             }
+    }
+}
+
+// Subagent Context View
+struct SubagentContextView: View {
+    let context: SubagentContext
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Prompt") {
+                    Text(context.prompt)
+                        .font(.body)
+                }
+                
+                Section("Documents") {
+                    if context.documents.isEmpty {
+                        Text("No documents")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(context.documents, id: \.self) { path in
+                            HStack {
+                                Image(systemName: "doc.text")
+                                Text(path)
+                            }
+                        }
+                    }
+                }
+                
+                if let raw = context.rawResponse {
+                    Section("Raw Output") {
+                        Text(raw)
+                            .font(.caption)
+                            .monospaced()
+                    }
+                }
+            }
+            .navigationTitle("Subagent Context")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }

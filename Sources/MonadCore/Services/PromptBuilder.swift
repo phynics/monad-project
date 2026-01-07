@@ -15,15 +15,7 @@ public actor PromptBuilder {
     }
 
     /// Build a complete prompt with all components
-    /// - Parameters:
-    ///   - systemInstructions: Base system instructions (defaults to built-in)
-    ///   - contextNotes: Always-append notes
-    ///   - documents: Loaded documents in context
-    ///   - memories: Relevant memories found via semantic search
-    ///   - tools: Available tools
-    ///   - chatHistory: Previous messages in conversation
-    ///   - userQuery: Current user message
-    /// - Returns: Tuple of (messages for LLM, debug raw prompt string)
+    /// - Returns: Tuple of (messages for LLM, debug raw prompt string, structured prompt sections)
     public func buildPrompt(
         systemInstructions: String? = nil,
         contextNotes: [Note],
@@ -32,8 +24,13 @@ public actor PromptBuilder {
         tools: [Tool] = [],
         chatHistory: [Message],
         userQuery: String
-    ) async -> (messages: [ChatQuery.ChatCompletionMessageParam], rawPrompt: String) {
+    ) async -> (
+        messages: [ChatQuery.ChatCompletionMessageParam], 
+        rawPrompt: String, 
+        structuredContext: [String: String]
+    ) {
 
+        // ... (existing component building logic)
         // Build components in priority order
         var components: [any PromptSection] = []
 
@@ -52,7 +49,6 @@ public actor PromptBuilder {
         }
         
         // Memories (Semantic Context)
-        // Aggregate memories from current turn and previous user messages in history
         var allMemories = memories
         for msg in chatHistory {
             if let memories = msg.debugInfo?.contextMemories {
@@ -94,10 +90,39 @@ public actor PromptBuilder {
             components: components
         )
 
-        // Generate debug prompt
+        // Generate structured context for debug
+        let structuredContext = await generateStructuredContext(components: components, chatHistory: chatHistory)
+        
+        // Generate raw string from structured context (for backward compatibility/easy viewing)
+        // Order by component priority? generateStructuredContext returns a Dict, so order is lost.
+        // We should re-iterate components to build raw string to preserve order.
         let rawPrompt = await generateDebugPrompt(components: components, chatHistory: chatHistory)
 
-        return (messages, rawPrompt)
+        return (messages, rawPrompt, structuredContext)
+    }
+
+    /// Generate structured map of section content
+    private func generateStructuredContext(
+        components: [any PromptSection],
+        chatHistory: [Message]
+    ) async -> [String: String] {
+        var context: [String: String] = [:]
+
+        for component in components {
+            if component.sectionId == "chat_history" {
+                if !chatHistory.isEmpty {
+                    let history = chatHistory.map { msg in
+                        "[\(msg.role.rawValue.uppercased())] \(msg.content)"
+                    }.joined(separator: "\n\n")
+                    context["Chat History"] = history
+                }
+            } else if let content = await component.generateContent() {
+                // Map sectionId to display title? Or just use ID.
+                // Using ID is safer for programmatic access, UI can map to title.
+                context[component.sectionId] = content
+            }
+        }
+        return context
     }
 
     /// Generate human-readable raw prompt for debugging
@@ -238,7 +263,8 @@ public actor PromptBuilder {
                     let skippedCount = messages.count - result.count
                     let summary = Message(
                         content: "[System: History truncated. \(skippedCount) earlier messages hidden. Use `view_chat_history` tool to retrieve them.]",
-                        role: .system
+                        role: .system,
+                        isSummary: true
                     )
                     result.insert(summary, at: 0)
                 }
