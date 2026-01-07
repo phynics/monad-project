@@ -25,9 +25,8 @@ public actor OllamaClient {
         
         // Use a custom configuration with longer timeout for local network robustness
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 60 // 60 seconds
-        config.timeoutIntervalForResource = 300 // 5 minutes
-        // Enable wait for connectivity to handle transient network/resolution issues
+        config.timeoutIntervalForRequest = 30 // Reduced for better UI response
+        config.timeoutIntervalForResource = 300 
         config.waitsForConnectivity = true
         self.session = URLSession(configuration: config)
     }

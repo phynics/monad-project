@@ -15,8 +15,7 @@ public final class ChatViewModel {
     public var errorMessage: String?
     
     // Startup Logic
-    public var showingStartupChoice = false
-    public var lastArchivedSession: ConversationSession?
+    // showingStartupChoice removed as we now auto-load latest
 
     public let llmService: LLMService
     public let persistenceManager: PersistenceManager
@@ -30,7 +29,7 @@ public final class ChatViewModel {
     // These must be preserved!
     public let streamingCoordinator: StreamingCoordinator
     public var toolExecutor: ToolExecutor?
-    public let conversationArchiver: ConversationArchiver
+    public let conversationArchiver: ConversationArchiver // Kept for embedding optimization/indexing if needed
 
     private let logger = Logger.chat
     
@@ -95,42 +94,32 @@ public final class ChatViewModel {
     
     private func checkStartupState() async {
         do {
-            if let last = try await persistenceManager.getLastArchivedSession() {
-                self.lastArchivedSession = last
-                self.showingStartupChoice = true
+            if let latest = try await persistenceManager.fetchLatestSession() {
+                try await persistenceManager.loadSession(id: latest.id)
+                messages = persistenceManager.uiMessages
             } else {
-                // No archived session, just start a new one
+                // No sessions, start new
                 try await persistenceManager.createNewSession()
             }
         } catch {
             logger.error("Failed to check startup state: \(error.localizedDescription)")
+            // Fallback to new session
+            try? await persistenceManager.createNewSession()
         }
     }
     
-    public func continueLastSession() {
-        guard let session = lastArchivedSession else { return }
-        Task {
-            do {
-                try await persistenceManager.unarchiveSession(session)
-                messages = persistenceManager.uiMessages
-                showingStartupChoice = false
-            } catch {
-                errorMessage = "Failed to continue session: \(error.localizedDescription)"
-            }
-        }
-    }
+    // Removed continueLastSession as it's now default behavior
     
-    public func startNewSession(deleteOld: Bool) {
+    public func startNewSession(deleteOld: Bool = false) {
         Task {
             do {
-                if deleteOld, let session = lastArchivedSession {
+                if deleteOld, let session = persistenceManager.currentSession {
                     try await persistenceManager.deleteSession(id: session.id)
                 }
-                // Just create new, old remains archived if not deleted
+                // Create new persistent session
                 try await persistenceManager.createNewSession()
                 messages = []
                 activeMemories = [] // Clear active memories on new session
-                showingStartupChoice = false
             } catch {
                 errorMessage = "Failed to start new session: \(error.localizedDescription)"
             }
@@ -268,6 +257,13 @@ public final class ChatViewModel {
                     tagResults: contextData.tagResults,
                     structuredContext: structuredContext
                 )
+                
+                // Persist the user message now that we have context data (memories)
+                try? await persistenceManager.addMessage(
+                    role: .user,
+                    content: prompt,
+                    recalledMemories: contextData.memories.map { $0.memory }
+                )
 
                 // 3. Start the conversation loop
                 try await runConversationLoop(
@@ -378,6 +374,15 @@ public final class ChatViewModel {
                 || assistantMessage.toolCalls != nil
             {
                 messages.append(assistantMessage)
+                
+                // Persist assistant message
+                try? await persistenceManager.addMessage(
+                    role: .assistant,
+                    content: assistantMessage.content
+                )
+                
+                // Check if we need to auto-generate a title
+                generateTitleIfNeeded()
 
                 // Execute tool calls if present
                 if let toolCalls = assistantMessage.toolCalls, !toolCalls.isEmpty,
@@ -388,6 +393,8 @@ public final class ChatViewModel {
                     let toolResults = await executor.executeAll(toolCalls)
                     isExecutingTools = false
                     messages.append(contentsOf: toolResults)
+                    
+                    // Note: We currently don't persist tool outputs as ConversationMessage doesn't support .tool role yet.
 
                     // Continue loop to send tool results back to LLM
                     shouldContinue = true
@@ -429,25 +436,21 @@ public final class ChatViewModel {
     }
 
     public func archiveConversation(confirmationDismiss: @escaping () -> Void) {
+        // "Archive" now effectively means "Start New Conversation"
+        // We trigger the archiver in the background for memory indexing/optimization
+        // but we don't wait for it to clear the UI.
+        let messagesToArchive = messages
         Task {
-            do {
-                try await conversationArchiver.archive(messages: messages)
-                logger.info("Conversation archived")
-                messages = []
-                errorMessage = nil
-                confirmationDismiss()
-            } catch {
-                let msg = "Failed to archive: \(error.localizedDescription)"
-                logger.error("\(msg)")
-                errorMessage = msg
-            }
+            try? await conversationArchiver.archive(messages: messagesToArchive)
         }
+        
+        startNewSession(deleteOld: false)
+        confirmationDismiss()
     }
 
     public func clearConversation() {
         logger.debug("Clearing conversation")
-        messages = []
-        errorMessage = nil
+        startNewSession(deleteOld: true)
     }
 
     public func retry() {
@@ -530,6 +533,27 @@ public final class ChatViewModel {
                 streamingCoordinator.stopStreaming()
                 isLoading = false
                 currentTask = nil
+            }
+        }
+    }
+    
+    private func generateTitleIfNeeded() {
+        // Generate title after 3 messages (usually User + Assistant + User)
+        // Check if we already have a custom title (not "New Conversation")
+        guard let session = persistenceManager.currentSession,
+              session.title == "New Conversation",
+              messages.count >= 3 else {
+            return
+        }
+        
+        Task {
+            do {
+                let title = try await llmService.generateTitle(for: messages)
+                var updatedSession = session
+                updatedSession.title = title
+                try await persistenceManager.updateSession(updatedSession)
+            } catch {
+                logger.warning("Failed to auto-generate title: \(error.localizedDescription)")
             }
         }
     }

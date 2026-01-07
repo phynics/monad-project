@@ -27,6 +27,8 @@ public struct SettingsView<PlatformContent: View>: View {
     @State private var errorMessage: String?
     @State private var showingResetConfirmation = false
     @State private var ollamaModels: [String] = []
+    @State private var openAIModels: [String] = []
+    @State private var isFetchingModels = false
 
     public init(
         llmService: LLMService,
@@ -340,28 +342,33 @@ public struct SettingsView<PlatformContent: View>: View {
     @ViewBuilder
     private var openAICompatibleSettings: some View {
         LabeledContent("API Endpoint") {
-            TextField("", text: $endpoint)
-                .textFieldStyle(.roundedBorder)
-        }
+            HStack {
+                TextField("", text: $endpoint)
+                    .textFieldStyle(.roundedBorder)
 
-        LabeledContent("Model Name") {
-            TextField("", text: $modelName)
-                .textFieldStyle(.roundedBorder)
-        }
-        
-        LabeledContent("Utility Model") {
-            TextField("", text: $utilityModel)
-                .textFieldStyle(.roundedBorder)
-        }
-        
-        LabeledContent("Fast Model") {
-            TextField("", text: $fastModel)
-                .textFieldStyle(.roundedBorder)
+                Button {
+                    fetchOpenAIModels()
+                } label: {
+                    if isFetchingModels {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Text("Fetch Models")
+                    }
+                }
+                .disabled(isFetchingModels || endpoint.isEmpty || apiKey.isEmpty)
+            }
         }
 
         LabeledContent("API Key") {
             SecureField("Required", text: $apiKey)
                 .textFieldStyle(.roundedBorder)
+        }
+
+        Group {
+            openAIModelPicker("Model Name", selection: $modelName)
+            openAIModelPicker("Utility Model", selection: $utilityModel)
+            openAIModelPicker("Fast Model", selection: $fastModel)
         }
     }
     
@@ -372,9 +379,17 @@ public struct SettingsView<PlatformContent: View>: View {
                 TextField("", text: $endpoint)
                     .textFieldStyle(.roundedBorder)
 
-                Button("Fetch Models") {
+                Button {
                     fetchOllamaModels()
+                } label: {
+                    if isFetchingModels {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Text("Fetch Models")
+                    }
                 }
+                .disabled(isFetchingModels || endpoint.isEmpty)
             }
         }
 
@@ -437,6 +452,8 @@ public struct SettingsView<PlatformContent: View>: View {
 
         if provider == .ollama {
             fetchOllamaModels()
+        } else if provider == .openAICompatible {
+            fetchOpenAIModels()
         }
     }
 
@@ -525,9 +542,88 @@ public struct SettingsView<PlatformContent: View>: View {
         }
     }
 
+    @ViewBuilder
+    private func openAIModelPicker(_ label: String, selection: Binding<String>) -> some View {
+        LabeledContent(label) {
+            if openAIModels.isEmpty {
+                TextField("", text: selection)
+                    .textFieldStyle(.roundedBorder)
+            } else {
+                Picker("", selection: selection) {
+                    ForEach(openAIModels, id: \.self) { model in
+                        Text(model).tag(model)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func fetchOpenAIModels() {
+        let currentEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        let currentKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !currentEndpoint.isEmpty && !currentKey.isEmpty else { return }
+        
+        isFetchingModels = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                let components = parseEndpoint(currentEndpoint)
+                let tempClient = OpenAIClient(
+                    apiKey: currentKey,
+                    modelName: "temp",
+                    host: components.host,
+                    port: components.port,
+                    scheme: components.scheme
+                )
+                
+                if let names = try await tempClient.fetchAvailableModels() {
+                    await MainActor.run {
+                        self.openAIModels = names.sorted()
+                        self.isFetchingModels = false
+                        if !modelName.isEmpty && names.contains(modelName) {
+                            // Keep
+                        } else if !names.isEmpty {
+                            modelName = names[0]
+                        }
+                    }
+                } else {
+                    await MainActor.run {
+                        self.isFetchingModels = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.isFetchingModels = false
+                    self.errorMessage = "Failed to fetch models: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+    
+    private func parseEndpoint(_ endpoint: String) -> (host: String, port: Int, scheme: String) {
+        let cleanedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: cleanedEndpoint), let host = url.host else {
+            return ("api.openai.com", 443, "https")
+        }
+
+        let scheme = url.scheme ?? "https"
+        let port: Int
+        if let urlPort = url.port {
+            port = urlPort
+        } else {
+            port = (scheme == "https") ? 443 : 80
+        }
+
+        return (host, port, scheme)
+    }
+
     private func fetchOllamaModels() {
         let currentEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !currentEndpoint.isEmpty else { return }
+        
+        isFetchingModels = true
+        errorMessage = nil
         
         Task {
             do {
@@ -536,13 +632,22 @@ public struct SettingsView<PlatformContent: View>: View {
                 if let names = try await tempClient.fetchAvailableModels() {
                     await MainActor.run {
                         self.ollamaModels = names
-                        if !names.contains(modelName) && !names.isEmpty {
+                        self.isFetchingModels = false
+                        // Don't auto-switch if we already have a valid selection from the list
+                        if !modelName.isEmpty && names.contains(modelName) {
+                            // Keep current
+                        } else if !names.isEmpty {
                             modelName = names[0]
                         }
+                    }
+                } else {
+                    await MainActor.run {
+                        self.isFetchingModels = false
                     }
                 }
             } catch {
                 await MainActor.run {
+                    self.isFetchingModels = false
                     self.errorMessage = "Failed to fetch models: \(error.localizedDescription)"
                 }
             }

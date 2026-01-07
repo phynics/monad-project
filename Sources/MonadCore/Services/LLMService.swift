@@ -24,13 +24,7 @@ extension LLMClientProtocol {
 }
 
 // Conform OpenAIClient (Retroactive - now in same module)
-extension OpenAIClient: LLMClientProtocol {
-    // OpenAI models are usually static in our app or require a different API call. 
-    // For now we use static lists in the UI, so we return nil to indicate "not supported/needed via this client".
-    public func fetchAvailableModels() async throws -> [String]? {
-        return nil
-    }
-}
+extension OpenAIClient: LLMClientProtocol {}
 
 // Conform OllamaClient
 extension OllamaClient: LLMClientProtocol {}

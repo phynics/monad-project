@@ -29,10 +29,19 @@ public final class PersistenceManager {
 
     public func createNewSession(title: String = "New Conversation") async throws {
         logger.info("Creating new session: \(title)")
-        let session = ConversationSession(title: title)
+        // Sessions start archived (persistent) by default per new requirements
+        var session = ConversationSession(title: title)
+        session.isArchived = true
         try await persistence.saveSession(session)
         currentSession = session
         currentMessages = []
+    }
+
+    public func fetchLatestSession() async throws -> ConversationSession? {
+        logger.debug("Fetching latest session")
+        // Fetches all sessions sorted by updatedAt DESC
+        let all = try await persistence.fetchAllSessions(includeArchived: true)
+        return all.first
     }
 
     public func loadSession(id: UUID) async throws {

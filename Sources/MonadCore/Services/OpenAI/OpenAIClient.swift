@@ -78,4 +78,10 @@ extension OpenAIClient {
         }
         return fullContent
     }
+
+    /// Fetch available models from the service
+    public func fetchAvailableModels() async throws -> [String]? {
+        let models = try await client.models()
+        return models.data.map { $0.id }
+    }
 }
