@@ -90,8 +90,30 @@ public struct MessageBubble: View {
                     // Main content
                     if hasContent {
                         HStack(alignment: .bottom, spacing: 0) {
-                            Text(displayContent)
-                                .padding(12)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(displayContent)
+                                
+                                // Context gathering progress for user messages
+                                if role == .user, let progress = message?.gatheringProgress, progress != .complete {
+                                    HStack(spacing: 4) {
+                                        ProgressView()
+                                            .scaleEffect(0.4)
+                                            .frame(width: 10, height: 10)
+                                            .tint(.white)
+                                        
+                                        Text(progress.rawValue)
+                                            .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                            .textCase(.uppercase)
+                                            .opacity(0.8)
+                                    }
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.black.opacity(0.2))
+                                    .cornerRadius(4)
+                                    .padding(.top, 4)
+                                }
+                            }
+                            .padding(12)
 
                             if isStreaming {
                                 Text("▋")

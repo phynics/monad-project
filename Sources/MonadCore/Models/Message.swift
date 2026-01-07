@@ -27,15 +27,20 @@ public struct Message: Identifiable, Equatable, Sendable {
     /// Debug info - not persisted
     public var debugInfo: MessageDebugInfo?
 
+    /// Current progress of context gathering (only for user messages)
+    public var gatheringProgress: ContextGatheringProgress?
+
     public init(
         content: String, role: MessageRole, think: String? = nil, toolCalls: [ToolCall]? = nil,
-        debugInfo: MessageDebugInfo? = nil
+        debugInfo: MessageDebugInfo? = nil,
+        gatheringProgress: ContextGatheringProgress? = nil
     ) {
         self.content = content
         self.role = role
         self.think = think
         self.toolCalls = toolCalls
         self.debugInfo = debugInfo
+        self.gatheringProgress = gatheringProgress
     }
 
     public enum MessageRole: String, Sendable {
@@ -43,6 +48,15 @@ public struct Message: Identifiable, Equatable, Sendable {
         case assistant
         case system
         case tool
+    }
+
+    public enum ContextGatheringProgress: String, Sendable, CaseIterable {
+        case augmenting = "Augmenting Query"
+        case tagging = "Generating Tags"
+        case embedding = "Generating Embedding"
+        case searching = "Searching Memories"
+        case ranking = "Ranking Results"
+        case complete = "Context Ready"
     }
 
     /// Content cleaned for UI display (removes <tool_call> tags)

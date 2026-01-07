@@ -95,6 +95,11 @@ public final class ChatViewModel {
         errorMessage = nil
         logger.debug("Starting message generation for prompt length: \(prompt.count)")
         
+        // Add user message immediately to track progress in UI
+        let userMessage = Message(content: prompt, role: .user, gatheringProgress: .augmenting)
+        messages.append(userMessage)
+        let userMessageIndex = messages.count - 1
+
         // Reset loop detection for the new interaction
         toolExecutor?.reset()
 
@@ -109,8 +114,14 @@ public final class ChatViewModel {
                 
                 let contextData = try await contextManager.gatherContext(
                     for: prompt, 
-                    history: messages,
-                    tagGenerator: tagGenerator
+                    history: Array(messages.prefix(userMessageIndex)), // History before this message
+                    tagGenerator: tagGenerator,
+                    onProgress: { [weak self] progress in
+                        guard let self = self else { return }
+                        Task { @MainActor in
+                            self.messages[userMessageIndex].gatheringProgress = progress
+                        }
+                    }
                 )
                 let enabledTools = tools.getEnabledTools()
                 
@@ -119,14 +130,25 @@ public final class ChatViewModel {
                     userQuery: prompt,
                     contextNotes: contextData.notes,
                     memories: contextData.memories.map { $0.memory },
-                    chatHistory: messages,
+                    chatHistory: Array(messages.prefix(userMessageIndex)),
                     tools: enabledTools
+                )
+
+                // Update debug info for the user message
+                messages[userMessageIndex].debugInfo = .userMessage(
+                    rawPrompt: initialRawPrompt, 
+                    contextMemories: contextData.memories,
+                    generatedTags: contextData.generatedTags,
+                    queryVector: contextData.queryVector,
+                    augmentedQuery: contextData.augmentedQuery,
+                    semanticResults: contextData.semanticResults,
+                    tagResults: contextData.tagResults
                 )
 
                 // 3. Start the conversation loop
                 try await runConversationLoop(
-                    userPrompt: prompt, 
-                    initialRawPrompt: initialRawPrompt,
+                    userPrompt: nil, // Already added
+                    initialRawPrompt: nil,
                     contextData: contextData
                 )
 

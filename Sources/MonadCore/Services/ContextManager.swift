@@ -21,10 +21,12 @@ public actor ContextManager {
     public func gatherContext(
         for query: String,
         history: [Message] = [],
-        tagGenerator: (@Sendable (String) async throws -> [String])? = nil
+        tagGenerator: (@Sendable (String) async throws -> [String])? = nil,
+        onProgress: (@Sendable (Message.ContextGatheringProgress) -> Void)? = nil
     ) async throws -> ContextData {
         logger.debug("Gathering context for query length: \(query.count), history count: \(history.count)")
         
+        onProgress?(.augmenting)
         // Augment query with recent history for better semantic search in multi-turn conversations
         let augmentedQuery: String
         if !history.isEmpty {
@@ -46,10 +48,11 @@ public actor ContextManager {
         }
         
         async let notesTask = persistenceService.fetchAlwaysAppendNotes()
-        async let memoriesDataTask = fetchRelevantMemories(for: augmentedQuery, tagGenerator: tagGenerator)
+        async let memoriesDataTask = fetchRelevantMemories(for: augmentedQuery, tagGenerator: tagGenerator, onProgress: onProgress)
         
         let (notes, memoriesData) = try await (notesTask, memoriesDataTask)
         
+        onProgress?(.complete)
         return ContextData(
             notes: notes,
             memories: memoriesData.memories,
@@ -63,7 +66,8 @@ public actor ContextManager {
     
     private func fetchRelevantMemories(
         for query: String,
-        tagGenerator: (@Sendable (String) async throws -> [String])?
+        tagGenerator: (@Sendable (String) async throws -> [String])?,
+        onProgress: (@Sendable (Message.ContextGatheringProgress) -> Void)?
     ) async throws -> (
         memories: [SemanticSearchResult], 
         tags: [String], 
@@ -78,6 +82,7 @@ public actor ContextManager {
         // 1. Generate Tags (if generator provided)
         var tags: [String] = []
         if let generator = tagGenerator {
+            onProgress?(.tagging)
             // We run this concurrently with embedding if possible, but inside this actor we await.
             // Tag generation might be slow (LLM call), so ideally we'd run parallel.
             // But we need tags for the search.
@@ -87,9 +92,11 @@ public actor ContextManager {
         }
         
         // 2. Generate Embedding
+        onProgress?(.embedding)
         let embedding = try await embeddingService.generateEmbedding(for: query)
         
         // 3. Search using Vector (Semantic) - Top 5 candidates
+        onProgress?(.searching)
         let semanticResults = try await persistenceService.searchMemories(
             embedding: embedding,
             limit: 5,
@@ -100,6 +107,7 @@ public actor ContextManager {
         let tagResults = try await persistenceService.searchMemories(matchingAnyTag: tags)
         
         // 5. Combine and Rank
+        onProgress?(.ranking)
         // We need to calculate similarity for tag-based results that weren't in semantic results
         
         var finalResults: [SemanticSearchResult] = semanticResults.map { 
