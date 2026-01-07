@@ -4,6 +4,7 @@ import SwiftUI
 public struct MessageListView: View {
     public let messages: [Message]
     public let isStreaming: Bool
+    public let isExecutingTools: Bool
     public let streamingThinking: String
     public let streamingContent: String
     public let isLoading: Bool
@@ -15,6 +16,7 @@ public struct MessageListView: View {
     public init(
         messages: [Message],
         isStreaming: Bool,
+        isExecutingTools: Bool = false,
         streamingThinking: String,
         streamingContent: String,
         isLoading: Bool,
@@ -23,6 +25,7 @@ public struct MessageListView: View {
     ) {
         self.messages = messages
         self.isStreaming = isStreaming
+        self.isExecutingTools = isExecutingTools
         self.streamingThinking = streamingThinking
         self.streamingContent = streamingContent
         self.isLoading = isLoading
@@ -52,11 +55,15 @@ public struct MessageListView: View {
                     }
 
                     if isLoading && !isStreaming {
-                        loadingIndicator
+                        loadingIndicator(text: "Connecting...")
+                    }
+                    
+                    if isExecutingTools {
+                        loadingIndicator(text: "Executing tools...")
                     }
 
                     Color.clear
-                        .frame(height: 50)
+                        .frame(height: 80) // Increased height for margin of error and to prevent overlap
                         .id("bottom-marker")
                         .onAppear { isAtBottom = true }
                         .onDisappear { isAtBottom = false }
@@ -138,11 +145,11 @@ public struct MessageListView: View {
         .padding()
     }
 
-    private var loadingIndicator: some View {
+    private func loadingIndicator(text: String) -> some View {
         HStack {
             ProgressView()
                 .scaleEffect(0.8)
-            Text("Connecting...")
+            Text(text)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }

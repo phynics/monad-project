@@ -11,6 +11,7 @@ public final class ChatViewModel {
     public var messages: [Message] = []
     public var activeMemories: [ActiveMemory] = []
     public var isLoading = false
+    public var isExecutingTools = false
     public var errorMessage: String?
     
     // Startup Logic
@@ -373,7 +374,9 @@ public final class ChatViewModel {
                     let executor = toolExecutor
                 {
                     logger.info("Executing \(toolCalls.count) tool calls")
+                    isExecutingTools = true
                     let toolResults = await executor.executeAll(toolCalls)
+                    isExecutingTools = false
                     messages.append(contentsOf: toolResults)
 
                     // Continue loop to send tool results back to LLM

@@ -39,6 +39,7 @@ public struct ContentView: View {
             MessageListView(
                 messages: viewModel.messages,
                 isStreaming: viewModel.isStreaming,
+                isExecutingTools: viewModel.isExecutingTools,
                 streamingThinking: viewModel.streamingThinking,
                 streamingContent: viewModel.streamingContent,
                 isLoading: viewModel.isLoading,
