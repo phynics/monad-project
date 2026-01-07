@@ -177,6 +177,35 @@ public final class PersistenceManager {
         logger.info("Searching archived sessions for: \(query)")
         return try await persistence.searchArchivedSessions(query: query)
     }
+    
+    public func getLastArchivedSession() async throws -> ConversationSession? {
+        logger.debug("Fetching last archived session")
+        // fetchAllSessions includes archived if flag is true, but it fetches ALL.
+        // We should add a specific method in PersistenceService for efficiency, but for now filtering here is acceptable for small DBs.
+        // Or better, let's use the persistence actor's capability if possible.
+        // Actually, fetchAllSessions returns ordered by updatedAt desc.
+        let all = try await persistence.fetchAllSessions(includeArchived: true)
+        return all.first(where: { $0.isArchived })
+    }
+    
+    public func unarchiveSession(_ session: ConversationSession) async throws {
+        logger.info("Unarchiving session: \(session.id)")
+        var updated = session
+        updated.isArchived = false
+        updated.updatedAt = Date()
+        try await persistence.saveSession(updated)
+        
+        // If there was a current session, we should probably archive it or handle it before calling this.
+        // This method just updates the DB state.
+        
+        // Reload lists
+        await loadActiveSessions()
+        await loadArchivedSessions()
+        
+        // Set as current?
+        currentSession = updated
+        currentMessages = try await persistence.fetchMessages(for: session.id)
+    }
 
     // MARK: - Notes Management
 

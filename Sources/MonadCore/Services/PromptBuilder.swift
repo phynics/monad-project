@@ -235,8 +235,9 @@ public actor PromptBuilder {
             } else {
                 // Add summary if we truncated
                 if result.count < messages.count {
+                    let skippedCount = messages.count - result.count
                     let summary = Message(
-                        content: "[Earlier: \(messages.count - result.count) messages]",
+                        content: "[System: History truncated. \(skippedCount) earlier messages hidden. Use `view_chat_history` tool to retrieve them.]",
                         role: .system
                     )
                     result.insert(summary, at: 0)
@@ -247,5 +248,4 @@ public actor PromptBuilder {
 
         return result
     }
-
 }

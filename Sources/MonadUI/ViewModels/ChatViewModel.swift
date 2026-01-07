@@ -11,6 +11,10 @@ public final class ChatViewModel {
     public var messages: [Message] = []
     public var isLoading = false
     public var errorMessage: String?
+    
+    // Startup Logic
+    public var showingStartupChoice = false
+    public var lastArchivedSession: ConversationSession?
 
     public let llmService: LLMService
     public let persistenceManager: PersistenceManager
@@ -42,6 +46,55 @@ public final class ChatViewModel {
             llmService: llmService,
             contextManager: contextManager
         )
+        
+        Task {
+            await checkStartupState()
+        }
+    }
+    
+    // MARK: - Startup Logic
+    
+    private func checkStartupState() async {
+        do {
+            if let last = try await persistenceManager.getLastArchivedSession() {
+                self.lastArchivedSession = last
+                self.showingStartupChoice = true
+            } else {
+                // No archived session, just start a new one
+                try await persistenceManager.createNewSession()
+            }
+        } catch {
+            logger.error("Failed to check startup state: \(error.localizedDescription)")
+        }
+    }
+    
+    public func continueLastSession() {
+        guard let session = lastArchivedSession else { return }
+        Task {
+            do {
+                try await persistenceManager.unarchiveSession(session)
+                messages = persistenceManager.uiMessages
+                showingStartupChoice = false
+            } catch {
+                errorMessage = "Failed to continue session: \(error.localizedDescription)"
+            }
+        }
+    }
+    
+    public func startNewSession(deleteOld: Bool) {
+        Task {
+            do {
+                if deleteOld, let session = lastArchivedSession {
+                    try await persistenceManager.deleteSession(id: session.id)
+                }
+                // Just create new, old remains archived if not deleted
+                try await persistenceManager.createNewSession()
+                messages = []
+                showingStartupChoice = false
+            } catch {
+                errorMessage = "Failed to start new session: \(error.localizedDescription)"
+            }
+        }
     }
 
     public var tools: SessionToolManager {
@@ -51,6 +104,11 @@ public final class ChatViewModel {
 
         let availableTools: [MonadCore.Tool] = [
             SearchArchivedChatsTool(persistenceService: persistenceManager.persistence),
+            ViewChatHistoryTool(persistenceService: persistenceManager.persistence, currentSessionProvider: { [weak self] in
+                await MainActor.run {
+                    return self?.persistenceManager.currentSession?.id
+                }
+            }),
             SearchMemoriesTool(persistenceService: persistenceManager.persistence, embeddingService: llmService.embeddingService),
             CreateMemoryTool(persistenceService: persistenceManager.persistence, embeddingService: llmService.embeddingService),
             SearchNotesTool(persistenceService: persistenceManager.persistence),

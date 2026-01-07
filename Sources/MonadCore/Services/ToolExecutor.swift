@@ -81,26 +81,37 @@ public final class ToolExecutor {
         }
     }
 
-    /// Execute multiple tool calls sequentially
+    /// Execute multiple tool calls concurrently
     public func executeAll(_ toolCalls: [ToolCall]) async -> [Message] {
-        logger.debug("Executing \(toolCalls.count) tool calls sequentially")
-        var results: [Message] = []
-
-        for toolCall in toolCalls {
-            do {
-                let result = try await execute(toolCall)
-                results.append(result)
-            } catch {
-                let errorMessage = Message(
-                    content:
-                        "Failed to execute tool \(toolCall.name): \(error.localizedDescription)",
-                    role: .tool,
-                    think: nil
-                )
-                results.append(errorMessage)
+        logger.debug("Executing \(toolCalls.count) tool calls concurrently")
+        
+        return await withTaskGroup(of: (Int, Message).self) { group in
+            for (index, toolCall) in toolCalls.enumerated() {
+                group.addTask {
+                    do {
+                        // Capture the actor-isolated execute method call properly
+                        // Since we are inside the actor, we can call it directly, but `addTask` closure 
+                        // is non-isolated. We need to await the call on `self`.
+                        let result = try await self.execute(toolCall)
+                        return (index, result)
+                    } catch {
+                        let errorMessage = Message(
+                            content: "Failed to execute tool \(toolCall.name): \(error.localizedDescription)",
+                            role: .tool,
+                            think: nil
+                        )
+                        return (index, errorMessage)
+                    }
+                }
             }
+            
+            var results: [(Int, Message)] = []
+            for await result in group {
+                results.append(result)
+            }
+            
+            // Restore original order
+            return results.sorted { $0.0 < $1.0 }.map { $0.1 }
         }
-
-        return results
     }
 }

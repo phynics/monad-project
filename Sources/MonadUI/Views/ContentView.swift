@@ -91,5 +91,23 @@ public struct ContentView: View {
         } message: {
             Text("This will save the current conversation to your archives.")
         }
+        // Startup Choice
+        .alert("Resume Last Session?", isPresented: $viewModel.showingStartupChoice) {
+            Button("Continue Last Session") {
+                viewModel.continueLastSession()
+            }
+            Button("New Chat (Archive Last)") {
+                viewModel.startNewSession(deleteOld: false)
+            }
+            Button("New Chat (Delete Last)", role: .destructive) {
+                viewModel.startNewSession(deleteOld: true)
+            }
+        } message: {
+            if let last = viewModel.lastArchivedSession {
+                Text("You have an archived session \"\(last.title)\" from \(last.updatedAt.formatted(date: .abbreviated, time: .shortened)).")
+            } else {
+                Text("Would you like to resume your previous session?")
+            }
+        }
     }
 }
