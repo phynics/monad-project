@@ -1,4 +1,5 @@
-import Shared
+import MonadCore
+import MonadUI
 import SwiftUI
 
 @main

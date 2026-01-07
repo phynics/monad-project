@@ -44,6 +44,26 @@ public struct Message: Identifiable, Equatable, Sendable {
         case system
         case tool
     }
+
+    /// Content cleaned for UI display (removes <tool_call> tags)
+    public var displayContent: String {
+        // Pattern to match <tool_call>...</tool_call> tags
+        let pattern = "<tool_call>(.*?)</tool_call>"
+
+        guard
+            let regex = try? NSRegularExpression(
+                pattern: pattern, options: .dotMatchesLineSeparators)
+        else {
+            return content
+        }
+
+        let nsString = content as NSString
+        return regex.stringByReplacingMatches(
+            in: content,
+            range: NSRange(location: 0, length: nsString.length),
+            withTemplate: ""
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 // MARK: - Tool Call

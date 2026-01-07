@@ -1,7 +1,7 @@
 import Foundation
 import OSLog
 import Observation
-import Shared
+import MonadCore
 
 /// A proxy tool that forwards execution to an MCP Client
 @Observable

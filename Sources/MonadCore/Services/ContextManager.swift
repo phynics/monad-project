@@ -15,16 +15,38 @@ public actor ContextManager {
     /// Gather all relevant context for a given user query
     /// - Parameters:
     ///   - query: The user's input text
+    ///   - history: Recent conversation history to provide context for the search
     ///   - tagGenerator: A function to generate tags from the query (e.g. via LLM)
     /// - Returns: Structured context containing notes and memories
     public func gatherContext(
         for query: String,
+        history: [Message] = [],
         tagGenerator: (@Sendable (String) async throws -> [String])? = nil
     ) async throws -> ContextData {
-        logger.debug("Gathering context for query length: \(query.count)")
+        logger.debug("Gathering context for query length: \(query.count), history count: \(history.count)")
+        
+        // Augment query with recent history for better semantic search in multi-turn conversations
+        let augmentedQuery: String
+        if !history.isEmpty {
+            // Take the last few user messages to provide context
+            let historyContext = history
+                .filter { $0.role == .user }
+                .suffix(2)
+                .map { $0.content }
+                .joined(separator: " ")
+            
+            if !historyContext.isEmpty {
+                augmentedQuery = "\(historyContext) \(query)"
+                logger.debug("Augmented query for search: \(augmentedQuery)")
+            } else {
+                augmentedQuery = query
+            }
+        } else {
+            augmentedQuery = query
+        }
         
         async let notesTask = persistenceService.fetchAlwaysAppendNotes()
-        async let memoriesDataTask = fetchRelevantMemories(for: query, tagGenerator: tagGenerator)
+        async let memoriesDataTask = fetchRelevantMemories(for: augmentedQuery, tagGenerator: tagGenerator)
         
         let (notes, memoriesData) = try await (notesTask, memoriesDataTask)
         

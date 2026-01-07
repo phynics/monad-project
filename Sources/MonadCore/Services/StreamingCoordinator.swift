@@ -190,7 +190,7 @@ public final class StreamingCoordinator {
 
         // Create final message
         return Message(
-            content: contentWithoutTools,
+            content: streamingContent,
             role: .assistant,
             // Only include think block if it's not empty
             think: streamingThinking.isEmpty ? nil : streamingThinking,

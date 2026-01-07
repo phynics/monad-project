@@ -1,4 +1,4 @@
-import Shared
+import MonadCore
 import SwiftUI
 
 public struct MCPSettingsView: View {

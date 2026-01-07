@@ -29,49 +29,99 @@ settings:
     ENABLE_HARDENED_RUNTIME: YES
 
 targets:
-  # Core Shared Logic & UI - macOS
-  Shared:
+  # Core Logic - macOS
+  MonadCore:
     type: framework
     platform: macOS
     deploymentTarget:
       macOS: "14.0"
     sources:
-      - path: Sources/Shared
+      - path: Sources/MonadCore
         excludes:
           - "**/.DS_Store"
     dependencies:
+      - sdk: NaturalLanguage.framework
       - package: OpenAI
         product: OpenAI
       - package: GRDB
         product: GRDB
     settings:
       base:
-        PRODUCT_NAME: Shared
-        PRODUCT_BUNDLE_IDENTIFIER: com.monad.shared
+        PRODUCT_NAME: MonadCore
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.core
         SKIP_INSTALL: YES
         INSTALL_PATH: "@rpath"
         DEFINES_MODULE: YES
-        SWIFT_EMIT_LOC_STRINGS: YES
 
-  # Core Shared Logic & UI - iOS
-  Shared-iOS:
+  # Core Logic - iOS
+  MonadCore-iOS:
     type: framework
     platform: iOS
     deploymentTarget:
       iOS: "17.0"
     sources:
-      - path: Sources/Shared
+      - path: Sources/MonadCore
         excludes:
           - "**/.DS_Store"
     dependencies:
+      - sdk: NaturalLanguage.framework
       - package: OpenAI
         product: OpenAI
       - package: GRDB
         product: GRDB
     settings:
       base:
-        PRODUCT_NAME: Shared
-        PRODUCT_BUNDLE_IDENTIFIER: com.monad.shared.ios
+        PRODUCT_NAME: MonadCore
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.core.ios
+        SKIP_INSTALL: YES
+        INSTALL_PATH: "@rpath"
+        DEFINES_MODULE: YES
+
+  # UI - macOS
+  MonadUI:
+    type: framework
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadUI
+        excludes:
+          - "**/.DS_Store"
+    dependencies:
+      - target: MonadCore
+      - package: OpenAI
+        product: OpenAI
+      - package: GRDB
+        product: GRDB
+    settings:
+      base:
+        PRODUCT_NAME: MonadUI
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.ui
+        SKIP_INSTALL: YES
+        INSTALL_PATH: "@rpath"
+        DEFINES_MODULE: YES
+        SWIFT_EMIT_LOC_STRINGS: YES
+
+  # UI - iOS
+  MonadUI-iOS:
+    type: framework
+    platform: iOS
+    deploymentTarget:
+      iOS: "17.0"
+    sources:
+      - path: Sources/MonadUI
+        excludes:
+          - "**/.DS_Store"
+    dependencies:
+      - target: MonadCore-iOS
+      - package: OpenAI
+        product: OpenAI
+      - package: GRDB
+        product: GRDB
+    settings:
+      base:
+        PRODUCT_NAME: MonadUI
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.ui.ios
         SKIP_INSTALL: YES
         INSTALL_PATH: "@rpath"
         DEFINES_MODULE: YES
@@ -88,7 +138,7 @@ targets:
         excludes:
           - "**/.DS_Store"
     dependencies:
-      - target: Shared
+      - target: MonadCore
     settings:
       base:
         PRODUCT_NAME: MonadMCP
@@ -108,7 +158,8 @@ targets:
         excludes:
           - "**/.DS_Store"
     dependencies:
-      - target: Shared
+      - target: MonadCore
+      - target: MonadUI
       - target: MonadMCP
     settings:
       base:
@@ -142,7 +193,8 @@ targets:
         excludes:
           - "**/.DS_Store"
     dependencies:
-      - target: Shared-iOS
+      - target: MonadCore-iOS
+      - target: MonadUI-iOS
     settings:
       base:
         PRODUCT_NAME: MonadAssistant
@@ -160,31 +212,51 @@ targets:
         SWIFT_OPTIMIZATION_LEVEL: "-O"
         CODE_SIGN_STYLE: Automatic
 
-  # Unit Tests (Mostly testing Shared)
-  MonadAssistantTests:
+  # Core Logic Tests
+  MonadCoreTests:
     type: bundle.unit-test
     platform: macOS
     deploymentTarget:
       macOS: "14.0"
     sources:
-      - path: Tests/MonadAssistantTests
+      - path: Tests/MonadCoreTests
     dependencies:
-      - target: Shared
-      - target: MonadMCP
+      - target: MonadCore
+      - package: OpenAI
+        product: OpenAI
+      - package: GRDB
+        product: GRDB
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.monad.assistant-tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.core-tests
+
+  # MCP Tests
+  MonadMCPTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Tests/MonadMCPTests
+    dependencies:
+      - target: MonadMCP
+      - target: MonadCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.mcp-tests
 
 schemes:
   MonadAssistant:
     build:
       targets:
         MonadAssistant: all
-        Shared: all
+        MonadUI: all
+        MonadCore: all
         MonadMCP: all
     test:
       targets:
-        - MonadAssistantTests
+        - MonadCoreTests
+        - MonadMCPTests
     run:
       executable: MonadAssistant
     profile:
@@ -198,7 +270,8 @@ schemes:
     build:
       targets:
         MonadAssistant-iOS: all
-        Shared-iOS: all
+        MonadUI-iOS: all
+        MonadCore-iOS: all
     run:
       executable: MonadAssistant-iOS
     profile:

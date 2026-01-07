@@ -103,7 +103,11 @@ public final class ChatViewModel {
                     try await service.generateTags(for: text)
                 }
                 
-                let contextData = try await contextManager.gatherContext(for: prompt, tagGenerator: tagGenerator)
+                let contextData = try await contextManager.gatherContext(
+                    for: prompt, 
+                    history: messages,
+                    tagGenerator: tagGenerator
+                )
                 let enabledTools = tools.getEnabledTools()
                 
                 // 2. Perform an initial call to get the raw prompt for the user message debug info

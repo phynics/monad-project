@@ -72,70 +72,72 @@ struct MessageDebugView: View {
                             
                             Divider()
                         }
-                        
-                        // Context Memories Section
-                        if let results = debugInfo.contextMemories, !results.isEmpty {
-                            Section {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    ForEach(results, id: \.memory.id) { result in
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            HStack {
-                                                Text(result.memory.title)
-                                                    .font(.headline)
-                                                Spacer()
-                                                if let similarity = result.similarity {
-                                                    Text(String(format: "%.1f%% Match", similarity * 100))
-                                                        .font(.caption)
-                                                        .foregroundStyle(.blue)
-                                                        .padding(.horizontal, 6)
-                                                        .padding(.vertical, 2)
-                                                        .background(Color.blue.opacity(0.1))
-                                                        .cornerRadius(4)
-                                                } else {
-                                                    Text("Keyword Match")
-                                                        .font(.caption)
-                                                        .foregroundStyle(.secondary)
-                                                }
-                                            }
-                                            
-                                            Text(result.memory.content)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(2)
-                                            
-                                            if !result.memory.tagArray.isEmpty {
-                                                Text(result.memory.tagArray.joined(separator: ", "))
-                                                    .font(.caption2)
-                                                    .italic()
-                                            }
-                                            
-                                            // Embedding Info
-                                            let vector = result.memory.embeddingVector
-                                            if !vector.isEmpty {
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text("Embedding Vector (\(vector.count) dims):")
-                                                        .font(.system(size: 8))
-                                                        .foregroundStyle(.secondary)
-                                                    Text(vector.prefix(8).map { String(format: "%.3f", $0) }.joined(separator: ", ") + "...")
-                                                        .font(.system(size: 8, design: .monospaced))
-                                                        .foregroundStyle(.secondary)
-                                                }
-                                                .padding(.top, 4)
+                    }
+
+                    // Context Memories Section
+                    if let results = debugInfo.contextMemories, !results.isEmpty {
+                        Section {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(results, id: \.memory.id) { result in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack {
+                                            Text(result.memory.title)
+                                                .font(.headline)
+                                            Spacer()
+                                            if let similarity = result.similarity {
+                                                Text(String(format: "%.1f%% Match", similarity * 100))
+                                                    .font(.caption)
+                                                    .foregroundStyle(.blue)
+                                                    .padding(.horizontal, 6)
+                                                    .padding(.vertical, 2)
+                                                    .background(Color.blue.opacity(0.1))
+                                                    .cornerRadius(4)
+                                            } else {
+                                                Text("Keyword Match")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
                                             }
                                         }
-                                        .padding(8)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(Color.blue.opacity(0.05))
-                                        .cornerRadius(6)
+                                        
+                                        Text(result.memory.content)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(2)
+                                        
+                                        if !result.memory.tagArray.isEmpty {
+                                            Text(result.memory.tagArray.joined(separator: ", "))
+                                                .font(.caption2)
+                                                .italic()
+                                        }
+                                        
+                                        // Embedding Info
+                                        let vector = result.memory.embeddingVector
+                                        if !vector.isEmpty {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text("Embedding Vector (\(vector.count) dims):")
+                                                    .font(.system(size: 8))
+                                                    .foregroundStyle(.secondary)
+                                                Text(vector.prefix(8).map { String(format: "%.3f", $0) }.joined(separator: ", ") + "...")
+                                                    .font(.system(size: 8, design: .monospaced))
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            .padding(.top, 4)
+                                        }
                                     }
+                                    .padding(8)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color.blue.opacity(0.05))
+                                    .cornerRadius(6)
                                 }
-                            } header: {
-                                SectionHeader(title: "Debug: Context Memories")
                             }
-                            
-                            Divider()
+                        } header: {
+                            SectionHeader(title: "Debug: Context Memories")
                         }
                         
+                        Divider()
+                    }
+
+                    if let rawPrompt = debugInfo.rawPrompt {
                         Section {
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {

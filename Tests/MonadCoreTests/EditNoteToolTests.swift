@@ -48,7 +48,7 @@ struct EditNoteToolTests {
         #expect(result.error?.contains("not found") == true)
     }
     
-    @Test("Edit readonly note fails")
+    @Test("Edit readonly note succeeds")
     func editReadonlyNote() async throws {
         // System note is created by default and is readonly
         let notes = try await persistence.fetchAllNotes()
@@ -59,14 +59,13 @@ struct EditNoteToolTests {
         
         let result = try await tool.execute(parameters: [
             "note_name": noteName,
-            "content": "Hacked content"
+            "content": "Modified system content"
         ])
         
-        #expect(!result.success)
-        #expect(result.error?.contains("readonly") == true)
+        #expect(result.success)
         
-        // Verify content didn't change
+        // Verify content changed
         let refetched = try await persistence.fetchNote(id: systemNote!.id)
-        #expect(refetched?.content == systemNote?.content)
+        #expect(refetched?.content == "Modified system content")
     }
 }

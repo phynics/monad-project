@@ -236,7 +236,20 @@ public struct MessageBubble: View {
     }
 
     private var displayContent: String {
-        isStreaming ? streamingContent : (message?.content ?? "")
+        if isStreaming {
+            // Clean up tool call tags from streaming content
+            let pattern = "<tool_call>(.*?)</tool_call>|<tool_call>(.*)"
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: .dotMatchesLineSeparators) else {
+                return streamingContent
+            }
+            let nsString = streamingContent as NSString
+            return regex.stringByReplacingMatches(
+                in: streamingContent,
+                range: NSRange(location: 0, length: nsString.length),
+                withTemplate: ""
+            ).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return message?.displayContent ?? ""
     }
 
     private var backgroundColor: Color {
