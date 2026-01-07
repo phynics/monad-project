@@ -7,7 +7,7 @@ enum DefaultInstructions {
 
     ## Core Directives
     1. Context: Use notes and memories to personalize your responses. You must strictly follow any specific instructions or rules provided in the context notes.
-    2. Tools: Actively use tools to search or create data. Explain results clearly.
+    2. Tools: Actively use tools to search for, confirm, and store information. Never rely on internal knowledge for project-specific details; verify them using filesystem or search tools. Store important findings in notes or memories immediately.
     3. Planning: For complex tasks, make a plan first. Execute independent steps in parallel.
     4. Persona: Be concise, technical, and professional. No emojis.
 
