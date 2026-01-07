@@ -1,7 +1,6 @@
 import MonadCore
 import SwiftUI
 import RegexBuilder
-import MarkdownUI
 
 #if os(macOS)
     import AppKit
@@ -110,8 +109,7 @@ public struct MessageBubble: View {
                         if hasContent {
                             HStack(alignment: .bottom, spacing: 0) {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Markdown(displayContent)
-                                        .markdownTheme(.gitHub)
+                                    Text(attributedString(from: displayContent))
                                         .background(Color.clear)
                                         .textSelection(.enabled)
                                     
@@ -438,6 +436,14 @@ public struct MessageBubble: View {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return message?.displayContent ?? ""
+    }
+
+    private func attributedString(from markdown: String) -> AttributedString {
+        do {
+            return try AttributedString(markdown: markdown, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
+        } catch {
+            return AttributedString(markdown)
+        }
     }
 
     private var backgroundColor: Color {

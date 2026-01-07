@@ -15,7 +15,6 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main"),
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
-        .package(url: "https://github.com/gonzalezreal/swift-markdown-ui", from: "2.4.0"),
     ],
     targets: [
         .target(
@@ -37,8 +36,7 @@ let package = Package(
                 "MonadCore",
                 "MonadMCP",
                 .product(name: "OpenAI", package: "OpenAI"),
-                .product(name: "GRDB", package: "GRDB.swift"),
-                .product(name: "MarkdownUI", package: "swift-markdown-ui")
+                .product(name: "GRDB", package: "GRDB.swift")
             ],
             path: "Sources/MonadUI"
         ),
