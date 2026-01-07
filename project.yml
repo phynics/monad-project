@@ -227,6 +227,7 @@ targets:
       - path: Tests/MonadCoreTests
     dependencies:
       - target: MonadCore
+      - target: MonadUI
       - package: OpenAI
         product: OpenAI
       - package: GRDB

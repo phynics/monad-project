@@ -62,8 +62,12 @@ public struct MessageListView: View {
                         loadingIndicator(text: "Executing tools...")
                     }
 
+                    // Bottom margin to prevent content being hidden by the floating button
+                    Spacer(minLength: 80)
+                        .id("bottom-margin")
+
                     Color.clear
-                        .frame(height: 80) // Increased height for margin of error and to prevent overlap
+                        .frame(height: 2)
                         .id("bottom-marker")
                         .onAppear { isAtBottom = true }
                         .onDisappear { isAtBottom = false }
@@ -71,31 +75,24 @@ public struct MessageListView: View {
                 .padding()
             }
             .overlay(alignment: .bottomTrailing) {
-                Group {
-                    if isAtBottom {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 8, height: 8)
-                            .transition(.opacity)
-                    } else {
-                        Button(action: {
-                            withAnimation {
-                                proxy.scrollTo("bottom-marker", anchor: .bottom)
-                            }
-                        }) {
-                            Image(systemName: "chevron.down.circle.fill")
-                                .resizable()
-                                .frame(width: 24, height: 24)
-                                .foregroundColor(.blue)
-                                .background(Color(.windowBackgroundColor))
-                                .clipShape(Circle())
-                                .shadow(radius: 2)
+                if !isAtBottom {
+                    Button(action: {
+                        withAnimation {
+                            proxy.scrollTo("bottom-marker", anchor: .bottom)
                         }
-                        .buttonStyle(.plain)
-                        .transition(.scale.combined(with: .opacity))
+                    }) {
+                        Image(systemName: "chevron.down.circle.fill")
+                            .resizable()
+                            .frame(width: 24, height: 24)
+                            .foregroundColor(.blue)
+                            .background(Color(.windowBackgroundColor))
+                            .clipShape(Circle())
+                            .shadow(radius: 2)
                     }
+                    .buttonStyle(.plain)
+                    .transition(.scale.combined(with: .opacity))
+                    .padding(16)
                 }
-                .padding(16)
             }
             .onChange(of: messages.count) { _ in
                 if isAtBottom {

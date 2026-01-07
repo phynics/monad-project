@@ -48,7 +48,10 @@ public struct ContentView: View {
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            ChatErrorMessageView(errorMessage: $viewModel.errorMessage)
+            ChatErrorMessageView(
+                errorMessage: $viewModel.errorMessage,
+                onRetry: viewModel.retry
+            )
 
             ChatInputView(viewModel: viewModel)
         }

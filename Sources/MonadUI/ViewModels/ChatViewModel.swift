@@ -438,4 +438,88 @@ public final class ChatViewModel {
         messages = []
         errorMessage = nil
     }
+
+    public func retry() {
+        guard errorMessage != nil else { return }
+        
+        // Find last user message
+        guard let lastUserMessageIndex = messages.lastIndex(where: { $0.role == .user }) else {
+            errorMessage = "Nothing to retry."
+            return
+        }
+        
+        let prompt = messages[lastUserMessageIndex].content
+        errorMessage = nil
+        isLoading = true
+        
+        // Remove everything after this user message (including any failed assistant/tool messages)
+        messages = Array(messages.prefix(through: lastUserMessageIndex))
+        
+        currentTask = Task {
+            do {
+                // Define tag generator closure
+                let service = llmService
+                let tagGenerator: @Sendable (String) async throws -> [String] = { text in
+                    try await service.generateTags(for: text)
+                }
+                
+                // Re-gather context
+                let contextData = try await contextManager.gatherContext(
+                    for: prompt,
+                    history: Array(messages.prefix(lastUserMessageIndex)),
+                    tagGenerator: tagGenerator,
+                    onProgress: { [weak self] progress in
+                        guard let self = self else { return }
+                        Task { @MainActor in
+                            self.messages[lastUserMessageIndex].gatheringProgress = progress
+                        }
+                    }
+                )
+                
+                updateActiveMemories(with: contextData.memories.map { $0.memory })
+                
+                let enabledTools = tools.getEnabledTools()
+                let contextDocuments = injectedDocuments
+                let contextMemories = injectedMemories
+                
+                // Refresh debug info
+                let (_, rawPrompt, structuredContext) = await llmService.chatStreamWithContext(
+                    userQuery: prompt,
+                    contextNotes: contextData.notes,
+                    documents: contextDocuments,
+                    memories: contextMemories,
+                    chatHistory: Array(messages.prefix(lastUserMessageIndex)),
+                    tools: enabledTools
+                )
+                
+                messages[lastUserMessageIndex].recalledMemories = contextMemories
+                messages[lastUserMessageIndex].recalledDocuments = contextDocuments
+                messages[lastUserMessageIndex].debugInfo = .userMessage(
+                    rawPrompt: rawPrompt,
+                    contextMemories: contextData.memories,
+                    generatedTags: contextData.generatedTags,
+                    queryVector: contextData.queryVector,
+                    augmentedQuery: contextData.augmentedQuery,
+                    semanticResults: contextData.semanticResults,
+                    tagResults: contextData.tagResults,
+                    structuredContext: structuredContext
+                )
+                
+                try await runConversationLoop(
+                    userPrompt: nil,
+                    initialRawPrompt: nil,
+                    contextData: contextData
+                )
+            } catch is CancellationError {
+                handleCancellation()
+            } catch {
+                let msg = "Failed to retry: \(error.localizedDescription)"
+                logger.error("\(msg)")
+                errorMessage = msg
+                streamingCoordinator.stopStreaming()
+                isLoading = false
+                currentTask = nil
+            }
+        }
+    }
 }

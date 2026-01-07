@@ -27,10 +27,10 @@ public actor ContextManager {
         logger.debug("Gathering context for query length: \(query.count), history count: \(history.count)")
         
         onProgress?(.augmenting)
-        // Augment query with recent history for better semantic search in multi-turn conversations
-        let augmentedQuery: String
+        // Augment query with recent history for better tag generation
+        let tagGenerationContext: String
         if !history.isEmpty {
-            // Take the last few user messages to provide context
+            // Take the last few user messages to provide context for tags
             let historyContext = history
                 .filter { $0.role == .user }
                 .suffix(2)
@@ -38,17 +38,22 @@ public actor ContextManager {
                 .joined(separator: " ")
             
             if !historyContext.isEmpty {
-                augmentedQuery = "\(historyContext) \(query)"
-                logger.debug("Augmented query for search: \(augmentedQuery)")
+                tagGenerationContext = "\(historyContext) \(query)"
+                logger.debug("Augmented tag context: \(tagGenerationContext)")
             } else {
-                augmentedQuery = query
+                tagGenerationContext = query
             }
         } else {
-            augmentedQuery = query
+            tagGenerationContext = query
         }
         
         async let notesTask = persistenceService.fetchAlwaysAppendNotes()
-        async let memoriesDataTask = fetchRelevantMemories(for: augmentedQuery, tagGenerator: tagGenerator, onProgress: onProgress)
+        async let memoriesDataTask = fetchRelevantMemories(
+            for: query, // Use raw query for embedding to keep it focused
+            tagContext: tagGenerationContext, // Use augmented context for tags
+            tagGenerator: tagGenerator, 
+            onProgress: onProgress
+        )
         
         let (notes, memoriesData) = try await (notesTask, memoriesDataTask)
         
@@ -58,7 +63,7 @@ public actor ContextManager {
             memories: memoriesData.memories,
             generatedTags: memoriesData.tags,
             queryVector: memoriesData.vector,
-            augmentedQuery: augmentedQuery,
+            augmentedQuery: tagGenerationContext,
             semanticResults: memoriesData.semanticResults,
             tagResults: memoriesData.tagResults
         )
@@ -66,6 +71,7 @@ public actor ContextManager {
     
     private func fetchRelevantMemories(
         for query: String,
+        tagContext: String,
         tagGenerator: (@Sendable (String) async throws -> [String])?,
         onProgress: (@Sendable (Message.ContextGatheringProgress) -> Void)?
     ) async throws -> (
@@ -83,11 +89,7 @@ public actor ContextManager {
         var tags: [String] = []
         if let generator = tagGenerator {
             onProgress?(.tagging)
-            // We run this concurrently with embedding if possible, but inside this actor we await.
-            // Tag generation might be slow (LLM call), so ideally we'd run parallel.
-            // But we need tags for the search.
-            // Let's run embedding and tag generation in parallel.
-            tags = try await generator(query)
+            tags = try await generator(tagContext)
             logger.debug("Generated tags: \(tags)")
         }
         

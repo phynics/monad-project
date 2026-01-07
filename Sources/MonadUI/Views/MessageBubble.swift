@@ -131,26 +131,6 @@ public struct MessageBubble: View {
                                         .buttonStyle(.plain)
                                         .padding(.top, 4)
                                     }
-                                    
-                                    // Context gathering progress for user messages
-                                    if role == .user, let progress = message?.gatheringProgress, progress != .complete {
-                                        HStack(spacing: 4) {
-                                            ProgressView()
-                                                .scaleEffect(0.4)
-                                                .frame(width: 10, height: 10)
-                                                .tint(.white)
-                                            
-                                            Text(progress.rawValue)
-                                                .font(.system(size: 8, weight: .medium, design: .monospaced))
-                                                .textCase(.uppercase)
-                                                .opacity(0.8)
-                                        }
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Color.black.opacity(0.2))
-                                        .cornerRadius(4)
-                                        .padding(.top, 4)
-                                    }
 
                                     // Context section for user messages
                                     if let memories = message?.recalledMemories, !memories.isEmpty {
@@ -296,35 +276,50 @@ public struct MessageBubble: View {
                     )
 
                     // Tags and Stats (Under the bubble)
-                    if !isStreaming {
-                        if let tags = message?.tags, !tags.isEmpty {
+                    HStack(spacing: 4) {
+                        if role == .user, let progress = message?.gatheringProgress, progress != .complete {
                             HStack(spacing: 4) {
-                                ForEach(tags, id: \.self) { tag in
-                                    Text("#\(tag)")
-                                        .font(.system(size: 8))
-                                        .foregroundColor(.secondary)
-                                        .padding(.horizontal, 4)
-                                        .padding(.vertical, 1)
-                                        .background(Color.gray.opacity(0.1))
-                                        .cornerRadius(4)
-                                }
+                                ProgressView()
+                                    .scaleEffect(0.3)
+                                    .frame(width: 8, height: 8)
+                                
+                                Text(progress.rawValue)
+                                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                    .textCase(.uppercase)
                             }
                             .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Color.blue.opacity(0.1))
+                            .foregroundColor(.blue)
+                            .cornerRadius(4)
                         }
 
-                        if let stats = message?.stats, (stats.tokensPerSecond != nil || stats.totalTokens != nil) {
-                            HStack(spacing: 8) {
-                                if let tps = stats.tokensPerSecond {
-                                    Text(String(format: "%.1f tokens/sec", tps))
-                                }
-                                if let total = stats.totalTokens {
-                                    Text("\(total) tokens")
-                                }
+                        if let tags = message?.tags, !tags.isEmpty {
+                            ForEach(tags, id: \.self) { tag in
+                                Text("#\(tag)")
+                                    .font(.system(size: 8))
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(Color.gray.opacity(0.1))
+                                    .cornerRadius(4)
                             }
-                            .font(.system(size: 8))
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 4)
                         }
+                    }
+                    .padding(.horizontal, 4)
+
+                    if let stats = message?.stats, (stats.tokensPerSecond != nil || stats.totalTokens != nil) {
+                        HStack(spacing: 8) {
+                            if let tps = stats.tokensPerSecond {
+                                Text(String(format: "%.1f tokens/sec", tps))
+                            }
+                            if let total = stats.totalTokens {
+                                Text("\(total) tokens")
+                            }
+                        }
+                        .font(.system(size: 8))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 4)
                     }
 
                     if let timestamp = message?.timestamp {

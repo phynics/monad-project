@@ -11,6 +11,7 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
     public var content: String
     public var timestamp: Date
     public var recalledMemories: String
+    public var memoryId: UUID?
 
     public init(
         id: UUID = UUID(),
@@ -18,7 +19,8 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
         role: MessageRole,
         content: String,
         timestamp: Date = Date(),
-        recalledMemories: String = "[]"
+        recalledMemories: String = "[]",
+        memoryId: UUID? = nil
     ) {
         self.id = id
         self.sessionId = sessionId
@@ -26,6 +28,7 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
         self.content = content
         self.timestamp = timestamp
         self.recalledMemories = recalledMemories
+        self.memoryId = memoryId
     }
 
     public enum MessageRole: String, Codable, Sendable {

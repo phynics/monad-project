@@ -31,17 +31,44 @@ public final class ConversationArchiver {
             try await persistenceManager.createNewSession(title: title)
         }
 
-        // 3. Save all messages
+        // 3. Save and index all messages
         for message in messages {
+            // Index user and assistant messages into memories for future semantic retrieval
+            var memoryId: UUID? = nil
+            if message.role == .user || message.role == .assistant {
+                do {
+                    let tags = try await llmService.generateTags(for: message.content)
+                    let embedding = try await llmService.embeddingService.generateEmbedding(for: message.content)
+                    
+                    let memory = Memory(
+                        title: generateMessageTitle(from: message.content),
+                        content: message.content,
+                        tags: tags,
+                        embedding: embedding
+                    )
+                    try await persistenceManager.saveMemory(memory)
+                    memoryId = memory.id
+                } catch {
+                    print("Failed to index message as memory: \(error)")
+                }
+            }
+
             try await persistenceManager.addMessage(
                 role: ConversationMessage.MessageRole(rawValue: message.role.rawValue) ?? .user,
                 content: message.content,
-                recalledMemories: message.recalledMemories
+                recalledMemories: message.recalledMemories,
+                memoryId: memoryId
             )
         }
 
         // 4. Archive the session
         try await persistenceManager.archiveCurrentSession()
+    }
+
+    /// Generate a short title for a message memory
+    private func generateMessageTitle(from content: String) -> String {
+        let words = content.split(separator: " ").prefix(5)
+        return words.joined(separator: " ") + (words.count < 5 ? "" : "...")
     }
 
     private func evaluateAndAdjustEmbeddings(from messages: [Message]) async {

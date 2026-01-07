@@ -18,7 +18,7 @@ enum DefaultInstructions {
     - History: Use view_chat_history if context is truncated.
 
     ### Filesystem and Documents
-    - Navigation: ls to explore. Common patterns: Sources/, Tests/, Package.swift.
+    - Navigation: ls to explore. When exploring a folder for the first time, look for README.*, Makefile, package.json, Package.swift, requirements.txt, or similar entry points to understand the project structure and build process.
     - Search: find for file patterns, grep for content.
     - Reading: cat for small files. load_document for context-aware coding.
     - Management: Unload documents when done. Use excerpts for large files.

@@ -93,8 +93,9 @@ extension Memory: PromptFormattable {
     public var promptString: String {
         var parts: [String] = []
 
-        // Title
-        parts.append(title)
+        // ID and Title
+        parts.append("ID: \(id.uuidString)")
+        parts.append("Title: \(title)")
 
         // Tags (if present)
         let tags = tagArray
@@ -103,6 +104,7 @@ extension Memory: PromptFormattable {
         }
 
         // Content
+        parts.append("Content:")
         parts.append(content)
 
         return parts.joined(separator: "\n")

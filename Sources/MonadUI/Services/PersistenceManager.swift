@@ -88,7 +88,7 @@ public final class PersistenceManager {
 
     // MARK: - Message Management
 
-    public func addMessage(role: ConversationMessage.MessageRole, content: String, recalledMemories: [Memory]? = nil) async throws {
+    public func addMessage(role: ConversationMessage.MessageRole, content: String, recalledMemories: [Memory]? = nil, memoryId: UUID? = nil) async throws {
         guard let session = currentSession else {
             logger.error("Attempted to add message but no active session")
             throw PersistenceError.noActiveSession
@@ -107,7 +107,8 @@ public final class PersistenceManager {
             sessionId: session.id,
             role: role,
             content: content,
-            recalledMemories: memoriesJson
+            recalledMemories: memoriesJson,
+            memoryId: memoryId
         )
 
         logger.debug("Saving message for session \(session.id.uuidString)")

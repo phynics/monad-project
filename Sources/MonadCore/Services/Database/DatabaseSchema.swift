@@ -40,6 +40,15 @@ public enum DatabaseSchema {
                 }
             }
         }
+
+        // v5: Add memoryId to conversationMessage
+        migrator.registerMigration("v5") { db in
+            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "memoryId" }) {
+                try db.alter(table: "conversationMessage") { t in
+                    t.add(column: "memoryId", .blob).references("memory", onDelete: .setNull)
+                }
+            }
+        }
     }
 
     // MARK: - Conversation Tables
