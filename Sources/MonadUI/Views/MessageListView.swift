@@ -56,12 +56,21 @@ public struct MessageListView: View {
                     }
 
                     Color.clear
-                        .frame(height: 1)
+                        .frame(height: 50)
                         .id("bottom-marker")
                         .onAppear { isAtBottom = true }
                         .onDisappear { isAtBottom = false }
                 }
                 .padding()
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if isAtBottom {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 8, height: 8)
+                        .padding(16)
+                        .transition(.opacity)
+                }
             }
             .onChange(of: messages.count) { _ in
                 if isAtBottom {
