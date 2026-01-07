@@ -64,13 +64,31 @@ public struct MessageListView: View {
                 .padding()
             }
             .overlay(alignment: .bottomTrailing) {
-                if isAtBottom {
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 8, height: 8)
-                        .padding(16)
-                        .transition(.opacity)
+                Group {
+                    if isAtBottom {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 8, height: 8)
+                            .transition(.opacity)
+                    } else {
+                        Button(action: {
+                            withAnimation {
+                                proxy.scrollTo("bottom-marker", anchor: .bottom)
+                            }
+                        }) {
+                            Image(systemName: "chevron.down.circle.fill")
+                                .resizable()
+                                .frame(width: 24, height: 24)
+                                .foregroundColor(.blue)
+                                .background(Color(.windowBackgroundColor))
+                                .clipShape(Circle())
+                                .shadow(radius: 2)
+                        }
+                        .buttonStyle(.plain)
+                        .transition(.scale.combined(with: .opacity))
+                    }
                 }
+                .padding(16)
             }
             .onChange(of: messages.count) { _ in
                 if isAtBottom {
