@@ -27,7 +27,7 @@ public final class ConversationArchiver {
 
         // 2. Create session if needed
         if persistenceManager.currentSession == nil {
-            let title = generateTitle(from: messages)
+            let title = try await llmService.generateTitle(for: messages)
             try await persistenceManager.createNewSession(title: title)
         }
 
@@ -113,14 +113,5 @@ public final class ConversationArchiver {
         } catch {
             print("Failed to evaluate and adjust embeddings: \(error)")
         }
-    }
-
-    /// Generate conversation title from messages
-    private func generateTitle(from messages: [Message]) -> String {
-        if let firstMessage = messages.first(where: { $0.role == .user }) {
-            let words = firstMessage.content.split(separator: " ").prefix(6)
-            return words.joined(separator: " ") + (words.count < 6 ? "" : "...")
-        }
-        return "Conversation at \(Date().formatted(date: .abbreviated, time: .shortened))"
     }
 }

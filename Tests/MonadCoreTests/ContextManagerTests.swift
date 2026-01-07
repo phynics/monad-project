@@ -66,17 +66,3 @@ final class ContextManagerTests: XCTestCase {
         XCTAssertEqual(mockEmbedding.lastInput, "Current query")
     }
 }
-
-final class MockEmbeddingService: EmbeddingService, @unchecked Sendable {
-    var mockEmbedding: [Double] = [0.1, 0.2, 0.3]
-    var lastInput: String?
-    
-    func generateEmbedding(for text: String) async throws -> [Double] {
-        lastInput = text
-        return mockEmbedding
-    }
-    
-    func generateEmbeddings(for texts: [String]) async throws -> [[Double]] {
-        return texts.map { _ in mockEmbedding }
-    }
-}

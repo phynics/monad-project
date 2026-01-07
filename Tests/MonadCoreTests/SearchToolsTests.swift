@@ -62,11 +62,15 @@ struct SearchToolsTests {
         let res1 = try await searchMemoriesTool.execute(parameters: ["query": "Alpha"])
         #expect(res1.success)
         #expect(res1.output.contains("Project Alpha"))
+        #expect(res1.output.contains("ID: \(mem1.id.uuidString)"))
+        #expect(res1.output.contains("Key details about Alpha"))
         
         // Test tag match
         let res2 = try await searchMemoriesTool.execute(parameters: ["query": "personal"])
         #expect(res2.success)
         #expect(res2.output.contains("Vacation"))
+        #expect(res2.output.contains("ID: \(mem2.id.uuidString)"))
+        #expect(res2.output.contains("Hawaii trip details"))
         
         // Test no match
         let res3 = try await searchMemoriesTool.execute(parameters: ["query": "Mars"])

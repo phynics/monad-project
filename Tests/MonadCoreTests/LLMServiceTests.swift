@@ -85,4 +85,28 @@ struct LLMServiceTests {
             _ = try await service.sendMessage("Hello")
         }
     }
+
+    @Test("Test generateTitle method")
+    func titleGeneration() async throws {
+        let mockClient = MockLLMClient()
+        mockClient.nextResponse = "SwiftUI Basics"
+        
+        let service = await LLMService(utilityClient: mockClient)
+        
+        let messages = [
+            Message(content: "How do I use SwiftUI?", role: .user),
+            Message(content: "You use it by declaring views.", role: .assistant)
+        ]
+        
+        let title = try await service.generateTitle(for: messages)
+        #expect(title == "SwiftUI Basics")
+        
+        // Verify transcript was sent in the prompt
+        if let lastMessage = mockClient.lastMessages.last {
+            if case .user(let m) = lastMessage, case .string(let content) = m.content {
+                #expect(content.contains("How do I use SwiftUI?"))
+                #expect(content.contains("You use it by declaring views."))
+            }
+        }
+    }
 }

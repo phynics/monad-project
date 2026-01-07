@@ -57,21 +57,30 @@ public final class LLMService {
     public init(
         storage: ConfigurationStorage = ConfigurationStorage(),
         promptBuilder: PromptBuilder = PromptBuilder(),
-        embeddingService: (any EmbeddingService)? = nil
+        embeddingService: (any EmbeddingService)? = nil,
+        client: (any LLMClientProtocol)? = nil,
+        utilityClient: (any LLMClientProtocol)? = nil,
+        fastClient: (any LLMClientProtocol)? = nil
     ) {
         self.storage = storage
         self.promptBuilder = promptBuilder
         self.embeddingService = embeddingService ?? LocalEmbeddingService()
+        self.client = client
+        self.utilityClient = utilityClient
+        self.fastClient = fastClient
+        
         // Load synchronously on main actor during init
         self.configuration = .openAI
-        self.isConfigured = false
+        self.isConfigured = client != nil // If clients are injected, consider it configured for tests
 
         Task {
             // Migrate configuration if needed
             await storage.migrateIfNeeded()
 
-            // Load configuration
-            await loadConfiguration()
+            // Only load from storage if clients weren't injected
+            if self.client == nil {
+                await loadConfiguration()
+            }
         }
     }
 
@@ -275,6 +284,34 @@ public final class LLMService {
         } catch {
             logger.error("Failed to generate tags: \(error.localizedDescription)")
             return []
+        }
+    }
+
+    /// Generate a concise title for a conversation
+    public func generateTitle(for messages: [Message]) async throws -> String {
+        guard let client = utilityClient ?? client, !messages.isEmpty else {
+            return "New Conversation"
+        }
+
+        let transcript = messages.map { "[\($0.role.rawValue.uppercased())] \($0.content)" }.joined(separator: "\n\n")
+
+        let prompt = """
+        Based on the following conversation transcript, generate a concise, descriptive title (maximum 6 words).
+        Return ONLY the title text, no quotes or additional formatting.
+
+        TRANSCRIPT:
+        \(transcript)
+        """
+
+        do {
+            let response = try await client.sendMessage(prompt, responseFormat: nil)
+            let title = response.trimmingCharacters(in: .whitespacesAndNewlines)
+                .replacingOccurrences(of: "\"", with: "")
+            
+            return title.isEmpty ? "New Conversation" : title
+        } catch {
+            logger.error("Failed to generate title: \(error.localizedDescription)")
+            return "New Conversation"
         }
     }
 

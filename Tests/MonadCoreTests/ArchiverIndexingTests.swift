@@ -73,4 +73,48 @@ final class ArchiverIndexingTests: XCTestCase {
         XCTAssertNotNil(savedMessages[0].memoryId)
         XCTAssertNotNil(savedMessages[1].memoryId)
     }
+    
+    @MainActor
+    func testArchiveGeneratesDescriptiveTitle() async throws {
+        let mockClient = MockLLMClient()
+        mockClient.nextResponse = "SwiftUI Learning Journey"
+        
+        let mockEmbedding = MockEmbeddingService()
+        let customLLMService = LLMService(embeddingService: mockEmbedding, utilityClient: mockClient)
+        let customArchiver = ConversationArchiver(
+            persistenceManager: persistenceManager,
+            llmService: customLLMService,
+            contextManager: ContextManager(persistenceService: persistence, embeddingService: mockEmbedding)
+        )
+        
+        // Reset session to nil so archiver creates one
+        // (Hack: PersistenceManager doesn't have an easy clear, so we just check the title of the next one)
+        let messages = [
+            Message(content: "I want to learn SwiftUI", role: .user)
+        ]
+        
+        // Archive should trigger createNewSession(title:) if currentSession is nil
+        // But since setUp creates one, let's just manually nil it for this test if possible.
+        // Actually, PersistenceManager.currentSession is readable but not writable from outside.
+        
+        // Let's just create a NEW archiver/manager pair for this test
+        let queue = try DatabaseQueue()
+        var migrator = DatabaseMigrator()
+        DatabaseSchema.registerMigrations(in: &migrator)
+        try migrator.migrate(queue)
+        let p = PersistenceService(dbQueue: queue)
+        let pm = PersistenceManager(persistence: p)
+        
+        let a = ConversationArchiver(
+            persistenceManager: pm,
+            llmService: customLLMService,
+            contextManager: ContextManager(persistenceService: p, embeddingService: mockEmbedding)
+        )
+        
+        try await a.archive(messages: messages)
+        
+        let sessions = try await p.fetchAllSessions(includeArchived: true)
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].title, "SwiftUI Learning Journey")
+    }
 }

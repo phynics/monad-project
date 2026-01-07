@@ -5,6 +5,7 @@ import OpenAI
 public actor OllamaClient {
     private let endpoint: URL
     private let modelName: String
+    private let session: URLSession
     private let logger = Logger(subsystem: "com.monad.assistant", category: "ollama-client")
 
     public init(
@@ -13,6 +14,14 @@ public actor OllamaClient {
     ) {
         self.endpoint = URL(string: endpoint) ?? URL(string: "http://localhost:11434")!
         self.modelName = modelName
+        
+        // Use a custom configuration with longer timeout for local network robustness
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 60 // 60 seconds
+        config.timeoutIntervalForResource = 300 // 5 minutes
+        // Enable wait for connectivity to handle transient network/resolution issues
+        config.waitsForConnectivity = true
+        self.session = URLSession(configuration: config)
     }
 
     public func chatStream(
@@ -25,7 +34,7 @@ public actor OllamaClient {
                 do {
                     let request = try buildRequest(messages: messages, tools: tools, responseFormat: responseFormat)
 
-                    let (stream, response) = try await URLSession.shared.bytes(for: request)
+                    let (stream, response) = try await session.bytes(for: request)
 
                     guard let httpResponse = response as? HTTPURLResponse,
                         (200...299).contains(httpResponse.statusCode)
