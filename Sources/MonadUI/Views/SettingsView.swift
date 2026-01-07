@@ -526,21 +526,9 @@ public struct SettingsView<PlatformContent: View>: View {
     }
 
     private func fetchOllamaModels() {
-        guard
-            let url = URL(string: endpoint.trimmingCharacters(in: .whitespacesAndNewlines))?
-                .appendingPathComponent("api/tags")
-        else { return }
-
         Task {
             do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                // Parse logic: {"models": [{"name": "..."}]}
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                    let models = json["models"] as? [[String: Any]]
-                {
-
-                    let names = models.compactMap { $0["name"] as? String }
-
+                if let names = try await llmService.fetchAvailableModels() {
                     await MainActor.run {
                         self.ollamaModels = names
                         if !names.contains(modelName) && !names.isEmpty {
@@ -549,7 +537,9 @@ public struct SettingsView<PlatformContent: View>: View {
                     }
                 }
             } catch {
-                print("Failed to fetch Ollama models: \(error)")
+                await MainActor.run {
+                    self.errorMessage = "Failed to fetch models: \(error.localizedDescription)"
+                }
             }
         }
     }

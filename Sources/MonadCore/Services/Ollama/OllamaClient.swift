@@ -195,6 +195,28 @@ public actor OllamaClient {
         }
         return fullContent
     }
+
+    public func fetchAvailableModels() async throws -> [String]? {
+        let tagsURL = endpoint.appendingPathComponent("api/tags")
+        let request = URLRequest(url: tagsURL)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw LLMServiceError.networkError("Ollama API Error: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+        }
+        
+        struct OllamaTagsResponse: Codable {
+            struct Model: Codable {
+                let name: String
+            }
+            let models: [Model]
+        }
+        
+        let tagsResponse = try JSONDecoder().decode(OllamaTagsResponse.self, from: data)
+        return tagsResponse.models.map { $0.name }
+    }
 }
 
 // MARK: - Internal Models

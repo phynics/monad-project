@@ -12,10 +12,25 @@ public protocol LLMClientProtocol: Sendable {
     ) async -> AsyncThrowingStream<ChatStreamResult, Error>
 
     func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?) async throws -> String
+    
+    /// Optional: Fetch available models from the service. Returns nil if not supported.
+    func fetchAvailableModels() async throws -> [String]?
+}
+
+extension LLMClientProtocol {
+    public func fetchAvailableModels() async throws -> [String]? {
+        return nil
+    }
 }
 
 // Conform OpenAIClient (Retroactive - now in same module)
-extension OpenAIClient: LLMClientProtocol {}
+extension OpenAIClient: LLMClientProtocol {
+    // OpenAI models are usually static in our app or require a different API call. 
+    // For now we use static lists in the UI, so we return nil to indicate "not supported/needed via this client".
+    public func fetchAvailableModels() async throws -> [String]? {
+        return nil
+    }
+}
 
 // Conform OllamaClient
 extension OllamaClient: LLMClientProtocol {}
@@ -153,6 +168,14 @@ public final class LLMService {
         client = nil
         utilityClient = nil
         fastClient = nil
+    }
+
+    /// Fetch available models from the currently configured client
+    public func fetchAvailableModels() async throws -> [String]? {
+        guard let client = client else {
+            return nil
+        }
+        return try await client.fetchAvailableModels()
     }
 
     // MARK: - Private Methods
