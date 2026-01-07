@@ -9,6 +9,7 @@ import MonadCore
 public final class ChatViewModel {
     public var inputText: String = ""
     public var messages: [Message] = []
+    public var activeMemories: [ActiveMemory] = []
     public var isLoading = false
     public var errorMessage: String?
     
@@ -31,6 +32,19 @@ public final class ChatViewModel {
     public let conversationArchiver: ConversationArchiver
 
     private let logger = Logger.chat
+    
+    public var injectedMemories: [Memory] {
+        let pinned = activeMemories.filter { $0.isPinned }
+        let unpinned = activeMemories.filter { !$0.isPinned }
+            .sorted { $0.lastAccessed > $1.lastAccessed }
+            .prefix(llmService.configuration.memoryContextLimit)
+        
+        return (pinned + Array(unpinned)).map { $0.memory }
+    }
+    
+    public var injectedDocuments: [DocumentContext] {
+        return documentManager.getEffectiveDocuments(limit: llmService.configuration.documentContextLimit)
+    }
 
     public init(llmService: LLMService, persistenceManager: PersistenceManager) {
         self.llmService = llmService
@@ -49,6 +63,30 @@ public final class ChatViewModel {
         
         Task {
             await checkStartupState()
+        }
+    }
+    
+    // MARK: - Active Context Management
+    
+    public func toggleMemoryPin(id: UUID) {
+        if let index = activeMemories.firstIndex(where: { $0.id == id }) {
+            activeMemories[index].isPinned.toggle()
+        }
+    }
+    
+    public func removeActiveMemory(id: UUID) {
+        activeMemories.removeAll { $0.id == id }
+    }
+    
+    private func updateActiveMemories(with newMemories: [Memory]) {
+        for memory in newMemories {
+            if let index = activeMemories.firstIndex(where: { $0.id == memory.id }) {
+                // Already active, just update access time
+                activeMemories[index].lastAccessed = Date()
+            } else {
+                // Add new active memory
+                activeMemories.append(ActiveMemory(memory: memory))
+            }
         }
     }
     
@@ -90,6 +128,7 @@ public final class ChatViewModel {
                 // Just create new, old remains archived if not deleted
                 try await persistenceManager.createNewSession()
                 messages = []
+                activeMemories = [] // Clear active memories on new session
                 showingStartupChoice = false
             } catch {
                 errorMessage = "Failed to start new session: \(error.localizedDescription)"
@@ -195,21 +234,28 @@ public final class ChatViewModel {
                         }
                     }
                 )
+                
+                // Merge found memories into chat-level active memories
+                updateActiveMemories(with: contextData.memories.map { $0.memory })
+                
                 let enabledTools = tools.getEnabledTools()
-                let activeDocuments = await documentManager.documents
+                
+                // Use computed properties for injection
+                let contextDocuments = injectedDocuments
+                let contextMemories = injectedMemories
                 
                 // 2. Perform an initial call to get the raw prompt for the user message debug info
                 let (_, initialRawPrompt) = await llmService.chatStreamWithContext(
                     userQuery: prompt,
                     contextNotes: contextData.notes,
-                    documents: activeDocuments,
-                    memories: contextData.memories.map { $0.memory },
+                    documents: contextDocuments,
+                    memories: contextMemories,
                     chatHistory: Array(messages.prefix(userMessageIndex)),
                     tools: enabledTools
                 )
 
                 // Update debug info for the user message
-                messages[userMessageIndex].recalledMemories = contextData.memories.map { $0.memory }
+                messages[userMessageIndex].recalledMemories = contextMemories // Log what was actually injected
                 messages[userMessageIndex].debugInfo = .userMessage(
                     rawPrompt: initialRawPrompt, 
                     contextMemories: contextData.memories,
@@ -249,28 +295,23 @@ public final class ChatViewModel {
     ) async throws {
         // 1. Add user message to history if provided
         if let prompt = userPrompt {
-            let userMessage = Message(
-                content: prompt,
-                role: .user,
-                think: nil,
-                debugInfo: initialRawPrompt.map { 
-                    .userMessage(
-                        rawPrompt: $0, 
-                        contextMemories: contextData.memories,
-                        generatedTags: contextData.generatedTags,
-                        queryVector: contextData.queryVector,
-                        augmentedQuery: contextData.augmentedQuery,
-                        semanticResults: contextData.semanticResults,
-                        tagResults: contextData.tagResults
-                    ) 
-                }
-            )
+            // Note: This path handles cases where runConversationLoop is called without sendMessage
+            // But we mainly use sendMessage.
+            // For now, assume this follows similar logic for debug info if needed.
+            let userMessage = Message(content: prompt, role: .user)
             messages.append(userMessage)
         }
 
         var shouldContinue = true
         var turnCount = 0
-        let currentMemories = contextData.memories.map { $0.memory }
+        
+        // Use injected memories which are now stable for this turn unless tools change them?
+        // Tools like CreateMemory might add new memories. 
+        // Ideally we re-evaluate injectedMemories every iteration if we want dynamic updates,
+        // but for consistency within a turn, maybe keep them?
+        // Requirement says "memories are collected at chat level". If a tool adds a memory, 
+        // we might want it to be immediately available.
+        // Let's use `injectedMemories` (computed) each time.
 
         while shouldContinue {
             turnCount += 1
@@ -279,28 +320,18 @@ public final class ChatViewModel {
                 shouldContinue = false
                 break
             }
-
-            // Re-fetch context notes if they might have changed (optional optimization: only fetch once if not expecting changes)
-            // But since tools might edit notes, it's safer to fetch.
-            // However, ContextManager is designed for the initial user query context.
-            // For subsequent turns in the loop (tool outputs), we might want to re-evaluate context or stick to the initial one.
-            // For now, let's keep fetching "Always Append" notes as they are "system prompts" essentially.
-            
-            // We can reuse ContextManager to fetch notes only, or expose a method.
-            // Since we don't have a query for tool outputs, semantic search for memories is harder.
-            // We'll stick to the initial memories for the whole turn for now, or accummulate.
-            // NOTE: The previous implementation re-fetched contextNotes every loop iteration.
             
             let contextNotes = try await persistenceManager.fetchAlwaysAppendNotes()
             let enabledTools = tools.getEnabledTools()
-            let activeDocuments = await documentManager.documents
+            let contextDocuments = injectedDocuments
+            let contextMemories = injectedMemories
 
-            // 2. Call LLM with empty userQuery, relying on chatHistory (which now includes the user message)
+            // 2. Call LLM with empty userQuery, relying on chatHistory
             let (stream, _) = await llmService.chatStreamWithContext(
                 userQuery: "",
                 contextNotes: contextNotes,
-                documents: activeDocuments,
-                memories: currentMemories,
+                documents: contextDocuments,
+                memories: contextMemories,
                 chatHistory: messages,
                 tools: enabledTools
             )
@@ -358,48 +389,3 @@ public final class ChatViewModel {
         currentTask = nil
         isLoading = false
     }
-
-    private func handleCancellation() {
-        logger.notice("Generation cancelled by user")
-        if !streamingCoordinator.streamingContent.isEmpty {
-            let assistantMessage = Message(
-                content: streamingCoordinator.streamingContent + "\n\n[Generation cancelled]",
-                role: .assistant,
-                think: streamingCoordinator.streamingThinking.isEmpty
-                    ? nil
-                    : streamingCoordinator.streamingThinking
-            )
-            messages.append(assistantMessage)
-        }
-        streamingCoordinator.stopStreaming()
-        currentTask = nil
-        isLoading = false
-    }
-
-    public func cancelGeneration() {
-        currentTask?.cancel()
-        currentTask = nil
-    }
-
-    public func archiveConversation(confirmationDismiss: @escaping () -> Void) {
-        Task {
-            do {
-                try await conversationArchiver.archive(messages: messages)
-                logger.info("Conversation archived")
-                messages = []
-                errorMessage = nil
-                confirmationDismiss()
-            } catch {
-                let msg = "Failed to archive: \(error.localizedDescription)"
-                logger.error("\(msg)")
-                errorMessage = msg
-            }
-        }
-    }
-
-    public func clearConversation() {
-        logger.debug("Clearing conversation")
-        messages = []
-        errorMessage = nil
-    }
-}

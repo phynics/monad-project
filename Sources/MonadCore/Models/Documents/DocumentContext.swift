@@ -10,6 +10,8 @@ public struct DocumentContext: Identifiable, Sendable, Codable {
     public var viewMode: ViewMode
     public var excerptOffset: Int
     public var excerptLength: Int
+    public var isPinned: Bool
+    public var lastAccessed: Date
 
     public enum ViewMode: String, Codable, Sendable {
         case full
@@ -18,13 +20,15 @@ public struct DocumentContext: Identifiable, Sendable, Codable {
         case metadata
     }
     
-    public init(path: String, content: String, viewMode: ViewMode = .full, excerptOffset: Int = 0, excerptLength: Int = 1000) {
+    public init(path: String, content: String, viewMode: ViewMode = .full, excerptOffset: Int = 0, excerptLength: Int = 1000, isPinned: Bool = false, lastAccessed: Date = Date()) {
         self.path = path
         self.content = content
         self.fileSize = content.count // Fallback if not provided, though ideally we pass it
         self.viewMode = viewMode
         self.excerptOffset = excerptOffset
         self.excerptLength = excerptLength
+        self.isPinned = isPinned
+        self.lastAccessed = lastAccessed
     }
     
     /// Get the visible content based on view mode

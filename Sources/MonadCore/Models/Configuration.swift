@@ -13,6 +13,8 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
     public var provider: LLMProvider
     public var toolFormat: ToolCallFormat
     public var mcpServers: [MCPServerConfiguration]
+    public var memoryContextLimit: Int
+    public var documentContextLimit: Int
 
     public init(
         endpoint: String = "https://api.openai.com",
@@ -20,10 +22,12 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         utilityModel: String = "gpt-4o-mini",
         fastModel: String = "gpt-4o-mini",
         apiKey: String = "",
-        version: Int = 3,
+        version: Int = 4,
         provider: LLMProvider = .openAI,
         toolFormat: ToolCallFormat = .openAI,
-        mcpServers: [MCPServerConfiguration] = []
+        mcpServers: [MCPServerConfiguration] = [],
+        memoryContextLimit: Int = 10,
+        documentContextLimit: Int = 5
     ) {
         self.endpoint = endpoint
         self.modelName = modelName
@@ -34,6 +38,8 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         self.provider = provider
         self.toolFormat = toolFormat
         self.mcpServers = mcpServers
+        self.memoryContextLimit = memoryContextLimit
+        self.documentContextLimit = documentContextLimit
     }
 
     /// Default OpenAI configuration
@@ -45,7 +51,9 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
             fastModel: "gpt-4o-mini",
             apiKey: "",
             provider: .openAI,
-            toolFormat: .openAI
+            toolFormat: .openAI,
+            memoryContextLimit: 10,
+            documentContextLimit: 5
         )
     }
 

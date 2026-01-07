@@ -49,15 +49,7 @@ public struct ContentView: View {
 
             ChatErrorMessageView(errorMessage: $viewModel.errorMessage)
 
-            ChatInputView(
-                inputText: $viewModel.inputText,
-                isLoading: viewModel.isLoading,
-                isStreaming: viewModel.isStreaming,
-                llmServiceConfigured: llmService.isConfigured,
-                documentManager: viewModel.documentManager,
-                onSend: viewModel.sendMessage,
-                onCancel: viewModel.cancelGeneration
-            )
+            ChatInputView(viewModel: viewModel)
         }
         .frame(minWidth: 600, minHeight: 400)
         .sheet(isPresented: $showingArchive) {

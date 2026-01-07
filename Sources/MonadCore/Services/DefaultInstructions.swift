@@ -22,7 +22,12 @@ enum DefaultInstructions {
     - **Search**: `find` for file patterns, `grep` for content.
     - **Reading**: `cat` for small files. `load_document` for context-aware coding.
     - **Management**: Unload documents when done. Use excerpts for large files.
-    - **Subagents**: Use `launch_subagent` for heavy analysis of specific files to keep main context clean.
+    - **Subagents**: Use `launch_subagent` for:
+        - Summarizing multiple files.
+        - Analyzing code for bugs without polluting context.
+        - Complex reasoning over specific documents.
+        - When the result is more important than the process.
+      The subagent runs in isolation with only the documents you provide. It returns a final answer.
 
     ## Interactive Behavior
     - Clarify ambiguity.

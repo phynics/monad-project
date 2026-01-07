@@ -1,54 +1,97 @@
 import MonadCore
 import SwiftUI
 
+import MonadCore
+import SwiftUI
+
 struct ChatInputView: View {
-    @Binding var inputText: String
-    let isLoading: Bool
-    let isStreaming: Bool
-    let llmServiceConfigured: Bool
-    let documentManager: DocumentManager?
-    let onSend: () -> Void
-    let onCancel: () -> Void
+    @Bindable var viewModel: ChatViewModel
 
     var body: some View {
-        VStack(spacing: 8) {
-            // Document List Bling
-            if let manager = documentManager, !manager.documents.isEmpty {
+        VStack(spacing: 0) {
+            // Active Context Bar (Memories & Documents)
+            if !viewModel.activeMemories.isEmpty || !viewModel.documentManager.documents.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(manager.documents) { doc in
+                        // Memories
+                        ForEach(viewModel.activeMemories) { activeMemory in
+                            HStack(spacing: 4) {
+                                Image(systemName: "brain.head.profile")
+                                    .foregroundColor(activeMemory.isPinned ? .orange : .purple)
+                                Text(activeMemory.memory.title)
+                                    .lineLimit(1)
+                                
+                                Button(action: { viewModel.toggleMemoryPin(id: activeMemory.id) }) {
+                                    Image(systemName: activeMemory.isPinned ? "pin.fill" : "pin")
+                                        .font(.caption2)
+                                }
+                                .buttonStyle(.plain)
+                                
+                                Button(action: { viewModel.removeActiveMemory(id: activeMemory.id) }) {
+                                    Image(systemName: "xmark")
+                                        .font(.caption2)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(activeMemory.isPinned ? Color.orange.opacity(0.1) : Color.purple.opacity(0.1))
+                            .foregroundColor(activeMemory.isPinned ? .orange : .purple)
+                            .cornerRadius(8)
+                        }
+                        
+                        // Documents
+                        ForEach(viewModel.documentManager.documents) { doc in
                             HStack(spacing: 4) {
                                 Image(systemName: "doc.text.fill")
+                                    .foregroundColor(doc.isPinned ? .orange : .blue)
                                 Text(URL(fileURLWithPath: doc.path).lastPathComponent)
                                     .lineLimit(1)
+                                
                                 if doc.viewMode == .excerpt {
                                     Text("(Excerpt)")
                                         .font(.caption2)
                                         .foregroundColor(.secondary)
                                 }
+                                
+                                Button(action: { viewModel.documentManager.togglePin(path: doc.path) }) {
+                                    Image(systemName: doc.isPinned ? "pin.fill" : "pin")
+                                        .font(.caption2)
+                                }
+                                .buttonStyle(.plain)
+                                
+                                Button(action: { viewModel.documentManager.unloadDocument(path: doc.path) }) {
+                                    Image(systemName: "xmark")
+                                        .font(.caption2)
+                                }
+                                .buttonStyle(.plain)
                             }
                             .font(.caption)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.1))
-                            .foregroundColor(.blue)
+                            .background(doc.isPinned ? Color.orange.opacity(0.1) : Color.blue.opacity(0.1))
+                            .foregroundColor(doc.isPinned ? .orange : .blue)
                             .cornerRadius(8)
                         }
                     }
                     .padding(.horizontal)
+                    .padding(.vertical, 8)
                 }
+                .background(Color.gray.opacity(0.02))
+                .overlay(Rectangle().frame(height: 1).foregroundColor(Color.gray.opacity(0.1)), alignment: .bottom)
             }
             
             HStack(spacing: 12) {
-                TextField("Type a message...", text: $inputText)
+                TextField("Type a message...", text: $viewModel.inputText)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
-                        onSend()
+                        viewModel.sendMessage()
                     }
-                    .disabled(isLoading || isStreaming || !llmServiceConfigured)
+                    .disabled(viewModel.isLoading || viewModel.isStreaming || !viewModel.llmService.isConfigured)
 
-                if isStreaming {
-                    Button(action: onCancel) {
+                if viewModel.isStreaming {
+                    Button(action: viewModel.cancelGeneration) {
                         HStack(spacing: 4) {
                             Image(systemName: "stop.fill")
                             Text("Cancel")
@@ -58,10 +101,10 @@ struct ChatInputView: View {
                     .foregroundColor(.red)
                 } else {
                     Button("Send") {
-                        onSend()
+                        viewModel.sendMessage()
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(inputText.isEmpty || isLoading || isStreaming || !llmServiceConfigured)
+                    .disabled(viewModel.inputText.isEmpty || viewModel.isLoading || viewModel.isStreaming || !viewModel.llmService.isConfigured)
                 }
             }
             .padding()
