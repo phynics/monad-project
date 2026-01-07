@@ -12,6 +12,8 @@ public final class StreamingCoordinator {
     public var streamingContent: String = ""
     public var streamingThinking: String = ""
     public var isStreaming: Bool = false
+    public var startTime: Date?
+    public var usage: ChatResult.CompletionUsage?
 
     // Accumulators
     private var accumulatedToolCalls: [Int: ToolCallAccumulator] = [:]
@@ -32,6 +34,8 @@ public final class StreamingCoordinator {
         accumulatedToolCalls = [:]
         currentToolCallIndex = nil
         isStreaming = true
+        startTime = Date()
+        usage = nil
         parser.reset()
         logger.debug("Started streaming")
     }
@@ -42,7 +46,10 @@ public final class StreamingCoordinator {
     }
 
     public func updateMetadata(from result: ChatStreamResult) {
-        // Update basic metadata if needed (e.g. usage stats if provided in stream)
+        // Update usage stats if provided in stream
+        if let usage = result.usage {
+            self.usage = usage
+        }
     }
 
     public func processChunk(_ delta: String) {
@@ -188,13 +195,32 @@ public final class StreamingCoordinator {
             logger.notice("Streaming cancelled")
         }
 
+        let duration = startTime.map { Date().timeIntervalSince($0) }
+        let tokensPerSecond = if let duration = duration, duration > 0, let completionTokens = usage?.completionTokens {
+            Double(completionTokens) / duration
+        } else {
+            nil as Double?
+        }
+
+        let debugInfo = usage.map { u in
+            MessageDebugInfo.assistantMessage(
+                response: APIResponseMetadata(
+                    promptTokens: u.promptTokens,
+                    completionTokens: u.completionTokens,
+                    totalTokens: u.totalTokens,
+                    duration: duration,
+                    tokensPerSecond: tokensPerSecond
+                )
+            )
+        }
+
         // Create final message
         return Message(
             content: streamingContent,
             role: .assistant,
-            // Only include think block if it's not empty
             think: streamingThinking.isEmpty ? nil : streamingThinking,
-            toolCalls: finalToolCalls.isEmpty ? nil : finalToolCalls
+            toolCalls: finalToolCalls.isEmpty ? nil : finalToolCalls,
+            debugInfo: debugInfo
         )
     }
 }

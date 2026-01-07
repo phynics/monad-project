@@ -171,6 +171,36 @@ public struct MessageBubble: View {
                                         }
                                         .padding(.top, 4)
                                     }
+
+                                    // Tags and Stats
+                                    if let tags = message?.tags, !tags.isEmpty {
+                                        HStack(spacing: 4) {
+                                            ForEach(tags, id: \.self) { tag in
+                                                Text("#\(tag)")
+                                                    .font(.system(size: 8))
+                                                    .foregroundColor(role == .user ? .white.opacity(0.7) : .secondary)
+                                                    .padding(.horizontal, 4)
+                                                    .padding(.vertical, 1)
+                                                    .background(role == .user ? Color.white.opacity(0.1) : Color.gray.opacity(0.1))
+                                                    .cornerRadius(4)
+                                            }
+                                        }
+                                        .padding(.top, 4)
+                                    }
+
+                                    if let stats = message?.stats, (stats.tokensPerSecond != nil || stats.totalTokens != nil) {
+                                        HStack(spacing: 8) {
+                                            if let tps = stats.tokensPerSecond {
+                                                Text(String(format: "%.1f tokens/sec", tps))
+                                            }
+                                            if let total = stats.totalTokens {
+                                                Text("\(total) tokens")
+                                            }
+                                        }
+                                        .font(.system(size: 8))
+                                        .foregroundColor(role == .user ? .white.opacity(0.7) : .secondary)
+                                        .padding(.top, 2)
+                                    }
                                 }
                                 .padding(12)
 

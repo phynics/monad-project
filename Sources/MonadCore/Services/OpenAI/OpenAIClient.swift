@@ -33,7 +33,8 @@ public actor OpenAIClient {
             messages: messages,
             model: modelName,
             responseFormat: responseFormat,
-            tools: tools
+            tools: tools,
+            streamOptions: .init(includeUsage: true)
         )
 
         return AsyncThrowingStream { continuation in

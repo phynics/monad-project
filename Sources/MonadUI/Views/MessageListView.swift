@@ -10,6 +10,8 @@ public struct MessageListView: View {
     public let llmServiceConfigured: Bool
     public let onConfigureSettings: () -> Void
 
+    @State private var isAtBottom = true
+
     public init(
         messages: [Message],
         isStreaming: Bool,
@@ -52,21 +54,37 @@ public struct MessageListView: View {
                     if isLoading && !isStreaming {
                         loadingIndicator
                     }
+
+                    Color.clear
+                        .frame(height: 1)
+                        .id("bottom-marker")
+                        .onAppear { isAtBottom = true }
+                        .onDisappear { isAtBottom = false }
                 }
                 .padding()
             }
             .onChange(of: messages.count) { _ in
-                if let lastMessage = messages.last {
+                if isAtBottom {
                     withAnimation {
-                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        proxy.scrollTo("bottom-marker", anchor: .bottom)
+                    }
+                }
+            }
+            .onChange(of: isStreaming) { oldValue, newValue in
+                if oldValue && !newValue {
+                    // Streaming finished, ensure we are at the bottom if we were following
+                    if isAtBottom {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            withAnimation {
+                                proxy.scrollTo("bottom-marker", anchor: .bottom)
+                            }
+                        }
                     }
                 }
             }
             .onChange(of: streamingContent) { _ in
-                if isStreaming {
-                    withAnimation {
-                        proxy.scrollTo("streaming", anchor: .bottom)
-                    }
+                if isStreaming && isAtBottom {
+                    proxy.scrollTo("bottom-marker", anchor: .bottom)
                 }
             }
         }

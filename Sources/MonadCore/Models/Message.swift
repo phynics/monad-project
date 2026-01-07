@@ -42,6 +42,17 @@ public struct Message: Identifiable, Equatable, Sendable {
     /// Whether this message is a system summary/truncation notice
     public var isSummary: Bool
 
+    /// Helper to get generated tags from debug info
+    public var tags: [String]? {
+        debugInfo?.generatedTags
+    }
+
+    /// Helper to get generation stats from debug info
+    public var stats: (tokensPerSecond: Double?, totalTokens: Int?)? {
+        guard let apiResponse = debugInfo?.apiResponse else { return nil }
+        return (apiResponse.tokensPerSecond, apiResponse.totalTokens)
+    }
+
     public init(
         content: String, role: MessageRole, think: String? = nil, toolCalls: [ToolCall]? = nil,
         debugInfo: MessageDebugInfo? = nil,
@@ -244,10 +255,13 @@ public struct APIResponseMetadata: Equatable, Sendable {
     public var totalTokens: Int?
     public var finishReason: String?
     public var systemFingerprint: String?
+    public var duration: TimeInterval?
+    public var tokensPerSecond: Double?
 
     public init(
         model: String? = nil, promptTokens: Int? = nil, completionTokens: Int? = nil,
-        totalTokens: Int? = nil, finishReason: String? = nil, systemFingerprint: String? = nil
+        totalTokens: Int? = nil, finishReason: String? = nil, systemFingerprint: String? = nil,
+        duration: TimeInterval? = nil, tokensPerSecond: Double? = nil
     ) {
         self.model = model
         self.promptTokens = promptTokens
@@ -255,6 +269,8 @@ public struct APIResponseMetadata: Equatable, Sendable {
         self.totalTokens = totalTokens
         self.finishReason = finishReason
         self.systemFingerprint = systemFingerprint
+        self.duration = duration
+        self.tokensPerSecond = tokensPerSecond
     }
 }
 
