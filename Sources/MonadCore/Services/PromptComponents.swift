@@ -56,7 +56,7 @@ public struct ContextNotesComponent: PromptSection {
         let notesText = notes.map { $0.promptString }.joined(separator: "\n\n")
 
         return """
-            _These are notes that you use keep track of important information. These context notes are the ones that are marked "Always Append", there could be more notes you could use to tools to search. You can also edit these notes using edit_note tool. Make sure to use notes for their purpose, and be brief in what you put in your notes. 'Human' note should only include information about the user, 'Persona' block should include information about yourself, etc. This self-editing function will help you grow recursively._
+            These are notes that you use keep track of important information. These context notes are the ones that are marked "Always Append", there could be more notes you could use to tools to search. You can also edit these notes using edit_note tool. Make sure to use notes for their purpose, and be brief in what you put in your notes. 'Human' note should only include information about the user, 'Persona' block should include information about yourself, etc. This self-editing function will help you grow recursively.
 
             \(notesText)
             """
@@ -168,14 +168,14 @@ public struct DocumentsComponent: PromptSection {
         for doc in documents {
             if doc.viewMode == .metadata {
                 parts.append("""
-                **Document:** `\(doc.path)` (Metadata Only)
-                **Size:** \(ByteCountFormatter.string(fromByteCount: Int64(doc.fileSize), countStyle: .file))
+                Document: `\(doc.path)` (Metadata Only)
+                Size: \(ByteCountFormatter.string(fromByteCount: Int64(doc.fileSize), countStyle: .file))
                 """)
             } else {
                 parts.append("""
-                **Document:** `\(doc.path)`
-                **View:** \(doc.viewMode.rawValue.capitalized)
-                \(doc.viewMode == .excerpt ? "**Window:** \(doc.excerptOffset)-\(doc.excerptOffset + doc.excerptLength)" : "")
+                Document: `\(doc.path)`
+                View: \(doc.viewMode.rawValue.capitalized)
+                \(doc.viewMode == .excerpt ? "Window: \(doc.excerptOffset)-\(doc.excerptOffset + doc.excerptLength)" : "")
                 
                 ```
                 \(doc.visibleContent)

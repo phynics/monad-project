@@ -94,12 +94,12 @@ extension Memory: PromptFormattable {
         var parts: [String] = []
 
         // Title
-        parts.append("**\(title)**")
+        parts.append(title)
 
         // Tags (if present)
         let tags = tagArray
         if !tags.isEmpty {
-            parts.append("_Tags: \(tags.joined(separator: ", "))_")
+            parts.append("Tags: \(tags.joined(separator: ", "))")
         }
 
         // Content

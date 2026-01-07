@@ -71,7 +71,7 @@ extension Tool {
 
         // Title with permission marker
         let permMarker = requiresPermission ? " 🔒" : ""
-        parts.append("**\(name)**\(permMarker)")
+        parts.append("\(name)\(permMarker)")
 
         // ID and description
         parts.append("- Tool ID: `\(id)`")
@@ -109,7 +109,7 @@ public func formatToolsForPrompt(_ tools: [any Tool]) async -> String {
 
         \(toolSpecs.joined(separator: "\n\n"))
 
-        **Usage Format:**
+        Usage Format:
         For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
         ```xml
         <tool_call>
@@ -117,7 +117,7 @@ public func formatToolsForPrompt(_ tools: [any Tool]) async -> String {
         </tool_call>
         ```
 
-        **Guidelines:**
+        Guidelines:
         - Use tools when you need to search, create, or modify data
         - Wrap each tool call in <tool_call></tool_call> tags
         - Arguments must be a JSON object (not a string)

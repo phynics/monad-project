@@ -74,11 +74,11 @@ extension Note: PromptFormattable {
         var parts: [String] = []
 
         // Title
-        parts.append("**\(name)**")
+        parts.append(name)
 
         // Description (if present)
         if !description.isEmpty {
-            parts.append("_\(description)_")
+            parts.append(description)
         }
 
         // Content
@@ -94,7 +94,7 @@ extension Array where Element == Note {
         guard !isEmpty else { return "" }
 
         return """
-            _These notes that are marked 'always append'._
+            These notes that are marked 'always append'.
 
             \(map { $0.promptString }.joined(separator: "\n\n"))
             """
