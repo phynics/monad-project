@@ -68,7 +68,8 @@ public final class ToolExecutor {
             return Message(
                 content: responseContent,
                 role: .tool,
-                think: nil
+                think: nil,
+                subagentContext: result.subagentContext
             )
         } catch {
             logger.error("Error executing tool \(tool.name): \(error.localizedDescription)")

@@ -64,6 +64,7 @@ public final class ChatViewModel {
             LoadDocumentTool(documentManager: documentManager),
             UnloadDocumentTool(documentManager: documentManager),
             SwitchDocumentViewTool(documentManager: documentManager),
+            EditDocumentSummaryTool(documentManager: documentManager),
             MoveDocumentExcerptTool(documentManager: documentManager),
             LaunchSubagentTool(llmService: llmService, documentManager: documentManager)
         ]

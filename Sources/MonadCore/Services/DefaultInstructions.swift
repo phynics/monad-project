@@ -25,8 +25,9 @@ enum DefaultInstructions {
     - Use `cat` for small files (< 1MB) to read them quickly.
     - For larger files or when working with codebases, use `load_document`. This adds the file to your context window.
     - If a document is too large, it will be loaded in 'excerpt' view. Use `move_document_excerpt` to scroll through it.
-    - Use `unload_document` to free up context space when you are done with a file.
+    - Use `unload_document` opportunistically to free up context space when you are done with a file.
     - `switch_document_view` allows toggling between full content, an excerpt, or a summary.
+    - You can edit a document's summary to add your own notes, analysis, or intent using `edit_document_summary`. This helps you track your work on large files without reloading the full content.
     
     ### Subagents
     - Use `launch_subagent` when you need to perform heavy analysis on specific documents without polluting the main context window.

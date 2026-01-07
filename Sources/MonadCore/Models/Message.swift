@@ -32,12 +32,16 @@ public struct Message: Identifiable, Equatable, Sendable {
 
     /// Memories that were provided as context for this message
     public var recalledMemories: [Memory]?
+    
+    /// Context used for subagent execution (if applicable)
+    public var subagentContext: SubagentContext?
 
     public init(
         content: String, role: MessageRole, think: String? = nil, toolCalls: [ToolCall]? = nil,
         debugInfo: MessageDebugInfo? = nil,
         gatheringProgress: ContextGatheringProgress? = nil,
-        recalledMemories: [Memory]? = nil
+        recalledMemories: [Memory]? = nil,
+        subagentContext: SubagentContext? = nil
     ) {
         self.content = content
         self.role = role
@@ -46,6 +50,7 @@ public struct Message: Identifiable, Equatable, Sendable {
         self.debugInfo = debugInfo
         self.gatheringProgress = gatheringProgress
         self.recalledMemories = recalledMemories
+        self.subagentContext = subagentContext
     }
 
     public enum MessageRole: String, Sendable {
@@ -82,6 +87,21 @@ public struct Message: Identifiable, Equatable, Sendable {
             range: NSRange(location: 0, length: nsString.length),
             withTemplate: ""
         ).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+// MARK: - Subagent Context
+
+/// Context information for a subagent execution
+public struct SubagentContext: Equatable, Sendable, Codable {
+    public let prompt: String
+    public let documents: [String] // Paths
+    public let rawResponse: String? // Full output including thinking
+    
+    public init(prompt: String, documents: [String], rawResponse: String? = nil) {
+        self.prompt = prompt
+        self.documents = documents
+        self.rawResponse = rawResponse
     }
 }
 
@@ -147,6 +167,9 @@ public struct MessageDebugInfo: Equatable, Sendable {
 
     /// For user messages: keyword/tag search matches
     public var tagResults: [Memory]?
+    
+    /// Subagent context info
+    public var subagentContext: SubagentContext?
 
     public static func userMessage(
         rawPrompt: String,
@@ -178,7 +201,8 @@ public struct MessageDebugInfo: Equatable, Sendable {
         original: String? = nil,
         parsed: String? = nil,
         thinking: String? = nil,
-        toolCalls: [ToolCall]? = nil
+        toolCalls: [ToolCall]? = nil,
+        subagentContext: SubagentContext? = nil
     ) -> MessageDebugInfo {
         MessageDebugInfo(
             rawPrompt: nil,
@@ -192,7 +216,8 @@ public struct MessageDebugInfo: Equatable, Sendable {
             queryVector: nil,
             augmentedQuery: nil,
             semanticResults: nil,
-            tagResults: nil
+            tagResults: nil,
+            subagentContext: subagentContext
         )
     }
 }

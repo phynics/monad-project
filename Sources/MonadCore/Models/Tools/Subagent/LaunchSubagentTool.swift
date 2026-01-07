@@ -99,6 +99,7 @@ public struct LaunchSubagentTool: Tool, @unchecked Sendable {
             return .failure("Subagent failed: \(error.localizedDescription)")
         }
         
-        return .success("Subagent Output:\n\n\(response)")
+        let context = SubagentContext(prompt: prompt, documents: docPaths, rawResponse: response)
+        return .success("Subagent Output:\n\n\(response)", subagentContext: context)
     }
 }

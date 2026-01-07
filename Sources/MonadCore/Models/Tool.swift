@@ -130,13 +130,14 @@ public struct ToolResult: Sendable {
     public let success: Bool
     public let output: String
     public let error: String?
+    public let subagentContext: SubagentContext?
 
-    public static func success(_ output: String) -> ToolResult {
-        ToolResult(success: true, output: output, error: nil)
+    public static func success(_ output: String, subagentContext: SubagentContext? = nil) -> ToolResult {
+        ToolResult(success: true, output: output, error: nil, subagentContext: subagentContext)
     }
 
     public static func failure(_ error: String) -> ToolResult {
-        ToolResult(success: false, output: "", error: error)
+        ToolResult(success: false, output: "", error: error, subagentContext: nil)
     }
 }
 
