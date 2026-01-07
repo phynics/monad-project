@@ -27,6 +27,11 @@ enum DefaultInstructions {
     - If a document is too large, it will be loaded in 'excerpt' view. Use `move_document_excerpt` to scroll through it.
     - Use `unload_document` to free up context space when you are done with a file.
     - `switch_document_view` allows toggling between full content, an excerpt, or a summary.
+    
+    ### Subagents
+    - Use `launch_subagent` when you need to perform heavy analysis on specific documents without polluting the main context window.
+    - This is ideal for tasks like "Summarize these 5 files" or "Check these files for bugs".
+    - The subagent will have the full content of the documents you provide, but the main conversation will only see the final result.
 
     ## Response Style
 

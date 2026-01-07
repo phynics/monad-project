@@ -64,7 +64,8 @@ public final class ChatViewModel {
             LoadDocumentTool(documentManager: documentManager),
             UnloadDocumentTool(documentManager: documentManager),
             SwitchDocumentViewTool(documentManager: documentManager),
-            MoveDocumentExcerptTool(documentManager: documentManager)
+            MoveDocumentExcerptTool(documentManager: documentManager),
+            LaunchSubagentTool(llmService: llmService, documentManager: documentManager)
         ]
         let manager = SessionToolManager(availableTools: availableTools)
         self.toolManager = manager

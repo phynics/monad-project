@@ -58,8 +58,8 @@ public struct LoadDocumentTool: Tool, @unchecked Sendable {
             var message = "Document loaded successfully."
             
             if content.count > 5000 && !forceFull {
-                mode = .excerpt
-                message = "Document loaded. File is large (\(content.count) chars), so it was loaded in 'excerpt' view. You can use 'move_excerpt' to read different parts, or 'load_document' with 'force_full: true' to load everything (use with caution)."
+                mode = .metadata
+                message = "Document added as metadata (large file: \(content.count) chars). Use `switch_document_view` to read content or `launch_subagent` to process it."
             }
             
             await documentManager.loadDocument(path: path, content: content)

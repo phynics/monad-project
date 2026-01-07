@@ -166,15 +166,22 @@ public struct DocumentsComponent: PromptSection {
 
         var parts: [String] = []
         for doc in documents {
-            parts.append("""
-            **Document:** `\(doc.path)`
-            **View:** \(doc.viewMode.rawValue.capitalized)
-            \(doc.viewMode == .excerpt ? "**Window:** \(doc.excerptOffset)-\(doc.excerptOffset + doc.excerptLength)" : "")
-            
-            ```
-            \(doc.visibleContent)
-            ```
-            """)
+            if doc.viewMode == .metadata {
+                parts.append("""
+                **Document:** `\(doc.path)` (Metadata Only)
+                **Size:** \(ByteCountFormatter.string(fromByteCount: Int64(doc.fileSize), countStyle: .file))
+                """)
+            } else {
+                parts.append("""
+                **Document:** `\(doc.path)`
+                **View:** \(doc.viewMode.rawValue.capitalized)
+                \(doc.viewMode == .excerpt ? "**Window:** \(doc.excerptOffset)-\(doc.excerptOffset + doc.excerptLength)" : "")
+                
+                ```
+                \(doc.visibleContent)
+                ```
+                """)
+            }
         }
 
         return """

@@ -35,7 +35,7 @@ public struct SwitchDocumentViewTool: Tool, @unchecked Sendable {
                 ],
                 "view": [
                     "type": "string",
-                    "enum": ["full", "excerpt", "summary"],
+                    "enum": ["full", "excerpt", "summary", "metadata"],
                     "description": "The view mode to switch to"
                 ]
             ],
@@ -47,7 +47,7 @@ public struct SwitchDocumentViewTool: Tool, @unchecked Sendable {
         guard let path = parameters["path"] as? String,
               let viewString = parameters["view"] as? String,
               let view = DocumentContext.ViewMode(rawValue: viewString) else {
-            return .failure("Missing or invalid parameters. 'view' must be one of: full, excerpt, summary")
+            return .failure("Missing or invalid parameters. 'view' must be one of: full, excerpt, summary, metadata")
         }
         
         guard var doc = await documentManager.getDocument(path: path) else {
