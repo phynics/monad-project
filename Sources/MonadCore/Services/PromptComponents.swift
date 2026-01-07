@@ -150,3 +150,42 @@ public struct UserQueryComponent: PromptSection {
         TokenEstimator.estimate(text: query)
     }
 }
+
+/// Loaded documents component
+public struct DocumentsComponent: PromptSection {
+    public let sectionId = "documents"
+    public let priority = 95 // High priority, below system instructions
+    public let documents: [DocumentContext]
+
+    public init(documents: [DocumentContext]) {
+        self.documents = documents
+    }
+
+    public func generateContent() async -> String? {
+        guard !documents.isEmpty else { return nil }
+
+        var parts: [String] = []
+        for doc in documents {
+            parts.append("""
+            **Document:** `\(doc.path)`
+            **View:** \(doc.viewMode.rawValue.capitalized)
+            \(doc.viewMode == .excerpt ? "**Window:** \(doc.excerptOffset)-\(doc.excerptOffset + doc.excerptLength)" : "")
+            
+            ```
+            \(doc.visibleContent)
+            ```
+            """)
+        }
+
+        return """
+            === ACTIVE DOCUMENTS ===
+            The following documents are loaded into your context. You can read them, move the excerpt window, or unload them.
+
+            \(parts.joined(separator: "\n\n"))
+            """
+    }
+
+    public var estimatedTokens: Int {
+        documents.reduce(0) { $0 + TokenEstimator.estimate(text: $1.visibleContent) }
+    }
+}

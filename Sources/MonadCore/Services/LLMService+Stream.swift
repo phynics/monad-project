@@ -7,6 +7,7 @@ extension LLMService {
     public func chatStreamWithContext(
         userQuery: String,
         contextNotes: [Note],
+        documents: [DocumentContext] = [],
         memories: [Memory] = [],
         chatHistory: [Message],
         tools: [Tool] = [],
@@ -24,6 +25,7 @@ extension LLMService {
         let (messages, rawPrompt) = await promptBuilder.buildPrompt(
             systemInstructions: systemInstructions,
             contextNotes: contextNotes,
+            documents: documents,
             memories: memories,
             tools: tools,
             chatHistory: chatHistory,

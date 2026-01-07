@@ -18,6 +18,7 @@ public actor PromptBuilder {
     /// - Parameters:
     ///   - systemInstructions: Base system instructions (defaults to built-in)
     ///   - contextNotes: Always-append notes
+    ///   - documents: Loaded documents in context
     ///   - memories: Relevant memories found via semantic search
     ///   - tools: Available tools
     ///   - chatHistory: Previous messages in conversation
@@ -26,6 +27,7 @@ public actor PromptBuilder {
     public func buildPrompt(
         systemInstructions: String? = nil,
         contextNotes: [Note],
+        documents: [DocumentContext] = [],
         memories: [Memory] = [],
         tools: [Tool] = [],
         chatHistory: [Message],
@@ -42,6 +44,11 @@ public actor PromptBuilder {
         // Context notes
         if !contextNotes.isEmpty {
             components.append(ContextNotesComponent(notes: contextNotes))
+        }
+        
+        // Documents
+        if !documents.isEmpty {
+            components.append(DocumentsComponent(documents: documents))
         }
         
         // Memories (Semantic Context)

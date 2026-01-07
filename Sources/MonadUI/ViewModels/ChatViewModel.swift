@@ -15,6 +15,7 @@ public final class ChatViewModel {
     public let llmService: LLMService
     public let persistenceManager: PersistenceManager
     public let contextManager: ContextManager
+    public let documentManager: DocumentManager
 
     private var currentTask: Task<Void, Never>?
     private var toolManager: SessionToolManager?
@@ -34,6 +35,7 @@ public final class ChatViewModel {
             persistenceService: persistenceManager.persistence,
             embeddingService: llmService.embeddingService
         )
+        self.documentManager = DocumentManager()
         self.streamingCoordinator = StreamingCoordinator()
         self.conversationArchiver = ConversationArchiver(
             persistenceManager: persistenceManager,
@@ -53,6 +55,16 @@ public final class ChatViewModel {
             CreateMemoryTool(persistenceService: persistenceManager.persistence, embeddingService: llmService.embeddingService),
             SearchNotesTool(persistenceService: persistenceManager.persistence),
             EditNoteTool(persistenceService: persistenceManager.persistence),
+            // Filesystem Tools
+            ListDirectoryTool(),
+            FindFileTool(),
+            SearchFileContentTool(),
+            ReadFileTool(),
+            // Document Tools
+            LoadDocumentTool(documentManager: documentManager),
+            UnloadDocumentTool(documentManager: documentManager),
+            SwitchDocumentViewTool(documentManager: documentManager),
+            MoveDocumentExcerptTool(documentManager: documentManager)
         ]
         let manager = SessionToolManager(availableTools: availableTools)
         self.toolManager = manager
@@ -124,11 +136,13 @@ public final class ChatViewModel {
                     }
                 )
                 let enabledTools = tools.getEnabledTools()
+                let activeDocuments = await documentManager.documents
                 
                 // 2. Perform an initial call to get the raw prompt for the user message debug info
                 let (_, initialRawPrompt) = await llmService.chatStreamWithContext(
                     userQuery: prompt,
                     contextNotes: contextData.notes,
+                    documents: activeDocuments,
                     memories: contextData.memories.map { $0.memory },
                     chatHistory: Array(messages.prefix(userMessageIndex)),
                     tools: enabledTools
@@ -219,11 +233,13 @@ public final class ChatViewModel {
             
             let contextNotes = try await persistenceManager.fetchAlwaysAppendNotes()
             let enabledTools = tools.getEnabledTools()
+            let activeDocuments = await documentManager.documents
 
             // 2. Call LLM with empty userQuery, relying on chatHistory (which now includes the user message)
             let (stream, _) = await llmService.chatStreamWithContext(
                 userQuery: "",
                 contextNotes: contextNotes,
+                documents: activeDocuments,
                 memories: currentMemories,
                 chatHistory: messages,
                 tools: enabledTools
