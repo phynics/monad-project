@@ -51,10 +51,12 @@ public actor OllamaClient {
                             OllamaChatResponse.self, from: data)
                         {
                             if let converted = convertToOpenAI(response) {
+                                logger.debug("Yielding Ollama chunk: \(response.message.content)")
                                 continuation.yield(converted)
                             }
                         }
                     }
+                    logger.debug("Ollama stream finished normally")
                     continuation.finish()
                 } catch {
                     logger.error("Ollama stream error: \(error.localizedDescription)")

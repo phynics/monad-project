@@ -53,6 +53,7 @@ public final class StreamingCoordinator {
     }
 
     public func processChunk(_ delta: String) {
+        logger.debug("Received chunk: '\(delta)'")
         // Parse the chunk using our parser (handles <think> tags)
         let (newThinking, newContent, isReclassified) = parser.process(delta)
 
@@ -62,9 +63,11 @@ public final class StreamingCoordinator {
             streamingContent = newContent ?? ""
         } else {
             if let thinking = newThinking {
+                logger.debug("Accumulating thinking (\(thinking.count) chars)")
                 streamingThinking += thinking
             }
             if let content = newContent {
+                logger.debug("Accumulating content (\(content.count) chars)")
                 streamingContent += content
             }
         }
@@ -73,6 +76,7 @@ public final class StreamingCoordinator {
     // Check for native tool calls in the stream delta
     // Using [Any] to avoid deep type nesting issues with OpenAI library
     public func processToolCalls(_ toolCalls: [Any]) {
+        logger.debug("Received \(toolCalls.count) native tool call deltas")
         for toolCall in toolCalls {
             // Use reflection to extract properties safely
             let mirror = Mirror(reflecting: toolCall)

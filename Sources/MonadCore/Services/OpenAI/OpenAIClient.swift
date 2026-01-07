@@ -1,10 +1,12 @@
 import Foundation
 import OpenAI
+import OSLog
 
 /// A wrapper around the OpenAI SDK that provides a clean interface for the Monad Assistant
 public actor OpenAIClient {
     private let client: OpenAI
     private let modelName: String
+    private let logger = Logger(subsystem: "com.monad.assistant", category: "openai-client")
 
     public init(
         apiKey: String,
@@ -39,13 +41,19 @@ public actor OpenAIClient {
 
         return AsyncThrowingStream { continuation in
             let client = self.client
+            let logger = self.logger
             Task {
                 do {
                     for try await result in client.chatsStream(query: query) {
+                        if let delta = result.choices.first?.delta.content {
+                            logger.debug("Yielding OpenAI chunk (\(delta.count) chars)")
+                        }
                         continuation.yield(result)
                     }
+                    logger.debug("OpenAI stream finished normally")
                     continuation.finish()
                 } catch {
+                    logger.error("OpenAI stream error: \(error.localizedDescription)")
                     continuation.finish(throwing: error)
                 }
             }

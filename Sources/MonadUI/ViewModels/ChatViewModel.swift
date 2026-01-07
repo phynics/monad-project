@@ -342,19 +342,28 @@ public final class ChatViewModel {
             streamingCoordinator.startStreaming()
             isLoading = false
 
-            for try await result in stream {
-                if Task.isCancelled { break }
+            do {
+                logger.debug("Starting stream consumption for turn \(turnCount)")
+                var chunkCount = 0
+                for try await result in stream {
+                    if Task.isCancelled { break }
+                    chunkCount += 1
 
-                streamingCoordinator.updateMetadata(from: result)
+                    streamingCoordinator.updateMetadata(from: result)
 
-                if let delta = result.choices.first?.delta.content {
-                    streamingCoordinator.processChunk(delta)
+                    if let delta = result.choices.first?.delta.content {
+                        streamingCoordinator.processChunk(delta)
+                    }
+
+                    // Process tool calls from delta
+                    if let toolCalls = result.choices.first?.delta.toolCalls {
+                        streamingCoordinator.processToolCalls(toolCalls)
+                    }
                 }
-
-                // Process tool calls from delta
-                if let toolCalls = result.choices.first?.delta.toolCalls {
-                    streamingCoordinator.processToolCalls(toolCalls)
-                }
+                logger.debug("Stream consumption finished for turn \(turnCount). Total chunks: \(chunkCount)")
+            } catch {
+                logger.error("Stream error in turn \(turnCount): \(error.localizedDescription)")
+                throw error
             }
 
             let assistantMessage = streamingCoordinator.finalize(wasCancelled: Task.isCancelled)
@@ -387,6 +396,8 @@ public final class ChatViewModel {
                     shouldContinue = false
                 }
             } else {
+                logger.warning("Assistant returned an empty response (no content, no thinking, no tool calls)")
+                errorMessage = "The model returned an empty response. You might want to try again."
                 shouldContinue = false
             }
         }
