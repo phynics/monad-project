@@ -182,6 +182,27 @@ public struct MessageBubble: View {
                                         }
                                         .padding(.leading, 20)
                                     }
+                                    
+                                    // UI Bling: Show in Finder for filesystem paths
+                                    if (toolCall.name == "ls" || toolCall.name == "find"),
+                                       let path = toolCall.arguments["path"]?.value as? String {
+                                        Button(action: {
+                                            #if os(macOS)
+                                            let url = URL(fileURLWithPath: path)
+                                            NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
+                                            #endif
+                                        }) {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "folder.fill")
+                                                Text("Show in Finder")
+                                            }
+                                            .font(.caption2)
+                                            .foregroundColor(.blue)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .padding(.leading, 20)
+                                        .padding(.top, 4)
+                                    }
                                 }
                                 .foregroundColor(.secondary)
                                 .padding(.horizontal, 12)

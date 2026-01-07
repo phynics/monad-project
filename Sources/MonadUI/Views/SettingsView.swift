@@ -174,11 +174,33 @@ public struct SettingsView<PlatformContent: View>: View {
                             }
                             .buttonStyle(.bordered)
                         }
+                        
+                        Divider()
+                        
+                        HStack(spacing: 12) {
+                            Button(action: exportDatabase) {
+                                HStack {
+                                    Image(systemName: "cylinder.split.1x2")
+                                    Text("Export DB")
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button(action: importDatabase) {
+                                HStack {
+                                    Image(systemName: "arrow.down.to.line.compact")
+                                    Text("Import DB")
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                        }
                     } header: {
                         Text("Backup & Restore")
                     } footer: {
                         Text(
-                            "Export saves settings without API key. Import will keep your current API key."
+                            "Export configuration saves settings without API key. Database export saves all chats, memories, and notes as JSON."
                         )
                         .font(.caption)
                     }
@@ -499,6 +521,58 @@ public struct SettingsView<PlatformContent: View>: View {
             }
         #else
             // iOS Import implementation
+            errorMessage = "Import not yet supported on iOS"
+        #endif
+    }
+    
+    private func exportDatabase() {
+        Task {
+            do {
+                let data = try await persistenceManager.exportDatabase()
+
+                #if os(macOS)
+                    let panel = NSSavePanel()
+                    panel.allowedContentTypes = [.json]
+                    panel.nameFieldStringValue = "monad-database-backup.json"
+
+                    if panel.runModal() == .OK, let url = panel.url {
+                        try data.write(to: url)
+                        showingSaveSuccess = true
+
+                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                        showingSaveSuccess = false
+                    }
+                #else
+                    errorMessage = "Export not yet supported on iOS"
+                #endif
+            } catch {
+                errorMessage = "Database export failed: \(error.localizedDescription)"
+            }
+        }
+    }
+    
+    private func importDatabase() {
+        #if os(macOS)
+            let panel = NSOpenPanel()
+            panel.allowedContentTypes = [.json]
+            panel.allowsMultipleSelection = false
+            panel.message = "This will overwrite your existing database!"
+
+            if panel.runModal() == .OK, let url = panel.url {
+                Task {
+                    do {
+                        let data = try Data(contentsOf: url)
+                        try await persistenceManager.importDatabase(from: data)
+                        showingSaveSuccess = true
+
+                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                        showingSaveSuccess = false
+                    } catch {
+                        errorMessage = "Database import failed: \(error.localizedDescription)"
+                    }
+                }
+            }
+        #else
             errorMessage = "Import not yet supported on iOS"
         #endif
     }

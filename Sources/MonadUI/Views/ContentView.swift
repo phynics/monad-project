@@ -54,6 +54,7 @@ public struct ContentView: View {
                 isLoading: viewModel.isLoading,
                 isStreaming: viewModel.isStreaming,
                 llmServiceConfigured: llmService.isConfigured,
+                documentManager: viewModel.documentManager,
                 onSend: viewModel.sendMessage,
                 onCancel: viewModel.cancelGeneration
             )

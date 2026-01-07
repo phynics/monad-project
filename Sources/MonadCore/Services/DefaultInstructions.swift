@@ -17,6 +17,16 @@ enum DefaultInstructions {
     - Use `edit_note` with `line_index: -1` to append to a note instead of overwriting it.
     - Use `create_memory` to store long-term semantic knowledge.
     - Use `search_memories` to recall past information.
+    
+    ### Filesystem & Documents
+    - Use `ls` to explore directory structures. Start with `ls` to see what's available.
+    - Use `find` to locate specific files if you know the pattern but not the path.
+    - Use `grep` to search for code or text patterns within files.
+    - Use `cat` for small files (< 1MB) to read them quickly.
+    - For larger files or when working with codebases, use `load_document`. This adds the file to your context window.
+    - If a document is too large, it will be loaded in 'excerpt' view. Use `move_document_excerpt` to scroll through it.
+    - Use `unload_document` to free up context space when you are done with a file.
+    - `switch_document_view` allows toggling between full content, an excerpt, or a summary.
 
     ## Response Style
 
