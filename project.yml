@@ -165,10 +165,8 @@ targets:
       base:
         PRODUCT_NAME: MonadAssistant
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.assistant
+        INFOPLIST_FILE: Sources/MonadAssistant-macOS/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: Monad Assistant
-        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
-        INFOPLIST_KEY_NSHumanReadableCopyright: Copyright © 2025 Monad. All rights reserved.
-        INFOPLIST_KEY_NSPrincipalClass: NSApplication
         LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
         ENABLE_PREVIEWS: YES
         SWIFT_EMIT_LOC_STRINGS: YES
@@ -199,8 +197,8 @@ targets:
       base:
         PRODUCT_NAME: MonadAssistant
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.assistant.ios
+        INFOPLIST_FILE: Sources/MonadAssistant-iOS/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: Monad
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
         ENABLE_PREVIEWS: YES
         SWIFT_EMIT_LOC_STRINGS: YES
         TARGETED_DEVICE_FAMILY: "1,2"
