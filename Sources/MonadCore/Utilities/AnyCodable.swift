@@ -115,3 +115,10 @@ public struct AnyCodable: Codable, @unchecked Sendable, Equatable, CustomStringC
         }
     }
 }
+
+extension Dictionary where Key == String, Value == AnyCodable {
+    func toJsonString() throws -> String {
+        let data = try JSONEncoder().encode(self)
+        return String(data: data, encoding: .utf8) ?? "{}"
+    }
+}

@@ -168,8 +168,20 @@ public actor PromptBuilder {
                 if let think = msg.think {
                     content = "<think>\(think)</think>\n\(content)"
                 }
+                
+                // Map internal ToolCall to OpenAI ToolCall
+                let toolCalls: [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam]? = msg.toolCalls?.map { toolCall in
+                    .init(
+                        id: toolCall.id.uuidString, 
+                        function: .init(
+                            arguments: (try? toolCall.arguments.toJsonString()) ?? "{}",
+                            name: toolCall.name
+                        )
+                    )
+                }
+                
                 messages.append(
-                    .assistant(.init(content: .textContent(content), name: nil, toolCalls: nil)))
+                    .assistant(.init(content: .textContent(content), name: nil, toolCalls: toolCalls)))
             case .system:
                 // History can contain system messages (e.g. context/summaries)
                 messages.append(.system(.init(content: .textContent(msg.content), name: nil)))

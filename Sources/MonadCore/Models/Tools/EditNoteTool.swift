@@ -80,7 +80,10 @@ public class EditNoteTool: Tool, @unchecked Sendable {
             var lines = updatedNote.content.components(separatedBy: .newlines)
             
             if idx == -1 || mode == "append" {
-                lines.append(newContent)
+                // Deduplicate: Don't append if the last line is identical
+                if lines.last != newContent {
+                    lines.append(newContent)
+                }
             } else if idx >= 0 && idx < lines.count {
                 lines[idx] = newContent
             } else {
@@ -90,7 +93,12 @@ public class EditNoteTool: Tool, @unchecked Sendable {
             finalContent = lines.joined(separator: "\n")
         } else if mode == "append" {
             // Append without line index
-            finalContent = updatedNote.content + "\n" + newContent
+            // Deduplicate: Check if content already ends with new content
+            if !updatedNote.content.trimmingCharacters(in: .whitespacesAndNewlines).hasSuffix(newContent.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                finalContent = updatedNote.content + "\n" + newContent
+            } else {
+                finalContent = updatedNote.content
+            }
         } else {
             // Default: Overwrite
             finalContent = newContent
