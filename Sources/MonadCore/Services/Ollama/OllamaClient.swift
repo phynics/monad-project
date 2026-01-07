@@ -12,7 +12,15 @@ public actor OllamaClient {
         endpoint: String,
         modelName: String
     ) {
-        self.endpoint = URL(string: endpoint) ?? URL(string: "http://localhost:11434")!
+        var cleanEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleanEndpoint.hasSuffix("/") {
+            cleanEndpoint.removeLast()
+        }
+        if cleanEndpoint.hasSuffix("/api") {
+            cleanEndpoint.removeLast(4)
+        }
+        
+        self.endpoint = URL(string: cleanEndpoint) ?? URL(string: "http://localhost:11434")!
         self.modelName = modelName
         
         // Use a custom configuration with longer timeout for local network robustness
@@ -39,8 +47,14 @@ public actor OllamaClient {
                     guard let httpResponse = response as? HTTPURLResponse,
                         (200...299).contains(httpResponse.statusCode)
                     else {
+                        // Attempt to read error body
+                        var errorBody = ""
+                        for try await line in stream.lines {
+                            errorBody += line
+                        }
+                        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
                         throw LLMServiceError.networkError(
-                            "Ollama API Error: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                            "Ollama API Error: \(statusCode) - \(errorBody)")
                     }
 
                     for try await line in stream.lines {
