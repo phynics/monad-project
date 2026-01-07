@@ -12,9 +12,12 @@ extension LLMService {
         chatHistory: [Message],
         tools: [Tool] = [],
         systemInstructions: String? = nil,
-        responseFormat: ChatQuery.ResponseFormat? = nil
+        responseFormat: ChatQuery.ResponseFormat? = nil,
+        useFastModel: Bool = false
     ) async -> (stream: AsyncThrowingStream<ChatStreamResult, Error>, rawPrompt: String) {
-        guard let client = getClient() else {
+        let clientToUse = useFastModel ? (getFastClient() ?? getClient()) : getClient()
+        
+        guard let client = clientToUse else {
             let stream = AsyncThrowingStream<ChatStreamResult, Error> { continuation in
                 continuation.finish(throwing: LLMServiceError.notConfigured)
             }

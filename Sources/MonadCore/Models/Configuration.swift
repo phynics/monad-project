@@ -6,6 +6,8 @@ import Foundation
 public struct LLMConfiguration: Codable, Sendable, Equatable {
     public var endpoint: String
     public var modelName: String
+    public var utilityModel: String
+    public var fastModel: String
     public var apiKey: String
     public var version: Int
     public var provider: LLMProvider
@@ -15,14 +17,18 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
     public init(
         endpoint: String = "https://api.openai.com",
         modelName: String = "gpt-4o",
+        utilityModel: String = "gpt-4o-mini",
+        fastModel: String = "gpt-4o-mini",
         apiKey: String = "",
-        version: Int = 2,
+        version: Int = 3,
         provider: LLMProvider = .openAI,
         toolFormat: ToolCallFormat = .openAI,
         mcpServers: [MCPServerConfiguration] = []
     ) {
         self.endpoint = endpoint
         self.modelName = modelName
+        self.utilityModel = utilityModel
+        self.fastModel = fastModel
         self.apiKey = apiKey
         self.version = version
         self.provider = provider
@@ -35,6 +41,8 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         LLMConfiguration(
             endpoint: "https://api.openai.com",
             modelName: "gpt-4o",
+            utilityModel: "gpt-4o-mini",
+            fastModel: "gpt-4o-mini",
             apiKey: "",
             provider: .openAI,
             toolFormat: .openAI
@@ -43,10 +51,11 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
 
     /// Validate configuration
     public var isValid: Bool {
+        let modelsValid = !modelName.isEmpty && !utilityModel.isEmpty && !fastModel.isEmpty
         if provider == .ollama {
-            return !endpoint.isEmpty && !modelName.isEmpty && isValidEndpoint(endpoint)
+            return !endpoint.isEmpty && modelsValid && isValidEndpoint(endpoint)
         }
-        return !endpoint.isEmpty && !modelName.isEmpty && !apiKey.isEmpty
+        return !endpoint.isEmpty && modelsValid && !apiKey.isEmpty
             && isValidEndpoint(endpoint)
     }
 

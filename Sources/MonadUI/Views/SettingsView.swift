@@ -17,6 +17,8 @@ public struct SettingsView<PlatformContent: View>: View {
     @State private var provider: LLMProvider = .openAI
     @State private var endpoint: String = ""
     @State private var modelName: String = ""
+    @State private var utilityModel: String = ""
+    @State private var fastModel: String = ""
     @State private var apiKey: String = ""
     @State private var toolFormat: ToolCallFormat = .openAI
     @State private var mcpServers: [MCPServerConfiguration] = []
@@ -35,206 +37,21 @@ public struct SettingsView<PlatformContent: View>: View {
         self.persistenceManager = persistenceManager
         self.platformContent = platformContent()
     }
-
+    
     public var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Text("Settings")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-
-                    Spacer()
-                }
-                .padding()
-                .background(Color.gray.opacity(0.05))
-
+                headerView
+                
                 Form {
-                    Section {
-                        Picker("Provider", selection: $provider) {
-                            ForEach(LLMProvider.allCases) { provider in
-                                Text(provider.rawValue).tag(provider)
-                            }
-                        }
-                        .pickerStyle(.menu)
-
-                        Picker("Tool Format", selection: $toolFormat) {
-                            ForEach(ToolCallFormat.allCases) { format in
-                                Text(format.rawValue).tag(format)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    } header: {
-                        Text("General")
-                    }
-
-                    Section {
-                        providerSettings
-                    } header: {
-                        Text(provider.rawValue + " Configuration")
-                    }
-
-                    // Platform specific content (e.g. MCP)
+                    generalSection
+                    providerConfigSection
                     platformContent
-
-                    Section {
-                        HStack {
-                            Image(
-                                systemName: llmService.isConfigured
-                                    ? "checkmark.circle.fill" : "xmark.circle.fill"
-                            )
-                            .foregroundColor(llmService.isConfigured ? .green : .red)
-                            Text(llmService.isConfigured ? "Connected" : "Not Configured")
-                        }
-                    } header: {
-                        Text("Status")
-                    }
-
-                    // Error/Success Messages
-                    if let error = errorMessage {
-                        Section {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.orange)
-                                Text(error)
-                                    .font(.caption)
-                                Spacer()
-                                Button("Dismiss") {
-                                    errorMessage = nil
-                                }
-                            }
-                        }
-                    }
-
-                    if showingSaveSuccess {
-                        Section {
-                            HStack {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                Text("Settings saved successfully!")
-                            }
-                        }
-                    }
-
-                    // Action Buttons
-                    Section {
-                        HStack(spacing: 12) {
-                            Button(action: saveSettings) {
-                                HStack {
-                                    Image(systemName: "checkmark.circle")
-                                    Text("Save Settings")
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(!isValid)
-
-                            Button(action: testConnection) {
-                                HStack {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                    Text("Test Connection")
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(!isValid)
-                        }
-                    } header: {
-                        Text("Save & Test")
-                    }
-
-                    // Backup & Restore
-                    Section {
-                        Button(action: restoreFromBackup) {
-                            HStack {
-                                Image(systemName: "arrow.counterclockwise.circle")
-                                Text("Restore from Backup")
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-
-                        HStack(spacing: 12) {
-                            Button(action: exportConfiguration) {
-                                HStack {
-                                    Image(systemName: "square.and.arrow.up")
-                                    Text("Export")
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-
-                            Button(action: importConfiguration) {
-                                HStack {
-                                    Image(systemName: "square.and.arrow.down")
-                                    Text("Import")
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                        
-                        Divider()
-                        
-                        HStack(spacing: 12) {
-                            Button(action: exportDatabase) {
-                                HStack {
-                                    Image(systemName: "cylinder.split.1x2")
-                                    Text("Export DB")
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-
-                            Button(action: importDatabase) {
-                                HStack {
-                                    Image(systemName: "arrow.down.to.line.compact")
-                                    Text("Import DB")
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                    } header: {
-                        Text("Backup & Restore")
-                    } footer: {
-                        Text(
-                            "Export configuration saves settings without API key. Database export saves all chats, memories, and notes as JSON."
-                        )
-                        .font(.caption)
-                    }
-
-                    // Danger Zone
-                    Section {
-                        Button(action: clearSettings) {
-                            HStack {
-                                Image(systemName: "trash")
-                                Text("Clear All Settings")
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .foregroundColor(.red)
-
-                        Button(action: { showingResetConfirmation = true }) {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle")
-                                Text("Reset Database")
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .foregroundColor(.red)
-                    } header: {
-                        Text("Danger Zone")
-                    } footer: {
-                        Text(
-                            "Reset Database will delete ALL conversations, notes, and memories. This cannot be undone!"
-                        )
-                        .font(.caption)
-                        .foregroundColor(.red)
-                    }
+                    statusSection
+                    messageSection
+                    saveTestSection
+                    backupRestoreSection
+                    dangerZoneSection
                 }
                 .formStyle(.grouped)
             }
@@ -259,78 +76,338 @@ public struct SettingsView<PlatformContent: View>: View {
         }
     }
 
+    // MARK: - Sections
+    
+    private var headerView: some View {
+        HStack {
+            Text("Settings")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Spacer()
+        }
+        .padding()
+        .background(Color.gray.opacity(0.05))
+    }
+    
+    private var generalSection: some View {
+        Section {
+            Picker("Provider", selection: $provider) {
+                ForEach(LLMProvider.allCases) { provider in
+                    Text(provider.rawValue).tag(provider)
+                }
+            }
+            .pickerStyle(.menu)
+
+            Picker("Tool Format", selection: $toolFormat) {
+                ForEach(ToolCallFormat.allCases) { format in
+                    Text(format.rawValue).tag(format)
+                }
+            }
+            .pickerStyle(.menu)
+        } header: {
+            Text("General")
+        }
+    }
+    
+    private var providerConfigSection: some View {
+        Section {
+            providerSettings
+        } header: {
+            Text(provider.rawValue + " Configuration")
+        }
+    }
+    
+    private var statusSection: some View {
+        Section {
+            HStack {
+                Image(
+                    systemName: llmService.isConfigured
+                        ? "checkmark.circle.fill" : "xmark.circle.fill"
+                )
+                .foregroundColor(llmService.isConfigured ? .green : .red)
+                Text(llmService.isConfigured ? "Connected" : "Not Configured")
+            }
+        } header: {
+            Text("Status")
+        }
+    }
+    
+    @ViewBuilder
+    private var messageSection: some View {
+        if let error = errorMessage {
+            Section {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text(error)
+                        .font(.caption)
+                    Spacer()
+                    Button("Dismiss") {
+                        errorMessage = nil
+                    }
+                }
+            }
+        }
+
+        if showingSaveSuccess {
+            Section {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Settings saved successfully!")
+                }
+            }
+        }
+    }
+    
+    private var saveTestSection: some View {
+        Section {
+            HStack(spacing: 12) {
+                Button(action: saveSettings) {
+                    HStack {
+                        Image(systemName: "checkmark.circle")
+                        Text("Save Settings")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!isValid)
+
+                Button(action: testConnection) {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Text("Test Connection")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(!isValid)
+            }
+        } header: {
+            Text("Save & Test")
+        }
+    }
+    
+    private var backupRestoreSection: some View {
+        Section {
+            Button(action: restoreFromBackup) {
+                HStack {
+                    Image(systemName: "arrow.counterclockwise.circle")
+                        Text("Restore from Backup")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+
+            HStack(spacing: 12) {
+                Button(action: exportConfiguration) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("Export")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                Button(action: importConfiguration) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.down")
+                        Text("Import")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+            
+            Divider()
+            
+            HStack(spacing: 12) {
+                Button(action: exportDatabase) {
+                    HStack {
+                        Image(systemName: "cylinder.split.1x2")
+                        Text("Export DB")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                Button(action: importDatabase) {
+                    HStack {
+                        Image(systemName: "arrow.down.to.line.compact")
+                        Text("Import DB")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+        } header: {
+            Text("Backup & Restore")
+        } footer: {
+            Text(
+                "Export configuration saves settings without API key. Database export saves all chats, memories, and notes as JSON."
+            )
+            .font(.caption)
+        }
+    }
+    
+    private var dangerZoneSection: some View {
+        Section {
+            Button(action: clearSettings) {
+                HStack {
+                    Image(systemName: "trash")
+                    Text("Clear All Settings")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .foregroundColor(.red)
+
+            Button(action: { showingResetConfirmation = true }) {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle")
+                    Text("Reset Database")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .foregroundColor(.red)
+        } header: {
+            Text("Danger Zone")
+        } footer: {
+            Text(
+                "Reset Database will delete ALL conversations, notes, and memories. This cannot be undone!"
+            )
+            .font(.caption)
+            .foregroundColor(.red)
+        }
+    }
+
     // MARK: - Subviews
 
     @ViewBuilder
     private var providerSettings: some View {
         switch provider {
         case .openAI:
-            LabeledContent("Model Name") {
+            openAISettings
+        case .openAICompatible:
+            openAICompatibleSettings
+        case .ollama:
+            ollamaSettings
+        }
+    }
+    
+    @ViewBuilder
+    private var openAISettings: some View {
+        Group {
+            LabeledContent("Model Name (Main)") {
                 HStack {
                     TextField("gpt-4o", text: $modelName)
                         .textFieldStyle(.roundedBorder)
-
-                    Menu {
-                        Button("gpt-4o") { modelName = "gpt-4o" }
-                        Button("gpt-4o-mini") { modelName = "gpt-4o-mini" }
-                        Button("gpt-4-turbo") { modelName = "gpt-4-turbo" }
-                        Button("gpt-3.5-turbo") { modelName = "gpt-3.5-turbo" }
-                    } label: {
-                        Image(systemName: "chevron.down.circle")
-                    }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize()
+                    modelMenu(binding: $modelName)
                 }
             }
-
-            LabeledContent("API Key") {
-                SecureField("", text: $apiKey)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            LabeledContent("API Endpoint") {
-                TextField("", text: $endpoint)
-                    .textFieldStyle(.roundedBorder)
-                    .foregroundColor(.secondary)
-            }
-
-        case .openAICompatible:
-            LabeledContent("API Endpoint") {
-                TextField("", text: $endpoint)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            LabeledContent("Model Name") {
-                TextField("", text: $modelName)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            LabeledContent("API Key") {
-                SecureField("Required", text: $apiKey)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-        case .ollama:
-            LabeledContent("API Endpoint") {
+            
+            LabeledContent("Utility Model") {
                 HStack {
-                    TextField("", text: $endpoint)
+                    TextField("gpt-4o-mini", text: $utilityModel)
                         .textFieldStyle(.roundedBorder)
-
-                    Button("Fetch Models") {
-                        fetchOllamaModels()
-                    }
+                    modelMenu(binding: $utilityModel)
                 }
             }
-
-            LabeledContent("Model Name") {
-                if ollamaModels.isEmpty {
-                    TextField("", text: $modelName)
+            
+            LabeledContent("Fast Model") {
+                HStack {
+                    TextField("gpt-4o-mini", text: $fastModel)
                         .textFieldStyle(.roundedBorder)
-                } else {
-                    Picker("", selection: $modelName) {
-                        ForEach(ollamaModels, id: \.self) { model in
-                            Text(model).tag(model)
-                        }
+                    modelMenu(binding: $fastModel)
+                }
+            }
+        }
+
+        LabeledContent("API Key") {
+            SecureField("", text: $apiKey)
+                .textFieldStyle(.roundedBorder)
+        }
+
+        LabeledContent("API Endpoint") {
+            TextField("", text: $endpoint)
+                .textFieldStyle(.roundedBorder)
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    @ViewBuilder
+    private var openAICompatibleSettings: some View {
+        LabeledContent("API Endpoint") {
+            TextField("", text: $endpoint)
+                .textFieldStyle(.roundedBorder)
+        }
+
+        LabeledContent("Model Name") {
+            TextField("", text: $modelName)
+                .textFieldStyle(.roundedBorder)
+        }
+        
+        LabeledContent("Utility Model") {
+            TextField("", text: $utilityModel)
+                .textFieldStyle(.roundedBorder)
+        }
+        
+        LabeledContent("Fast Model") {
+            TextField("", text: $fastModel)
+                .textFieldStyle(.roundedBorder)
+        }
+
+        LabeledContent("API Key") {
+            SecureField("Required", text: $apiKey)
+                .textFieldStyle(.roundedBorder)
+        }
+    }
+    
+    @ViewBuilder
+    private var ollamaSettings: some View {
+        LabeledContent("API Endpoint") {
+            HStack {
+                TextField("", text: $endpoint)
+                    .textFieldStyle(.roundedBorder)
+
+                Button("Fetch Models") {
+                    fetchOllamaModels()
+                }
+            }
+        }
+
+        Group {
+            ollamaModelPicker("Model Name (Main)", selection: $modelName)
+            ollamaModelPicker("Utility Model", selection: $utilityModel)
+            ollamaModelPicker("Fast Model", selection: $fastModel)
+        }
+    }
+    
+    private func modelMenu(binding: Binding<String>) -> some View {
+        Menu {
+            Button("gpt-4o") { binding.wrappedValue = "gpt-4o" }
+            Button("gpt-4o-mini") { binding.wrappedValue = "gpt-4o-mini" }
+            Button("gpt-4-turbo") { binding.wrappedValue = "gpt-4-turbo" }
+            Button("gpt-3.5-turbo") { binding.wrappedValue = "gpt-3.5-turbo" }
+        } label: {
+            Image(systemName: "chevron.down.circle")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+    }
+    
+    @ViewBuilder
+    private func ollamaModelPicker(_ label: String, selection: Binding<String>) -> some View {
+        LabeledContent(label) {
+            if ollamaModels.isEmpty {
+                TextField("", text: selection)
+                    .textFieldStyle(.roundedBorder)
+            } else {
+                Picker("", selection: selection) {
+                    ForEach(ollamaModels, id: \.self) { model in
+                        Text(model).tag(model)
                     }
                 }
             }
@@ -352,6 +429,8 @@ public struct SettingsView<PlatformContent: View>: View {
         provider = llmService.configuration.provider
         endpoint = llmService.configuration.endpoint
         modelName = llmService.configuration.modelName
+        utilityModel = llmService.configuration.utilityModel
+        fastModel = llmService.configuration.fastModel
         apiKey = llmService.configuration.apiKey
         toolFormat = llmService.configuration.toolFormat
         mcpServers = llmService.configuration.mcpServers
@@ -368,6 +447,8 @@ public struct SettingsView<PlatformContent: View>: View {
         let config = LLMConfiguration(
             endpoint: endpoint,
             modelName: modelName,
+            utilityModel: utilityModel,
+            fastModel: fastModel,
             apiKey: apiKey,
             provider: provider,
             toolFormat: toolFormat,
@@ -396,6 +477,8 @@ public struct SettingsView<PlatformContent: View>: View {
                 let config = LLMConfiguration(
                     endpoint: endpoint,
                     modelName: modelName,
+                    utilityModel: utilityModel,
+                    fastModel: fastModel,
                     apiKey: apiKey,
                     provider: provider,
                     toolFormat: toolFormat,

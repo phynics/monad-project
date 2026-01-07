@@ -34,6 +34,9 @@ public final class LLMService {
     public let embeddingService: any EmbeddingService
 
     private var client: (any LLMClientProtocol)?
+    private var utilityClient: (any LLMClientProtocol)?
+    private var fastClient: (any LLMClientProtocol)?
+    
     private let storage: ConfigurationStorage
     public let promptBuilder: PromptBuilder
     private let logger = Logger.llm
@@ -41,6 +44,14 @@ public final class LLMService {
     /// Internal helper to get client if configured
     public func getClient() -> (any LLMClientProtocol)? {
         return client
+    }
+    
+    public func getUtilityClient() -> (any LLMClientProtocol)? {
+        return utilityClient
+    }
+    
+    public func getFastClient() -> (any LLMClientProtocol)? {
+        return fastClient
     }
 
     public init(
@@ -76,7 +87,7 @@ public final class LLMService {
         self.isConfigured = config.isValid
 
         if config.isValid {
-            logger.info("Loaded configuration for model: \(config.modelName)")
+            logger.info("Loaded configuration. Main: \(config.modelName), Utility: \(config.utilityModel), Fast: \(config.fastModel)")
             updateClient(with: config)
         } else {
             logger.notice("LLM service not yet configured")
@@ -110,7 +121,7 @@ public final class LLMService {
 
     /// Update configuration and persist
     public func updateConfiguration(_ config: LLMConfiguration) async throws {
-        logger.info("Updating configuration to model: \(config.modelName)")
+        logger.info("Updating configuration to models: \(config.modelName) / \(config.utilityModel) / \(config.fastModel)")
         try await storage.save(config)
         self.configuration = config
         self.isConfigured = config.isValid
@@ -119,6 +130,8 @@ public final class LLMService {
             updateClient(with: config)
         } else {
             client = nil
+            utilityClient = nil
+            fastClient = nil
         }
     }
 
@@ -129,13 +142,15 @@ public final class LLMService {
         self.configuration = .openAI
         self.isConfigured = false
         client = nil
+        utilityClient = nil
+        fastClient = nil
     }
 
     // MARK: - Private Methods
 
     /// Update LLM client with configuration
     private func updateClient(with config: LLMConfiguration) {
-        logger.debug("Updating client for provider: \(config.provider.rawValue)")
+        logger.debug("Updating clients for provider: \(config.provider.rawValue)")
 
         switch config.provider {
         case .ollama:
@@ -143,12 +158,34 @@ public final class LLMService {
                 endpoint: config.endpoint,
                 modelName: config.modelName
             )
+            self.utilityClient = OllamaClient(
+                endpoint: config.endpoint,
+                modelName: config.utilityModel
+            )
+            self.fastClient = OllamaClient(
+                endpoint: config.endpoint,
+                modelName: config.fastModel
+            )
 
         case .openAI, .openAICompatible:
             let components = parseEndpoint(config.endpoint)
             self.client = OpenAIClient(
                 apiKey: config.apiKey,
                 modelName: config.modelName,
+                host: components.host,
+                port: components.port,
+                scheme: components.scheme
+            )
+            self.utilityClient = OpenAIClient(
+                apiKey: config.apiKey,
+                modelName: config.utilityModel,
+                host: components.host,
+                port: components.port,
+                scheme: components.scheme
+            )
+            self.fastClient = OpenAIClient(
+                apiKey: config.apiKey,
+                modelName: config.fastModel,
                 host: components.host,
                 port: components.port,
                 scheme: components.scheme
@@ -199,7 +236,7 @@ public final class LLMService {
     
     /// Generate tags/keywords for a given text using the LLM
     public func generateTags(for text: String) async throws -> [String] {
-        guard let client = client else {
+        guard let client = utilityClient ?? client else {
             return []
         }
         
@@ -250,7 +287,7 @@ public final class LLMService {
         transcript: String,
         recalledMemories: [Memory]
     ) async throws -> [String: Double] {
-        guard let client = client, !recalledMemories.isEmpty else {
+        guard let client = utilityClient ?? client, !recalledMemories.isEmpty else {
             return [:]
         }
 

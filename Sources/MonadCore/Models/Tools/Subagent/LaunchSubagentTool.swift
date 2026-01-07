@@ -85,7 +85,8 @@ public struct LaunchSubagentTool: Tool, @unchecked Sendable {
             memories: [],
             chatHistory: [],
             tools: [], // Subagent doesn't use tools for now (to avoid recursion depth issues)
-            systemInstructions: "You are a focused subagent. You have been provided with specific documents to analyze. Answer the user's prompt based ONLY on these documents and your general knowledge."
+            systemInstructions: "You are a focused subagent. You have been provided with specific documents to analyze. Answer the user's prompt based ONLY on these documents and your general knowledge.",
+            useFastModel: true
         )
         
         var response = ""

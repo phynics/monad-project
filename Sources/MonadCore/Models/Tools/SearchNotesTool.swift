@@ -1,7 +1,7 @@
 import Foundation
 
 /// Tool to search context notes
-public class SearchNotesTool: Tool, @unchecked Sendable {
+public struct SearchNotesTool: Tool, @unchecked Sendable {
     public let id = "search_notes"
     public let name = "Search Notes"
     public let description = "Search through context notes to find relevant information"
@@ -39,6 +39,7 @@ public class SearchNotesTool: Tool, @unchecked Sendable {
     }
     
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
+        // More robust parameter extraction
         guard let query = parameters["query"] as? String else {
             return .failure("Missing required parameter: query")
         }
