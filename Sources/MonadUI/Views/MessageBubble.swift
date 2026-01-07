@@ -1,6 +1,7 @@
 import MonadCore
 import SwiftUI
 import RegexBuilder
+import MarkdownUI
 
 #if os(macOS)
     import AppKit
@@ -109,7 +110,9 @@ public struct MessageBubble: View {
                         if hasContent {
                             HStack(alignment: .bottom, spacing: 0) {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(displayContent)
+                                    Markdown(displayContent)
+                                        .markdownTheme(.gitHub)
+                                        .textSelection(.enabled)
                                     
                                     // Subagent Context Bling
                                     if let _ = message?.subagentContext {

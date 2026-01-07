@@ -15,6 +15,9 @@ packages:
   GRDB:
     url: https://github.com/groue/GRDB.swift.git
     from: 7.0.0
+  MarkdownUI:
+    url: https://github.com/gonzalezreal/swift-markdown-ui
+    from: 2.4.0
 
 settings:
   base:
@@ -93,6 +96,8 @@ targets:
         product: OpenAI
       - package: GRDB
         product: GRDB
+      - package: MarkdownUI
+        product: MarkdownUI
     settings:
       base:
         PRODUCT_NAME: MonadUI
@@ -226,6 +231,8 @@ targets:
         product: OpenAI
       - package: GRDB
         product: GRDB
+      - package: MarkdownUI
+        product: MarkdownUI
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.core-tests
