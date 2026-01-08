@@ -58,7 +58,11 @@ public class EditNoteTool: Tool, @unchecked Sendable {
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let noteName = parameters["note_name"] as? String,
               let newContent = parameters["content"] as? String else {
-            return .failure("Missing required parameters: note_name and content")
+            let errorMsg = "Missing required parameters: note_name and content."
+            if let example = usageExample {
+                return .failure("\(errorMsg) Example: \(example)")
+            }
+            return .failure(errorMsg)
         }
         
         // Search for note by name

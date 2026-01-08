@@ -56,7 +56,11 @@ public class EditMemoryTool: Tool, @unchecked Sendable {
         guard let memoryIdString = parameters["memory_id"] as? String,
             let memoryId = UUID(uuidString: memoryIdString)
         else {
-            return .failure("Invalid or missing parameter: memory_id")
+            let errorMsg = "Invalid or missing parameter: memory_id."
+            if let example = usageExample {
+                return .failure("\(errorMsg) Example: \(example)")
+            }
+            return .failure(errorMsg)
         }
 
         guard let memory = try await persistenceService.fetchMemory(id: memoryId) else {

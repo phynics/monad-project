@@ -44,7 +44,11 @@ public struct SearchFileContentTool: Tool, @unchecked Sendable {
     
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let pattern = parameters["pattern"] as? String else {
-            return .failure("Missing required parameter: pattern")
+            let errorMsg = "Missing required parameter: pattern."
+            if let example = usageExample {
+                return .failure("\(errorMsg) Example: \(example)")
+            }
+            return .failure(errorMsg)
         }
         
         let pathString = parameters["path"] as? String ?? "."

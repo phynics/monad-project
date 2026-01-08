@@ -23,6 +23,7 @@ public actor OpenAIClient {
         )
         self.client = OpenAI(configuration: configuration)
         self.modelName = modelName
+        logger.debug("Initialized OpenAIClient with model: \(modelName), host: \(host), port: \(port), scheme: \(scheme)")
     }
 
     /// Stream chat responses
@@ -38,6 +39,12 @@ public actor OpenAIClient {
             tools: tools,
             streamOptions: .init(includeUsage: true)
         )
+
+        logger.debug("Starting chat stream with model: \(self.modelName)")
+        logger.debug("Number of messages: \(messages.count)")
+        if let tools = tools {
+            logger.debug("Tools provided: \(tools.map { $0.function.name }.joined(separator: ", "))")
+        }
 
         return AsyncThrowingStream { continuation in
             let client = self.client

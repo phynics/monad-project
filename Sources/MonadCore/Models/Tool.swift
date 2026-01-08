@@ -17,7 +17,7 @@ public protocol Tool: Sendable, PromptFormattable {
     /// Whether tool requires user permission to execute
     var requiresPermission: Bool { get }
 
-    /// Example usage of the tool (optional, for prompt)
+    /// Example usage of the tool (optional, used for error guidance)
     var usageExample: String? { get }
 
     /// Whether tool can be used (e.g., readonly notes can't be edited)
@@ -77,14 +77,6 @@ extension Tool {
         parts.append("- Tool ID: `\(id)`")
         parts.append("- Purpose: \(description)")
 
-        // Usage example (if provided)
-        if let example = usageExample {
-            parts.append("- Example:")
-            parts.append("  ```")
-            parts.append("  \(example)")
-            parts.append("  ```")
-        }
-
         return parts.joined(separator: "\n")
     }
 }
@@ -113,9 +105,10 @@ public func formatToolsForPrompt(_ tools: [any Tool]) async -> String {
         For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
         ```xml
         <tool_call>
-        {"name": "function_name", "arguments": {"param": "value"}}
+        {"name": "tool_name", "arguments": {"param1": "value1", "param2": 42}}
         </tool_call>
         ```
+        For general conversation, ALWAYS respond in natural language (Markdown).
 
         Guidelines:
         - Use tools only when you need to search, create, or modify data that is not already in your context.

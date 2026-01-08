@@ -193,6 +193,30 @@ public final class LLMService {
                 modelName: config.fastModel
             )
 
+        case .openRouter:
+            let components = parseEndpoint(config.endpoint)
+            self.client = OpenRouterClient(
+                apiKey: config.apiKey,
+                modelName: config.modelName,
+                host: components.host,
+                port: components.port,
+                scheme: components.scheme
+            )
+            self.utilityClient = OpenRouterClient(
+                apiKey: config.apiKey,
+                modelName: config.utilityModel,
+                host: components.host,
+                port: components.port,
+                scheme: components.scheme
+            )
+            self.fastClient = OpenRouterClient(
+                apiKey: config.apiKey,
+                modelName: config.fastModel,
+                host: components.host,
+                port: components.port,
+                scheme: components.scheme
+            )
+
         case .openAI, .openAICompatible:
             let components = parseEndpoint(config.endpoint)
             self.client = OpenAIClient(
@@ -218,8 +242,6 @@ public final class LLMService {
             )
         }
     }
-
-    /// Parse endpoint URL into components (host, port, scheme)
     /// - Parameter endpoint: Full endpoint URL (e.g., "http://localhost:11434")
     /// - Returns: Tuple with host, port, and scheme
     /// - Note: Supports custom ports for local LLM servers like Ollama (11434), LM Studio (1234), etc.

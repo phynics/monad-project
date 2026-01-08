@@ -14,7 +14,7 @@ public final class CreateMemoryTool: Tool, @unchecked Sendable {
     public var usageExample: String? {
         """
         <tool_call>
-        {"name": "create_memory", "arguments": {"title": "Project Alpha", "content": "Key deadlines: Q1 Report due Jan 15", "tags": ["work", "deadlines"]}}
+        {"name": "create_memory", "arguments": {"title": "Meeting Notes", "content": "Project sync on Tuesday", "tags": ["work"]}}
         </tool_call>
         """
     }
@@ -58,7 +58,11 @@ public final class CreateMemoryTool: Tool, @unchecked Sendable {
         guard let title = parameters["title"] as? String,
             let content = parameters["content"] as? String
         else {
-            return .failure("Missing required parameters: title and content")
+            let errorMsg = "Missing required parameters: title and content."
+            if let example = usageExample {
+                return .failure("\(errorMsg) Example: \(example)")
+            }
+            return .failure(errorMsg)
         }
 
         var tags = parameters["tags"] as? [String] ?? []

@@ -45,7 +45,11 @@ public struct MoveDocumentExcerptTool: Tool, @unchecked Sendable {
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let path = parameters["path"] as? String,
               let offset = parameters["offset"] as? Int else {
-            return .failure("Missing required parameters")
+            let errorMsg = "Missing required parameters: path and offset."
+            if let example = usageExample {
+                return .failure("\(errorMsg) Example: \(example)")
+            }
+            return .failure(errorMsg)
         }
         
         guard var doc = await documentManager.getDocument(path: path) else {

@@ -36,7 +36,11 @@ public struct ReadFileTool: Tool, @unchecked Sendable {
     
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let pathString = parameters["path"] as? String else {
-            return .failure("Missing required parameter: path")
+            let errorMsg = "Missing required parameter: path."
+            if let example = usageExample {
+                return .failure("\(errorMsg) Example: \(example)")
+            }
+            return .failure(errorMsg)
         }
         
         let url = URL(fileURLWithPath: pathString).standardized

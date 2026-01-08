@@ -51,7 +51,11 @@ public struct LaunchSubagentTool: Tool, @unchecked Sendable {
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let prompt = parameters["prompt"] as? String,
               let docPaths = parameters["documents"] as? [String] else {
-            return .failure("Missing required parameters: prompt and documents")
+            let errorMsg = "Missing required parameters: prompt and documents."
+            if let example = usageExample {
+                return .failure("\(errorMsg) Example: \(example)")
+            }
+            return .failure(errorMsg)
         }
         
         // Gather documents

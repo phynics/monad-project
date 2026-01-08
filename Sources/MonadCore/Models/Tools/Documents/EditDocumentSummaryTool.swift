@@ -45,7 +45,11 @@ public struct EditDocumentSummaryTool: Tool, @unchecked Sendable {
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let path = parameters["path"] as? String,
               let summary = parameters["summary"] as? String else {
-            return .failure("Missing required parameters: path and summary")
+            let errorMsg = "Missing required parameters: path and summary."
+            if let example = usageExample {
+                return .failure("\(errorMsg) Example: \(example)")
+            }
+            return .failure(errorMsg)
         }
         
         guard var doc = await documentManager.getDocument(path: path) else {

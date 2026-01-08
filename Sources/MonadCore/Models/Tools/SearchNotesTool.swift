@@ -41,7 +41,11 @@ public struct SearchNotesTool: Tool, @unchecked Sendable {
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
         // More robust parameter extraction
         guard let query = parameters["query"] as? String else {
-            return .failure("Missing required parameter: query")
+            let errorMsg = "Missing required parameter: query."
+            if let example = usageExample {
+                return .failure("\(errorMsg) Example: \(example)")
+            }
+            return .failure(errorMsg)
         }
         
         let notes = try await persistenceService.searchNotes(query: query)

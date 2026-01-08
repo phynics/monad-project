@@ -40,7 +40,11 @@ public class SearchArchivedChatsTool: Tool, @unchecked Sendable {
     
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let query = parameters["query"] as? String else {
-            return .failure("Missing required parameter: query")
+            let errorMsg = "Missing required parameter: query."
+            if let example = usageExample {
+                return .failure("\(errorMsg) Example: \(example)")
+            }
+            return .failure(errorMsg)
         }
         
         let sessions = try await persistenceService.searchArchivedSessions(query: query)

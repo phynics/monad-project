@@ -348,11 +348,13 @@ public final class ChatViewModel {
                     streamingCoordinator.updateMetadata(from: result)
 
                     if let delta = result.choices.first?.delta.content {
+                        logger.debug("RAW STREAM CHUNK: '\(delta)'")
                         streamingCoordinator.processChunk(delta)
                     }
 
                     // Process tool calls from delta
                     if let toolCalls = result.choices.first?.delta.toolCalls {
+                        logger.debug("RAW TOOL CALL DELTA: \(toolCalls.count) items")
                         streamingCoordinator.processToolCalls(toolCalls)
                     }
                 }

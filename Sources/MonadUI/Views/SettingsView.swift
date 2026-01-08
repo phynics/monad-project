@@ -100,6 +100,28 @@ public struct SettingsView<PlatformContent: View>: View {
                 }
             }
             .pickerStyle(.menu)
+            .onChange(of: provider) { _, newValue in
+                // Set defaults when switching providers if empty
+                switch newValue {
+                case .openAI:
+                    if endpoint.isEmpty || endpoint.contains("openrouter.ai") {
+                        endpoint = "https://api.openai.com"
+                    }
+                case .openRouter:
+                    endpoint = "https://openrouter.ai/api"
+                    if modelName.isEmpty || !modelName.contains("/") {
+                        modelName = "openai/gpt-4o"
+                        utilityModel = "openai/gpt-4o-mini"
+                        fastModel = "openai/gpt-4o-mini"
+                    }
+                case .ollama:
+                    if endpoint.isEmpty || endpoint.contains("api.openai.com") {
+                        endpoint = "http://localhost:11434"
+                    }
+                case .openAICompatible:
+                    break
+                }
+            }
 
             Picker("Tool Format", selection: $toolFormat) {
                 ForEach(ToolCallFormat.allCases) { format in
@@ -292,6 +314,8 @@ public struct SettingsView<PlatformContent: View>: View {
         switch provider {
         case .openAI:
             openAISettings
+        case .openRouter:
+            openRouterSettings
         case .openAICompatible:
             openAICompatibleSettings
         case .ollama:
@@ -299,6 +323,76 @@ public struct SettingsView<PlatformContent: View>: View {
         }
     }
     
+    @ViewBuilder
+    private var openRouterSettings: some View {
+        LabeledContent("API Key") {
+            SecureField("OpenRouter API Key", text: $apiKey)
+                .textFieldStyle(.roundedBorder)
+        }
+
+        LabeledContent("API Endpoint") {
+            HStack {
+                TextField("https://openrouter.ai/api", text: $endpoint)
+                    .textFieldStyle(.roundedBorder)
+                
+                Button {
+                    fetchOpenRouterModels()
+                } label: {
+                    if isFetchingModels {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Text("Fetch Models")
+                    }
+                }
+                .disabled(isFetchingModels || endpoint.isEmpty || apiKey.isEmpty)
+            }
+        }
+
+        Group {
+            openRouterModelPicker("Model Name (Main)", selection: $modelName)
+            openRouterModelPicker("Utility Model", selection: $utilityModel)
+            openRouterModelPicker("Fast Model", selection: $fastModel)
+        }
+    }
+
+    @ViewBuilder
+    private func openRouterModelPicker(_ label: String, selection: Binding<String>) -> some View {
+        LabeledContent(label) {
+            HStack {
+                if openAIModels.isEmpty {
+                    // Reuse openAIModels state for OpenRouter results too
+                    TextField("e.g. anthropic/claude-3.5-sonnet", text: selection)
+                        .textFieldStyle(.roundedBorder)
+                } else {
+                    Picker("", selection: selection) {
+                        ForEach(openAIModels, id: \.self) { model in
+                            Text(model).tag(model)
+                        }
+                    }
+                }
+                openRouterModelMenu(binding: selection)
+            }
+        }
+    }
+
+    private func openRouterModelMenu(binding: Binding<String>) -> some View {
+        Menu {
+            Button("anthropic/claude-3.5-sonnet") { binding.wrappedValue = "anthropic/claude-3.5-sonnet" }
+            Button("anthropic/claude-3-haiku") { binding.wrappedValue = "anthropic/claude-3-haiku" }
+            Button("openai/gpt-4o") { binding.wrappedValue = "openai/gpt-4o" }
+            Button("openai/gpt-4o-mini") { binding.wrappedValue = "openai/gpt-4o-mini" }
+            Button("google/gemini-pro-1.5") { binding.wrappedValue = "google/gemini-pro-1.5" }
+            Button("google/gemini-flash-1.5") { binding.wrappedValue = "google/gemini-flash-1.5" }
+            Button("meta-llama/llama-3.1-405b-instruct") { binding.wrappedValue = "meta-llama/llama-3.1-405b-instruct" }
+            Button("meta-llama/llama-3.1-70b-instruct") { binding.wrappedValue = "meta-llama/llama-3.1-70b-instruct" }
+        } label: {
+            Image(systemName: "chevron.down.circle")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+    }
+
     @ViewBuilder
     private var openAISettings: some View {
         Group {
@@ -452,9 +546,13 @@ public struct SettingsView<PlatformContent: View>: View {
 
         if provider == .ollama {
             fetchOllamaModels()
-        } else if provider == .openAICompatible {
+        } else if provider == .openAICompatible || provider == .openRouter {
             fetchOpenAIModels()
         }
+    }
+
+    private func fetchOpenRouterModels() {
+        fetchOpenAIModels() // Reuse existing fetch logic as we updated LLMService to return OpenRouter specific list
     }
 
     private func saveSettings() {

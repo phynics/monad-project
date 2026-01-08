@@ -48,12 +48,12 @@ public class StreamingParser {
         while let result = processBuffer() {
             if result.isThinking {
                 Logger.parser.debug(
-                    "🧠 [Parser] Extracted thinking segment: \(result.text.count) chars")
+                    "🧠 [Parser] EXTRACTED THINKING: \(result.text.count) chars: '\(result.text)'")
                 thinkingBuffer += result.text
                 newThinking = (newThinking ?? "") + result.text
             } else {
                 Logger.parser.debug(
-                    "🧠 [Parser] Extracted content segment: \(result.text.count) chars")
+                    "🧠 [Parser] EXTRACTED CONTENT: \(result.text.count) chars: '\(result.text)'")
 
                 // Workaround: If we find a </think> tag but we weren't inside one,
                 // it means we missed the opening <think> tag.

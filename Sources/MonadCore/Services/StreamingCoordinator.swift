@@ -53,21 +53,21 @@ public final class StreamingCoordinator {
     }
 
     public func processChunk(_ delta: String) {
-        logger.debug("Received chunk: '\(delta)'")
+        logger.debug("PARSING CHUNK: '\(delta)'")
         // Parse the chunk using our parser (handles <think> tags)
         let (newThinking, newContent, isReclassified) = parser.process(delta)
 
         if isReclassified {
-            logger.warning("RECLASSIFYING UI STATE: moving content to thinking")
+            logger.warning("PARSER RECLASSIFIED STATE: content moved to thinking")
             streamingThinking = newThinking ?? ""
             streamingContent = newContent ?? ""
         } else {
             if let thinking = newThinking {
-                logger.debug("Accumulating thinking (\(thinking.count) chars)")
+                logger.debug("PARSED THINKING: \(thinking.count) chars")
                 streamingThinking += thinking
             }
             if let content = newContent {
-                logger.debug("Accumulating content (\(content.count) chars)")
+                logger.debug("PARSED CONTENT: \(content.count) chars")
                 streamingContent += content
             }
         }

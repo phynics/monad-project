@@ -29,6 +29,7 @@ public actor OllamaClient {
         config.timeoutIntervalForResource = 300 
         config.waitsForConnectivity = true
         self.session = URLSession(configuration: config)
+        logger.debug("Initialized OllamaClient with model: \(modelName), endpoint: \(self.endpoint.absoluteString)")
     }
 
     public func chatStream(
@@ -36,24 +37,34 @@ public actor OllamaClient {
         tools: [ChatQuery.ChatCompletionToolParam]? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil
     ) -> AsyncThrowingStream<ChatStreamResult, Error> {
+        logger.debug("Ollama chat stream started for model: \(self.modelName)")
         return AsyncThrowingStream { continuation in
             Task {
                 do {
                     let request = try buildRequest(messages: messages, tools: tools, responseFormat: responseFormat)
+                    logger.debug("Ollama request URL: \(request.url?.absoluteString ?? "nil")")
+                    if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
+                        logger.debug("Ollama request body: \(bodyString)")
+                    }
 
                     let (stream, response) = try await session.bytes(for: request)
 
-                    guard let httpResponse = response as? HTTPURLResponse,
-                        (200...299).contains(httpResponse.statusCode)
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        throw LLMServiceError.networkError("Invalid response type from Ollama")
+                    }
+                    
+                    logger.debug("Ollama response status code: \(httpResponse.statusCode)")
+
+                    guard (200...299).contains(httpResponse.statusCode)
                     else {
                         // Attempt to read error body
                         var errorBody = ""
                         for try await line in stream.lines {
                             errorBody += line
                         }
-                        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+                        logger.error("Ollama error response body: \(errorBody)")
                         throw LLMServiceError.networkError(
-                            "Ollama API Error: \(statusCode) - \(errorBody)")
+                            "Ollama API Error: \(httpResponse.statusCode) - \(errorBody)")
                     }
 
                     for try await line in stream.lines {
@@ -287,12 +298,18 @@ public actor OllamaClient {
     public func fetchAvailableModels() async throws -> [String]? {
         let tagsURL = endpoint.appendingPathComponent("api/tags")
         let request = URLRequest(url: tagsURL)
+        logger.debug("Fetching Ollama models from: \(tagsURL.absoluteString)")
         
         let (data, response) = try await session.data(for: request)
         
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw LLMServiceError.networkError("Ollama API Error: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMServiceError.networkError("Invalid response type from Ollama models API")
+        }
+        
+        logger.debug("Ollama models response status: \(httpResponse.statusCode)")
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw LLMServiceError.networkError("Ollama API Error: \(httpResponse.statusCode)")
         }
         
         struct OllamaTagsResponse: Codable {
@@ -303,7 +320,9 @@ public actor OllamaClient {
         }
         
         let tagsResponse = try JSONDecoder().decode(OllamaTagsResponse.self, from: data)
-        return tagsResponse.models.map { $0.name }
+        let models = tagsResponse.models.map { $0.name }
+        logger.debug("Found \(models.count) Ollama models: \(models.joined(separator: ", "))")
+        return models
     }
 }
 

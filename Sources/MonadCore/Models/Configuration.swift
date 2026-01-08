@@ -57,6 +57,21 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         )
     }
 
+    /// Default OpenRouter configuration
+    public static var openRouter: LLMConfiguration {
+        LLMConfiguration(
+            endpoint: "https://openrouter.ai/api",
+            modelName: "openai/gpt-4o",
+            utilityModel: "openai/gpt-4o-mini",
+            fastModel: "openai/gpt-4o-mini",
+            apiKey: "",
+            provider: .openRouter,
+            toolFormat: .openAI,
+            memoryContextLimit: 10,
+            documentContextLimit: 5
+        )
+    }
+
     /// Validate configuration
     public var isValid: Bool {
         let modelsValid = !modelName.isEmpty && !utilityModel.isEmpty && !fastModel.isEmpty
@@ -78,6 +93,7 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
 
 public enum LLMProvider: String, Codable, CaseIterable, Identifiable, Sendable {
     case openAI = "OpenAI"
+    case openRouter = "OpenRouter"
     case openAICompatible = "OpenAI Compatible"
     case ollama = "Ollama"
 
