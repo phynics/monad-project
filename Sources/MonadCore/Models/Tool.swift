@@ -118,7 +118,8 @@ public func formatToolsForPrompt(_ tools: [any Tool]) async -> String {
         ```
 
         Guidelines:
-        - Use tools when you need to search, create, or modify data
+        - Use tools only when you need to search, create, or modify data that is not already in your context.
+        - DO NOT use tools for simple greetings (e.g., "hi", "hello") or general conversation.
         - Wrap each tool call in <tool_call></tool_call> tags
         - Arguments must be a JSON object (not a string)
         - Be specific in your queries
