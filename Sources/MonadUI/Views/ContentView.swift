@@ -13,6 +13,7 @@ public struct ContentView: View {
     @State private var showingMemories = false
     @State private var showingTools = false
     @State private var showingArchiveConfirmation = false
+    @State private var showSidebar = true
 
     @Environment(\.openWindow) private var openWindow
 
@@ -23,20 +24,29 @@ public struct ContentView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            ChatHeaderView(
-                llmService: llmService,
-                messagesEmpty: viewModel.messages.isEmpty,
-                onArchive: { showingArchive = true },
-                onNotes: { showingNotes = true },
-                onMemories: { showingMemories = true },
-                onClear: viewModel.clearConversation,
-                onArchiveCurrent: { showingArchiveConfirmation = true },
-                onSettings: { openWindow(id: "settings") },
-                onTools: { showingTools = true }
-            )
+        HStack(spacing: 0) {
+            if showSidebar {
+                ChatSidebarView(viewModel: viewModel)
+                    .transition(.move(edge: .leading))
+                
+                Divider()
+            }
+            
+            VStack(spacing: 0) {
+                ChatHeaderView(
+                    llmService: llmService,
+                    showSidebar: $showSidebar,
+                    messagesEmpty: viewModel.messages.isEmpty,
+                    onArchive: { showingArchive = true },
+                    onNotes: { showingNotes = true },
+                    onMemories: { showingMemories = true },
+                    onClear: viewModel.clearConversation,
+                    onArchiveCurrent: { showingArchiveConfirmation = true },
+                    onSettings: { openWindow(id: "settings") },
+                    onTools: { showingTools = true }
+                )
 
-            MessageListView(
+                MessageListView(
                 messages: viewModel.messages,
                 isStreaming: viewModel.isStreaming,
                 isExecutingTools: viewModel.isExecutingTools,
@@ -54,6 +64,7 @@ public struct ContentView: View {
             )
 
             ChatInputView(viewModel: viewModel)
+            }
         }
         .frame(minWidth: 600, minHeight: 400)
         .sheet(isPresented: $showingArchive) {

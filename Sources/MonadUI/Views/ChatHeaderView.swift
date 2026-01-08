@@ -3,6 +3,7 @@ import SwiftUI
 
 public struct ChatHeaderView: View {
     public var llmService: LLMService
+    @Binding public var showSidebar: Bool
     public let messagesEmpty: Bool
     public let onArchive: () -> Void
     public let onNotes: () -> Void
@@ -14,6 +15,7 @@ public struct ChatHeaderView: View {
 
     public init(
         llmService: LLMService,
+        showSidebar: Binding<Bool>,
         messagesEmpty: Bool,
         onArchive: @escaping () -> Void,
         onNotes: @escaping () -> Void,
@@ -24,6 +26,7 @@ public struct ChatHeaderView: View {
         onTools: @escaping () -> Void
     ) {
         self.llmService = llmService
+        self._showSidebar = showSidebar
         self.messagesEmpty = messagesEmpty
         self.onArchive = onArchive
         self.onNotes = onNotes
@@ -36,6 +39,17 @@ public struct ChatHeaderView: View {
 
     public var body: some View {
         HStack {
+            Button {
+                withAnimation {
+                    showSidebar.toggle()
+                }
+            } label: {
+                Image(systemName: "sidebar.left")
+                    .font(.title3)
+            }
+            .buttonStyle(.plain)
+            .help("Toggle Sidebar")
+            
             Text("Monad Assistant")
                 .font(.title)
                 .fontWeight(.bold)
