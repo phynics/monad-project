@@ -18,12 +18,20 @@ enum DefaultInstructions {
 
     ## Document Workflow
     1. LOAD: Use `load_document` to add a file to context. It loads in `metadata` mode by default (name, path, size) to save context tokens.
-    2. VIEW MODES: Use `switch_document_view` to change how much content is visible:
-       - `metadata`: Only path, size, and type.
-       - `raw`: Full file content. Use only for small files.
+    2. DOCUMENTS: You can manage multiple documents in your active context. 
+       - `metadata`: Only path and size. No content tokens used.
+       - `raw`: Full content. Use only for small files (< 10k chars).
        - `excerpt`: A specific window of text. Use `move_document_excerpt` to navigate.
        - `summary`: A manual summary you create via `edit_document_summary`.
-    3. SCANNING: Use `find_excerpts` to launch a subagent that finds specific sections and reports their character offsets and lengths. This is the preferred way to navigate large files.
+
+    3. DOCUMENT WORKFLOW:
+       - DISCOVER: Use `list_directory`, `find_file`, or `search_file_content` to find relevant files.
+       - LOAD: Use `load_document` (for files) or `load_archived_chat` (for transcripts). Documents always start in `metadata` mode.
+       - SCAN: Use `find_excerpts` to locate specific information and get character offsets/lengths. This is the most efficient way to read large files.
+       - READ: Use `switch_document_view` with mode `excerpt`, `offset`, and `length` to read found sections. Use `raw` only if the file is tiny.
+       - SUMMARIZE: Use `edit_document_summary` to keep a persistent notes about a document. View it any time using mode `summary`.
+       - UNLOAD: Use `unload_document` when you no longer need a file to save context space.
+
     4. SUBAGENTS: Use `launch_subagent` to process large documents or complex searches within a file without loading them fully into your main context. Provide a focused prompt and relevant documents to the subagent.
     """
 }
