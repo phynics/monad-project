@@ -239,10 +239,12 @@ public struct MessageDebugInfo: Equatable, Sendable {
         parsed: String? = nil,
         thinking: String? = nil,
         toolCalls: [ToolCall]? = nil,
-        subagentContext: SubagentContext? = nil
+        subagentContext: SubagentContext? = nil,
+        rawPrompt: String? = nil,
+        structuredContext: [String: String]? = nil
     ) -> MessageDebugInfo {
         MessageDebugInfo(
-            rawPrompt: nil,
+            rawPrompt: rawPrompt,
             apiResponse: response,
             originalResponse: original,
             parsedContent: parsed,
@@ -255,7 +257,7 @@ public struct MessageDebugInfo: Equatable, Sendable {
             semanticResults: nil,
             tagResults: nil,
             subagentContext: subagentContext,
-            structuredContext: nil
+            structuredContext: structuredContext
         )
     }
 }

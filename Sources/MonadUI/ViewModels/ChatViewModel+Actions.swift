@@ -146,7 +146,7 @@ extension ChatViewModel {
             let contextMemories = injectedMemories
 
             // 2. Call LLM with empty userQuery, relying on chatHistory
-            let (stream, _, _) = await llmService.chatStreamWithContext(
+            let (stream, rawPrompt, structuredContext) = await llmService.chatStreamWithContext(
                 userQuery: "",
                 contextNotes: contextNotes,
                 documents: contextDocuments,
@@ -184,7 +184,11 @@ extension ChatViewModel {
                 throw error
             }
 
-            let assistantMessage = streamingCoordinator.finalize(wasCancelled: Task.isCancelled)
+            let assistantMessage = streamingCoordinator.finalize(
+                wasCancelled: Task.isCancelled,
+                rawPrompt: rawPrompt,
+                structuredContext: structuredContext
+            )
             streamingCoordinator.stopStreaming()
             
             // Record performance

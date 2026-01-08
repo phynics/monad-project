@@ -155,7 +155,11 @@ public final class StreamingCoordinator {
         }
     }
 
-    public func finalize(wasCancelled: Bool = false) -> Message {
+    public func finalize(
+        wasCancelled: Bool = false,
+        rawPrompt: String? = nil,
+        structuredContext: [String: String]? = nil
+    ) -> Message {
         // 1. Extract XML tools from the content
         let (contentWithoutTools, xmlToolCalls) = parser.extractToolCalls(from: streamingContent)
 
@@ -230,7 +234,9 @@ public final class StreamingCoordinator {
                 original: streamingContent,
                 parsed: contentWithoutTools,
                 thinking: streamingThinking.isEmpty ? nil : streamingThinking,
-                toolCalls: finalToolCalls.isEmpty ? nil : finalToolCalls
+                toolCalls: finalToolCalls.isEmpty ? nil : finalToolCalls,
+                rawPrompt: rawPrompt,
+                structuredContext: structuredContext
             )
         )
     }
