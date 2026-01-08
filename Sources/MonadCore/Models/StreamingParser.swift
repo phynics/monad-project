@@ -33,33 +33,33 @@ public class StreamingParser {
 
         // Debug: Show chunk if it contains tag-related content
         if chunk.contains("<think") || chunk.contains("</think") || chunk.contains("think>") {
-            Logger.parser.info("🧠 [Parser] Chunk with tag content: '\(chunk, privacy: .public)'")
+            Logger.parser.info("[Parser] Chunk with tag content: '\(chunk, privacy: .public)'")
         }
 
         // Debug: Check if we're seeing think tags in full buffer
         if buffer.contains("<think>") {
-            Logger.parser.debug("🧠 [Parser] Buffer contains <think> tag")
+            Logger.parser.debug("[Parser] Buffer contains <think> tag")
         }
         if buffer.contains("</think>") {
-            Logger.parser.debug("🧠 [Parser] Buffer contains </think> tag")
+            Logger.parser.debug("[Parser] Buffer contains </think> tag")
         }
 
         // Process buffer to extract thinking and content
         while let result = processBuffer() {
             if result.isThinking {
                 Logger.parser.debug(
-                    "🧠 [Parser] EXTRACTED THINKING: \(result.text.count) chars: '\(result.text)'")
+                    "[Parser] EXTRACTED THINKING: \(result.text.count) chars: '\(result.text)'")
                 thinkingBuffer += result.text
                 newThinking = (newThinking ?? "") + result.text
             } else {
                 Logger.parser.debug(
-                    "🧠 [Parser] EXTRACTED CONTENT: \(result.text.count) chars: '\(result.text)'")
+                    "[Parser] EXTRACTED CONTENT: \(result.text.count) chars: '\(result.text)'")
 
                 // Workaround: If we find a </think> tag but we weren't inside one,
                 // it means we missed the opening <think> tag.
                 if result.text.contains("RECLASSIFY_THINKING_MARKER") {
                     Logger.parser.warning(
-                        "🧠 [Parser] ORPHANED </think> DETECTED! Reclassifying accumulated content.")
+                        "[Parser] ORPHANED </think> DETECTED! Reclassifying accumulated content.")
                     let actualText = result.text.replacingOccurrences(
                         of: "RECLASSIFY_THINKING_MARKER", with: "")
 
@@ -84,19 +84,19 @@ public class StreamingParser {
     /// Get final thinking and content after stream completes
     /// - Returns: Complete thinking (optional) and content strings
     public func finalize() -> (thinking: String?, content: String) {
-        print("🧠 [Parser] Finalizing - buffer: '\(buffer.prefix(100))'")
-        print("🧠 [Parser] Raw buffer length: \(rawBuffer.count)")
-        print("🧠 [Parser] Thinking buffer length: \(thinkingBuffer.count)")
-        print("🧠 [Parser] Content buffer length: \(contentBuffer.count)")
-        print("🧠 [Parser] Inside think tag: \(insideThinkTag)")
+        print("[Parser] Finalizing - buffer: '\(buffer.prefix(100))'")
+        print("[Parser] Raw buffer length: \(rawBuffer.count)")
+        print("[Parser] Thinking buffer length: \(thinkingBuffer.count)")
+        print("[Parser] Content buffer length: \(contentBuffer.count)")
+        print("[Parser] Inside think tag: \(insideThinkTag)")
 
         // Process any remaining buffer
         if !buffer.isEmpty {
             if insideThinkTag {
-                print("🧠 [Parser] Adding remaining buffer to thinking")
+                print("[Parser] Adding remaining buffer to thinking")
                 thinkingBuffer += buffer
             } else {
-                print("🧠 [Parser] Adding remaining buffer to content")
+                print("[Parser] Adding remaining buffer to content")
                 contentBuffer += buffer
             }
             buffer = ""
@@ -107,8 +107,8 @@ public class StreamingParser {
             ? nil : thinkingBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalContent = contentBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        print("🧠 [Parser] Final thinking: \(finalThinking?.count ?? 0) chars")
-        print("🧠 [Parser] Final content: \(finalContent.count) chars")
+        print("[Parser] Final thinking: \(finalThinking?.count ?? 0) chars")
+        print("[Parser] Final content: \(finalContent.count) chars")
 
         return (finalThinking, finalContent)
     }
@@ -143,7 +143,7 @@ public class StreamingParser {
         if insideThinkTag {
             // Look for closing </think> tag
             if !insideCodeBlock, let endRange = buffer.range(of: "</think>") {
-                Logger.parser.info("🧠 [Parser] Found closing </think> tag! Exiting thinking mode")
+                Logger.parser.info("[Parser] Found closing </think> tag! Exiting thinking mode")
                 let text = String(buffer[..<endRange.lowerBound])
                 buffer.removeSubrange(..<endRange.upperBound)
                 insideThinkTag = false
@@ -160,13 +160,13 @@ public class StreamingParser {
                         let safeContent = String(buffer[..<lastAngleBracket])
                         buffer = potentialTag
                         Logger.parser.debug(
-                            "🧠 [Parser] Flushing thinking before potential tag: '\(potentialTag, privacy: .public)'"
+                            "[Parser] Flushing thinking before potential tag: '\(potentialTag, privacy: .public)'"
                         )
                         return (safeContent, true)
                     }
                     // Buffer is just the partial tag, wait for more
                     Logger.parser.debug(
-                        "🧠 [Parser] Holding partial tag: '\(potentialTag, privacy: .public)'")
+                        "[Parser] Holding partial tag: '\(potentialTag, privacy: .public)'")
                     return nil
                 }
             }
@@ -174,7 +174,7 @@ public class StreamingParser {
             // Large buffer safety (though unlikely in streams)
             if buffer.count > 1000 {
                 Logger.parser.warning(
-                    "🧠 [Parser] Large buffer in thinking mode (\(self.buffer.count) chars), potential missing tag"
+                    "[Parser] Large buffer in thinking mode (\(self.buffer.count) chars), potential missing tag"
                 )
             }
 
@@ -188,7 +188,7 @@ public class StreamingParser {
         } else {
             // Look for opening <think> tag
             if !insideCodeBlock, let startRange = buffer.range(of: "<think>") {
-                Logger.parser.info("🧠 [Parser] Found opening <think> tag! Entering thinking mode")
+                Logger.parser.info("[Parser] Found opening <think> tag! Entering thinking mode")
                 // Extract content before <think> tag
                 let textBefore = String(buffer[..<startRange.lowerBound])
                 buffer.removeSubrange(..<startRange.upperBound)
@@ -196,7 +196,7 @@ public class StreamingParser {
 
                 if !textBefore.isEmpty {
                     Logger.parser.debug(
-                        "🧠 [Parser] Returning content before tag: \(textBefore.count) chars")
+                        "[Parser] Returning content before tag: \(textBefore.count) chars")
                     return (textBefore, false)
                 }
                 // Continue processing for thinking content
@@ -214,13 +214,13 @@ public class StreamingParser {
                         let safeContent = String(buffer[..<lastAngleBracket])
                         buffer = potentialTag
                         Logger.parser.debug(
-                            "🧠 [Parser] Flushing content before potential tag: '\(potentialTag, privacy: .public)'"
+                            "[Parser] Flushing content before potential tag: '\(potentialTag, privacy: .public)'"
                         )
                         return (safeContent, false)
                     }
                     // Buffer is just the partial tag, wait for more
                     Logger.parser.debug(
-                        "🧠 [Parser] Holding potential tag start: '\(potentialTag, privacy: .public)'"
+                        "[Parser] Holding potential tag start: '\(potentialTag, privacy: .public)'"
                     )
                     return nil
                 }
@@ -232,12 +232,12 @@ public class StreamingParser {
                         let safeContent = String(buffer[..<lastAngleBracket])
                         buffer = potentialTag
                         Logger.parser.debug(
-                            "🧠 [Parser] Flushing content before potential orphaned tag: '\(potentialTag, privacy: .public)'"
+                            "[Parser] Flushing content before potential orphaned tag: '\(potentialTag, privacy: .public)'"
                         )
                         return (safeContent, false)
                     }
                     Logger.parser.debug(
-                        "🧠 [Parser] Holding potential orphaned tag start: '\(potentialTag, privacy: .public)'"
+                        "[Parser] Holding potential orphaned tag start: '\(potentialTag, privacy: .public)'"
                     )
                     return nil
                 }
@@ -246,7 +246,7 @@ public class StreamingParser {
             // ORPHANED TAG DETECTION: Look for full </think> tag even when not insideThinkTag
             if !insideCodeBlock, let endRange = buffer.range(of: "</think>") {
                 Logger.parser.warning(
-                    "🧠 [Parser] Found orphaned </think> tag! Triggering reclassification.")
+                    "[Parser] Found orphaned </think> tag! Triggering reclassification.")
                 let textBefore = String(buffer[..<endRange.lowerBound])
                 buffer.removeSubrange(..<endRange.upperBound)
                 // We don't set insideThinkTag to true because we just hit the end of it

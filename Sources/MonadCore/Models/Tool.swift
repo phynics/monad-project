@@ -70,7 +70,7 @@ extension Tool {
         var parts: [String] = []
 
         // Title with permission marker
-        let permMarker = requiresPermission ? " 🔒" : ""
+        let permMarker = requiresPermission ? " [Locked]" : ""
         parts.append("\(name)\(permMarker)")
 
         // ID and description

@@ -4,7 +4,10 @@
       "Edit(**)",
       "Bash(swift build)",
       "Bash(cat:*)",
-      "Bash(cd /Volumes/Development/monad-project/Sources/monad-assistant && mkdir -p Views Models Services)"
+      "Bash(cd /Volumes/Development/monad-project/Sources/monad-assistant && mkdir -p Views Models Services)",
+      "Bash(cd /Volumes/Development/monad-project && git shortlog -sn --all | head -10)",
+      "Bash(ls:*)",
+      "Bash(cd /Volumes/Development/monad-project && make test 2>&1)"
     ]
   }
 }

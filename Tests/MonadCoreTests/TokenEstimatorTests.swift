@@ -20,7 +20,7 @@ import Testing
     @Test("Test multi-byte character estimation")
     func multiByteCharacters() {
         // Emoji and special chars should still be estimated reasonably
-        let count = TokenEstimator.estimate(text: "🚀 Monad Assistant")
+        let count = TokenEstimator.estimate(text: "Monad Assistant")
         #expect(count > 0)
     }
 

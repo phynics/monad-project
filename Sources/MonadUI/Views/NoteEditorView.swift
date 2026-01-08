@@ -49,7 +49,7 @@ struct NoteEditorView: View {
                     Text("Basic Info")
                 } footer: {
                     if isReadonly {
-                        Text("⚠️ This is a system note. Editing is allowed for both you and the LLM to support recursive growth.")
+                        Text("System Note: Editing is allowed for both you and the LLM to support recursive growth.")
                             .font(.caption)
                             .foregroundColor(.orange)
                     }

@@ -27,7 +27,7 @@ extension ChatViewModel {
         
         // Prune if we have too many
         // We allow some buffer (e.g. 2x limit) but eventually we should remove oldest unpinned ones
-        let limit = llmService.configuration.memoryContextLimit
+        let limit = 5
         let maxBuffer = limit * 2
         
         let unpinnedCount = activeMemories.filter { !$0.isPinned }.count

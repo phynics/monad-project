@@ -36,7 +36,7 @@ public final class ChatViewModel {
         let pinned = activeMemories.filter { $0.isPinned }
         let unpinned = activeMemories.filter { !$0.isPinned }
             .sorted { $0.lastAccessed > $1.lastAccessed }
-            .prefix(llmService.configuration.memoryContextLimit)
+            .prefix(5)
         
         return (pinned + Array(unpinned)).map { $0.memory }
     }

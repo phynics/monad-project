@@ -23,19 +23,19 @@ help:
 
 # Install dependencies
 install-deps:
-	@echo "📦 Installing development dependencies..."
+	@echo "Installing development dependencies..."
 	@which xcodegen > /dev/null || brew install xcodegen
-	@echo "✅ Dependencies installed!"
+	@echo "Dependencies installed!"
 
 # Generate Xcode project
 generate:
-	@echo "⚙️  Generating Xcode project..."
+	@echo "Generating Xcode project..."
 	@xcodegen generate
-	@echo "✅ Project generated at MonadAssistant.xcodeproj"
+	@echo "Project generated at MonadAssistant.xcodeproj"
 
 # Build the project
 build: generate
-	@echo "🔨 Building MonadAssistant..."
+	@echo "Building MonadAssistant..."
 	@xcodebuild -project MonadAssistant.xcodeproj \
 		-scheme MonadAssistant \
 		-configuration Debug \
@@ -43,27 +43,27 @@ build: generate
 
 # Clean build artifacts
 clean:
-	@echo "🧹 Cleaning build artifacts..."
+	@echo "Cleaning build artifacts..."
 	@xcodebuild -project MonadAssistant.xcodeproj \
 		-scheme MonadAssistant \
 		clean
 	@rm -rf DerivedData
 	@rm -rf .build
-	@echo "✅ Clean complete!"
+	@echo "Clean complete!"
 
 # Run the application
 run: build
-	@echo "🚀 Running MonadAssistant..."
+	@echo "Running MonadAssistant..."
 	@open -a "$(shell find ~/Library/Developer/Xcode/DerivedData -name "MonadAssistant.app" -print -quit)"
 
 # Open in Xcode
 open: generate
-	@echo "📂 Opening in Xcode..."
+	@echo "Opening in Xcode..."
 	@open MonadAssistant.xcodeproj
 
 # Run tests (when tests are added)
 test: generate
-	@echo "🧪 Running tests..."
+	@echo "Running tests..."
 	@xcodebuild -project MonadAssistant.xcodeproj \
 		-scheme MonadAssistant \
 		-configuration Debug \
@@ -71,11 +71,11 @@ test: generate
 
 # Swift Package Manager commands (fallback)
 spm-build:
-	@echo "🔨 Building with Swift Package Manager..."
+	@echo "Building with Swift Package Manager..."
 	@swift build
 
 spm-run:
-	@echo "🚀 Running with Swift Package Manager..."
+	@echo "Running with Swift Package Manager..."
 	@swift run
 
 # Quick rebuild
