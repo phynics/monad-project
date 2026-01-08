@@ -52,17 +52,18 @@ public struct LoadDocumentTool: Tool, @unchecked Sendable {
         }
         
         let url = URL(fileURLWithPath: path).standardized
+        let targetPath = url.path
         
         do {
             let content = try String(contentsOf: url, encoding: .utf8)
             
             // Always default to metadata mode on initial load to save context
             let mode: DocumentContext.ViewMode = .metadata
-            let message = "Document '\(path)' loaded into context in 'metadata' mode. Use `switch_document_view` to read content."
+            let message = "Document '\(targetPath)' loaded into context in 'metadata' mode. Use `switch_document_view` to read content."
             
-            await documentManager.loadDocument(path: path, content: content)
+            await documentManager.loadDocument(path: targetPath, content: content)
             
-            if var doc = await documentManager.getDocument(path: path) {
+            if var doc = await documentManager.getDocument(path: targetPath) {
                 doc.viewMode = mode
                 await documentManager.updateDocument(doc)
             }

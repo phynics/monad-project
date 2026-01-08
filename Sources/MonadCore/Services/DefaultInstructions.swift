@@ -27,6 +27,7 @@ enum DefaultInstructions {
     3. DOCUMENT WORKFLOW:
        - DISCOVER: Use `list_directory`, `find_file`, or `search_file_content` to find relevant files.
        - LOAD: Use `load_document` (for files) or `load_archived_chat` (for transcripts). Documents always start in `metadata` mode.
+       - EXACT PATHS: When using document tools (`switch_document_view`, `unload_document`, etc.), you MUST use the exact path string provided in the active context (e.g. `Sources/Main.swift` or `archived://[UUID]`).
        - SCAN: Use `find_excerpts` to locate specific information and get character offsets/lengths. This is the most efficient way to read large files.
        - READ: Use `switch_document_view` with mode `excerpt`, `offset`, and `length` to read found sections. Use `raw` only if the file is tiny.
        - SUMMARIZE: Use `edit_document_summary` to keep a persistent notes about a document. View it any time using mode `summary`.

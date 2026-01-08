@@ -10,15 +10,19 @@ public final class DocumentManager: Sendable {
     public init() {}
     
     public func loadDocument(path: String, content: String) {
-        // Remove existing if present (reload)
-        unloadDocument(path: path)
+        // Standardize path if it's a real file path
+        let targetPath = standardize(path)
         
-        let doc = DocumentContext(path: path, content: content)
+        // Remove existing if present (reload)
+        unloadDocument(path: targetPath)
+        
+        let doc = DocumentContext(path: targetPath, content: content)
         documents.append(doc)
     }
     
     public func unloadDocument(path: String) {
-        documents.removeAll { $0.path == path }
+        let targetPath = standardize(path)
+        documents.removeAll { $0.path == targetPath }
     }
     
     public func updateDocument(_ document: DocumentContext) {
@@ -28,14 +32,23 @@ public final class DocumentManager: Sendable {
     }
     
     public func getDocument(path: String) -> DocumentContext? {
-        documents.first { $0.path == path }
+        let targetPath = standardize(path)
+        return documents.first { $0.path == targetPath }
     }
     
     public func togglePin(path: String) {
-        guard let index = documents.firstIndex(where: { $0.path == path }) else { return }
+        let targetPath = standardize(path)
+        guard let index = documents.firstIndex(where: { $0.path == targetPath }) else { return }
         var doc = documents[index]
         doc.isPinned.toggle()
         documents[index] = doc
+    }
+    
+    private func standardize(_ path: String) -> String {
+        if path.starts(with: "archived://") {
+            return path
+        }
+        return URL(fileURLWithPath: path).standardized.path
     }
     
     /// Get effective list of documents for context injection (Pinned + Recent N)
