@@ -228,6 +228,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.core-tests
+        CODE_SIGNING_ALLOWED: NO
       debug:
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Automatic
@@ -246,6 +247,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.mcp-tests
+        CODE_SIGNING_ALLOWED: NO
       debug:
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Automatic
