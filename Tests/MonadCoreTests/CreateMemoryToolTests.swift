@@ -3,11 +3,14 @@ import GRDB
 import MonadCore
 import Testing
 
+@testable import MonadCore
+
 @Suite(.serialized)
 @MainActor
 struct CreateMemoryToolTests {
     private let persistence: PersistenceService
     private let tool: CreateMemoryTool
+    private let mockEmbeddingService: MockEmbeddingService
 
     init() async throws {
         // Use an in-memory database for testing
@@ -18,7 +21,8 @@ struct CreateMemoryToolTests {
         try migrator.migrate(queue)
 
         persistence = PersistenceService(dbQueue: queue)
-        tool = CreateMemoryTool(persistenceService: persistence, embeddingService: LocalEmbeddingService())
+        mockEmbeddingService = MockEmbeddingService()
+        tool = CreateMemoryTool(persistenceService: persistence, embeddingService: mockEmbeddingService)
     }
 
     @Test("Test creating a memory successfully")
@@ -46,11 +50,13 @@ struct CreateMemoryToolTests {
         #expect(memory?.tagArray.contains("tag1") == true)
         #expect(memory?.tagArray.contains("tag2") == true)
         
-        // Verify embedding was generated
-        #expect(memory?.embeddingVector.count == 512)
+        // Verify embedding was generated (Mock returns 3 dimensions)
+        #expect(memory?.embeddingVector.count == 3)
+        #expect(memory?.embeddingVector == [0.1, 0.2, 0.3])
     }
 
-    @Test("Test creating a memory without tags")
+    #if canImport(NaturalLanguage)
+    @Test("Test creating a memory without tags (Auto-tagging)")
     func createMemoryWithoutTags() async throws {
         let parameters: [String: Any] = [
             "title": "Natural Language Processing",
@@ -69,6 +75,7 @@ struct CreateMemoryToolTests {
         #expect(memory?.tagArray.isEmpty == false)
         #expect((memory?.tagArray.count ?? 0) > 0)
     }
+    #endif
 
     @Test("Test missing required parameters")
     func missingParameters() async throws {

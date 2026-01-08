@@ -199,6 +199,28 @@ struct PersistenceTests {
         #expect(allMemories.contains { $0.id == memory.id })
     }
 
+    @Test("Test memory update (upsert)")
+    func memoryUpdate() async throws {
+        var memory = Memory(title: "Original Title", content: "Original Content")
+        try await persistence.saveMemory(memory)
+
+        let fetchedOriginal = try await persistence.fetchMemory(id: memory.id)
+        #expect(fetchedOriginal?.title == "Original Title")
+
+        // Update
+        memory.title = "Updated Title"
+        memory.content = "Updated Content"
+        try await persistence.saveMemory(memory)
+
+        let fetchedUpdated = try await persistence.fetchMemory(id: memory.id)
+        #expect(fetchedUpdated?.title == "Updated Title")
+        #expect(fetchedUpdated?.content == "Updated Content")
+
+        // Ensure count is still 1
+        let allMemories = try await persistence.fetchAllMemories()
+        #expect(allMemories.count == 1)
+    }
+
     @Test("Test semantic memory search")
     func semanticSearch() async throws {
         // Create memories with distinct vectors
@@ -214,5 +236,11 @@ struct PersistenceTests {
         #expect(results.count == 1)
         #expect(results.first?.memory.title == "Apple")
         #expect(results.first?.similarity ?? 0 > 0.9)
+    }
+
+    @Test("Test search memories with empty database")
+    func searchMemoriesEmpty() async throws {
+        let results = try await persistence.searchMemories(embedding: [1.0, 0.0, 0.0], limit: 5)
+        #expect(results.isEmpty)
     }
 }
