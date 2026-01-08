@@ -17,8 +17,6 @@ public struct MessageBubble: View {
     @State private var isThinkingExpanded = false
     @State private var showingDebugInfo = false
     @State private var showingSubagentInfo = false
-    @State private var selectedMemory: Memory?
-    @State private var selectedDocument: DocumentContext?
 
     public init(message: Message) {
         self.message = message
@@ -129,53 +127,6 @@ public struct MessageBubble: View {
                                         }
                                         .buttonStyle(.plain)
                                         .padding(.top, 4)
-                                    }
-
-                                    // Context section for user messages
-                                    if let memories = message?.recalledMemories, !memories.isEmpty {
-                                        FlowLayout(spacing: 4) {
-                                            ForEach(memories) { memory in
-                                                Button(action: { selectedMemory = memory }) {
-                                                    HStack(spacing: 3) {
-                                                        Image(systemName: "brain.head.profile")
-                                                            .font(.system(size: 7))
-                                                        Text(memory.title)
-                                                            .font(.system(size: 8, weight: .bold))
-                                                            .lineLimit(1)
-                                                    }
-                                                    .padding(.horizontal, 6)
-                                                    .padding(.vertical, 3)
-                                                    .background(role == .user ? Color.white.opacity(0.2) : Color.blue.opacity(0.1))
-                                                    .foregroundColor(role == .user ? .white : .blue)
-                                                    .cornerRadius(4)
-                                                }
-                                                .buttonStyle(.plain)
-                                            }
-                                        }
-                                        .padding(.top, 4)
-                                    }
-
-                                    if let docs = message?.recalledDocuments, !docs.isEmpty {
-                                        FlowLayout(spacing: 4) {
-                                            ForEach(docs) { doc in
-                                                Button(action: { selectedDocument = doc }) {
-                                                    HStack(spacing: 3) {
-                                                        Image(systemName: "doc.text.fill")
-                                                            .font(.system(size: 7))
-                                                        Text(doc.path.split(separator: "/").last?.description ?? doc.path)
-                                                            .font(.system(size: 8, weight: .bold))
-                                                            .lineLimit(1)
-                                                    }
-                                                    .padding(.horizontal, 6)
-                                                    .padding(.vertical, 3)
-                                                    .background(role == .user ? Color.white.opacity(0.2) : Color.blue.opacity(0.1))
-                                                    .foregroundColor(role == .user ? .white : .blue)
-                                                    .cornerRadius(4)
-                                                }
-                                                .buttonStyle(.plain)
-                                            }
-                                        }
-                                        .padding(.top, 2)
                                     }
                                 }
                                 .padding(12)
@@ -364,12 +315,6 @@ public struct MessageBubble: View {
                 if let context = message?.subagentContext {
                     SubagentContextView(context: context)
                 }
-            }
-            .sheet(item: $selectedMemory) { memory in
-                MemoryDetailView(memory: memory)
-            }
-            .sheet(item: $selectedDocument) { doc in
-                DocumentContextDetailView(document: doc)
             }
         }
     }
