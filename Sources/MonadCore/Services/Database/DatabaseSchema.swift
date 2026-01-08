@@ -138,10 +138,11 @@ public enum DatabaseSchema {
             name: "System",
             description: "Core capabilities and operational constraints.",
             content: """
-                Operational directivies:
-                - Use available context to personalize responses and maintain continuity.
-                - Employ tools only when required for information retrieval or project state updates.
-                - Maintain a professional, technical, and concise persona.
+                Operational Rules:
+                - Use tools only when necessary for information retrieval or state updates.
+                - DO NOT use tools for greetings or general conversation.
+                - Persona: technical, professional, and concise. No emojis.
+                - Prioritize context notes and memories for accuracy and personalization.
                 """,
             isReadonly: true,
             alwaysAppend: true,
