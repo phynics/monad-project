@@ -136,14 +136,12 @@ public enum DatabaseSchema {
         // System Note (Readonly, Always Append)
         let systemNote = Note(
             name: "System",
-            description: "Core system instructions and capabilities",
+            description: "Core capabilities and operational constraints.",
             content: """
-                You are an AI assistant with access to the user's context. You have:
-                - Access to conversation history
-                - Context notes for project-specific information
-                - Ability to learn and adapt based on user preferences
-
-                Always be helpful, accurate, and concise. Use the provided context to give relevant responses.
+                Core instructions and system capabilities:
+                - AI assistant with access to conversation history and project-specific context.
+                - Ability to manage long-term memories and short-term notes.
+                - Professional, concise, and technical communication style.
                 """,
             isReadonly: true,
             alwaysAppend: true,
@@ -155,17 +153,10 @@ public enum DatabaseSchema {
         // Persona Note (Editable, Always Append)
         let personaNote = Note(
             name: "Persona",
-            description: "AI personality and behavioral guidelines",
+            description: "AI personality and behavioral guidelines.",
             content: """
-                ## Communication Style
-                - Be clear and direct
-                - Use technical language when appropriate
-                - Provide examples when helpful
-
-                ## Approach
-                - Ask clarifying questions when needed
-                - Break down complex problems
-                - Suggest best practices
+                Guidelines for AI personality, communication style, and behavioral preferences.
+                [EMPTY; FILL AS NEEDED]
                 """,
             isReadonly: false,
             alwaysAppend: true,
@@ -177,16 +168,10 @@ public enum DatabaseSchema {
         // Human Note (Editable, Always Append)
         let humanNote = Note(
             name: "Human",
-            description: "Information about the user",
+            description: "Information about the user.",
             content: """
-                ## User Information
-                [Add information about user here]
-
-                ## Preferences
-                [Add user's preferences here]
-
-                ## Current Projects
-                [Add information about what user is working on]
+                Information about the user, their preferences, and current focus.
+                [EMPTY; FILL AS NEEDED]
                 """,
             isReadonly: false,
             alwaysAppend: true,
@@ -198,12 +183,10 @@ public enum DatabaseSchema {
         // Scratchpad Note (Editable, Always Append)
         let scratchpadNote = Note(
             name: "Scratchpad",
-            description: "A Todo list, note-to-self, short term planing, etc.",
+            description: "Temporary storage for planning.",
             content: """
-                Let's take things step by step:
-                - [ ] Make a plan
-                - [ ] Put the plan in the scratchpad
-                - [ ] Profit!
+                Temporary storage for Todo lists, planning, and short-term state tracking.
+                [EMPTY; FILL AS NEEDED]
                 """,
             alwaysAppend: true
         )
