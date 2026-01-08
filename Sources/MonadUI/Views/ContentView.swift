@@ -36,6 +36,7 @@ public struct ContentView: View {
                 ChatHeaderView(
                     llmService: llmService,
                     showSidebar: $showSidebar,
+                    performanceMetrics: viewModel.performanceMetrics,
                     messagesEmpty: viewModel.messages.isEmpty,
                     onArchive: { showingArchive = true },
                     onNotes: { showingNotes = true },

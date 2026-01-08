@@ -186,6 +186,17 @@ extension ChatViewModel {
 
             let assistantMessage = streamingCoordinator.finalize(wasCancelled: Task.isCancelled)
             streamingCoordinator.stopStreaming()
+            
+            // Record performance
+            if let speed = assistantMessage.stats?.tokensPerSecond {
+                performanceMetrics.recordSpeed(speed)
+                
+                // Trigger logic: after 5 messages, if speed < 75% of average
+                if messages.count >= 5 && performanceMetrics.isSlow {
+                    Logger.chat.warning("Performance drop detected (\(speed) t/s). Injecting long context for next turn.")
+                    shouldInjectLongContext = true
+                }
+            }
 
             if Task.isCancelled {
                 shouldContinue = false

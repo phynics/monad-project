@@ -14,6 +14,8 @@ public final class ChatViewModel {
     public var isLoading = false
     public var isExecutingTools = false
     public var errorMessage: String?
+    public var performanceMetrics = PerformanceMetrics()
+    public var shouldInjectLongContext = false
     
     // MARK: - Service Dependencies
     public let llmService: LLMService
@@ -40,7 +42,15 @@ public final class ChatViewModel {
     }
     
     public var injectedDocuments: [DocumentContext] {
-        return documentManager.getEffectiveDocuments(limit: llmService.configuration.documentContextLimit)
+        var docs = documentManager.getEffectiveDocuments(limit: llmService.configuration.documentContextLimit)
+        
+        if shouldInjectLongContext {
+            let longText = String(repeating: "This is a long context placeholder for performance testing. ", count: 1000)
+            let longDoc = DocumentContext(path: "performance_test_long_context.txt", content: longText)
+            docs.append(longDoc)
+        }
+        
+        return docs
     }
 
     // Expose streaming state

@@ -200,7 +200,14 @@ public final class StreamingCoordinator {
         }
 
         let duration = startTime.map { Date().timeIntervalSince($0) }
-        let tokensPerSecond = if let duration = duration, duration > 0, let completionTokens = usage?.completionTokens {
+        
+        let completionTokens = if let usageTokens = usage?.completionTokens {
+            usageTokens
+        } else {
+            TokenEstimator.estimate(text: streamingContent + streamingThinking)
+        }
+
+        let tokensPerSecond = if let duration = duration, duration > 0 {
             Double(completionTokens) / duration
         } else {
             nil as Double?

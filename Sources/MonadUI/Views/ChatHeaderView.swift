@@ -4,6 +4,7 @@ import SwiftUI
 public struct ChatHeaderView: View {
     public var llmService: LLMService
     @Binding public var showSidebar: Bool
+    public var performanceMetrics: PerformanceMetrics
     public let messagesEmpty: Bool
     public let onArchive: () -> Void
     public let onNotes: () -> Void
@@ -16,6 +17,7 @@ public struct ChatHeaderView: View {
     public init(
         llmService: LLMService,
         showSidebar: Binding<Bool>,
+        performanceMetrics: PerformanceMetrics,
         messagesEmpty: Bool,
         onArchive: @escaping () -> Void,
         onNotes: @escaping () -> Void,
@@ -27,6 +29,7 @@ public struct ChatHeaderView: View {
     ) {
         self.llmService = llmService
         self._showSidebar = showSidebar
+        self.performanceMetrics = performanceMetrics
         self.messagesEmpty = messagesEmpty
         self.onArchive = onArchive
         self.onNotes = onNotes
@@ -53,6 +56,21 @@ public struct ChatHeaderView: View {
             Text("Monad Assistant")
                 .font(.title)
                 .fontWeight(.bold)
+
+            if let speed = performanceMetrics.lastSpeed {
+                HStack(spacing: 4) {
+                    Image(systemName: "speedometer")
+                        .font(.caption)
+                    Text("\(String(format: "%.1f", speed)) t/s")
+                        .font(.caption)
+                        .monospacedDigit()
+                }
+                .foregroundColor(performanceMetrics.isSlow ? .red : .secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(performanceMetrics.isSlow ? Color.red.opacity(0.1) : Color.secondary.opacity(0.1))
+                .cornerRadius(4)
+            }
 
             Spacer()
 
