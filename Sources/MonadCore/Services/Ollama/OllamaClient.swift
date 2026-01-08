@@ -158,7 +158,17 @@ public actor OllamaClient {
             model: modelName,
             messages: ollamaMessages,
             stream: true,
-            format: format
+            format: format,
+            tools: tools?.map { tool in
+                OllamaTool(
+                    type: "function",
+                    function: OllamaToolFunction(
+                        name: tool.function.name,
+                        description: tool.function.description ?? "",
+                        parameters: tool.function.parameters ?? .object([:])
+                    )
+                )
+            }
         )
 
         request.httpBody = try JSONEncoder().encode(payload)
@@ -166,32 +176,49 @@ public actor OllamaClient {
     }
 
     private func convertToOpenAI(_ response: OllamaChatResponse) -> ChatStreamResult? {
-        // If it's the final chunk with no content, we still want to yield it if it has usage stats
-        // but OpenAI's ChatStreamResult might not like a completely empty choice.
-        // For now, let's yield if there is content or if it's not done.
-        
-        if response.done && response.message.content.isEmpty {
-            // Check if we have usage stats to return
-            if let promptEvalCount = response.prompt_eval_count, let evalCount = response.eval_count {
-                let jsonDict: [String: Any] = [
-                    "id": UUID().uuidString,
-                    "object": "chat.completion.chunk",
-                    "created": Int(Date().timeIntervalSince1970),
-                    "model": response.model,
-                    "choices": [],
-                    "usage": [
-                        "prompt_tokens": promptEvalCount,
-                        "completion_tokens": evalCount,
-                        "total_tokens": promptEvalCount + evalCount
+        // Handle final chunk with usage statistics
+        if response.done {
+            let promptEvalCount = response.prompt_eval_count ?? 0
+            let evalCount = response.eval_count ?? 0
+            
+            let jsonDict: [String: Any] = [
+                "id": UUID().uuidString,
+                "object": "chat.completion.chunk",
+                "created": Int(Date().timeIntervalSince1970),
+                "model": response.model,
+                "choices": [
+                    [
+                        "index": 0,
+                        "delta": [
+                            "role": "assistant",
+                            "content": response.message.content,
+                        ],
+                        "finish_reason": "stop",
                     ]
+                ],
+                "usage": [
+                    "prompt_tokens": promptEvalCount,
+                    "completion_tokens": evalCount,
+                    "total_tokens": promptEvalCount + evalCount
                 ]
-                return try? JSONDecoder().decode(ChatStreamResult.self, from: JSONSerialization.data(withJSONObject: jsonDict))
+            ]
+            
+            do {
+                let data = try JSONSerialization.data(withJSONObject: jsonDict)
+                return try JSONDecoder().decode(ChatStreamResult.self, from: data)
+            } catch {
+                logger.error("Failed to convert final Ollama response: \(error)")
+                return nil
             }
+        }
+
+        // Skip empty intermediate chunks
+        guard !response.message.content.isEmpty else {
             return nil
         }
 
-        // Manually construct JSON to decode into ChatStreamResult
-        var jsonDict: [String: Any] = [
+        // Manually construct JSON for intermediate chunks
+        let jsonDict: [String: Any] = [
             "id": UUID().uuidString,
             "object": "chat.completion.chunk",
             "created": Int(Date().timeIntervalSince1970),
@@ -203,18 +230,10 @@ public actor OllamaClient {
                         "role": "assistant",
                         "content": response.message.content,
                     ],
-                    "finish_reason": response.done ? "stop" : nil,
+                    "finish_reason": nil,
                 ]
             ],
         ]
-        
-        if response.done, let promptEvalCount = response.prompt_eval_count, let evalCount = response.eval_count {
-            jsonDict["usage"] = [
-                "prompt_tokens": promptEvalCount,
-                "completion_tokens": evalCount,
-                "total_tokens": promptEvalCount + evalCount
-            ]
-        }
 
         do {
             let data = try JSONSerialization.data(withJSONObject: jsonDict)
@@ -270,6 +289,18 @@ struct OllamaChatRequest: Codable {
     let messages: [OllamaMessage]
     let stream: Bool
     let format: String?
+    let tools: [OllamaTool]?
+}
+
+struct OllamaTool: Codable {
+    let type: String
+    let function: OllamaToolFunction
+}
+
+struct OllamaToolFunction: Codable {
+    let name: String
+    let description: String
+    let parameters: JSONSchema
 }
 
 struct OllamaMessage: Codable {

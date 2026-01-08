@@ -190,6 +190,12 @@ public actor PromptBuilder {
             messages.append(.system(.init(content: .textContent(systemContent), name: nil)))
         }
 
+        // Memories (Semantic Context) - Add as a system message early in the context
+        if let memoriesComponent = components.first(where: { $0.sectionId == "memories" }) as? MemoriesComponent,
+           let content = await memoriesComponent.generateContent() {
+            messages.append(.system(.init(content: .textContent(content), name: nil)))
+        }
+
         // History
         for msg in history {
             switch msg.role {
@@ -225,12 +231,6 @@ public actor PromptBuilder {
                             content: .string("<tool_response>\n\(msg.content)\n</tool_response>"),
                             name: nil)))
             }
-        }
-
-        // Memories (Semantic Context) - Add as a system message just before the user query
-        if let memoriesComponent = components.first(where: { $0.sectionId == "memories" }) as? MemoriesComponent,
-           let content = await memoriesComponent.generateContent() {
-            messages.append(.system(.init(content: .textContent(content), name: nil)))
         }
 
         // User query
