@@ -67,16 +67,7 @@ extension Tool {
 extension Tool {
     /// Formatted content for inclusion in LLM prompt
     public var promptString: String {
-        var parts: [String] = []
-
-        // Title
-        parts.append("\(name)")
-
-        // ID and description
-        parts.append("- Tool ID: `\(id)`")
-        parts.append("- Purpose: \(description)")
-
-        return parts.joined(separator: "\n")
+        "- `\(id)`: \(description)"
     }
 }
 
@@ -96,29 +87,18 @@ public func formatToolsForPrompt(_ tools: [any Tool]) async -> String {
     guard !toolSpecs.isEmpty else { return "" }
 
     return """
-        You have access to these tools:
+        Available tools:
+        \(toolSpecs.joined(separator: "\n"))
 
-        \(toolSpecs.joined(separator: "\n\n"))
+        Usage: Wrap JSON tool calls in <tool_call> tags:
+        <tool_call>{"name": "tool_id", "arguments": {...}}</tool_call>
 
-        Usage Format:
-        For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
-        ```xml
-        <tool_call>
-        {"name": "tool_name", "arguments": {"param1": "value1", "param2": 42}}
-        </tool_call>
-        ```
-        For general conversation, ALWAYS respond in natural language (Markdown).
-
-        Guidelines:
-        - Use tools only when you need to search, create, or modify data that is not already in your context.
-        - Create memories frequently: Use `create_memory` to store any interesting facts, user preferences, or project details learned during the conversation. Proactive memory creation helps maintain long-term continuity.
-        - Subagents: Use `launch_subagent` for isolated, complex tasks like broad bug-hunting. IMPORTANT: Subagents CANNOT use tools. You must provide all necessary information to the subagent through the prompt and the provided documents (which are always injected in full). Instruct subagents to be brief, factual, and to the point.
-        - DO NOT use tools for simple greetings (e.g., "hi", "hello") or general conversation.
-        - Reading Files: Prefer document tools (`load_document`) to read file content into context. Only use the `cat` tool for small files or when specific line-level access is required and context space is critical.
-        - Navigation: When exploring a folder, look for entry points like README, Makefile, Package.swift, or requirements.txt. Use `inspect_file` to identify file types and metadata.
-        - Wrap each tool call in <tool_call></tool_call> tags
-        - Arguments must be a JSON object (not a string)
-        - Be specific in your queries
+        Rules:
+        - Use tools only for missing context.
+        - Create memories frequently via `create_memory`.
+        - `launch_subagent` for isolated tasks (no tools in subagents).
+        - Prefer `load_document` over `cat`.
+        - Be specific.
         """
 }
 
