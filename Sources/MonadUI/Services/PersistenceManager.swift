@@ -9,13 +9,13 @@ import MonadCore
 @Observable
 public final class PersistenceManager {
     public private(set) var currentSession: ConversationSession?
-    public private(set) var currentMessages: [ConversationMessage] = []
+    public private(set) var currentMessages: [MessageNode] = []
     public private(set) var archivedSessions: [ConversationSession] = []
     public private(set) var activeSessions: [ConversationSession] = []
     public var errorMessage: String?
 
     public var uiMessages: [Message] {
-        currentMessages.map { $0.toMessage() }
+        currentMessages.flattened()
     }
 
     public let persistence: PersistenceService
@@ -51,7 +51,8 @@ public final class PersistenceManager {
             throw PersistenceError.sessionNotFound
         }
         currentSession = session
-        currentMessages = try await persistence.fetchMessages(for: id)
+        let flatMessages = try await persistence.fetchMessages(for: id).map { $0.toMessage() }
+        currentMessages = .constructForest(from: flatMessages)
     }
 
     public func updateSession(_ session: ConversationSession) async throws {
@@ -97,7 +98,13 @@ public final class PersistenceManager {
 
     // MARK: - Message Management
 
-    public func addMessage(role: ConversationMessage.MessageRole, content: String, recalledMemories: [Memory]? = nil, memoryId: UUID? = nil) async throws {
+    public func addMessage(
+        role: ConversationMessage.MessageRole, 
+        content: String, 
+        recalledMemories: [Memory]? = nil, 
+        memoryId: UUID? = nil,
+        parentId: UUID? = nil
+    ) async throws {
         guard let session = currentSession else {
             logger.error("Attempted to add message but no active session")
             throw PersistenceError.noActiveSession
@@ -117,14 +124,16 @@ public final class PersistenceManager {
             role: role,
             content: content,
             recalledMemories: memoriesJson,
-            memoryId: memoryId
+            memoryId: memoryId,
+            parentId: parentId
         )
 
         logger.debug("Saving message for session \(session.id.uuidString)")
         try await persistence.saveMessage(message)
 
-        // Update local state
-        currentMessages.append(message)
+        // Update local state by reconstructing forest (simplest way to ensure correctness)
+        let flatMessages = try await persistence.fetchMessages(for: session.id).map { $0.toMessage() }
+        currentMessages = .constructForest(from: flatMessages)
 
         // Update session timestamp
         var updatedSession = session
@@ -204,7 +213,8 @@ public final class PersistenceManager {
         
         // Set as current?
         currentSession = updated
-        currentMessages = try await persistence.fetchMessages(for: session.id)
+        let flatMessages = try await persistence.fetchMessages(for: session.id).map { $0.toMessage() }
+        currentMessages = .constructForest(from: flatMessages)
     }
 
     // MARK: - Notes Management

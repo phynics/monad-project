@@ -12,6 +12,7 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
     public var timestamp: Date
     public var recalledMemories: String
     public var memoryId: UUID?
+    public var parentId: UUID?
 
     public init(
         id: UUID = UUID(),
@@ -20,7 +21,8 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
         content: String,
         timestamp: Date = Date(),
         recalledMemories: String = "[]",
-        memoryId: UUID? = nil
+        memoryId: UUID? = nil,
+        parentId: UUID? = nil
     ) {
         self.id = id
         self.sessionId = sessionId
@@ -29,12 +31,14 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
         self.timestamp = timestamp
         self.recalledMemories = recalledMemories
         self.memoryId = memoryId
+        self.parentId = parentId
     }
 
     public enum MessageRole: String, Codable, Sendable {
         case user
         case assistant
         case system
+        case tool
     }
 
     public var messageRole: MessageRole {
@@ -50,9 +54,18 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
             memories = []
         }
 
+        let uiRole: Message.MessageRole = switch role {
+        case "user": .user
+        case "assistant": .assistant
+        case "system": .system
+        case "tool": .tool
+        default: .user
+        }
+
         return Message(
             content: content,
-            role: Message.MessageRole(rawValue: role) ?? .user,
+            role: uiRole,
+            parentId: parentId,
             recalledMemories: memories.isEmpty ? nil : memories
         )
     }

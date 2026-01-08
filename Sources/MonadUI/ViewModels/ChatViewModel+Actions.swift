@@ -27,8 +27,16 @@ extension ChatViewModel {
         
         // Add user message immediately to track progress in UI
         let userMessage = Message(content: prompt, role: .user, gatheringProgress: .augmenting)
-        messages.append(userMessage)
-        let userMessageIndex = messages.count - 1
+        let userNode = MessageNode(message: userMessage)
+        // Note: For now we still show flat messages in the VM for simple UI binding if needed, 
+        // but let's try to transition to the forest as the source of truth for UI as well if we can.
+        // If we want UI to remain same, we can just use the flattened view.
+        
+        // For simplicity during transition, I will keep 'messages' as [Message] in the VM
+        // but derived from the forest in PersistenceManager.
+        
+        // Let's modify runConversationLoop to handle parent IDs.
+        let userMsgId = userMessage.id
 
         // Reset loop detection for the new interaction
         toolExecutor?.reset()
@@ -44,12 +52,15 @@ extension ChatViewModel {
                 
                 let contextData = try await contextManager.gatherContext(
                     for: prompt, 
-                    history: Array(messages.prefix(userMessageIndex)), // History before this message
+                    history: messages, // History before this message
+                    limit: llmService.configuration.memoryContextLimit,
                     tagGenerator: tagGenerator,
                     onProgress: { [weak self] progress in
                         guard let self = self else { return }
                         Task { @MainActor in
-                            self.messages[userMessageIndex].gatheringProgress = progress
+                            if let index = self.messages.firstIndex(where: { $0.id == userMsgId }) {
+                                self.messages[index].gatheringProgress = progress
+                            }
                         }
                     }
                 )
@@ -69,35 +80,24 @@ extension ChatViewModel {
                     contextNotes: contextData.notes,
                     documents: contextDocuments,
                     memories: contextMemories,
-                    chatHistory: Array(messages.prefix(userMessageIndex)),
+                    chatHistory: messages,
                     tools: enabledTools
                 )
 
-                // Update debug info for the user message
-                messages[userMessageIndex].recalledMemories = contextMemories // Log what was actually injected
-                messages[userMessageIndex].recalledDocuments = contextDocuments
-                messages[userMessageIndex].debugInfo = .userMessage(
-                    rawPrompt: initialRawPrompt, 
-                    contextMemories: contextData.memories,
-                    generatedTags: contextData.generatedTags,
-                    queryVector: contextData.queryVector,
-                    augmentedQuery: contextData.augmentedQuery,
-                    semanticResults: contextData.semanticResults,
-                    tagResults: contextData.tagResults,
-                    structuredContext: structuredContext
-                )
-                
                 // Persist the user message now that we have context data (memories)
                 try? await persistenceManager.addMessage(
                     role: .user,
                     content: prompt,
                     recalledMemories: contextData.memories.map { $0.memory }
                 )
+                
+                // Sync UI messages from forest
+                messages = persistenceManager.uiMessages
 
                 // 3. Start the conversation loop
                 try await runConversationLoop(
-                    userPrompt: nil, // Already added
-                    initialRawPrompt: nil,
+                    userPrompt: nil, // Already added and persisted
+                    parentId: userMsgId,
                     contextData: contextData
                 )
 
@@ -116,20 +116,18 @@ extension ChatViewModel {
 
     internal func runConversationLoop(
         userPrompt: String?,
-        initialRawPrompt: String?,
+        parentId: UUID?,
         contextData: ContextData
     ) async throws {
         // 1. Add user message to history if provided
         if let prompt = userPrompt {
-            // Note: This path handles cases where runConversationLoop is called without sendMessage
-            // But we mainly use sendMessage.
-            // For now, assume this follows similar logic for debug info if needed.
-            let userMessage = Message(content: prompt, role: .user)
-            messages.append(userMessage)
+            try? await persistenceManager.addMessage(role: .user, content: prompt)
+            messages = persistenceManager.uiMessages
         }
 
         var shouldContinue = true
         var turnCount = 0
+        var currentParentId = parentId
         
         while shouldContinue {
             turnCount += 1
@@ -209,14 +207,20 @@ extension ChatViewModel {
             if !assistantMessage.content.isEmpty || assistantMessage.think != nil
                 || assistantMessage.toolCalls != nil
             {
-                messages.append(assistantMessage)
-                
-                // Persist assistant message
+                // Persist assistant message under currentParentId
                 try? await persistenceManager.addMessage(
                     role: .assistant,
-                    content: assistantMessage.content
+                    content: assistantMessage.content,
+                    parentId: currentParentId
                 )
                 
+                // Update local UI from persisted forest
+                messages = persistenceManager.uiMessages
+                
+                // Get the assistant message ID for nesting tool results
+                // Since it's the last assistant message in flat view too
+                let assistantMsgId = messages.last { $0.role == .assistant }?.id
+
                 // Check if we need to auto-generate a title
                 generateTitleIfNeeded()
 
@@ -228,11 +232,30 @@ extension ChatViewModel {
                     isExecutingTools = true
                     let toolResults = await executor.executeAll(toolCalls)
                     isExecutingTools = false
-                    messages.append(contentsOf: toolResults)
                     
-                    // Note: We currently don't persist tool outputs as ConversationMessage doesn't support .tool role yet.
+                    // Persist tool results under assistant message
+                    for var toolResult in toolResults {
+                        try? await persistenceManager.addMessage(
+                            role: .tool,
+                            content: toolResult.content,
+                            parentId: assistantMsgId
+                        )
+                    }
+                    
+                    messages = persistenceManager.uiMessages
 
                     // Continue loop to send tool results back to LLM
+                    // Next assistant message should probably also be under user message 
+                    // OR under the last assistant message.
+                    // Requirement: "tool call loops are placed under the assistant message"
+                    // This implies the assistant message is the parent of tools.
+                    // If assistant continues after tools, it's a sibling of the tools?
+                    // Or child of previous assistant?
+                    // Let's keep subsequent assistant messages as siblings of tools (children of assistantMsgId).
+                    // Actually, if we want User -> Assistant -> [Tools], then next Assistant 
+                    // should probably be a child of Assistant too if it's responding to tools.
+                    currentParentId = assistantMsgId
+                    
                     shouldContinue = true
                 } else {
                     // No more tool calls, we are done
@@ -337,9 +360,11 @@ extension ChatViewModel {
                     structuredContext: structuredContext
                 )
                 
+                let lastUserMessage = messages[lastUserMessageIndex]
+                
                 try await runConversationLoop(
                     userPrompt: nil,
-                    initialRawPrompt: nil,
+                    parentId: lastUserMessage.id,
                     contextData: contextData
                 )
             } catch is CancellationError {

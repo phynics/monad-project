@@ -23,6 +23,9 @@ public struct Message: Identifiable, Equatable, Sendable {
     /// Debug info - not persisted
     public var debugInfo: MessageDebugInfo?
 
+    /// Optional ID of the parent message in the forest structure
+    public var parentId: UUID?
+
     /// Current progress of context gathering (only for user messages)
     public var gatheringProgress: ContextGatheringProgress?
 
@@ -55,6 +58,7 @@ public struct Message: Identifiable, Equatable, Sendable {
     public init(
         content: String, role: MessageRole, think: String? = nil, toolCalls: [ToolCall]? = nil,
         debugInfo: MessageDebugInfo? = nil,
+        parentId: UUID? = nil,
         gatheringProgress: ContextGatheringProgress? = nil,
         recalledMemories: [Memory]? = nil,
         recalledDocuments: [DocumentContext]? = nil,
@@ -66,6 +70,7 @@ public struct Message: Identifiable, Equatable, Sendable {
         self.think = think
         self.toolCalls = toolCalls
         self.debugInfo = debugInfo
+        self.parentId = parentId
         self.gatheringProgress = gatheringProgress
         self.recalledMemories = recalledMemories
         self.recalledDocuments = recalledDocuments

@@ -77,6 +77,15 @@ public enum DatabaseSchema {
                 }
             }
         }
+
+        // v8: Add parentId to conversationMessage for tree structure
+        migrator.registerMigration("v8") { db in
+            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "parentId" }) {
+                try db.alter(table: "conversationMessage") { t in
+                    t.add(column: "parentId", .blob).references("conversationMessage", onDelete: .setNull)
+                }
+            }
+        }
     }
 
     // MARK: - Conversation Tables
