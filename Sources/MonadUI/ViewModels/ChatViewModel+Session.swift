@@ -10,14 +10,21 @@ extension ChatViewModel {
             if let latest = try await persistenceManager.fetchLatestSession() {
                 try await persistenceManager.loadSession(id: latest.id)
                 messages = persistenceManager.uiMessages
+                
+                // If the session was newly created and is empty, add welcome message
+                if messages.isEmpty {
+                    await addWelcomeMessage()
+                }
             } else {
                 // No sessions, start new
                 try await persistenceManager.createNewSession()
+                await addWelcomeMessage()
             }
         } catch {
             Logger.chat.error("Failed to check startup state: \(error.localizedDescription)")
             // Fallback to new session
             try? await persistenceManager.createNewSession()
+            await addWelcomeMessage()
         }
     }
     
@@ -31,9 +38,19 @@ extension ChatViewModel {
                 try await persistenceManager.createNewSession()
                 messages = []
                 activeMemories = [] // Clear active memories on new session
+                await addWelcomeMessage()
             } catch {
                 errorMessage = "Failed to start new session: \(error.localizedDescription)"
             }
+        }
+    }
+
+    private func addWelcomeMessage() async {
+        do {
+            try await persistenceManager.addMessage(role: .assistant, content: "Hi, how can I help you today?")
+            messages = persistenceManager.uiMessages
+        } catch {
+            Logger.chat.error("Failed to add welcome message: \(error.localizedDescription)")
         }
     }
 
