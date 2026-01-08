@@ -17,6 +17,13 @@
 				<key>NSIncludesSubdomains</key>
 				<true/>
 			</dict>
+			<key>10.0.1.7</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
 		</dict>
 	</dict>
 	<key>NSHumanReadableCopyright</key>
