@@ -133,13 +133,25 @@ public struct SubagentContext: Equatable, Sendable, Codable {
 
 /// Represents a tool call from the LLM
 public struct ToolCall: Identifiable, Equatable, Codable, Sendable, Hashable {
-    public let id = UUID()
+    public let id: UUID
     public let name: String
     public let arguments: [String: AnyCodable]
 
     public init(name: String, arguments: [String: AnyCodable]) {
+        self.id = UUID()
         self.name = name
         self.arguments = arguments
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, arguments
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = (try? container.decode(UUID.self, forKey: .id)) ?? UUID()
+        self.name = try container.decode(String.self, forKey: .name)
+        self.arguments = try container.decode([String: AnyCodable].self, forKey: .arguments)
     }
 
     public static func == (lhs: ToolCall, rhs: ToolCall) -> Bool {

@@ -260,6 +260,31 @@ public final class LLMService {
         return try await client.sendMessage(content, responseFormat: nil)
     }
     
+    /// Build the full prompt for the given context
+    public func buildPrompt(
+        userQuery: String,
+        contextNotes: [Note],
+        documents: [DocumentContext] = [],
+        memories: [Memory] = [],
+        chatHistory: [Message],
+        tools: [Tool] = [],
+        systemInstructions: String? = nil
+    ) async -> (
+        messages: [ChatQuery.ChatCompletionMessageParam],
+        rawPrompt: String,
+        structuredContext: [String: String]
+    ) {
+        await promptBuilder.buildPrompt(
+            systemInstructions: systemInstructions,
+            contextNotes: contextNotes,
+            documents: documents,
+            memories: memories,
+            tools: tools,
+            chatHistory: chatHistory,
+            userQuery: userQuery
+        )
+    }
+    
     /// Generate tags/keywords for a given text using the LLM
     public func generateTags(for text: String) async throws -> [String] {
         guard let client = utilityClient ?? client else {

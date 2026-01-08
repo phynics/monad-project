@@ -206,25 +206,25 @@ public final class StreamingCoordinator {
             nil as Double?
         }
 
-        let debugInfo = usage.map { u in
-            MessageDebugInfo.assistantMessage(
-                response: APIResponseMetadata(
-                    promptTokens: u.promptTokens,
-                    completionTokens: u.completionTokens,
-                    totalTokens: u.totalTokens,
-                    duration: duration,
-                    tokensPerSecond: tokensPerSecond
-                )
-            )
-        }
-
         // Create final message
         return Message(
-            content: streamingContent,
+            content: contentWithoutTools,
             role: .assistant,
             think: streamingThinking.isEmpty ? nil : streamingThinking,
             toolCalls: finalToolCalls.isEmpty ? nil : finalToolCalls,
-            debugInfo: debugInfo
+            debugInfo: .assistantMessage(
+                response: APIResponseMetadata(
+                    promptTokens: usage?.promptTokens,
+                    completionTokens: usage?.completionTokens,
+                    totalTokens: usage?.totalTokens,
+                    duration: duration,
+                    tokensPerSecond: tokensPerSecond
+                ),
+                original: streamingContent,
+                parsed: contentWithoutTools,
+                thinking: streamingThinking.isEmpty ? nil : streamingThinking,
+                toolCalls: finalToolCalls.isEmpty ? nil : finalToolCalls
+            )
         )
     }
 }

@@ -234,8 +234,8 @@ public final class ChatViewModel {
                 let contextDocuments = injectedDocuments
                 let contextMemories = injectedMemories
                 
-                // 2. Perform an initial call to get the raw prompt for the user message debug info
-                let (_, initialRawPrompt, structuredContext) = await llmService.chatStreamWithContext(
+                // 2. Build the prompt for debug info without starting a stream
+                let (_, initialRawPrompt, structuredContext) = await llmService.buildPrompt(
                     userQuery: prompt,
                     contextNotes: contextData.notes,
                     documents: contextDocuments,
