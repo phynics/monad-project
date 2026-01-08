@@ -26,14 +26,15 @@ struct LLMServiceTests {
         #expect(llmService.configuration.modelName == "test-model")
     }
 
-    @Test("Test prompt building logic")
+    @Test("Test prompt building logic and structure")
     func promptBuilding() async throws {
         let promptBuilder = PromptBuilder()
         let notes = [
             Note(name: "Test Note", content: "Note Content")
         ]
         let history = [
-            Message(content: "Previous user message", role: .user)
+            Message(content: "Previous user message", role: .user),
+            Message(content: "Previous assistant message", role: .assistant)
         ]
 
         let (messages, rawPrompt, _) = await promptBuilder.buildPrompt(
@@ -44,13 +45,82 @@ struct LLMServiceTests {
             userQuery: "Current question"
         )
 
+        // Validate basic content presence
         #expect(rawPrompt.contains("System rules"))
         #expect(rawPrompt.contains("Note Content"))
         #expect(rawPrompt.contains("Previous user message"))
         #expect(rawPrompt.contains("Current question"))
 
-        // Final message should be the user query
-        #expect(messages.last?.role == .user)
+        // Validate message ordering and roles
+        #expect(!messages.isEmpty)
+
+        // 1. System message should be first
+        if let first = messages.first, case .system = first {
+            // Success
+        } else {
+            #expect(Bool(false), "First message should be system message")
+        }
+
+        // 2. Chat history should follow
+        // We look for the messages from history. Note that system prompts might be consolidated.
+        // The messages array passed to LLM usually is [System, ...History, UserQuery]
+
+        let historyStart = messages.dropFirst() // Drop system
+
+        // Find "Previous user message"
+        let foundHistoryUser = historyStart.contains { msg in
+            if case .user(let m) = msg, case .string(let content) = m.content {
+                return content == "Previous user message"
+            }
+            return false
+        }
+        #expect(foundHistoryUser)
+
+        // Find "Previous assistant message"
+        let foundHistoryAssistant = historyStart.contains { msg in
+             if case .assistant(let m) = msg, case .string(let content) = m.content {
+                return content == "Previous assistant message"
+            }
+            return false
+        }
+        #expect(foundHistoryAssistant)
+
+        // 3. Final message should be the user query
+        guard let lastMessage = messages.last else {
+            #expect(Bool(false), "Messages should not be empty")
+            return
+        }
+
+        if case .user(let m) = lastMessage, case .string(let content) = m.content {
+            #expect(content == "Current question")
+        } else {
+            #expect(Bool(false), "Last message should be user query")
+        }
+    }
+
+    @Test("Test prompt building with empty context")
+    func promptBuildingEmptyContext() async throws {
+        let promptBuilder = PromptBuilder()
+        let (messages, _, _) = await promptBuilder.buildPrompt(
+            systemInstructions: "System Only",
+            contextNotes: [],
+            chatHistory: [],
+            userQuery: "Hello"
+        )
+
+        #expect(messages.count >= 2) // System + User
+
+        if let first = messages.first, case .system(let s) = first, case .textContent(let content) = s.content {
+            #expect(content.contains("System Only"))
+        } else {
+             #expect(Bool(false), "First message should be system")
+        }
+
+        if let last = messages.last, case .user(let u) = last, case .string(let content) = u.content {
+            #expect(content == "Hello")
+        } else {
+             #expect(Bool(false), "Last message should be user query")
+        }
     }
 
     @Test("Test PromptBuilder truncation with large history")
@@ -72,6 +142,7 @@ struct LLMServiceTests {
         )
 
         // Should have fewer messages than total history + user query
+        // Original history is 10 messages. Plus 1 user query = 11.
         #expect(messages.count < largeHistory.count + 1)
         #expect(messages.last?.role == .user)  // User query always included
     }

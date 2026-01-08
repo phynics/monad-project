@@ -13,6 +13,7 @@ struct SearchToolsTests {
     private let searchChatsTool: SearchArchivedChatsTool
     private let searchMemoriesTool: SearchMemoriesTool
     private let searchNotesTool: SearchNotesTool
+    private let mockEmbeddingService: MockEmbeddingService
 
     init() async throws {
         let queue = try DatabaseQueue()
@@ -22,8 +23,10 @@ struct SearchToolsTests {
 
         persistence = PersistenceService(dbQueue: queue)
         
+        mockEmbeddingService = MockEmbeddingService()
+
         searchChatsTool = SearchArchivedChatsTool(persistenceService: persistence)
-        searchMemoriesTool = SearchMemoriesTool(persistenceService: persistence, embeddingService: LocalEmbeddingService())
+        searchMemoriesTool = SearchMemoriesTool(persistenceService: persistence, embeddingService: mockEmbeddingService)
         searchNotesTool = SearchNotesTool(persistenceService: persistence)
     }
 
