@@ -189,7 +189,7 @@ public actor PersistenceService {
             let memoryVector = memory.embeddingVector
             guard !memoryVector.isEmpty else { continue }
             
-            let similarity = cosineSimilarity(embedding, memoryVector)
+            let similarity = VectorMath.cosineSimilarity(embedding, memoryVector)
             // logger.debug("Semantic similarity for '\(memory.title)': \(similarity)")
             if similarity >= minSimilarity {
                 results.append((memory: memory, similarity: similarity))
@@ -200,27 +200,6 @@ public actor PersistenceService {
         results.sort { $0.similarity > $1.similarity }
         
         return Array(results.prefix(limit))
-    }
-
-    private func cosineSimilarity(_ a: [Double], _ b: [Double]) -> Double {
-        guard a.count == b.count, !a.isEmpty else { return 0.0 }
-        
-        var dotProduct = 0.0
-        var magA = 0.0
-        var magB = 0.0
-        
-        for i in 0..<a.count {
-            dotProduct += a[i] * b[i]
-            magA += a[i] * a[i]
-            magB += b[i] * b[i]
-        }
-        
-        magA = sqrt(magA)
-        magB = sqrt(magB)
-        
-        guard magA > 0 && magB > 0 else { return 0.0 }
-        
-        return dotProduct / (magA * magB)
     }
 
     public func deleteMemory(id: UUID) throws {
