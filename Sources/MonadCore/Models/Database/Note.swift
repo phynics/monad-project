@@ -74,7 +74,7 @@ extension Note: PromptFormattable {
         var parts: [String] = []
 
         // Title
-        parts.append(name)
+        parts.append("# \(name)")
 
         // Description (if present)
         if !description.isEmpty {

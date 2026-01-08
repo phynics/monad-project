@@ -110,12 +110,10 @@ public actor PromptBuilder {
 
         for component in components {
             if component.sectionId == "chat_history" {
-                if !chatHistory.isEmpty {
-                    let history = chatHistory.map { msg in
-                        "[\(msg.role.rawValue.uppercased())] \(msg.content)"
-                    }.joined(separator: "\n\n")
-                    context["Chat History"] = history
-                }
+                let history = chatHistory.map { msg in
+                    "[\(msg.role.rawValue.uppercased())] \(msg.content)"
+                }.joined(separator: "\n\n")
+                context["Chat History"] = history.isEmpty ? "[No history yet]" : history
             } else if let content = await component.generateContent() {
                 // Map sectionId to display title? Or just use ID.
                 // Using ID is safer for programmatic access, UI can map to title.
@@ -134,12 +132,10 @@ public actor PromptBuilder {
 
         for component in components {
             if component.sectionId == "chat_history" {
-                if !chatHistory.isEmpty {
-                    let history = chatHistory.map { msg in
-                        "[\(msg.role.rawValue.uppercased())] \(msg.content)"
-                    }.joined(separator: "\n\n")
-                    sections.append("=== CHAT HISTORY ===\n\(history)")
-                }
+                let history = chatHistory.map { msg in
+                    "[\(msg.role.rawValue.uppercased())] \(msg.content)"
+                }.joined(separator: "\n\n")
+                sections.append("=== CHAT HISTORY ===\n\(history.isEmpty ? "[No history yet]" : history)")
             } else if let content = await component.generateContent() {
                 sections.append("=== \(component.sectionId.uppercased()) ===\n\(content)")
             }
