@@ -38,13 +38,6 @@ public final class DocumentManager: Sendable {
         documents[index] = doc
     }
     
-    public func touchDocument(path: String) {
-        guard let index = documents.firstIndex(where: { $0.path == path }) else { return }
-        var doc = documents[index]
-        doc.lastAccessed = Date()
-        documents[index] = doc
-    }
-    
     /// Get effective list of documents for context injection (Pinned + Recent N)
     public func getEffectiveDocuments(limit: Int) -> [DocumentContext] {
         let pinned = documents.filter { $0.isPinned }

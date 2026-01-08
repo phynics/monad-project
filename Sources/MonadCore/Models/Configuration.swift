@@ -26,7 +26,7 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         provider: LLMProvider = .openAI,
         toolFormat: ToolCallFormat = .openAI,
         mcpServers: [MCPServerConfiguration] = [],
-        memoryContextLimit: Int = 10,
+        memoryContextLimit: Int = 5,
         documentContextLimit: Int = 5
     ) {
         self.endpoint = endpoint
@@ -52,7 +52,7 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
             apiKey: "",
             provider: .openAI,
             toolFormat: .openAI,
-            memoryContextLimit: 10,
+            memoryContextLimit: 5,
             documentContextLimit: 5
         )
     }
@@ -67,7 +67,7 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
             apiKey: "",
             provider: .openRouter,
             toolFormat: .openAI,
-            memoryContextLimit: 10,
+            memoryContextLimit: 5,
             documentContextLimit: 5
         )
     }

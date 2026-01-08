@@ -7,6 +7,7 @@ import MonadCore
 @MainActor
 @Observable
 public final class ChatViewModel {
+    // MARK: - State Properties
     public var inputText: String = ""
     public var messages: [Message] = []
     public var activeMemories: [ActiveMemory] = []
@@ -14,25 +15,21 @@ public final class ChatViewModel {
     public var isExecutingTools = false
     public var errorMessage: String?
     
-    // Startup Logic
-    // showingStartupChoice removed as we now auto-load latest
-
+    // MARK: - Service Dependencies
     public let llmService: LLMService
     public let persistenceManager: PersistenceManager
     public let contextManager: ContextManager
     public let documentManager: DocumentManager
-
-    private var currentTask: Task<Void, Never>?
-    private var toolManager: SessionToolManager?
-
-    // Service dependencies
-    // These must be preserved!
     public let streamingCoordinator: StreamingCoordinator
+    public let conversationArchiver: ConversationArchiver
     public var toolExecutor: ToolExecutor?
-    public let conversationArchiver: ConversationArchiver // Kept for embedding optimization/indexing if needed
 
-    private let logger = Logger.chat
+    // MARK: - Internal Storage
+    internal var currentTask: Task<Void, Never>?
+    internal var toolManager: SessionToolManager?
+    internal let logger = Logger.chat
     
+    // MARK: - Computed Properties
     public var injectedMemories: [Memory] {
         let pinned = activeMemories.filter { $0.isPinned }
         let unpinned = activeMemories.filter { !$0.isPinned }
@@ -46,6 +43,20 @@ public final class ChatViewModel {
         return documentManager.getEffectiveDocuments(limit: llmService.configuration.documentContextLimit)
     }
 
+    // Expose streaming state
+    public var streamingThinking: String {
+        streamingCoordinator.streamingThinking
+    }
+
+    public var streamingContent: String {
+        streamingCoordinator.streamingContent
+    }
+
+    public var isStreaming: Bool {
+        streamingCoordinator.isStreaming
+    }
+
+    // MARK: - Initialization
     public init(llmService: LLMService, persistenceManager: PersistenceManager) {
         self.llmService = llmService
         self.persistenceManager = persistenceManager
@@ -65,499 +76,9 @@ public final class ChatViewModel {
             await checkStartupState()
         }
     }
-    
-    // MARK: - Active Context Management
-    
-    public func toggleMemoryPin(id: UUID) {
-        if let index = activeMemories.firstIndex(where: { $0.id == id }) {
-            activeMemories[index].isPinned.toggle()
-        }
-    }
-    
-    public func removeActiveMemory(id: UUID) {
-        activeMemories.removeAll { $0.id == id }
-    }
-    
-    private func updateActiveMemories(with newMemories: [Memory]) {
-        for memory in newMemories {
-            if let index = activeMemories.firstIndex(where: { $0.id == memory.id }) {
-                // Already active, just update access time
-                activeMemories[index].lastAccessed = Date()
-            } else {
-                // Add new active memory
-                activeMemories.append(ActiveMemory(memory: memory))
-            }
-        }
-    }
-    
-    // MARK: - Startup Logic
-    
-    private func checkStartupState() async {
-        do {
-            if let latest = try await persistenceManager.fetchLatestSession() {
-                try await persistenceManager.loadSession(id: latest.id)
-                messages = persistenceManager.uiMessages
-            } else {
-                // No sessions, start new
-                try await persistenceManager.createNewSession()
-            }
-        } catch {
-            logger.error("Failed to check startup state: \(error.localizedDescription)")
-            // Fallback to new session
-            try? await persistenceManager.createNewSession()
-        }
-    }
-    
-    // Removed continueLastSession as it's now default behavior
-    
-    public func startNewSession(deleteOld: Bool = false) {
-        Task {
-            do {
-                if deleteOld, let session = persistenceManager.currentSession {
-                    try await persistenceManager.deleteSession(id: session.id)
-                }
-                // Create new persistent session
-                try await persistenceManager.createNewSession()
-                messages = []
-                activeMemories = [] // Clear active memories on new session
-            } catch {
-                errorMessage = "Failed to start new session: \(error.localizedDescription)"
-            }
-        }
-    }
 
-    public var tools: SessionToolManager {
-        if let existing = toolManager {
-            return existing
-        }
-
-        let availableTools: [MonadCore.Tool] = [
-            SearchArchivedChatsTool(persistenceService: persistenceManager.persistence),
-            ViewChatHistoryTool(persistenceService: persistenceManager.persistence, currentSessionProvider: { [weak self] in
-                await MainActor.run {
-                    return self?.persistenceManager.currentSession?.id
-                }
-            }),
-            SearchMemoriesTool(persistenceService: persistenceManager.persistence, embeddingService: llmService.embeddingService),
-            CreateMemoryTool(persistenceService: persistenceManager.persistence, embeddingService: llmService.embeddingService),
-            SearchNotesTool(persistenceService: persistenceManager.persistence),
-            EditNoteTool(persistenceService: persistenceManager.persistence),
-            // Filesystem Tools
-            ListDirectoryTool(),
-            FindFileTool(),
-            SearchFileContentTool(),
-            ReadFileTool(),
-            InspectFileTool(),
-            // Document Tools
-            LoadDocumentTool(documentManager: documentManager),
-            UnloadDocumentTool(documentManager: documentManager),
-            SwitchDocumentViewTool(documentManager: documentManager),
-            EditDocumentSummaryTool(documentManager: documentManager),
-            MoveDocumentExcerptTool(documentManager: documentManager),
-            LaunchSubagentTool(llmService: llmService, documentManager: documentManager)
-        ]
-        let manager = SessionToolManager(availableTools: availableTools)
+    // MARK: - Internal Helpers
+    internal func setToolManager(_ manager: SessionToolManager) {
         self.toolManager = manager
-        self.toolExecutor = ToolExecutor(toolManager: manager)
-        return manager
-    }
-
-    // Expose streaming state
-    public var streamingThinking: String {
-        streamingCoordinator.streamingThinking
-    }
-
-    public var streamingContent: String {
-        streamingCoordinator.streamingContent
-    }
-
-    public var isStreaming: Bool {
-        streamingCoordinator.isStreaming
-    }
-
-    public func sendMessage() {
-        // Input Validation
-        let cleanedInput = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanedInput.isEmpty else { return }
-        
-        guard llmService.isConfigured else {
-            errorMessage = "LLM Service is not configured."
-            return
-        }
-        
-        // Basic sanity check for extremely long input to prevent accidental massive pastes hanging the UI
-        if cleanedInput.count > 100_000 {
-            errorMessage = "Input is too long (\(cleanedInput.count) characters). Please shorten your message."
-            return
-        }
-
-        let prompt = cleanedInput
-        inputText = ""
-        isLoading = true
-        errorMessage = nil
-        logger.debug("Starting message generation for prompt length: \(prompt.count)")
-        
-        // Add user message immediately to track progress in UI
-        let userMessage = Message(content: prompt, role: .user, gatheringProgress: .augmenting)
-        messages.append(userMessage)
-        let userMessageIndex = messages.count - 1
-
-        // Reset loop detection for the new interaction
-        toolExecutor?.reset()
-
-        currentTask = Task {
-            do {
-                // 1. Gather Context via ContextManager
-                // Define tag generator closure
-                let service = llmService
-                let tagGenerator: @Sendable (String) async throws -> [String] = { text in
-                    try await service.generateTags(for: text)
-                }
-                
-                let contextData = try await contextManager.gatherContext(
-                    for: prompt, 
-                    history: Array(messages.prefix(userMessageIndex)), // History before this message
-                    tagGenerator: tagGenerator,
-                    onProgress: { [weak self] progress in
-                        guard let self = self else { return }
-                        Task { @MainActor in
-                            self.messages[userMessageIndex].gatheringProgress = progress
-                        }
-                    }
-                )
-                
-                // Merge found memories into chat-level active memories
-                updateActiveMemories(with: contextData.memories.map { $0.memory })
-                
-                let enabledTools = tools.getEnabledTools()
-                
-                // Use computed properties for injection
-                let contextDocuments = injectedDocuments
-                let contextMemories = injectedMemories
-                
-                // 2. Build the prompt for debug info without starting a stream
-                let (_, initialRawPrompt, structuredContext) = await llmService.buildPrompt(
-                    userQuery: prompt,
-                    contextNotes: contextData.notes,
-                    documents: contextDocuments,
-                    memories: contextMemories,
-                    chatHistory: Array(messages.prefix(userMessageIndex)),
-                    tools: enabledTools
-                )
-
-                // Update debug info for the user message
-                messages[userMessageIndex].recalledMemories = contextMemories // Log what was actually injected
-                messages[userMessageIndex].recalledDocuments = contextDocuments
-                messages[userMessageIndex].debugInfo = .userMessage(
-                    rawPrompt: initialRawPrompt, 
-                    contextMemories: contextData.memories,
-                    generatedTags: contextData.generatedTags,
-                    queryVector: contextData.queryVector,
-                    augmentedQuery: contextData.augmentedQuery,
-                    semanticResults: contextData.semanticResults,
-                    tagResults: contextData.tagResults,
-                    structuredContext: structuredContext
-                )
-                
-                // Persist the user message now that we have context data (memories)
-                try? await persistenceManager.addMessage(
-                    role: .user,
-                    content: prompt,
-                    recalledMemories: contextData.memories.map { $0.memory }
-                )
-
-                // 3. Start the conversation loop
-                try await runConversationLoop(
-                    userPrompt: nil, // Already added
-                    initialRawPrompt: nil,
-                    contextData: contextData
-                )
-
-            } catch is CancellationError {
-                handleCancellation()
-            } catch {
-                let msg = "Failed to get response: \(error.localizedDescription)"
-                logger.error("\(msg)")
-                errorMessage = msg
-                streamingCoordinator.stopStreaming()
-                isLoading = false
-                currentTask = nil
-            }
-        }
-    }
-
-    // Removed fetchRelevantMemories as it is now in ContextManager
-
-    private func runConversationLoop(
-        userPrompt: String?,
-        initialRawPrompt: String?,
-        contextData: ContextData
-    ) async throws {
-        // 1. Add user message to history if provided
-        if let prompt = userPrompt {
-            // Note: This path handles cases where runConversationLoop is called without sendMessage
-            // But we mainly use sendMessage.
-            // For now, assume this follows similar logic for debug info if needed.
-            let userMessage = Message(content: prompt, role: .user)
-            messages.append(userMessage)
-        }
-
-        var shouldContinue = true
-        var turnCount = 0
-        
-        // Use injected memories which are now stable for this turn unless tools change them?
-        // Tools like CreateMemory might add new memories. 
-        // Ideally we re-evaluate injectedMemories every iteration if we want dynamic updates,
-        // but for consistency within a turn, maybe keep them?
-        // Requirement says "memories are collected at chat level". If a tool adds a memory, 
-        // we might want it to be immediately available.
-        // Let's use `injectedMemories` (computed) each time.
-
-        while shouldContinue {
-            turnCount += 1
-            if turnCount > 10 {
-                logger.warning("Conversation loop exceeded max turns (10). Breaking.")
-                shouldContinue = false
-                break
-            }
-            
-            let contextNotes = try await persistenceManager.fetchAlwaysAppendNotes()
-            let enabledTools = tools.getEnabledTools()
-            let contextDocuments = injectedDocuments
-            let contextMemories = injectedMemories
-
-            // 2. Call LLM with empty userQuery, relying on chatHistory
-            let (stream, _, _) = await llmService.chatStreamWithContext(
-                userQuery: "",
-                contextNotes: contextNotes,
-                documents: contextDocuments,
-                memories: contextMemories,
-                chatHistory: messages,
-                tools: enabledTools
-            )
-
-            streamingCoordinator.startStreaming()
-            isLoading = false
-
-            do {
-                logger.debug("Starting stream consumption for turn \(turnCount)")
-                var chunkCount = 0
-                for try await result in stream {
-                    if Task.isCancelled { break }
-                    chunkCount += 1
-
-                    streamingCoordinator.updateMetadata(from: result)
-
-                    if let delta = result.choices.first?.delta.content {
-                        logger.debug("RAW STREAM CHUNK: '\(delta)'")
-                        streamingCoordinator.processChunk(delta)
-                    }
-
-                    // Process tool calls from delta
-                    if let toolCalls = result.choices.first?.delta.toolCalls {
-                        logger.debug("RAW TOOL CALL DELTA: \(toolCalls.count) items")
-                        streamingCoordinator.processToolCalls(toolCalls)
-                    }
-                }
-                logger.debug("Stream consumption finished for turn \(turnCount). Total chunks: \(chunkCount)")
-            } catch {
-                logger.error("Stream error in turn \(turnCount): \(error.localizedDescription)")
-                throw error
-            }
-
-            let assistantMessage = streamingCoordinator.finalize(wasCancelled: Task.isCancelled)
-            streamingCoordinator.stopStreaming()
-
-            if Task.isCancelled {
-                shouldContinue = false
-                break
-            }
-
-            if !assistantMessage.content.isEmpty || assistantMessage.think != nil
-                || assistantMessage.toolCalls != nil
-            {
-                messages.append(assistantMessage)
-                
-                // Persist assistant message
-                try? await persistenceManager.addMessage(
-                    role: .assistant,
-                    content: assistantMessage.content
-                )
-                
-                // Check if we need to auto-generate a title
-                generateTitleIfNeeded()
-
-                // Execute tool calls if present
-                if let toolCalls = assistantMessage.toolCalls, !toolCalls.isEmpty,
-                    let executor = toolExecutor
-                {
-                    logger.info("Executing \(toolCalls.count) tool calls")
-                    isExecutingTools = true
-                    let toolResults = await executor.executeAll(toolCalls)
-                    isExecutingTools = false
-                    messages.append(contentsOf: toolResults)
-                    
-                    // Note: We currently don't persist tool outputs as ConversationMessage doesn't support .tool role yet.
-
-                    // Continue loop to send tool results back to LLM
-                    shouldContinue = true
-                } else {
-                    // No more tool calls, we are done
-                    shouldContinue = false
-                }
-            } else {
-                logger.warning("Assistant returned an empty response (no content, no thinking, no tool calls)")
-                errorMessage = "The model returned an empty response. You might want to try again."
-                shouldContinue = false
-            }
-        }
-
-        currentTask = nil
-        isLoading = false
-    }
-
-    private func handleCancellation() {
-        logger.notice("Generation cancelled by user")
-        if !streamingCoordinator.streamingContent.isEmpty {
-            let assistantMessage = Message(
-                content: streamingCoordinator.streamingContent + "\n\n[Generation cancelled]",
-                role: .assistant,
-                think: streamingCoordinator.streamingThinking.isEmpty
-                    ? nil
-                    : streamingCoordinator.streamingThinking
-            )
-            messages.append(assistantMessage)
-        }
-        streamingCoordinator.stopStreaming()
-        currentTask = nil
-        isLoading = false
-    }
-
-    public func cancelGeneration() {
-        currentTask?.cancel()
-        currentTask = nil
-    }
-
-    public func archiveConversation(confirmationDismiss: @escaping () -> Void) {
-        // "Archive" now effectively means "Start New Conversation"
-        // We trigger the archiver in the background for memory indexing/optimization
-        // but we don't wait for it to clear the UI.
-        let messagesToArchive = messages
-        Task {
-            try? await conversationArchiver.archive(messages: messagesToArchive)
-        }
-        
-        startNewSession(deleteOld: false)
-        confirmationDismiss()
-    }
-
-    public func clearConversation() {
-        logger.debug("Clearing conversation")
-        startNewSession(deleteOld: true)
-    }
-
-    public func retry() {
-        guard errorMessage != nil else { return }
-        
-        // Find last user message
-        guard let lastUserMessageIndex = messages.lastIndex(where: { $0.role == .user }) else {
-            errorMessage = "Nothing to retry."
-            return
-        }
-        
-        let prompt = messages[lastUserMessageIndex].content
-        errorMessage = nil
-        isLoading = true
-        
-        // Remove everything after this user message (including any failed assistant/tool messages)
-        messages = Array(messages.prefix(through: lastUserMessageIndex))
-        
-        currentTask = Task {
-            do {
-                // Define tag generator closure
-                let service = llmService
-                let tagGenerator: @Sendable (String) async throws -> [String] = { text in
-                    try await service.generateTags(for: text)
-                }
-                
-                // Re-gather context
-                let contextData = try await contextManager.gatherContext(
-                    for: prompt,
-                    history: Array(messages.prefix(lastUserMessageIndex)),
-                    tagGenerator: tagGenerator,
-                    onProgress: { [weak self] progress in
-                        guard let self = self else { return }
-                        Task { @MainActor in
-                            self.messages[lastUserMessageIndex].gatheringProgress = progress
-                        }
-                    }
-                )
-                
-                updateActiveMemories(with: contextData.memories.map { $0.memory })
-                
-                let enabledTools = tools.getEnabledTools()
-                let contextDocuments = injectedDocuments
-                let contextMemories = injectedMemories
-                
-                // Refresh debug info
-                let (_, rawPrompt, structuredContext) = await llmService.chatStreamWithContext(
-                    userQuery: prompt,
-                    contextNotes: contextData.notes,
-                    documents: contextDocuments,
-                    memories: contextMemories,
-                    chatHistory: Array(messages.prefix(lastUserMessageIndex)),
-                    tools: enabledTools
-                )
-                
-                messages[lastUserMessageIndex].recalledMemories = contextMemories
-                messages[lastUserMessageIndex].recalledDocuments = contextDocuments
-                messages[lastUserMessageIndex].debugInfo = .userMessage(
-                    rawPrompt: rawPrompt,
-                    contextMemories: contextData.memories,
-                    generatedTags: contextData.generatedTags,
-                    queryVector: contextData.queryVector,
-                    augmentedQuery: contextData.augmentedQuery,
-                    semanticResults: contextData.semanticResults,
-                    tagResults: contextData.tagResults,
-                    structuredContext: structuredContext
-                )
-                
-                try await runConversationLoop(
-                    userPrompt: nil,
-                    initialRawPrompt: nil,
-                    contextData: contextData
-                )
-            } catch is CancellationError {
-                handleCancellation()
-            } catch {
-                let msg = "Failed to retry: \(error.localizedDescription)"
-                logger.error("\(msg)")
-                errorMessage = msg
-                streamingCoordinator.stopStreaming()
-                isLoading = false
-                currentTask = nil
-            }
-        }
-    }
-    
-    private func generateTitleIfNeeded() {
-        // Generate title after 3 messages (usually User + Assistant + User)
-        // Check if we already have a custom title (not "New Conversation")
-        guard let session = persistenceManager.currentSession,
-              session.title == "New Conversation",
-              messages.count >= 3 else {
-            return
-        }
-        
-        Task {
-            do {
-                let title = try await llmService.generateTitle(for: messages)
-                var updatedSession = session
-                updatedSession.title = title
-                try await persistenceManager.updateSession(updatedSession)
-            } catch {
-                logger.warning("Failed to auto-generate title: \(error.localizedDescription)")
-            }
-        }
     }
 }

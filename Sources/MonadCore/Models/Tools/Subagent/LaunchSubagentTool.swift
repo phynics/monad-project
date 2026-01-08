@@ -63,16 +63,16 @@ public struct LaunchSubagentTool: Tool, @unchecked Sendable {
         for path in docPaths {
             // Check if already loaded
             if let existing = await documentManager.getDocument(path: path) {
-                // Force full view for subagent
+                // Force raw view for subagent
                 var doc = existing
-                doc.viewMode = .full
+                doc.viewMode = .raw
                 subagentDocs.append(doc)
             } else {
                 // Load from disk
                 let url = URL(fileURLWithPath: path).standardized
                 do {
                     let content = try String(contentsOf: url, encoding: .utf8)
-                    let doc = DocumentContext(path: path, content: content, viewMode: .full)
+                    let doc = DocumentContext(path: path, content: content, viewMode: .raw)
                     subagentDocs.append(doc)
                 } catch {
                     return .failure("Failed to load document '\(path)': \(error.localizedDescription)")

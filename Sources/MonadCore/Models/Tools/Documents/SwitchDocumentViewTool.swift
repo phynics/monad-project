@@ -35,8 +35,8 @@ public struct SwitchDocumentViewTool: Tool, @unchecked Sendable {
                 ],
                 "view": [
                     "type": "string",
-                    "enum": ["full", "excerpt", "summary", "metadata"],
-                    "description": "The view mode to switch to"
+                    "enum": ["raw", "excerpt", "summary", "metadata"],
+                    "description": "The view mode to switch to (raw, excerpt, summary, or metadata)"
                 ]
             ],
             "required": ["path", "view"]
@@ -47,7 +47,7 @@ public struct SwitchDocumentViewTool: Tool, @unchecked Sendable {
         guard let path = parameters["path"] as? String,
               let viewString = parameters["view"] as? String,
               let view = DocumentContext.ViewMode(rawValue: viewString) else {
-            let errorMsg = "Missing or invalid parameters. 'view' must be one of: full, excerpt, summary, metadata."
+            let errorMsg = "Missing or invalid parameters. 'view' must be one of: raw, excerpt, summary, metadata."
             if let example = usageExample {
                 return .failure("\(errorMsg) Example: \(example)")
             }
@@ -59,18 +59,7 @@ public struct SwitchDocumentViewTool: Tool, @unchecked Sendable {
         }
         
         doc.viewMode = view
-        
-        // TODO: Trigger summary generation if needed
-        if view == .summary && doc.summary == nil {
-             // Ideally we'd trigger a background task here or fail. 
-             // For now, let's set a placeholder or require summary generation separately.
-             // But the requirement says "model can load a summary... as summarized by a simple completion call".
-             // We can't easily make a re-entrant LLM call from here inside a tool execution loop without passing the LLM service.
-             // Let's assume the model should use a separate "generate_summary" tool or we mark it as pending.
-             doc.summary = "[Summary requested - not implemented in this iteration]"
-        }
-        
         await documentManager.updateDocument(doc)
-        return .success("Switched \(path) to \(viewString) view")
+        return .success("Switched \(path) to \(viewString) view.")
     }
 }

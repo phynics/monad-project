@@ -176,31 +176,18 @@ public struct DocumentsComponent: PromptSection {
     public func generateContent() async -> String? {
         guard !documents.isEmpty else { return nil }
 
-        var parts: [String] = []
-        for doc in documents {
-            if doc.viewMode == .metadata {
-                parts.append("""
-                Document: `\(doc.path)` (Metadata Only)
-                Size: \(ByteCountFormatter.string(fromByteCount: Int64(doc.fileSize), countStyle: .file))
-                """)
-            } else {
-                parts.append("""
-                Document: `\(doc.path)`
-                View: \(doc.viewMode.rawValue.capitalized)
-                \(doc.viewMode == .excerpt ? "Window: \(doc.excerptOffset)-\(doc.excerptOffset + doc.excerptLength)" : "")
-                
-                ```
-                \(doc.visibleContent)
-                ```
-                """)
-            }
+        let parts = documents.map { doc in
+            """
+            DOCUMENT: `\(doc.path)`
+            \(doc.visibleContent)
+            """
         }
 
         return """
             === ACTIVE DOCUMENTS ===
-            The following documents are loaded into your context. You can read them, move the excerpt window, or unload them.
+            The following documents are loaded into your context. Use document tools to navigate or search them.
 
-            \(parts.joined(separator: "\n\n"))
+            \(parts.joined(separator: "\n\n---\n\n"))
             """
     }
 

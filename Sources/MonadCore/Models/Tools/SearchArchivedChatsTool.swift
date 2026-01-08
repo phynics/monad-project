@@ -31,32 +31,56 @@ public class SearchArchivedChatsTool: Tool, @unchecked Sendable {
             "properties": [
                 "query": [
                     "type": "string",
-                    "description": "Search query to find in archived conversations"
+                    "description": "Search query to find in archived conversations (searches title and message content)"
+                ],
+                "tags": [
+                    "type": "array",
+                    "items": ["type": "string"],
+                    "description": "Optional list of tags to filter by"
                 ]
-            ],
-            "required": ["query"]
+            ]
         ]
     }
     
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let query = parameters["query"] as? String else {
-            let errorMsg = "Missing required parameter: query."
-            if let example = usageExample {
-                return .failure("\(errorMsg) Example: \(example)")
+        let query = parameters["query"] as? String
+        let tags = parameters["tags"] as? [String]
+        
+        if query == nil && (tags == nil || tags!.isEmpty) {
+            return .failure("Either 'query' or 'tags' must be provided.")
+        }
+        
+        do {
+            var allSessions: [ConversationSession] = []
+            
+            if let query = query, !query.isEmpty {
+                allSessions = try await persistenceService.searchArchivedSessions(query: query)
             }
-            return .failure(errorMsg)
+            
+            if let tags = tags, !tags.isEmpty {
+                let tagSessions = try await persistenceService.searchArchivedSessions(matchingAnyTag: tags)
+                let existingIds = Set(allSessions.map { $0.id })
+                for session in tagSessions {
+                    if !existingIds.contains(session.id) {
+                        allSessions.append(session)
+                    }
+                }
+            }
+
+            if allSessions.isEmpty {
+                let criteria = [query != nil ? "query '\(query!)'" : nil, tags != nil ? "tags \(tags!)" : nil]
+                    .compactMap { $0 }.joined(separator: " and ")
+                return .success("No archived conversations found matching \(criteria)")
+            }
+            
+            let results: String = allSessions.prefix(10).map { session in
+                let tagsStr = session.tagArray.isEmpty ? "" : " [Tags: \(session.tagArray.joined(separator: ", "))]"
+                return "- \(session.title)\(tagsStr) [ID: \(session.id.uuidString)] (Updated: \(session.updatedAt.formatted()))"
+            }.joined(separator: "\n")
+            
+            return .success("Found \(allSessions.count) archived conversation(s):\n\(results)\n\nTo read a conversation, use 'load_archived_chat' with the provided ID.")
+        } catch {
+            return .failure("Search failed: \(error.localizedDescription)")
         }
-        
-        let sessions = try await persistenceService.searchArchivedSessions(query: query)
-        
-        if sessions.isEmpty {
-            return .success("No archived conversations found matching '\(query)'")
-        }
-        
-        let results: String = sessions.prefix(5).map { session in
-            "- \(session.title) (Updated: \(session.updatedAt.formatted()))"
-        }.joined(separator: "\n")
-        
-        return .success("Found \(sessions.count) archived conversation(s):\n\(results)")
     }
 }

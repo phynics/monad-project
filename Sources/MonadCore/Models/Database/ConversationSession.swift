@@ -25,11 +25,16 @@ public struct ConversationSession: Codable, Identifiable, FetchableRecord, Persi
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isArchived = isArchived
-        self.tags = (try? JSONEncoder().encode(tags).base64EncodedString()) ?? ""
+        
+        if let data = try? JSONEncoder().encode(tags), let str = String(data: data, encoding: .utf8) {
+            self.tags = str
+        } else {
+            self.tags = "[]"
+        }
     }
 
     public var tagArray: [String] {
-        guard let data = Data(base64Encoded: tags),
+        guard let data = tags.data(using: .utf8),
             let array = try? JSONDecoder().decode([String].self, from: data)
         else {
             return []

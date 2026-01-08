@@ -50,7 +50,8 @@ public final class LLMService {
     public let promptBuilder: PromptBuilder
     private let logger = Logger.llm
 
-    /// Internal helper to get client if configured
+    // MARK: - Client Accessors
+
     public func getClient() -> (any LLMClientProtocol)? {
         return client
     }
@@ -62,6 +63,14 @@ public final class LLMService {
     public func getFastClient() -> (any LLMClientProtocol)? {
         return fastClient
     }
+
+    internal func setClients(main: (any LLMClientProtocol)?, utility: (any LLMClientProtocol)?, fast: (any LLMClientProtocol)?) {
+        self.client = main
+        self.utilityClient = utility
+        self.fastClient = fast
+    }
+
+    // MARK: - Initialization
 
     public init(
         storage: ConfigurationStorage = ConfigurationStorage(),
@@ -80,25 +89,22 @@ public final class LLMService {
         
         // Load synchronously on main actor during init
         self.configuration = .openAI
-        self.isConfigured = client != nil // If clients are injected, consider it configured for tests
+        self.isConfigured = client != nil
 
         Task {
-            // Migrate configuration if needed
             await storage.migrateIfNeeded()
-
-            // Only load from storage if clients weren't injected
             if self.client == nil {
                 await loadConfiguration()
             }
         }
     }
 
-    /// Register a tool provider (e.g. MCPClient)
+    // MARK: - Public API
+
     public func registerToolProvider(_ provider: ToolProvider) {
         toolProviders.append(provider)
     }
 
-    /// Load configuration from storage
     public func loadConfiguration() async {
         let config = await storage.load()
         self.configuration = config
@@ -112,7 +118,6 @@ public final class LLMService {
         }
     }
 
-    /// Restore configuration from backup
     public func restoreFromBackup() async throws {
         if let restored = try await storage.restoreFromBackup() {
             logger.info("Restored configuration from backup")
@@ -125,19 +130,16 @@ public final class LLMService {
         }
     }
 
-    /// Export configuration (without API key)
     public func exportConfiguration() async throws -> Data {
         try await storage.exportConfiguration()
     }
 
-    /// Import configuration
     public func importConfiguration(from data: Data) async throws {
         logger.info("Importing configuration")
         try await storage.importConfiguration(from: data)
         await loadConfiguration()
     }
 
-    /// Update configuration and persist
     public func updateConfiguration(_ config: LLMConfiguration) async throws {
         logger.info("Updating configuration to models: \(config.modelName) / \(config.utilityModel) / \(config.fastModel)")
         try await storage.save(config)
@@ -147,24 +149,18 @@ public final class LLMService {
         if config.isValid {
             updateClient(with: config)
         } else {
-            client = nil
-            utilityClient = nil
-            fastClient = nil
+            setClients(main: nil, utility: nil, fast: nil)
         }
     }
 
-    /// Clear configuration
     public func clearConfiguration() async {
         logger.warning("Clearing configuration")
         await storage.clear()
         self.configuration = .openAI
         self.isConfigured = false
-        client = nil
-        utilityClient = nil
-        fastClient = nil
+        setClients(main: nil, utility: nil, fast: nil)
     }
 
-    /// Fetch available models from the currently configured client
     public func fetchAvailableModels() async throws -> [String]? {
         guard let client = client else {
             return nil
@@ -172,117 +168,13 @@ public final class LLMService {
         return try await client.fetchAvailableModels()
     }
 
-    // MARK: - Private Methods
-
-    /// Update LLM client with configuration
-    private func updateClient(with config: LLMConfiguration) {
-        logger.debug("Updating clients for provider: \(config.provider.rawValue)")
-
-        switch config.provider {
-        case .ollama:
-            self.client = OllamaClient(
-                endpoint: config.endpoint,
-                modelName: config.modelName
-            )
-            self.utilityClient = OllamaClient(
-                endpoint: config.endpoint,
-                modelName: config.utilityModel
-            )
-            self.fastClient = OllamaClient(
-                endpoint: config.endpoint,
-                modelName: config.fastModel
-            )
-
-        case .openRouter:
-            let components = parseEndpoint(config.endpoint)
-            self.client = OpenRouterClient(
-                apiKey: config.apiKey,
-                modelName: config.modelName,
-                host: components.host,
-                port: components.port,
-                scheme: components.scheme
-            )
-            self.utilityClient = OpenRouterClient(
-                apiKey: config.apiKey,
-                modelName: config.utilityModel,
-                host: components.host,
-                port: components.port,
-                scheme: components.scheme
-            )
-            self.fastClient = OpenRouterClient(
-                apiKey: config.apiKey,
-                modelName: config.fastModel,
-                host: components.host,
-                port: components.port,
-                scheme: components.scheme
-            )
-
-        case .openAI, .openAICompatible:
-            let components = parseEndpoint(config.endpoint)
-            self.client = OpenAIClient(
-                apiKey: config.apiKey,
-                modelName: config.modelName,
-                host: components.host,
-                port: components.port,
-                scheme: components.scheme
-            )
-            self.utilityClient = OpenAIClient(
-                apiKey: config.apiKey,
-                modelName: config.utilityModel,
-                host: components.host,
-                port: components.port,
-                scheme: components.scheme
-            )
-            self.fastClient = OpenAIClient(
-                apiKey: config.apiKey,
-                modelName: config.fastModel,
-                host: components.host,
-                port: components.port,
-                scheme: components.scheme
-            )
-        }
-    }
-    /// - Parameter endpoint: Full endpoint URL (e.g., "http://localhost:11434")
-    /// - Returns: Tuple with host, port, and scheme
-    /// - Note: Supports custom ports for local LLM servers like Ollama (11434), LM Studio (1234), etc.
-    private func parseEndpoint(_ endpoint: String) -> (host: String, port: Int, scheme: String) {
-        let cleanedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: cleanedEndpoint), let host = url.host else {
-            logger.error("Invalid endpoint URL: \(endpoint)")
-            // Fallback to default if invalid, but log error. Ideally should throw if called from a throwing context.
-            // For now, ensuring we don't return partial garbage.
-            return ("api.openai.com", 443, "https")
-        }
-
-        let scheme = url.scheme ?? "https"
-        
-        // Validate scheme
-        guard ["http", "https"].contains(scheme.lowercased()) else {
-             logger.error("Unsupported scheme: \(scheme)")
-             return ("api.openai.com", 443, "https")
-        }
-
-        // Extract port or use default based on scheme
-        let port: Int
-        if let urlPort = url.port {
-            port = urlPort
-        } else {
-            port = (scheme == "https") ? 443 : 80
-        }
-
-        return (host, port, scheme)
-    }
-
-    /// Send a simple message (useful for connection testing)
     public func sendMessage(_ content: String) async throws -> String {
         guard let client = client else {
             throw LLMServiceError.notConfigured
         }
-
         return try await client.sendMessage(content, responseFormat: nil)
     }
     
-    /// Build the full prompt for the given context
     public func buildPrompt(
         userQuery: String,
         contextNotes: [Note],
@@ -305,137 +197,6 @@ public final class LLMService {
             chatHistory: chatHistory,
             userQuery: userQuery
         )
-    }
-    
-    /// Generate tags/keywords for a given text using the LLM
-    public func generateTags(for text: String) async throws -> [String] {
-        guard let client = utilityClient ?? client else {
-            return []
-        }
-        
-        let prompt = """
-        Extract 3-5 relevant keywords or tags from the following text.
-        Return ONLY a JSON object with a key "tags" containing an array of strings.
-        
-        Text:
-        \(text)
-        """
-        
-        do {
-            let response = try await client.sendMessage(prompt, responseFormat: .jsonObject)
-            
-            // Clean up response (some models might still include markdown)
-            var cleanJson = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-            if cleanJson.hasPrefix("```json") {
-                cleanJson = cleanJson.replacingOccurrences(of: "```json", with: "")
-            }
-            if cleanJson.hasPrefix("```") {
-                cleanJson = cleanJson.replacingOccurrences(of: "```", with: "")
-            }
-            cleanJson = cleanJson.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-            
-            struct TagResponse: Codable {
-                let tags: [String]
-            }
-
-            guard let data = cleanJson.data(using: String.Encoding.utf8),
-                  let tagResponse = try? JSONDecoder().decode(TagResponse.self, from: data) else {
-                logger.warning("Failed to parse tags from LLM response: \(response)")
-                return []
-            }
-            
-            return tagResponse.tags.map { $0.lowercased() }
-        } catch {
-            logger.error("Failed to generate tags: \(error.localizedDescription)")
-            return []
-        }
-    }
-
-    /// Generate a concise title for a conversation
-    public func generateTitle(for messages: [Message]) async throws -> String {
-        guard let client = utilityClient ?? client, !messages.isEmpty else {
-            return "New Conversation"
-        }
-
-        let transcript = messages.map { "[\($0.role.rawValue.uppercased())] \($0.content)" }.joined(separator: "\n\n")
-
-        let prompt = """
-        Based on the following conversation transcript, generate a concise, descriptive title (maximum 6 words).
-        Return ONLY the title text, no quotes or additional formatting.
-
-        TRANSCRIPT:
-        \(transcript)
-        """
-
-        do {
-            let response = try await client.sendMessage(prompt, responseFormat: nil)
-            let title = response.trimmingCharacters(in: .whitespacesAndNewlines)
-                .replacingOccurrences(of: "\"", with: "")
-            
-            return title.isEmpty ? "New Conversation" : title
-        } catch {
-            logger.error("Failed to generate title: \(error.localizedDescription)")
-            return "New Conversation"
-        }
-    }
-
-    /// Evaluate which recalled memories were actually helpful in the conversation
-    /// - Parameters:
-    ///   - transcript: The conversation text
-    ///   - recalledMemories: The memories that were injected as context
-    /// - Returns: A dictionary mapping memory ID strings to a helpfulness score (-1.0 to 1.0)
-    public func evaluateRecallPerformance(
-        transcript: String,
-        recalledMemories: [Memory]
-    ) async throws -> [String: Double] {
-        guard let client = utilityClient ?? client, !recalledMemories.isEmpty else {
-            return [:]
-        }
-
-        let memoriesText = recalledMemories.map { "- ID: \($0.id.uuidString)\n  Title: \($0.title)\n  Content: \($0.content)" }.joined(separator: "\n\n")
-
-        let prompt = """
-        Analyze the following conversation transcript and the list of recalled memories that were provided to you as context.
-        Determine for EACH memory if it was actually useful for answering the user's questions or providing relevant context.
-
-        RECALLED MEMORIES:
-        \(memoriesText)
-
-        TRANSCRIPT:
-        \(transcript)
-
-        Return ONLY a JSON object where keys are memory IDs and values are helpfulness scores (numbers between -1.0 and 1.0):
-        1.0: Extremely helpful, directly used to answer.
-        0.5: Somewhat helpful, provided good context.
-        0.0: Neutral, didn't hurt but wasn't used.
-        -0.5: Irrelevant, slightly off-topic.
-        -1.0: Completely irrelevant or misleading.
-        """
-
-        do {
-            let response = try await client.sendMessage(prompt, responseFormat: .jsonObject)
-            
-            // Clean up response
-            var cleanJson = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-            if cleanJson.hasPrefix("```json") {
-                cleanJson = cleanJson.replacingOccurrences(of: "```json", with: "")
-            }
-            if cleanJson.hasPrefix("```") {
-                cleanJson = cleanJson.replacingOccurrences(of: "```", with: "")
-            }
-            cleanJson = cleanJson.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-            
-            guard let data = cleanJson.data(using: String.Encoding.utf8),
-                  let scores = try? JSONDecoder().decode([String: Double].self, from: data) else {
-                logger.warning("Failed to parse recall evaluation from LLM response: \(response)")
-                return [:]
-            }
-            
-            return scores
-        } catch {
-            logger.error("Failed to evaluate recall: \(error.localizedDescription)")
-            return [:]
-        }
     }
 }
 

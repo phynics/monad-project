@@ -7,8 +7,9 @@ final class SubagentTests: XCTestCase {
         let content = "Hello World"
         let doc = DocumentContext(path: "test.txt", content: content, viewMode: .metadata)
         
-        XCTAssertTrue(doc.visibleContent.contains("Content not loaded"))
-        XCTAssertTrue(doc.visibleContent.contains("Size:"))
+        XCTAssertTrue(doc.visibleContent.contains("PATH: test.txt"))
+        XCTAssertTrue(doc.visibleContent.contains("SIZE:"))
+        XCTAssertTrue(doc.visibleContent.contains("MODE: metadata"))
     }
     
     func testDocumentsComponentMetadata() async {
@@ -18,9 +19,9 @@ final class SubagentTests: XCTestCase {
         
         let output = await component.generateContent()
         XCTAssertNotNil(output)
-        XCTAssertTrue(output!.contains("Metadata Only"))
+        XCTAssertTrue(output!.contains("MODE: metadata"))
         XCTAssertTrue(output!.contains("100 bytes"))
-        XCTAssertFalse(output!.contains(content)) // Should not show content
+        XCTAssertFalse(output!.contains("--- RAW CONTENT ---")) // Should not show content
     }
     
     // We can't easily test LaunchSubagentTool execution fully without mocking the entire LLMService/Client stack

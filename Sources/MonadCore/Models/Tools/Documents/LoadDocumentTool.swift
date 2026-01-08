@@ -51,20 +51,14 @@ public struct LoadDocumentTool: Tool, @unchecked Sendable {
             return .failure(errorMsg)
         }
         
-        let forceFull = parameters["force_full"] as? Bool ?? false
         let url = URL(fileURLWithPath: path).standardized
         
         do {
             let content = try String(contentsOf: url, encoding: .utf8)
             
-            // Check size
-            var mode: DocumentContext.ViewMode = .full
-            var message = "Document loaded successfully."
-            
-            if content.count > 5000 && !forceFull {
-                mode = .metadata
-                message = "Document added as metadata (large file: \(content.count) chars). Use `switch_document_view` to read content or `launch_subagent` to process it."
-            }
+            // Always default to metadata mode on initial load to save context
+            let mode: DocumentContext.ViewMode = .metadata
+            let message = "Document '\(path)' loaded into context in 'metadata' mode. Use `switch_document_view` to read content."
             
             await documentManager.loadDocument(path: path, content: content)
             

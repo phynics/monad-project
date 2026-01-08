@@ -26,6 +26,8 @@ public struct Note: Codable, Identifiable, Hashable, FetchableRecord, Persistabl
     /// If true, always append to every prompt (for critical context)
     public var alwaysAppend: Bool
 
+    public var tags: String // JSON array stored as string
+
     public var createdAt: Date
     public var updatedAt: Date
 
@@ -36,6 +38,7 @@ public struct Note: Codable, Identifiable, Hashable, FetchableRecord, Persistabl
         content: String,
         isReadonly: Bool = false,
         alwaysAppend: Bool = false,
+        tags: [String] = [],
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) {
@@ -45,8 +48,24 @@ public struct Note: Codable, Identifiable, Hashable, FetchableRecord, Persistabl
         self.content = content
         self.isReadonly = isReadonly
         self.alwaysAppend = alwaysAppend
+        
+        if let data = try? JSONEncoder().encode(tags), let str = String(data: data, encoding: .utf8) {
+            self.tags = str
+        } else {
+            self.tags = "[]"
+        }
+        
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+
+    public var tagArray: [String] {
+        guard let data = tags.data(using: .utf8),
+            let array = try? JSONDecoder().decode([String].self, from: data)
+        else {
+            return []
+        }
+        return array
     }
 }
 
@@ -63,6 +82,7 @@ extension Note {
         return name.lowercased().contains(lowercased)
             || description.lowercased().contains(lowercased)
             || content.lowercased().contains(lowercased)
+            || tags.lowercased().contains(lowercased)
     }
 }
 

@@ -31,34 +31,57 @@ public struct SearchNotesTool: Tool, @unchecked Sendable {
             "properties": [
                 "query": [
                     "type": "string",
-                    "description": "Search query to find in notes"
+                    "description": "Search query to find in notes (searches name, description, and content)"
+                ],
+                "tags": [
+                    "type": "array",
+                    "items": ["type": "string"],
+                    "description": "Optional list of tags to filter by"
                 ]
-            ],
-            "required": ["query"]
+            ]
         ]
     }
     
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        // More robust parameter extraction
-        guard let query = parameters["query"] as? String else {
-            let errorMsg = "Missing required parameter: query."
-            if let example = usageExample {
-                return .failure("\(errorMsg) Example: \(example)")
+        let query = parameters["query"] as? String
+        let tags = parameters["tags"] as? [String]
+        
+        if query == nil && (tags == nil || tags!.isEmpty) {
+            return .failure("Either 'query' or 'tags' must be provided.")
+        }
+        
+        do {
+            var allNotes: [Note] = []
+            
+            if let query = query, !query.isEmpty {
+                allNotes = try await persistenceService.searchNotes(query: query)
             }
-            return .failure(errorMsg)
+            
+            if let tags = tags, !tags.isEmpty {
+                let tagNotes = try await persistenceService.searchNotes(matchingAnyTag: tags)
+                let existingIds = Set(allNotes.map { $0.id })
+                for note in tagNotes {
+                    if !existingIds.contains(note.id) {
+                        allNotes.append(note)
+                    }
+                }
+            }
+
+            if allNotes.isEmpty {
+                let criteria = [query != nil ? "query '\(query!)'" : nil, tags != nil ? "tags \(tags!)" : nil]
+                    .compactMap { $0 }.joined(separator: " and ")
+                return .success("No notes found matching \(criteria)")
+            }
+            
+            let results: String = allNotes.prefix(10).map { note in
+                let readonly = note.isReadonly ? " [READONLY]" : ""
+                let tagsStr = note.tagArray.isEmpty ? "" : " [Tags: \(note.tagArray.joined(separator: ", "))]"
+                return "- \(note.name)\(readonly)\(tagsStr): \(note.description)"
+            }.joined(separator: "\n")
+            
+            return .success("Found \(allNotes.count) note(s):\n\(results)")
+        } catch {
+            return .failure("Search failed: \(error.localizedDescription)")
         }
-        
-        let notes = try await persistenceService.searchNotes(query: query)
-        
-        if notes.isEmpty {
-            return .success("No notes found matching '\(query)'")
-        }
-        
-        let results: String = notes.prefix(5).map { note in
-            let readonly = note.isReadonly ? " [READONLY]" : ""
-            return "- \(note.name)\(readonly): \(note.description)"
-        }.joined(separator: "\n")
-        
-        return .success("Found \(notes.count) note(s):\n\(results)")
     }
 }

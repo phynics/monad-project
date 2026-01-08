@@ -4,10 +4,6 @@ import Foundation
 ///
 /// Supports Chain of Thought (CoT) reasoning models that use `<think>` tags
 /// to show their reasoning process separately from the final answer.
-/// UI message model for chat interface
-///
-/// Supports Chain of Thought (CoT) reasoning models that use `<think>` tags
-/// to show their reasoning process separately from the final answer.
 public struct Message: Identifiable, Equatable, Sendable {
     public let id = UUID()
 

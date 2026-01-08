@@ -276,6 +276,29 @@ public actor PersistenceService {
                 .fetchAll(db)
         }
     }
+    
+    /// Search for notes that contain any of the provided tags
+    public func searchNotes(matchingAnyTag tags: [String]) throws -> [Note] {
+        guard !tags.isEmpty else { return [] }
+        
+        return try dbQueue.read { db in
+            var conditions: [SQLExpression] = []
+            for tag in tags {
+                conditions.append(Column("tags").like("%\(tag)%"))
+            }
+            
+            let query = conditions.joined(operator: .or)
+            
+            let candidates = try Note
+                .filter(query)
+                .fetchAll(db)
+            
+            return candidates.filter { note in
+                let noteTags = Set(note.tagArray.map { $0.lowercased() })
+                return !noteTags.intersection(tags.map { $0.lowercased() }).isEmpty
+            }
+        }
+    }
 
     /// Delete a note (only if not readonly)
     public func deleteNote(id: UUID) throws {
@@ -303,15 +326,52 @@ public actor PersistenceService {
 
     // MARK: - Search Archived Sessions
 
+    /// Search archived sessions by title, tags, or message content
     public func searchArchivedSessions(query: String) throws -> [ConversationSession] {
         try dbQueue.read { db in
             let pattern = "%\(query)%"
+            
+            // Subquery to find session IDs that have matching messages
+            let matchingMessageSessionIds = try ConversationMessage
+                .filter(Column("content").like(pattern))
+                .select(Column("sessionId"))
+                .fetchAll(db)
+                .map { $0 as UUID }
+            
             return
                 try ConversationSession
                 .filter(Column("isArchived") == true)
-                .filter(Column("title").like(pattern) || Column("tags").like(pattern))
+                .filter(
+                    Column("title").like(pattern) || 
+                    Column("tags").like(pattern) ||
+                    matchingMessageSessionIds.contains(Column("id"))
+                )
                 .order(Column("updatedAt").desc)
                 .fetchAll(db)
+        }
+    }
+    
+    /// Search for archived sessions that contain any of the provided tags
+    public func searchArchivedSessions(matchingAnyTag tags: [String]) throws -> [ConversationSession] {
+        guard !tags.isEmpty else { return [] }
+        
+        return try dbQueue.read { db in
+            var conditions: [SQLExpression] = []
+            for tag in tags {
+                conditions.append(Column("tags").like("%\(tag)%"))
+            }
+            
+            let query = conditions.joined(operator: .or)
+            
+            let candidates = try ConversationSession
+                .filter(Column("isArchived") == true)
+                .filter(query)
+                .fetchAll(db)
+            
+            return candidates.filter { session in
+                let sessionTags = Set(session.tagArray.map { $0.lowercased() })
+                return !sessionTags.intersection(tags.map { $0.lowercased() }).isEmpty
+            }
         }
     }
 

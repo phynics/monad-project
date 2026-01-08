@@ -94,7 +94,7 @@ public struct MessageListView: View {
                     .padding(16)
                 }
             }
-            .onChange(of: messages.count) { _ in
+            .onChange(of: messages.count) {
                 if isAtBottom {
                     withAnimation {
                         proxy.scrollTo("bottom-marker", anchor: .bottom)
@@ -113,7 +113,7 @@ public struct MessageListView: View {
                     }
                 }
             }
-            .onChange(of: streamingContent) { _ in
+            .onChange(of: streamingContent) {
                 if isStreaming && isAtBottom {
                     proxy.scrollTo("bottom-marker", anchor: .bottom)
                 }

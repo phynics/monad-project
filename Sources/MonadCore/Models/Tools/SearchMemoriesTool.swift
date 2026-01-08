@@ -33,46 +33,65 @@ public class SearchMemoriesTool: Tool, @unchecked Sendable {
             "properties": [
                 "query": [
                     "type": "string",
-                    "description": "Search query to find in memories"
+                    "description": "Search query to find in memories (searches title and content)"
+                ],
+                "tags": [
+                    "type": "array",
+                    "items": ["type": "string"],
+                    "description": "Optional list of tags to filter by"
                 ]
-            ],
-            "required": ["query"]
+            ]
         ]
     }
     
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let query = parameters["query"] as? String else {
-            let errorMsg = "Missing required parameter: query."
-            if let example = usageExample {
-                return .failure("\(errorMsg) Example: \(example)")
-            }
-            return .failure(errorMsg)
+        let query = parameters["query"] as? String
+        let tags = parameters["tags"] as? [String]
+        
+        if query == nil && (tags == nil || tags!.isEmpty) {
+            return .failure("Either 'query' or 'tags' must be provided.")
         }
         
         do {
-            // 1. Keyword search
-            let keywordMemories = try await persistenceService.searchMemories(query: query)
+            var allMemories: [Memory] = []
             
-            // 2. Semantic search
-            let embedding = try await embeddingService.generateEmbedding(for: query)
-            let semanticResults = try await persistenceService.searchMemories(embedding: embedding, limit: 5, minSimilarity: 0.4)
+            if let query = query, !query.isEmpty {
+                // 1. Keyword search
+                let keywordMemories = try await persistenceService.searchMemories(query: query)
+                
+                // 2. Semantic search
+                let embedding = try await embeddingService.generateEmbedding(for: query)
+                let semanticResults = try await persistenceService.searchMemories(embedding: embedding, limit: 5, minSimilarity: 0.4)
+                
+                // Combine results, avoiding duplicates
+                allMemories = keywordMemories
+                let keywordIds = Set(allMemories.map { $0.id })
+                
+                for result in semanticResults {
+                    if !keywordIds.contains(result.memory.id) {
+                        allMemories.append(result.memory)
+                    }
+                }
+            }
             
-            // Combine results, avoiding duplicates
-            var allMemories = keywordMemories
-            let keywordIds = Set(allMemories.map { $0.id })
-            
-            for result in semanticResults {
-                if !keywordIds.contains(result.memory.id) {
-                    allMemories.append(result.memory)
+            if let tags = tags, !tags.isEmpty {
+                let tagMemories = try await persistenceService.searchMemories(matchingAnyTag: tags)
+                let existingIds = Set(allMemories.map { $0.id })
+                for memory in tagMemories {
+                    if !existingIds.contains(memory.id) {
+                        allMemories.append(memory)
+                    }
                 }
             }
 
             if allMemories.isEmpty {
-                return .success("No memories found matching '\(query)'")
+                let criteria = [query != nil ? "query '\(query!)'" : nil, tags != nil ? "tags \(tags!)" : nil]
+                    .compactMap { $0 }.joined(separator: " and ")
+                return .success("No memories found matching \(criteria)")
             }
 
             let formattedResults = allMemories.map { $0.promptString }.joined(separator: "\n\n---\n\n")
-            return .success("Found \(allMemories.count) memories for '\(query)':\n\n\(formattedResults)")
+            return .success("Found \(allMemories.count) memories:\n\n\(formattedResults)")
         } catch {
             return .failure("Search failed: \(error.localizedDescription)")
         }

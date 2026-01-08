@@ -49,6 +49,34 @@ public enum DatabaseSchema {
                 }
             }
         }
+
+        // v6: Add tags to Note
+        migrator.registerMigration("v6") { db in
+            if try !db.columns(in: "note").contains(where: { $0.name == "tags" }) {
+                try db.alter(table: "note") { t in
+                    t.add(column: "tags", .text).notNull().defaults(to: "[]")
+                }
+            }
+        }
+
+        // v7: Convert conversationSession tags from base64 to JSON
+        migrator.registerMigration("v7") { db in
+            let sessions = try ConversationSession.fetchAll(db)
+            for var session in sessions {
+                // Try to detect if it's base64 encoded. 
+                // A simple JSON array string like '["a"]' is not valid base64 usually,
+                // but a base64 string won't start with '['.
+                if !session.tags.isEmpty && !session.tags.hasPrefix("[") {
+                    if let data = Data(base64Encoded: session.tags),
+                       let tagsArray = try? JSONDecoder().decode([String].self, from: data),
+                       let newData = try? JSONEncoder().encode(tagsArray),
+                       let newString = String(data: newData, encoding: .utf8) {
+                        session.tags = newString
+                        try session.update(db)
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Conversation Tables
@@ -110,6 +138,7 @@ public enum DatabaseSchema {
             t.column("content", .text).notNull()
             t.column("isReadonly", .boolean).notNull().defaults(to: false)
             t.column("alwaysAppend", .boolean).notNull().defaults(to: false)
+            t.column("tags", .text).notNull().defaults(to: "[]")
             t.column("isEnabled", .boolean).notNull().defaults(to: true)
             t.column("priority", .integer).notNull().defaults(to: 0)
             t.column("createdAt", .datetime).notNull()
