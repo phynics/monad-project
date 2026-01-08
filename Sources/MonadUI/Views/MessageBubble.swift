@@ -415,7 +415,7 @@ public struct MessageBubble: View {
                 }
                 "<tool_call>"
                 ZeroOrMore(.any, .reluctant)
-                "</tool_call>"
+                "</tool_call> "
                 Optionally {
                     ZeroOrMore(.whitespace)
                     "```"
@@ -435,7 +435,14 @@ public struct MessageBubble: View {
                 .replacing(openToolCallPattern, with: "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        return message?.displayContent ?? ""
+        
+        // ONLY strip tool calls for assistant role. 
+        // Tool role messages might contain content we want to see (like subagent results).
+        if role == .assistant {
+            return message?.displayContent ?? ""
+        } else {
+            return message?.content ?? ""
+        }
     }
 
     private func attributedString(from markdown: String) -> AttributedString {
@@ -500,34 +507,45 @@ struct SubagentContextView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Prompt") {
+                Section {
                     Text(context.prompt)
                         .font(.body)
+                } header: {
+                    Label("Subagent Prompt", systemImage: "text.justify.left")
+                        .foregroundColor(.purple)
                 }
                 
-                Section("Documents") {
+                Section {
                     if context.documents.isEmpty {
                         Text("No documents")
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(context.documents, id: \.self) { path in
                             HStack {
-                                Image(systemName: "doc.text")
+                                Image(systemName: "doc.text.fill")
+                                    .foregroundColor(.purple)
                                 Text(path)
+                                    .monospaced()
                             }
                         }
                     }
+                } header: {
+                    Label("Context Documents", systemImage: "folder.fill")
+                        .foregroundColor(.purple)
                 }
                 
                 if let raw = context.rawResponse {
-                    Section("Raw Output") {
+                    Section {
                         Text(raw)
-                            .font(.caption)
-                            .monospaced()
+                            .font(.system(.caption, design: .monospaced))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } header: {
+                        Label("Raw Response", systemImage: "terminal.fill")
+                            .foregroundColor(.purple)
                     }
                 }
             }
-            .navigationTitle("Subagent Context")
+            .navigationTitle("Subagent Details")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -536,6 +554,7 @@ struct SubagentContextView: View {
                 }
             }
         }
+        .frame(minWidth: 600, minHeight: 500)
     }
 }
 

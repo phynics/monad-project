@@ -60,9 +60,8 @@ public actor PromptBuilder {
             }
         }
 
-        if !allMemories.isEmpty {
-            components.append(MemoriesComponent(memories: allMemories))
-        }
+        // Always add MemoriesComponent to provide guidance even if empty
+        components.append(MemoriesComponent(memories: allMemories))
 
         // Tools
         if !tools.isEmpty {

@@ -14,7 +14,7 @@ public final class CreateMemoryTool: Tool, @unchecked Sendable {
     public var usageExample: String? {
         """
         <tool_call>
-        {"name": "create_memory", "arguments": {"title": "Meeting Notes", "content": "Project sync on Tuesday", "tags": ["work"]}}
+        {"name": "create_memory", "arguments": {"title": "User Preference", "content": "User prefers \\"dark mode\\" and \\"Swift\\" for development tasks.", "tags": ["preferences"]}}
         </tool_call>
         """
     }

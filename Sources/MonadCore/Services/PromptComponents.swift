@@ -78,7 +78,19 @@ public struct MemoriesComponent: PromptSection {
     }
 
     public func generateContent() async -> String? {
-        guard !memories.isEmpty else { return nil }
+        if memories.isEmpty {
+            return """
+                No relevant memories found for this query.
+                
+                Memories are persistent facts, preferences, or notes about the user and past interactions that are stored in your long-term memory. You can create new memories using the `create_memory` tool or edit existing ones with `edit_memory`. 
+                
+                When creating or editing memories:
+                - Compress the content to be concise but informative.
+                - Use "quotes" around specific phrases or terms that might be useful to reference-back later for exact matching or clarity.
+                
+                Always use these tools to store important information that should be remembered across different chat sessions.
+                """
+        }
 
         // Use Memory array extension
         return memories.promptContent

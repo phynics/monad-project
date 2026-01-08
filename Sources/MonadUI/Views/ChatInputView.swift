@@ -6,6 +6,8 @@ import SwiftUI
 
 struct ChatInputView: View {
     @Bindable var viewModel: ChatViewModel
+    @State private var selectedMemory: Memory?
+    @State private var selectedDocument: DocumentContext?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,10 +18,17 @@ struct ChatInputView: View {
                         // Memories
                         ForEach(viewModel.activeMemories) { activeMemory in
                             HStack(spacing: 4) {
-                                Image(systemName: "brain.head.profile")
-                                    .foregroundColor(activeMemory.isPinned ? .orange : .purple)
-                                Text(activeMemory.memory.title)
-                                    .lineLimit(1)
+                                Button {
+                                    selectedMemory = activeMemory.memory
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "brain.head.profile")
+                                            .foregroundColor(activeMemory.isPinned ? .orange : .purple)
+                                        Text(activeMemory.memory.title)
+                                            .lineLimit(1)
+                                    }
+                                }
+                                .buttonStyle(.plain)
                                 
                                 Button(action: { viewModel.toggleMemoryPin(id: activeMemory.id) }) {
                                     Image(systemName: activeMemory.isPinned ? "pin.fill" : "pin")
@@ -44,16 +53,23 @@ struct ChatInputView: View {
                         // Documents
                         ForEach(viewModel.documentManager.documents) { doc in
                             HStack(spacing: 4) {
-                                Image(systemName: "doc.text.fill")
-                                    .foregroundColor(doc.isPinned ? .orange : .blue)
-                                Text(URL(fileURLWithPath: doc.path).lastPathComponent)
-                                    .lineLimit(1)
-                                
-                                if doc.viewMode == .excerpt {
-                                    Text("(Excerpt)")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                Button {
+                                    selectedDocument = doc
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "doc.text.fill")
+                                            .foregroundColor(doc.isPinned ? .orange : .blue)
+                                        Text(URL(fileURLWithPath: doc.path).lastPathComponent)
+                                            .lineLimit(1)
+                                        
+                                        if doc.viewMode == .excerpt {
+                                            Text("(Excerpt)")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
                                 }
+                                .buttonStyle(.plain)
                                 
                                 Button(action: { viewModel.documentManager.togglePin(path: doc.path) }) {
                                     Image(systemName: doc.isPinned ? "pin.fill" : "pin")
@@ -83,6 +99,7 @@ struct ChatInputView: View {
             }
             
             HStack(spacing: 12) {
+                // ... (rest of the body)
                 TextField("Type a message...", text: $viewModel.inputText)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
@@ -109,6 +126,12 @@ struct ChatInputView: View {
             }
             .padding()
             .background(Color.gray.opacity(0.05))
+        }
+        .sheet(item: $selectedMemory) { memory in
+            MemoryDetailView(memory: memory)
+        }
+        .sheet(item: $selectedDocument) { doc in
+            DocumentContextDetailView(document: doc)
         }
     }
 }
