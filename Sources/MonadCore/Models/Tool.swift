@@ -113,9 +113,10 @@ public func formatToolsForPrompt(_ tools: [any Tool]) async -> String {
         Guidelines:
         - Use tools only when you need to search, create, or modify data that is not already in your context.
         - Create memories frequently: Use `create_memory` to store any interesting facts, user preferences, or project details learned during the conversation. Proactive memory creation helps maintain long-term continuity.
+        - Subagents: Use `launch_subagent` for isolated, complex tasks like broad bug-hunting. IMPORTANT: Subagents CANNOT use tools. You must provide all necessary information to the subagent through the prompt and the provided documents (which are always injected in full). Instruct subagents to be brief, factual, and to the point.
         - DO NOT use tools for simple greetings (e.g., "hi", "hello") or general conversation.
-        - Navigation: When exploring a folder, look for entry points like README, Makefile, Package.swift, or requirements.txt.
-        - Subagents: Use launch_subagent for isolated, complex tasks like broad bug-hunting.
+        - Reading Files: Prefer document tools (`load_document`) to read file content into context. Only use the `cat` tool for small files or when specific line-level access is required and context space is critical.
+        - Navigation: When exploring a folder, look for entry points like README, Makefile, Package.swift, or requirements.txt. Use `inspect_file` to identify file types and metadata.
         - Wrap each tool call in <tool_call></tool_call> tags
         - Arguments must be a JSON object (not a string)
         - Be specific in your queries

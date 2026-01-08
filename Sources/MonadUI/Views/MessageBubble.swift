@@ -218,7 +218,6 @@ public struct MessageBubble: View {
                                                     .font(.caption2)
                                                     .foregroundColor(.secondary)
                                                     .monospaced()
-                                                    .lineLimit(1)
                                             }
                                             .padding(.leading, 20)
                                         }

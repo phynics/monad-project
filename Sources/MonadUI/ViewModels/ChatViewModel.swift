@@ -147,6 +147,7 @@ public final class ChatViewModel {
             FindFileTool(),
             SearchFileContentTool(),
             ReadFileTool(),
+            InspectFileTool(),
             // Document Tools
             LoadDocumentTool(documentManager: documentManager),
             UnloadDocumentTool(documentManager: documentManager),

@@ -228,6 +228,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.core-tests
+      debug:
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Automatic
 
   # MCP Tests
   MonadMCPTests:
@@ -243,6 +246,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.mcp-tests
+      debug:
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Automatic
 
 schemes:
   MonadAssistant:

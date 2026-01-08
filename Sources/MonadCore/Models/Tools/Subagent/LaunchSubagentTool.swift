@@ -5,7 +5,7 @@ import OpenAI
 public struct LaunchSubagentTool: Tool, @unchecked Sendable {
     public let id = "launch_subagent"
     public let name = "Launch Subagent"
-    public let description = "Launch a temporary subagent to process specific documents with a focused prompt. Use this for heavy processing of large files to keep the main context clean."
+    public let description = "Launch a temporary subagent to process specific documents with a focused prompt. Use this for heavy processing of large files. IMPORTANT: Subagents cannot use tools; any information it needs must be provided in full via the 'documents' and 'prompt' parameters."
     public let requiresPermission = true
     
     public var usageExample: String? {
@@ -89,7 +89,7 @@ public struct LaunchSubagentTool: Tool, @unchecked Sendable {
             memories: [],
             chatHistory: [],
             tools: [], // Subagent doesn't use tools for now (to avoid recursion depth issues)
-            systemInstructions: "You are a focused subagent. You have been provided with specific documents to analyze. Answer the user's prompt based ONLY on these documents and your general knowledge.",
+            systemInstructions: "You are a focused subagent. You have been provided with specific documents to analyze. Answer the user's prompt based ONLY on these documents and your general knowledge. IMPORTANT: Be extremely brief and to the point. Provide only the facts and requested analysis without conversational filler.",
             useFastModel: true
         )
         
