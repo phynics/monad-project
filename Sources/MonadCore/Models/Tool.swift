@@ -120,6 +120,8 @@ public func formatToolsForPrompt(_ tools: [any Tool]) async -> String {
         Guidelines:
         - Use tools only when you need to search, create, or modify data that is not already in your context.
         - DO NOT use tools for simple greetings (e.g., "hi", "hello") or general conversation.
+        - Navigation: When exploring a folder, look for entry points like README, Makefile, Package.swift, or requirements.txt.
+        - Subagents: Use launch_subagent for isolated, complex tasks like broad bug-hunting.
         - Wrap each tool call in <tool_call></tool_call> tags
         - Arguments must be a JSON object (not a string)
         - Be specific in your queries
