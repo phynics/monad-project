@@ -186,22 +186,34 @@ public actor ContextManager {
         tagBased: [Memory],
         queryEmbedding: [Double]
     ) -> [SemanticSearchResult] {
+        // Tag matches are explicit and highly relevant, give them a definitive boost
+        // A boost of 2.0 ensures they always beat pure semantic matches (max 1.0)
+        let tagBoost: Double = 2.0
+        
         var results: [SemanticSearchResult] = semantic.map { 
             SemanticSearchResult(memory: $0.memory, similarity: $0.similarity)
         }
         
         let existingIds = Set(results.map { $0.memory.id })
         
-        // Add tag results that aren't already included
+        // Boost existing semantic results if they also match tags
+        let tagIds = Set(tagBased.map { $0.id })
+        results = results.map { res in
+            if tagIds.contains(res.memory.id) {
+                return SemanticSearchResult(memory: res.memory, similarity: (res.similarity ?? 0) + tagBoost)
+            }
+            return res
+        }
+        
+        // Add tag results that aren't already included, with boost
         for memory in tagBased {
             if !existingIds.contains(memory.id) {
-                // Calculate similarity for ranking consistency
                 let sim = VectorMath.cosineSimilarity(queryEmbedding, memory.embeddingVector)
-                results.append(SemanticSearchResult(memory: memory, similarity: sim))
+                results.append(SemanticSearchResult(memory: memory, similarity: sim + tagBoost))
             }
         }
         
-        // Re-sort everything by similarity
+        // Re-sort everything by similarity (now includes definitive tag boosts)
         results.sort { ($0.similarity ?? 0) > ($1.similarity ?? 0) }
         return results
     }
