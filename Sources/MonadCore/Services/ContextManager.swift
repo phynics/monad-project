@@ -39,6 +39,7 @@ public actor ContextManager {
     public func gatherContext(
         for query: String,
         history: [Message] = [],
+        limit: Int = 5,
         tagGenerator: (@Sendable (String) async throws -> [String])? = nil,
         onProgress: (@Sendable (Message.ContextGatheringProgress) -> Void)? = nil
     ) async throws -> ContextData {
@@ -54,6 +55,7 @@ public actor ContextManager {
         async let memoriesDataTask = fetchRelevantMemories(
             for: query, 
             tagContext: tagGenerationContext,
+            limit: limit,
             tagGenerator: tagGenerator, 
             onProgress: onProgress
         )
@@ -102,6 +104,7 @@ public actor ContextManager {
     private func fetchRelevantMemories(
         for query: String,
         tagContext: String,
+        limit: Int,
         tagGenerator: (@Sendable (String) async throws -> [String])?,
         onProgress: (@Sendable (Message.ContextGatheringProgress) -> Void)?
     ) async throws -> (
@@ -147,7 +150,7 @@ public actor ContextManager {
         let searchTags = tags // Capture local copy for concurrency safety
         async let semanticTask = persistenceService.searchMemories(
             embedding: embedding,
-            limit: 5,
+            limit: limit * 2, // Search for more to allow for tag-boosted re-ranking
             minSimilarity: 0.35 // Slightly lower to catch more candidates for re-ranking
         )
         
@@ -167,8 +170,8 @@ public actor ContextManager {
             queryEmbedding: embedding
         )
         
-        // Take top 3
-        let topResults = Array(finalResults.prefix(3))
+        // Take top N based on limit
+        let topResults = Array(finalResults.prefix(limit))
         
         logger.info("Recall performance: \(topResults.count) memories selected from \(semanticResults.count) semantic + \(tagResults.count) tag matches")
         

@@ -45,6 +45,7 @@ extension ChatViewModel {
                 let contextData = try await contextManager.gatherContext(
                     for: prompt, 
                     history: Array(messages.prefix(userMessageIndex)), // History before this message
+                    limit: llmService.configuration.memoryContextLimit,
                     tagGenerator: tagGenerator,
                     onProgress: { [weak self] progress in
                         guard let self = self else { return }
@@ -284,6 +285,7 @@ extension ChatViewModel {
                 let contextData = try await contextManager.gatherContext(
                     for: prompt,
                     history: Array(messages.prefix(lastUserMessageIndex)),
+                    limit: llmService.configuration.memoryContextLimit,
                     tagGenerator: tagGenerator,
                     onProgress: { [weak self] progress in
                         guard let self = self else { return }
