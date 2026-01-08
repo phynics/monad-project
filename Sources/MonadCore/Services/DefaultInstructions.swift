@@ -34,5 +34,26 @@ enum DefaultInstructions {
        - UNLOAD: Use `unload_document` when you no longer need a file to save context space.
 
     4. SUBAGENTS: Use `launch_subagent` to process large documents or complex searches within a file without loading them fully into your main context. Provide a focused prompt and relevant documents to the subagent.
+
+    ## Tool Use Guidelines
+    - FORMAT: Wrap each tool call in `<tool_call>` tags and return a single valid JSON object.
+    - FREQUENCY: Create memories frequently to persist important facts.
+    - SPECIFICITY: Be specific in your search queries and document paths.
+    - EXAMPLES:
+      ```xml
+      <tool_call>
+      {"name": "search_archived_chats", "arguments": {"query": "authentication flow"}}
+      </tool_call>
+      ```
+      ```xml
+      <tool_call>
+      {"name": "load_document", "arguments": {"path": "Sources/Auth/LoginView.swift"}}
+      </tool_call>
+      ```
+      ```xml
+      <tool_call>
+      {"name": "create_memory", "arguments": {"title": "User Preference: Swift 6", "content": "The user prefers strictly following Swift 6 concurrency patterns.", "tags": ["swift6", "concurrency", "preferences"]}}
+      </tool_call>
+      ```
     """
 }

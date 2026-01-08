@@ -69,9 +69,8 @@ extension Tool {
     public var promptString: String {
         var parts: [String] = []
 
-        // Title with permission marker
-        let permMarker = requiresPermission ? " [Locked]" : ""
-        parts.append("\(name)\(permMarker)")
+        // Title
+        parts.append("\(name)")
 
         // ID and description
         parts.append("- Tool ID: `\(id)`")
