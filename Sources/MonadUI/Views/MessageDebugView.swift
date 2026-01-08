@@ -17,22 +17,20 @@ struct MessageDebugView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    
-                    MessageDebugInfoView(message: message)
-
-                    Divider()
-
-                    if debugInfo.rawPrompt != nil || debugInfo.structuredContext != nil {
-                        MessageDebugPromptContextView(debugInfo: debugInfo)
-                        Divider()
-                    }
-                    
                     if message.role == .user {
                         MessageDebugContextPipelineView(debugInfo: debugInfo)
-                        Divider()
-                    }
+                    } else {
+                        MessageDebugInfoView(message: message)
 
-                    MessageDebugResponseView(debugInfo: debugInfo)
+                        Divider()
+
+                        if debugInfo.rawPrompt != nil || debugInfo.structuredContext != nil {
+                            MessageDebugPromptContextView(debugInfo: debugInfo)
+                            Divider()
+                        }
+
+                        MessageDebugResponseView(debugInfo: debugInfo)
+                    }
 
                     Spacer()
                 }

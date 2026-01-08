@@ -227,31 +227,41 @@ public struct MessageBubble: View {
                     // Tags and Stats (Under the bubble)
                     HStack(spacing: 4) {
                         if role == .user, let progress = message?.gatheringProgress, progress != .complete {
-                            HStack(spacing: 4) {
-                                ProgressView()
-                                    .scaleEffect(0.3)
-                                    .frame(width: 8, height: 8)
-                                
-                                Text(progress.rawValue)
-                                    .font(.system(size: 8, weight: .medium, design: .monospaced))
-                                    .textCase(.uppercase)
+                            Button {
+                                showingDebugInfo = true
+                            } label: {
+                                HStack(spacing: 4) {
+                                    ProgressView()
+                                        .scaleEffect(0.3)
+                                        .frame(width: 8, height: 8)
+                                    
+                                    Text(progress.rawValue)
+                                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                        .textCase(.uppercase)
+                                }
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.blue.opacity(0.1))
+                                .foregroundColor(.blue)
+                                .cornerRadius(4)
                             }
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Color.blue.opacity(0.1))
-                            .foregroundColor(.blue)
-                            .cornerRadius(4)
+                            .buttonStyle(.plain)
                         }
 
                         if let tags = message?.tags, !tags.isEmpty {
                             ForEach(tags, id: \.self) { tag in
-                                Text("#\(tag)")
-                                    .font(.system(size: 8))
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 1)
-                                    .background(Color.gray.opacity(0.1))
-                                    .cornerRadius(4)
+                                Button {
+                                    showingDebugInfo = true
+                                } label: {
+                                    Text("#\(tag)")
+                                        .font(.system(size: 8))
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(Color.gray.opacity(0.1))
+                                        .cornerRadius(4)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -264,6 +274,17 @@ public struct MessageBubble: View {
                             }
                             if let total = stats.totalTokens {
                                 Text("\(total) tokens")
+                            }
+                            
+                            if role == .assistant && message?.debugInfo != nil {
+                                Button {
+                                    showingDebugInfo = true
+                                } label: {
+                                    Image(systemName: "info.circle")
+                                        .font(.system(size: 10))
+                                }
+                                .buttonStyle(.plain)
+                                .foregroundColor(.blue)
                             }
                         }
                         .font(.system(size: 8))
