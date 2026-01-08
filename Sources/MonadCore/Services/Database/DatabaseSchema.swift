@@ -138,10 +138,10 @@ public enum DatabaseSchema {
             name: "System",
             description: "Core capabilities and operational constraints.",
             content: """
-                Core instructions and system capabilities:
-                - AI assistant with access to conversation history and project-specific context.
-                - Ability to manage long-term memories and short-term notes.
-                - Professional, concise, and technical communication style.
+                Operational directivies:
+                - Use available context to personalize responses and maintain continuity.
+                - Employ tools only when required for information retrieval or project state updates.
+                - Maintain a professional, technical, and concise persona.
                 """,
             isReadonly: true,
             alwaysAppend: true,
