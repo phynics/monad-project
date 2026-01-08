@@ -138,7 +138,7 @@ public actor OllamaClient {
                 }
             }
 
-            return OllamaMessage(role: role, content: content)
+            return OllamaMessage(role: role, content: content, tool_calls: nil)
         }
 
         // Map responseFormat to Ollama's format parameter
@@ -176,11 +176,33 @@ public actor OllamaClient {
     }
 
     private func convertToOpenAI(_ response: OllamaChatResponse) -> ChatStreamResult? {
+        // Map Ollama tool calls to OpenAI format
+        let openAIToolCalls = response.message.tool_calls?.enumerated().map { (index, tc) in
+            [
+                "index": index,
+                "id": UUID().uuidString,
+                "type": "function",
+                "function": [
+                    "name": tc.function.name,
+                    "arguments": (try? tc.function.arguments.toJsonString()) ?? "{}"
+                ]
+            ]
+        }
+
         // Handle final chunk with usage statistics
         if response.done {
             let promptEvalCount = response.prompt_eval_count ?? 0
             let evalCount = response.eval_count ?? 0
             
+            var delta: [String: Any] = [
+                "role": "assistant",
+                "content": response.message.content
+            ]
+            
+            if let tc = openAIToolCalls {
+                delta["tool_calls"] = tc
+            }
+
             let jsonDict: [String: Any] = [
                 "id": UUID().uuidString,
                 "object": "chat.completion.chunk",
@@ -189,11 +211,8 @@ public actor OllamaClient {
                 "choices": [
                     [
                         "index": 0,
-                        "delta": [
-                            "role": "assistant",
-                            "content": response.message.content,
-                        ],
-                        "finish_reason": "stop",
+                        "delta": delta,
+                        "finish_reason": response.message.tool_calls?.isEmpty == false ? "tool_calls" : "stop",
                     ]
                 ],
                 "usage": [
@@ -212,12 +231,21 @@ public actor OllamaClient {
             }
         }
 
-        // Skip empty intermediate chunks
-        guard !response.message.content.isEmpty else {
+        // Skip empty intermediate chunks WITHOUT tool calls
+        guard !response.message.content.isEmpty || response.message.tool_calls?.isEmpty == false else {
             return nil
         }
 
         // Manually construct JSON for intermediate chunks
+        var delta: [String: Any] = [
+            "role": "assistant",
+            "content": response.message.content,
+        ]
+        
+        if let tc = openAIToolCalls {
+            delta["tool_calls"] = tc
+        }
+
         let jsonDict: [String: Any] = [
             "id": UUID().uuidString,
             "object": "chat.completion.chunk",
@@ -226,10 +254,7 @@ public actor OllamaClient {
             "choices": [
                 [
                     "index": 0,
-                    "delta": [
-                        "role": "assistant",
-                        "content": response.message.content,
-                    ],
+                    "delta": delta,
                     "finish_reason": nil,
                 ]
             ],
@@ -306,6 +331,16 @@ struct OllamaToolFunction: Codable {
 struct OllamaMessage: Codable {
     let role: String
     let content: String
+    let tool_calls: [OllamaToolCall]?
+}
+
+struct OllamaToolCall: Codable {
+    let function: OllamaToolCallFunction
+}
+
+struct OllamaToolCallFunction: Codable {
+    let name: String
+    let arguments: [String: AnyCodable]
 }
 
 struct OllamaChatResponse: Codable {

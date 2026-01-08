@@ -185,15 +185,20 @@ public actor PromptBuilder {
     ) async -> [ChatQuery.ChatCompletionMessageParam] {
         var messages: [ChatQuery.ChatCompletionMessageParam] = []
 
-        // System message (Instructions and Notes)
-        if !systemContent.isEmpty {
-            messages.append(.system(.init(content: .textContent(systemContent), name: nil)))
-        }
+        var combinedSystemContent = systemContent
 
-        // Memories (Semantic Context) - Add as a system message early in the context
+        // Memories (Semantic Context) - Combine with system instructions
         if let memoriesComponent = components.first(where: { $0.sectionId == "memories" }) as? MemoriesComponent,
            let content = await memoriesComponent.generateContent() {
-            messages.append(.system(.init(content: .textContent(content), name: nil)))
+            if !combinedSystemContent.isEmpty {
+                combinedSystemContent += "\n\n"
+            }
+            combinedSystemContent += "--- RELEVANT MEMORY CONTEXT ---\n\(content)"
+        }
+
+        // System message (Instructions, Notes, and Memories)
+        if !combinedSystemContent.isEmpty {
+            messages.append(.system(.init(content: .textContent(combinedSystemContent), name: nil)))
         }
 
         // History
