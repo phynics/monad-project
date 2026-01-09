@@ -5,7 +5,7 @@ public struct InspectFileTool: Tool, @unchecked Sendable {
     public let id = "inspect_file"
     public let name = "Inspect File"
     public let description = "Determine file type and basic metadata using the unix 'file' command."
-    public let requiresPermission = false // Inspection is usually safe
+    public let requiresPermission = true
     
     public var usageExample: String? {
         """

@@ -100,5 +100,11 @@ public struct ContentView: View {
         } message: {
             Text("The current conversation is already saved in history.")
         }
+        .sheet(item: $viewModel.pendingPermissionRequest) { request in
+            PermissionRequestView(request: request) { response in
+                viewModel.respondToPermissionRequest(response)
+            }
+            .interactiveDismissDisabled()
+        }
     }
 }

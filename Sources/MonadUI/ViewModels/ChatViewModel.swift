@@ -26,8 +26,10 @@ public final class ChatViewModel {
     public let conversationArchiver: ConversationArchiver
     public let contextCompressor: ContextCompressor
     public var toolExecutor: ToolExecutor?
+    public let permissionManager: PermissionManager
 
     // MARK: - Internal Storage
+    public var pendingPermissionRequest: PermissionRequest?
     internal var currentTask: Task<Void, Never>?
     internal var toolManager: SessionToolManager?
     internal let logger = Logger.chat
@@ -71,6 +73,7 @@ public final class ChatViewModel {
     public init(llmService: LLMService, persistenceManager: PersistenceManager) {
         self.llmService = llmService
         self.persistenceManager = persistenceManager
+        self.permissionManager = PermissionManager()
         self.contextManager = ContextManager(
             persistenceService: persistenceManager.persistence,
             embeddingService: llmService.embeddingService
@@ -85,6 +88,7 @@ public final class ChatViewModel {
         self.contextCompressor = ContextCompressor(llmService: llmService)
         
         Task {
+            await permissionManager.setDelegate(self)
             await checkStartupState()
         }
     }
@@ -92,5 +96,38 @@ public final class ChatViewModel {
     // MARK: - Internal Helpers
     internal func setToolManager(_ manager: SessionToolManager) {
         self.toolManager = manager
+    }
+}
+
+// MARK: - Permission Handling
+extension ChatViewModel: PermissionDelegate {
+    public struct PermissionRequest: Identifiable, Sendable {
+        public let id: UUID
+        public let tool: MonadCore.Tool
+        public let arguments: [String: String]
+        public let workingDirectory: String
+        public let continuation: CheckedContinuation<PermissionResponse, Never>
+    }
+
+    public func requestPermission(tool: MonadCore.Tool, arguments: [String: String]) async -> PermissionResponse {
+        let currentWD = persistenceManager.currentSession?.workingDirectory ?? FileManager.default.currentDirectoryPath
+
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.main.async {
+                self.pendingPermissionRequest = PermissionRequest(
+                    id: UUID(),
+                    tool: tool,
+                    arguments: arguments,
+                    workingDirectory: currentWD,
+                    continuation: continuation
+                )
+            }
+        }
+    }
+
+    public func respondToPermissionRequest(_ response: PermissionResponse) {
+        guard let request = pendingPermissionRequest else { return }
+        request.continuation.resume(returning: response)
+        self.pendingPermissionRequest = nil
     }
 }

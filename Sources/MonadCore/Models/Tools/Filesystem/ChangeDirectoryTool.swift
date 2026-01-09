@@ -5,7 +5,7 @@ public struct ChangeDirectoryTool: Tool, @unchecked Sendable {
     public let id = "change_directory"
     public let name = "Change Directory"
     public let description = "Change the current working directory for relative file operations."
-    public let requiresPermission = false
+    public let requiresPermission = true
     
     public var usageExample: String? {
         """

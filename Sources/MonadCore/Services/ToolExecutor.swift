@@ -5,14 +5,18 @@ import OSLog
 @MainActor
 public final class ToolExecutor {
     private let toolManager: SessionToolManager
+    private let permissionManager: PermissionManager
+    private let workingDirectoryProvider: @MainActor () -> String
     private let logger = Logger.tools
     
     // Loop detection
     private var callCounts: [ToolCall: Int] = [:]
     private let maxRepeatedCalls = 3
 
-    public init(toolManager: SessionToolManager) {
+    public init(toolManager: SessionToolManager, permissionManager: PermissionManager, workingDirectoryProvider: @escaping @MainActor () -> String) {
         self.toolManager = toolManager
+        self.permissionManager = permissionManager
+        self.workingDirectoryProvider = workingDirectoryProvider
     }
     
     /// Reset loop detection state
@@ -53,6 +57,18 @@ public final class ToolExecutor {
         }
 
         do {
+            // Check permission
+            let currentWD = await workingDirectoryProvider()
+            let isAllowed = await permissionManager.checkPermission(tool: tool, arguments: anyArgs, workingDirectory: currentWD)
+            guard isAllowed else {
+                logger.warning("Permission denied for tool: \(tool.name)")
+                return Message(
+                    content: "Error: Permission denied for tool '\(tool.name)'",
+                    role: .tool,
+                    think: nil
+                )
+            }
+
             let result = try await tool.execute(parameters: anyArgs)
             let responseContent =
                 result.success

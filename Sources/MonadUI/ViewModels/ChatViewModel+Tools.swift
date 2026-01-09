@@ -48,7 +48,14 @@ extension ChatViewModel {
         ]
         let manager = SessionToolManager(availableTools: availableTools)
         self.setToolManager(manager)
-        self.toolExecutor = ToolExecutor(toolManager: manager)
+        self.toolExecutor = ToolExecutor(
+            toolManager: manager,
+            permissionManager: permissionManager,
+            workingDirectoryProvider: { [weak self] in
+                guard let self = self else { return FileManager.default.currentDirectoryPath }
+                return self.persistenceManager.currentSession?.workingDirectory ?? FileManager.default.currentDirectoryPath
+            }
+        )
         return manager
     }
 }
