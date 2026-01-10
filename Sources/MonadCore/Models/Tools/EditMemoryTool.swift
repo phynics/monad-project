@@ -1,12 +1,12 @@
 import Foundation
 
 /// Tool to edit an existing memory
-public class EditMemoryTool: Tool, @unchecked Sendable {
+public final class EditMemoryTool: Tool, Sendable {
     public let id = "edit_memory"
     public let name = "Edit Memory"
     public let description = "Edit an existing memory entry"
     public let requiresPermission = false
-    
+
     public var usageExample: String? {
         """
         <tool_call>

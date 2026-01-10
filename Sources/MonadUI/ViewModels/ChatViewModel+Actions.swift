@@ -69,7 +69,7 @@ extension ChatViewModel {
                 let contextMemories = injectedMemories
 
                 // 2. Build the prompt for debug info without starting a stream
-                let (_, initialRawPrompt, structuredContext) = await llmService.buildPrompt(
+                let (_, _, _) = await llmService.buildPrompt(
                     userQuery: prompt,
                     contextNotes: contextData.notes,
                     documents: contextDocuments,
@@ -264,7 +264,7 @@ extension ChatViewModel {
                     isExecutingTools = false
 
                     // Persist tool results under assistant message
-                    for var toolResult in toolResults {
+                    for toolResult in toolResults {
                         do {
                             try await persistenceManager.addMessage(
                                 role: .tool,

@@ -206,7 +206,7 @@ public struct AddJobTool: ContextTool, @unchecked Sendable {
         let description = parameters["description"] as? String
         let priority = parameters["priority"] as? Int ?? 0
 
-        let job = await context.addJob(title: title, description: description, priority: priority)
+        let job = context.addJob(title: title, description: description, priority: priority)
         return .success("Added job: \(job.title) [ID: \(job.id.uuidString.prefix(8))]")
     }
 }
@@ -244,11 +244,11 @@ public struct RemoveJobTool: ContextTool, @unchecked Sendable {
         }
 
         // Try to find by prefix first, then by full UUID
-        if let job = await context.findJob(idPrefix: idString) {
-            _ = await context.removeJob(id: job.id)
+        if let job = context.findJob(idPrefix: idString) {
+            _ = context.removeJob(id: job.id)
             return .success("Removed job: \(job.title)")
         } else if let uuid = UUID(uuidString: idString),
-            let job = await context.removeJob(id: uuid)
+            let job = context.removeJob(id: uuid)
         {
             return .success("Removed job: \(job.title)")
         }
@@ -294,12 +294,12 @@ public struct ChangePriorityTool: ContextTool, @unchecked Sendable {
         }
 
         // Try to find by prefix first
-        if let job = await context.findJob(idPrefix: idString) {
-            if let updated = await context.changePriority(id: job.id, newPriority: priority) {
+        if let job = context.findJob(idPrefix: idString) {
+            if let updated = context.changePriority(id: job.id, newPriority: priority) {
                 return .success("Updated priority for '\(updated.title)' to \(priority)")
             }
         } else if let uuid = UUID(uuidString: idString) {
-            if let updated = await context.changePriority(id: uuid, newPriority: priority) {
+            if let updated = context.changePriority(id: uuid, newPriority: priority) {
                 return .success("Updated priority for '\(updated.title)' to \(priority)")
             }
         }
@@ -330,7 +330,7 @@ public struct ListJobsTool: ContextTool, @unchecked Sendable {
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        let jobs = await context.listJobs()
+        let jobs = context.listJobs()
         if jobs.isEmpty {
             return .success("Queue is empty")
         }
@@ -382,12 +382,12 @@ public struct UpdateJobStatusTool: ContextTool, @unchecked Sendable {
         }
 
         // Try to find by prefix first
-        if let job = await context.findJob(idPrefix: idString) {
-            if let updated = await context.updateStatus(id: job.id, status: status) {
+        if let job = context.findJob(idPrefix: idString) {
+            if let updated = context.updateStatus(id: job.id, status: status) {
                 return .success("Updated '\(updated.title)' status to \(status.rawValue)")
             }
         } else if let uuid = UUID(uuidString: idString) {
-            if let updated = await context.updateStatus(id: uuid, status: status) {
+            if let updated = context.updateStatus(id: uuid, status: status) {
                 return .success("Updated '\(updated.title)' status to \(status.rawValue)")
             }
         }
@@ -418,7 +418,7 @@ public struct ClearQueueTool: ContextTool, @unchecked Sendable {
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        let count = await context.clearQueue()
+        let count = context.clearQueue()
         return .success("Cleared \(count) job\(count == 1 ? "" : "s") from queue")
     }
 }

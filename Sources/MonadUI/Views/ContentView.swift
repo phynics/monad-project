@@ -17,7 +17,9 @@ public struct ContentView: View {
 
     @Environment(\.openWindow) private var openWindow
 
-    public init(viewModel: ChatViewModel, llmService: LLMService, persistenceManager: PersistenceManager) {
+    public init(
+        viewModel: ChatViewModel, llmService: LLMService, persistenceManager: PersistenceManager
+    ) {
         self.viewModel = viewModel
         self.llmService = llmService
         self.persistenceManager = persistenceManager
@@ -28,10 +30,10 @@ public struct ContentView: View {
             if showSidebar {
                 ChatSidebarView(viewModel: viewModel)
                     .transition(.move(edge: .leading))
-                
+
                 Divider()
             }
-            
+
             VStack(spacing: 0) {
                 ChatHeaderView(
                     llmService: llmService,
@@ -45,8 +47,8 @@ public struct ContentView: View {
                     onArchiveCurrent: { showingArchiveConfirmation = true },
                     onSettings: { openWindow(id: "settings") },
                     onTools: { showingTools = true },
-                    onCompress: { scope in 
-                        Task { await viewModel.compressContext(scope: scope) } 
+                    onCompress: { scope in
+                        Task { await viewModel.compressContext(scope: scope) }
                     },
                     onVacuum: {
                         Task { await viewModel.triggerMemoryVacuum() }
@@ -54,18 +56,18 @@ public struct ContentView: View {
                 )
 
                 MessageListView(
-                viewModel: viewModel,
-                llmServiceConfigured: llmService.isConfigured,
-                onConfigureSettings: { openWindow(id: "settings") }
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    viewModel: viewModel,
+                    llmServiceConfigured: llmService.isConfigured,
+                    onConfigureSettings: { openWindow(id: "settings") }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            ChatErrorMessageView(
-                errorMessage: $viewModel.errorMessage,
-                onRetry: viewModel.retry
-            )
+                ChatErrorMessageView(
+                    errorMessage: $viewModel.errorMessage,
+                    onRetry: viewModel.retry
+                )
 
-            ChatInputView(viewModel: viewModel)
+                ChatInputView(viewModel: viewModel)
             }
         }
         .frame(minWidth: 600, minHeight: 400)
@@ -82,8 +84,8 @@ public struct ContentView: View {
         }
         .sheet(isPresented: $showingTools) {
             ToolsSettingsView(
-                toolManager: viewModel.tools,
-                availableTools: viewModel.tools.getEnabledTools()
+                toolManager: viewModel.toolManager,
+                availableTools: viewModel.toolManager.getEnabledTools()
             )
         }
         .confirmationDialog(
