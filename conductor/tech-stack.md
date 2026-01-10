@@ -9,6 +9,10 @@
 ## Logic and Architecture
 - **MonadCore:** A dedicated pure logic framework (Linux-compatible) responsible for context management, persistence, and tool execution.
 - **Modular Design:** Separation of concerns into Core, UI, and specialized modules (like MonadMCP).
+- **Architectural Integrity:**
+    - **Protocol-Oriented Programming:** Services are defined by protocols to enable mocking and isolation.
+    - **Dependency Injection:** Core components like `ContextManager` receive their dependencies via constructor injection, facilitating testability and modularity.
+    - **Comprehensive Testing:** Commitment to high code coverage (>80% for core logic) using XCTest and mocking for all external interactions.
 
 ## Database and Persistence
 - **GRDB.swift:** A robust toolkit for SQLite databases, providing high-level Swift interfaces for concurrent database access.
