@@ -7,13 +7,13 @@ Prepare the testing infrastructure by creating mocks for external dependencies.
 - [x] Task: Create `TestMocks` in the test bundle for LLM and Database interactions. 2a0ee3d
 - [x] Task: Conductor - User Manual Verification 'Foundation and Mocking' (Protocol in workflow.md) [checkpoint: df5218c]
 
-## Phase 2: ContextManager Refactoring
+## Phase 2: ContextManager Refactoring [checkpoint: 2dee3fd]
 Isolate `ContextManager` and apply dependency injection.
 
 - [x] Task: Refactor `ContextManager` to accept injected service protocols. 2a0ee3d
 - [x] Task: Write Tests: Create `ContextManagerTests.swift` and implement tests for semantic retrieval. 8694f06
 - [x] Task: Implement Feature: Ensure `ContextManager` passes all tests using mocks. 8694f06
-- [ ] Task: Conductor - User Manual Verification 'ContextManager Refactoring' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'ContextManager Refactoring' (Protocol in workflow.md) [checkpoint: 2dee3fd]
 - [ ] Task: Conductor - User Manual Verification 'ContextManager Refactoring' (Protocol in workflow.md)
 
 ## Phase 3: Comprehensive Testing and Quality
