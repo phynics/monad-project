@@ -3,7 +3,7 @@
 ## Phase 1: Foundation and Mocking
 Prepare the testing infrastructure by creating mocks for external dependencies.
 
-- [x] Task: Define protocols for `LLMService` and `PersistenceService` to enable mocking. [9a2b3c4]
+- [x] Task: Define protocols for `LLMService` and `PersistenceService` to enable mocking. 2a0ee3d
 - [~] Task: Create `TestMocks` in the test bundle for LLM and Database interactions.
 - [ ] Task: Conductor - User Manual Verification 'Foundation and Mocking' (Protocol in workflow.md)
 
