@@ -21,11 +21,11 @@ public enum ContextManagerError: LocalizedError {
 
 /// Manages the retrieval and organization of context for the chat
 public actor ContextManager {
-    private let persistenceService: PersistenceService
+    private let persistenceService: any PersistenceServiceProtocol
     private let embeddingService: any EmbeddingService
     private let logger = Logger(subsystem: "com.monad.core", category: "ContextManager")
 
-    public init(persistenceService: PersistenceService, embeddingService: any EmbeddingService) {
+    public init(persistenceService: any PersistenceServiceProtocol, embeddingService: any EmbeddingService) {
         self.persistenceService = persistenceService
         self.embeddingService = embeddingService
     }

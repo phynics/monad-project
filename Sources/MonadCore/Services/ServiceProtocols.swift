@@ -7,6 +7,15 @@ public protocol LLMServiceProtocol: Sendable {
     var isConfigured: Bool { get }
     var configuration: LLMConfiguration { get }
     
+    // Configuration Management
+    func loadConfiguration() async
+    func updateConfiguration(_ config: LLMConfiguration) async throws
+    func clearConfiguration() async
+    func restoreFromBackup() async throws
+    func exportConfiguration() async throws -> Data
+    func importConfiguration(from data: Data) async throws
+    
+    // Core LLM Interaction
     func sendMessage(_ content: String) async throws -> String
     
     func chatStreamWithContext(
@@ -39,25 +48,48 @@ public protocol LLMServiceProtocol: Sendable {
         structuredContext: [String: String]
     )
     
+    // Utilities
     func generateTags(for text: String) async throws -> [String]
     func generateTitle(for messages: [Message]) async throws -> String
     func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws -> [String: Double]
+    func fetchAvailableModels() async throws -> [String]?
 }
 
 /// Protocol for Persistence Service to enable mocking and isolation
 public protocol PersistenceServiceProtocol: Sendable {
+    // Notes
+    func saveNote(_ note: Note) async throws
+    func fetchNote(id: UUID) async throws -> Note?
+    func fetchAllNotes() async throws -> [Note]
     func fetchAlwaysAppendNotes() async throws -> [Note]
+    func searchNotes(query: String) async throws -> [Note]
+    func searchNotes(matchingAnyTag tags: [String]) async throws -> [Note]
+    func deleteNote(id: UUID) async throws
+    
+    // Memories
+    func saveMemory(_ memory: Memory, policy: MemorySavePolicy) async throws -> UUID
+    func fetchMemory(id: UUID) async throws -> Memory?
+    func fetchAllMemories() async throws -> [Memory]
+    func searchMemories(query: String) async throws -> [Memory]
     func searchMemories(embedding: [Double], limit: Int, minSimilarity: Double) async throws -> [(memory: Memory, similarity: Double)]
     func searchMemories(matchingAnyTag tags: [String]) async throws -> [Memory]
-    func fetchMemory(id: UUID) async throws -> Memory?
+    func deleteMemory(id: UUID) async throws
     func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws
+    func vacuumMemories(threshold: Double) async throws -> Int
     
+    // Messages
     func saveMessage(_ message: ConversationMessage) async throws
     func fetchMessages(for sessionId: UUID) async throws -> [ConversationMessage]
     func deleteMessages(for sessionId: UUID) async throws
     
+    // Sessions
     func saveSession(_ session: ConversationSession) async throws
     func fetchSession(id: UUID) async throws -> ConversationSession?
     func fetchAllSessions(includeArchived: Bool) async throws -> [ConversationSession]
     func deleteSession(id: UUID) async throws
+    func searchArchivedSessions(query: String) async throws -> [ConversationSession]
+    func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession]
+    
+    // Database Management
+    func resetDatabase() async throws
 }

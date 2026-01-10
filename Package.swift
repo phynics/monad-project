@@ -42,7 +42,7 @@ let package = Package(
         ),
         .testTarget(
             name: "MonadCoreTests",
-            dependencies: ["MonadCore"],
+            dependencies: ["MonadCore", "MonadUI"],
             path: "Tests/MonadCoreTests"
         ),
         .testTarget(
