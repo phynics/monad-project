@@ -5,13 +5,13 @@ import Foundation
 /// Supports Chain of Thought (CoT) reasoning models that use `<think>` tags
 /// to show their reasoning process separately from the final answer.
 public struct Message: Identifiable, Equatable, Sendable {
-    public let id = UUID()
+    public let id: UUID
 
     /// The main response content (with <think> tags removed)
     public let content: String
 
     public let role: MessageRole
-    public let timestamp = Date()
+    public let timestamp: Date
 
     /// Chain of Thought reasoning extracted from <think>...</think> blocks
     /// Only present for models that support reasoning tags (e.g., DeepSeek R1, QwQ)
@@ -64,6 +64,8 @@ public struct Message: Identifiable, Equatable, Sendable {
     }
 
     public init(
+        id: UUID = UUID(),
+        timestamp: Date = Date(),
         content: String, role: MessageRole, think: String? = nil, toolCalls: [ToolCall]? = nil,
         debugInfo: MessageDebugInfo? = nil,
         parentId: UUID? = nil,
@@ -74,6 +76,8 @@ public struct Message: Identifiable, Equatable, Sendable {
         isSummary: Bool = false,
         summaryType: SummaryType? = nil
     ) {
+        self.id = id
+        self.timestamp = timestamp
         self.content = content
         self.role = role
         self.think = think

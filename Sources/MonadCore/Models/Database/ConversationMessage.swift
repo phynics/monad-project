@@ -60,7 +60,7 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
         } else {
             memories = []
         }
-        
+
         let calls: [ToolCall]
         if let data = toolCalls.data(using: .utf8) {
             calls = (try? JSONDecoder().decode([ToolCall].self, from: data)) ?? []
@@ -68,16 +68,19 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
             calls = []
         }
 
-        let uiRole: Message.MessageRole = switch role {
-        case "user": .user
-        case "assistant": .assistant
-        case "system": .system
-        case "tool": .tool
-        case "summary": .summary
-        default: .user
-        }
+        let uiRole: Message.MessageRole =
+            switch role {
+            case "user": .user
+            case "assistant": .assistant
+            case "system": .system
+            case "tool": .tool
+            case "summary": .summary
+            default: .user
+            }
 
         return Message(
+            id: id,
+            timestamp: timestamp,
             content: content,
             role: uiRole,
             think: think,
