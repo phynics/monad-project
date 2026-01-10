@@ -294,8 +294,48 @@ extension ChatViewModel {
 
                     shouldContinue = true
                 } else {
-                    // No more tool calls, we are done
-                    shouldContinue = false
+                    // No more tool calls - check for auto-dequeue
+                    if autoDequeueEnabled,
+                        let executor = toolExecutor,
+                        let jobQueue = executor.jobQueueContext,
+                        jobQueue.hasPendingJobs,
+                        let nextJob = jobQueue.dequeueNext()
+                    {
+                        // Auto-dequeue: inject job as synthetic user message
+                        Logger.chat.info("Auto-dequeueing job: \(nextJob.title)")
+
+                        let jobPrompt = """
+                            [Auto-Dequeued Task]
+                            **\(nextJob.title)**
+                            \(nextJob.description ?? "")
+
+                            Please complete this task.
+                            """
+
+                        // Add synthetic user message and continue loop
+                        let syntheticUserMsg = Message(content: jobPrompt, role: .user)
+                        messages.append(syntheticUserMsg)
+
+                        // Persist the synthetic message
+                        do {
+                            try await persistenceManager.addMessage(
+                                id: syntheticUserMsg.id,
+                                role: .user,
+                                content: jobPrompt
+                            )
+                            messages = persistenceManager.uiMessages
+                        } catch {
+                            Logger.chat.error(
+                                "Failed to save auto-dequeued message: \(error.localizedDescription)"
+                            )
+                        }
+
+                        currentParentId = syntheticUserMsg.id
+                        shouldContinue = true
+                    } else {
+                        // No auto-dequeue, we are done
+                        shouldContinue = false
+                    }
                 }
             } else {
                 streamingCoordinator.stopStreaming()

@@ -1,8 +1,8 @@
+import MonadCore
 import OSLog
 import Observation
 import OpenAI
 import SwiftUI
-import MonadCore
 
 @MainActor
 @Observable
@@ -16,7 +16,10 @@ public final class ChatViewModel {
     public var errorMessage: String?
     public var performanceMetrics = PerformanceMetrics()
     public var shouldInjectLongContext = false
-    
+
+    /// When enabled, automatically dequeues and processes the next job when chat awaits user input
+    public var autoDequeueEnabled = false
+
     // MARK: - Service Dependencies
     public let llmService: LLMService
     public let persistenceManager: PersistenceManager
@@ -31,26 +34,30 @@ public final class ChatViewModel {
     internal var currentTask: Task<Void, Never>?
     internal var toolManager: SessionToolManager?
     internal let logger = Logger.chat
-    
+
     // MARK: - Computed Properties
     public var injectedMemories: [Memory] {
         let pinned = activeMemories.filter { $0.isPinned }
         let unpinned = activeMemories.filter { !$0.isPinned }
             .sorted { $0.lastAccessed > $1.lastAccessed }
             .prefix(5)
-        
+
         return (pinned + Array(unpinned)).map { $0.memory }
     }
-    
+
     public var injectedDocuments: [DocumentContext] {
-        var docs = documentManager.getEffectiveDocuments(limit: llmService.configuration.documentContextLimit)
-        
+        var docs = documentManager.getEffectiveDocuments(
+            limit: llmService.configuration.documentContextLimit)
+
         if shouldInjectLongContext {
-            let longText = String(repeating: "This is a long context placeholder for performance testing. ", count: 1000)
-            let longDoc = DocumentContext(path: "performance_test_long_context.txt", content: longText)
+            let longText = String(
+                repeating: "This is a long context placeholder for performance testing. ",
+                count: 1000)
+            let longDoc = DocumentContext(
+                path: "performance_test_long_context.txt", content: longText)
             docs.append(longDoc)
         }
-        
+
         return docs
     }
 
@@ -83,7 +90,7 @@ public final class ChatViewModel {
             contextManager: contextManager
         )
         self.contextCompressor = ContextCompressor(llmService: llmService)
-        
+
         Task {
             await checkStartupState()
         }

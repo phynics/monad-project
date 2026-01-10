@@ -10,15 +10,21 @@ public final class ToolExecutor {
     /// Active tool context session
     public let contextSession: ToolContextSession
 
+    /// Reference to job queue for auto-dequeue functionality
+    public let jobQueueContext: JobQueueContext?
+
     // Loop detection
     private var callCounts: [ToolCall: Int] = [:]
     private let maxRepeatedCalls = 3
 
     public init(
-        toolManager: SessionToolManager, contextSession: ToolContextSession = ToolContextSession()
+        toolManager: SessionToolManager,
+        contextSession: ToolContextSession = ToolContextSession(),
+        jobQueueContext: JobQueueContext? = nil
     ) {
         self.toolManager = toolManager
         self.contextSession = contextSession
+        self.jobQueueContext = jobQueueContext
     }
 
     /// Reset loop detection state

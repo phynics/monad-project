@@ -130,6 +130,38 @@ public final class JobQueueContext: ToolContext, @unchecked Sendable {
     public func findJob(idPrefix: String) -> Job? {
         jobs.first { $0.id.uuidString.lowercased().hasPrefix(idPrefix.lowercased()) }
     }
+
+    /// Dequeue the next pending job with highest priority.
+    /// Marks the job as in_progress and returns it for processing.
+    /// Returns nil if no pending jobs are available.
+    public func dequeueNext() -> Job? {
+        // Find highest priority pending job
+        let pending = jobs.filter { $0.status == .pending }
+            .sorted { $0.priority > $1.priority }
+
+        guard let nextJob = pending.first else {
+            return nil
+        }
+
+        // Find the index in the current jobs array
+        let currentJobs = jobs
+        guard let index = currentJobs.firstIndex(where: { $0.id == nextJob.id }) else {
+            return nil
+        }
+
+        // Mark as in progress
+        jobs[index].status = .inProgress
+        jobs[index].updatedAt = Date()
+        let dequeuedJob = jobs[index]
+        logger.info("Dequeued job: \(dequeuedJob.title) (priority: \(dequeuedJob.priority))")
+        return dequeuedJob
+    }
+
+    /// Check if there are pending jobs that can be dequeued
+    public var hasPendingJobs: Bool {
+        let currentJobs = jobs
+        return currentJobs.contains { $0.status == .pending }
+    }
 }
 
 // MARK: - Context Tools
