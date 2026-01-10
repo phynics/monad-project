@@ -1,22 +1,34 @@
 import MonadCore
 import SwiftUI
 
-import MonadCore
-import SwiftUI
-
 struct ChatInputView: View {
     @Bindable var viewModel: ChatViewModel
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                // ... (rest of the body)
+                // Auto-dequeue toggle
+                Button {
+                    viewModel.autoDequeueEnabled.toggle()
+                } label: {
+                    Image(
+                        systemName: viewModel.autoDequeueEnabled
+                            ? "arrow.triangle.2.circlepath.circle.fill"
+                            : "arrow.triangle.2.circlepath.circle"
+                    )
+                    .foregroundStyle(viewModel.autoDequeueEnabled ? .blue : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help(viewModel.autoDequeueEnabled ? "Auto-dequeue: ON" : "Auto-dequeue: OFF")
+
                 TextField("Type a message...", text: $viewModel.inputText)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
                         viewModel.sendMessage()
                     }
-                    .disabled(viewModel.isLoading || viewModel.isStreaming || !viewModel.llmService.isConfigured)
+                    .disabled(
+                        viewModel.isLoading || viewModel.isStreaming
+                            || !viewModel.llmService.isConfigured)
 
                 if viewModel.isStreaming {
                     Button(action: viewModel.cancelGeneration) {
@@ -32,7 +44,9 @@ struct ChatInputView: View {
                         viewModel.sendMessage()
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(viewModel.inputText.isEmpty || viewModel.isLoading || viewModel.isStreaming || !viewModel.llmService.isConfigured)
+                    .disabled(
+                        viewModel.inputText.isEmpty || viewModel.isLoading || viewModel.isStreaming
+                            || !viewModel.llmService.isConfigured)
                 }
             }
             .padding()
