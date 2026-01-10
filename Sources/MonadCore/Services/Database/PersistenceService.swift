@@ -3,7 +3,7 @@ import GRDB
 import OSLog
 
 /// Thread-safe persistence service using GRDB
-public actor PersistenceService {
+public actor PersistenceService: PersistenceServiceProtocol {
     internal let dbQueue: DatabaseQueue
     internal let logger = Logger.database
 

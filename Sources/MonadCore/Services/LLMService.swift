@@ -32,7 +32,7 @@ extension OllamaClient: LLMClientProtocol {}
 /// Service for managing LLM interactions with configuration support
 @MainActor
 @Observable
-public final class LLMService {
+public final class LLMService: LLMServiceProtocol {
     public var configuration: LLMConfiguration
     public var isConfigured: Bool
 
