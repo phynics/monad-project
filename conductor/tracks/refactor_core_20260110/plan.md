@@ -1,11 +1,11 @@
 # Track Plan: MonadCore Refactoring and Context Engine Testing
 
-## Phase 1: Foundation and Mocking
+## Phase 1: Foundation and Mocking [checkpoint: df5218c]
 Prepare the testing infrastructure by creating mocks for external dependencies.
 
 - [x] Task: Define protocols for `LLMService` and `PersistenceService` to enable mocking. 2a0ee3d
 - [x] Task: Create `TestMocks` in the test bundle for LLM and Database interactions. 2a0ee3d
-- [ ] Task: Conductor - User Manual Verification 'Foundation and Mocking' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Foundation and Mocking' (Protocol in workflow.md) [checkpoint: df5218c]
 
 ## Phase 2: ContextManager Refactoring
 Isolate `ContextManager` and apply dependency injection.
