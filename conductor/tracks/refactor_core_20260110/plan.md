@@ -19,7 +19,7 @@ Isolate `ContextManager` and apply dependency injection.
 ## Phase 3: Comprehensive Testing and Quality
 Expand test coverage and finalize the refactoring.
 
-- [~] Task: Write Tests: Add tests for tag boosting and adaptive learning logic in `ContextManager`.
-- [ ] Task: Implement Feature: Refine logic to pass expanded test cases.
-- [ ] Task: Verify overall code coverage for `MonadCore` and ensure it meets the >80% target.
+- [x] Task: Write Tests: Add tests for tag boosting and adaptive learning logic in `ContextManager`. ce61ec3
+- [x] Task: Implement Feature: Refine logic to pass expanded test cases. ce61ec3
+- [~] Task: Verify overall code coverage for `MonadCore` and ensure it meets the >80% target.
 - [ ] Task: Conductor - User Manual Verification 'Comprehensive Testing and Quality' (Protocol in workflow.md)
