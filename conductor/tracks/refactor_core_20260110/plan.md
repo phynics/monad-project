@@ -21,5 +21,5 @@ Expand test coverage and finalize the refactoring.
 
 - [x] Task: Write Tests: Add tests for tag boosting and adaptive learning logic in `ContextManager`. ce61ec3
 - [x] Task: Implement Feature: Refine logic to pass expanded test cases. ce61ec3
-- [~] Task: Verify overall code coverage for `MonadCore` and ensure it meets the >80% target.
+- [x] Task: Verify overall code coverage for `MonadCore` and ensure it meets the >80% target. 2af6d4a
 - [ ] Task: Conductor - User Manual Verification 'Comprehensive Testing and Quality' (Protocol in workflow.md)
