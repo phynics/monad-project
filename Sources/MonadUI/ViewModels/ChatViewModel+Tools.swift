@@ -3,20 +3,11 @@ import MonadCore
 import SwiftUI
 
 extension ChatViewModel {
-    public var tools: SessionToolManager {
-        if let existing = toolManager {
-            return existing
-        }
-
+    /// Creates the tool manager with all available tools
+    func createToolManager() -> SessionToolManager {
         let currentWD =
             persistenceManager.currentSession?.workingDirectory
             ?? FileManager.default.currentDirectoryPath
-
-        // Create the shared JobQueueContext for the session
-        let jobQueueContext = JobQueueContext()
-
-        // Create the ToolContextSession for managing context lifecycles
-        let contextSession = ToolContextSession()
 
         let availableTools: [MonadCore.Tool] = [
             SearchArchivedChatsTool(persistenceService: persistenceManager.persistence),
@@ -45,8 +36,7 @@ extension ChatViewModel {
                     guard let self = self else { return }
                     try? await self.persistenceManager.updateWorkingDirectory(newPath)
                     await MainActor.run {
-                        self.toolManager = nil  // Invalidate cache to recreate tools with new root
-                        self.toolExecutor = nil
+                        self.invalidateToolInfrastructure()
                     }
                 }),
             ListDirectoryTool(root: currentWD),
@@ -64,13 +54,19 @@ extension ChatViewModel {
             LaunchSubagentTool(llmService: llmService, documentManager: documentManager),
             DetectTopicChangeTool(),
             // Job Queue Gateway
-            JobQueueGatewayTool(context: jobQueueContext, contextSession: contextSession),
+            JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession),
         ]
-        let manager = SessionToolManager(
-            availableTools: availableTools, contextSession: contextSession)
-        self.setToolManager(manager)
-        self.toolExecutor = ToolExecutor(
-            toolManager: manager, contextSession: contextSession, jobQueueContext: jobQueueContext)
-        return manager
+
+        return SessionToolManager(
+            availableTools: availableTools, contextSession: toolContextSession)
+    }
+
+    /// Creates the tool executor
+    func createToolExecutor() -> ToolExecutor {
+        return ToolExecutor(
+            toolManager: toolManager,
+            contextSession: toolContextSession,
+            jobQueueContext: jobQueueContext
+        )
     }
 }

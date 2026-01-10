@@ -33,7 +33,7 @@ extension ChatViewModel {
         let userMsgId = userMessage.id
 
         // Reset loop detection for the new interaction
-        toolExecutor?.reset()
+        toolExecutor.reset()
 
         currentTask = Task {
             do {
@@ -62,7 +62,7 @@ extension ChatViewModel {
                 // Merge found memories into chat-level active memories
                 updateActiveMemories(with: contextData.memories.map { $0.memory })
 
-                let enabledTools = tools.getEnabledTools()
+                let enabledTools = toolManager.getEnabledTools()
 
                 // Use computed properties for injection
                 let contextDocuments = injectedDocuments
@@ -147,7 +147,7 @@ extension ChatViewModel {
             }
 
             let contextNotes = try await persistenceManager.fetchAlwaysAppendNotes()
-            let enabledTools = tools.getEnabledTools()
+            let enabledTools = toolManager.getEnabledTools()
             let contextDocuments = injectedDocuments
             let contextMemories = injectedMemories
 
@@ -257,12 +257,10 @@ extension ChatViewModel {
                 generateTitleIfNeeded()
 
                 // Execute tool calls if present
-                if let toolCalls = assistantMessage.toolCalls, !toolCalls.isEmpty,
-                    let executor = toolExecutor
-                {
+                if let toolCalls = assistantMessage.toolCalls, !toolCalls.isEmpty {
                     Logger.chat.info("Executing \(toolCalls.count) tool calls")
                     isExecutingTools = true
-                    let toolResults = await executor.executeAll(toolCalls)
+                    let toolResults = await toolExecutor.executeAll(toolCalls)
                     isExecutingTools = false
 
                     // Persist tool results under assistant message
@@ -296,10 +294,8 @@ extension ChatViewModel {
                 } else {
                     // No more tool calls - check for auto-dequeue
                     if autoDequeueEnabled,
-                        let executor = toolExecutor,
-                        let jobQueue = executor.jobQueueContext,
-                        jobQueue.hasPendingJobs,
-                        let nextJob = jobQueue.dequeueNext()
+                        jobQueueContext.hasPendingJobs,
+                        let nextJob = jobQueueContext.dequeueNext()
                     {
                         // Auto-dequeue: inject job as synthetic user message
                         Logger.chat.info("Auto-dequeueing job: \(nextJob.title)")
@@ -442,7 +438,7 @@ extension ChatViewModel {
 
                 updateActiveMemories(with: contextData.memories.map { $0.memory })
 
-                let enabledTools = tools.getEnabledTools()
+                let enabledTools = toolManager.getEnabledTools()
                 let contextDocuments = injectedDocuments
                 let contextMemories = injectedMemories
 

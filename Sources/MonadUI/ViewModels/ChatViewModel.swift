@@ -28,11 +28,39 @@ public final class ChatViewModel {
     public let streamingCoordinator: StreamingCoordinator
     public let conversationArchiver: ConversationArchiver
     public let contextCompressor: ContextCompressor
-    public var toolExecutor: ToolExecutor?
+
+    // MARK: - Tool Infrastructure (owned by ChatViewModel)
+    public let jobQueueContext: JobQueueContext
+    public let toolContextSession: ToolContextSession
+
+    /// Tool manager - lazily initialized via computed property
+    private var _toolManager: SessionToolManager?
+    public var toolManager: SessionToolManager {
+        if let existing = _toolManager, !_toolsNeedRecreation {
+            return existing
+        }
+        let manager = createToolManager()
+        _toolManager = manager
+        _toolsNeedRecreation = false
+        return manager
+    }
+
+    /// Tool executor - lazily initialized via computed property
+    private var _toolExecutor: ToolExecutor?
+    public var toolExecutor: ToolExecutor {
+        if let existing = _toolExecutor, !_toolsNeedRecreation {
+            return existing
+        }
+        let executor = createToolExecutor()
+        _toolExecutor = executor
+        return executor
+    }
+
+    /// Flag to force tool infrastructure recreation (e.g., after directory change)
+    private var _toolsNeedRecreation = false
 
     // MARK: - Internal Storage
     internal var currentTask: Task<Void, Never>?
-    internal var toolManager: SessionToolManager?
     internal let logger = Logger.chat
 
     // MARK: - Computed Properties
@@ -91,13 +119,21 @@ public final class ChatViewModel {
         )
         self.contextCompressor = ContextCompressor(llmService: llmService)
 
+        // Initialize tool infrastructure
+        self.jobQueueContext = JobQueueContext()
+        self.toolContextSession = ToolContextSession()
+
         Task {
             await checkStartupState()
         }
     }
 
-    // MARK: - Internal Helpers
-    internal func setToolManager(_ manager: SessionToolManager) {
-        self.toolManager = manager
+    // MARK: - Tool Infrastructure Management
+
+    /// Invalidates tool infrastructure to force recreation with new working directory
+    public func invalidateToolInfrastructure() {
+        _toolsNeedRecreation = true
+        _toolManager = nil
+        _toolExecutor = nil
     }
 }

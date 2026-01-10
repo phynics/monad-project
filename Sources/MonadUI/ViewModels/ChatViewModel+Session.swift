@@ -1,16 +1,16 @@
 import Foundation
-import OSLog
 import MonadCore
+import OSLog
 
 extension ChatViewModel {
     // MARK: - Startup Logic
-    
+
     internal func checkStartupState() async {
         do {
             if let latest = try await persistenceManager.fetchLatestSession() {
                 try await persistenceManager.loadSession(id: latest.id)
                 messages = persistenceManager.uiMessages
-                
+
                 // If the session was newly created and is empty, add welcome message
                 if messages.isEmpty {
                     await addWelcomeMessage()
@@ -27,7 +27,7 @@ extension ChatViewModel {
             await addWelcomeMessage()
         }
     }
-    
+
     public func startNewSession(deleteOld: Bool = false) {
         Task {
             do {
@@ -36,13 +36,12 @@ extension ChatViewModel {
                 }
                 // Create new persistent session
                 try await persistenceManager.createNewSession()
-                
+
                 // Invalidate tools to reset working directory
-                self.toolManager = nil
-                self.toolExecutor = nil
-                
+                invalidateToolInfrastructure()
+
                 messages = []
-                activeMemories = [] // Clear active memories on new session
+                activeMemories = []  // Clear active memories on new session
                 await addWelcomeMessage()
             } catch {
                 errorMessage = "Failed to start new session: \(error.localizedDescription)"
@@ -52,7 +51,8 @@ extension ChatViewModel {
 
     private func addWelcomeMessage() async {
         do {
-            try await persistenceManager.addMessage(role: .assistant, content: "Hi, how can I help you today?")
+            try await persistenceManager.addMessage(
+                role: .assistant, content: "Hi, how can I help you today?")
             messages = persistenceManager.uiMessages
         } catch {
             Logger.chat.error("Failed to add welcome message: \(error.localizedDescription)")
@@ -65,11 +65,12 @@ extension ChatViewModel {
         // but we don't wait for it to clear the UI.
         let messagesToArchive = messages
         let sessionId = persistenceManager.currentSession?.id
-        
+
         Task {
-            try? await conversationArchiver.archive(messages: messagesToArchive, sessionId: sessionId)
+            try? await conversationArchiver.archive(
+                messages: messagesToArchive, sessionId: sessionId)
         }
-        
+
         startNewSession(deleteOld: false)
         confirmationDismiss()
     }
@@ -83,11 +84,12 @@ extension ChatViewModel {
         // Generate title after 3 messages (usually User + Assistant + User)
         // Check if we already have a custom title (not "New Conversation")
         guard let session = persistenceManager.currentSession,
-              session.title == "New Conversation",
-              messages.count >= 3 else {
+            session.title == "New Conversation",
+            messages.count >= 3
+        else {
             return
         }
-        
+
         Task {
             do {
                 let title = try await llmService.generateTitle(for: messages)

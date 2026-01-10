@@ -120,44 +120,35 @@ public struct ChatSidebarView: View {
 
                     // Job Queue Section
                     VStack(alignment: .leading, spacing: 12) {
-                        if let executor = viewModel.toolExecutor,
-                            let jobQueue = executor.jobQueueContext
-                        {
-                            let jobs = jobQueue.listJobs()
-                            let pendingJobs = jobs.filter { $0.status == .pending }
-                            let inProgressJobs = jobs.filter { $0.status == .inProgress }
+                        let jobs = viewModel.jobQueueContext.listJobs()
+                        let pendingJobs = jobs.filter { $0.status == .pending }
+                        let inProgressJobs = jobs.filter { $0.status == .inProgress }
 
-                            if !inProgressJobs.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    sectionHeader(
-                                        "IN PROGRESS", systemImage: "arrow.triangle.2.circlepath",
-                                        color: .orange)
-                                    ForEach(inProgressJobs) { job in
-                                        jobItem(job)
-                                    }
-                                }
-                            }
-
-                            if !pendingJobs.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    sectionHeader(
-                                        "PENDING JOBS", systemImage: "tray.full", color: .secondary)
-                                    ForEach(pendingJobs) { job in
-                                        jobItem(job)
-                                    }
-                                }
-                            }
-
-                            if pendingJobs.isEmpty && inProgressJobs.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    sectionHeader(
-                                        "JOB QUEUE", systemImage: "tray", color: .secondary)
-                                    emptyState("No jobs queued")
-                                }
-                            }
-                        } else {
+                        if !inProgressJobs.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
-                                sectionHeader("JOB QUEUE", systemImage: "tray", color: .secondary)
+                                sectionHeader(
+                                    "IN PROGRESS", systemImage: "arrow.triangle.2.circlepath",
+                                    color: .orange)
+                                ForEach(inProgressJobs) { job in
+                                    jobItem(job)
+                                }
+                            }
+                        }
+
+                        if !pendingJobs.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                sectionHeader(
+                                    "PENDING JOBS", systemImage: "tray.full", color: .secondary)
+                                ForEach(pendingJobs) { job in
+                                    jobItem(job)
+                                }
+                            }
+                        }
+
+                        if pendingJobs.isEmpty && inProgressJobs.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                sectionHeader(
+                                    "JOB QUEUE", systemImage: "tray", color: .secondary)
                                 emptyState("No jobs queued")
                             }
                         }
