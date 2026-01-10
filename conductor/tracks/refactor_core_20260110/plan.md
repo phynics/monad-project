@@ -4,7 +4,7 @@
 Prepare the testing infrastructure by creating mocks for external dependencies.
 
 - [x] Task: Define protocols for `LLMService` and `PersistenceService` to enable mocking. 2a0ee3d
-- [~] Task: Create `TestMocks` in the test bundle for LLM and Database interactions.
+- [x] Task: Create `TestMocks` in the test bundle for LLM and Database interactions. 2a0ee3d
 - [ ] Task: Conductor - User Manual Verification 'Foundation and Mocking' (Protocol in workflow.md)
 
 ## Phase 2: ContextManager Refactoring
