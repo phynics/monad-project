@@ -34,16 +34,16 @@ public struct Message: Identifiable, Equatable, Sendable {
 
     /// Documents that were provided as context for this message
     public var recalledDocuments: [DocumentContext]?
-    
+
     /// Context used for subagent execution (if applicable)
     public var subagentContext: SubagentContext?
-    
+
     /// For user messages: structured map of prompt sections (e.g. "system" -> content)
     public var structuredContext: [String: String]?
-    
+
     /// Whether this message is a system summary/truncation notice
     public var isSummary: Bool
-    
+
     /// Type of summary (if role is .summary)
     public var summaryType: SummaryType?
 
@@ -51,10 +51,10 @@ public struct Message: Identifiable, Equatable, Sendable {
     public var tags: [String]? {
         debugInfo?.generatedTags
     }
-    
+
     public enum SummaryType: String, Codable, Sendable {
-        case topic // Vertical line
-        case broad // Middle blob
+        case topic  // Vertical line
+        case broad  // Middle blob
     }
 
     /// Helper to get generation stats from debug info
@@ -131,9 +131,9 @@ public struct Message: Identifiable, Equatable, Sendable {
 /// Context information for a subagent execution
 public struct SubagentContext: Equatable, Sendable, Codable {
     public let prompt: String
-    public let documents: [String] // Paths
-    public let rawResponse: String? // Full output including thinking
-    
+    public let documents: [String]  // Paths
+    public let rawResponse: String?  // Full output including thinking
+
     public init(prompt: String, documents: [String], rawResponse: String? = nil) {
         self.prompt = prompt
         self.documents = documents
@@ -197,13 +197,13 @@ public struct MessageDebugInfo: Equatable, Sendable {
 
     /// For assistant messages: parsed tool calls
     public var parsedToolCalls: [ToolCall]?
-    
+
     /// For user messages: relevant memories found for this message with similarity info
     public var contextMemories: [SemanticSearchResult]?
-    
+
     /// For user messages: tags generated for search
     public var generatedTags: [String]?
-    
+
     /// For user messages: query embedding vector
     public var queryVector: [Double]?
 
@@ -215,12 +215,45 @@ public struct MessageDebugInfo: Equatable, Sendable {
 
     /// For user messages: keyword/tag search matches
     public var tagResults: [Memory]?
-    
+
     /// Subagent context info
     public var subagentContext: SubagentContext?
-    
+
     /// For user messages: structured map of prompt sections (e.g. "system" -> content)
     public var structuredContext: [String: String]?
+
+    /// Default empty initializer for fallback scenarios
+    public init(
+        rawPrompt: String? = nil,
+        apiResponse: APIResponseMetadata? = nil,
+        originalResponse: String? = nil,
+        parsedContent: String? = nil,
+        parsedThinking: String? = nil,
+        parsedToolCalls: [ToolCall]? = nil,
+        contextMemories: [SemanticSearchResult]? = nil,
+        generatedTags: [String]? = nil,
+        queryVector: [Double]? = nil,
+        augmentedQuery: String? = nil,
+        semanticResults: [SemanticSearchResult]? = nil,
+        tagResults: [Memory]? = nil,
+        subagentContext: SubagentContext? = nil,
+        structuredContext: [String: String]? = nil
+    ) {
+        self.rawPrompt = rawPrompt
+        self.apiResponse = apiResponse
+        self.originalResponse = originalResponse
+        self.parsedContent = parsedContent
+        self.parsedThinking = parsedThinking
+        self.parsedToolCalls = parsedToolCalls
+        self.contextMemories = contextMemories
+        self.generatedTags = generatedTags
+        self.queryVector = queryVector
+        self.augmentedQuery = augmentedQuery
+        self.semanticResults = semanticResults
+        self.tagResults = tagResults
+        self.subagentContext = subagentContext
+        self.structuredContext = structuredContext
+    }
 
     public static func userMessage(
         rawPrompt: String,

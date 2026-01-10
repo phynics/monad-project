@@ -1,6 +1,6 @@
 import MonadCore
-import SwiftUI
 import RegexBuilder
+import SwiftUI
 
 #if os(macOS)
     import AppKit
@@ -50,7 +50,7 @@ public struct MessageBubble: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
-                            
+
                             if !isSummaryExpanded {
                                 Image(systemName: "chevron.down")
                                     .font(.caption2)
@@ -74,13 +74,13 @@ public struct MessageBubble: View {
                             .frame(width: 4)
                             .cornerRadius(2)
                             .padding(.vertical, 2)
-                        
+
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Topic Summary")
                                 .font(.caption)
                                 .bold()
                                 .foregroundColor(.secondary)
-                            
+
                             if isSummaryExpanded {
                                 Text(message?.content ?? "")
                                     .font(.caption)
@@ -162,14 +162,21 @@ public struct MessageBubble: View {
                         if hasContent {
                             if role == .tool {
                                 VStack(alignment: .leading, spacing: 0) {
-                                    Button(action: { withAnimation { isToolResultExpanded.toggle() } }) {
+                                    Button(action: {
+                                        withAnimation { isToolResultExpanded.toggle() }
+                                    }) {
                                         HStack(spacing: 4) {
-                                            Image(systemName: isToolResultExpanded ? "chevron.down" : "chevron.right")
-                                                .font(.system(size: 8))
+                                            Image(
+                                                systemName: isToolResultExpanded
+                                                    ? "chevron.down" : "chevron.right"
+                                            )
+                                            .font(.system(size: 8))
                                             Image(systemName: "terminal")
                                                 .font(.system(size: 9))
-                                            Text("Tool Result (\(message?.content.count ?? 0) chars)")
-                                                .font(.system(size: 10, weight: .bold))
+                                            Text(
+                                                "Tool Result (\(message?.content.count ?? 0) chars)"
+                                            )
+                                            .font(.system(size: 10, weight: .bold))
                                             Spacer()
                                         }
                                         .foregroundColor(.secondary)
@@ -178,8 +185,9 @@ public struct MessageBubble: View {
                                         .contentShape(Rectangle())
                                     }
                                     .buttonStyle(.plain)
-                                    
-                                    if isToolResultExpanded || (message?.content.count ?? 0) <= 300 {
+
+                                    if isToolResultExpanded || (message?.content.count ?? 0) <= 300
+                                    {
                                         if isToolResultExpanded {
                                             Divider().padding(.horizontal, 8).opacity(0.1)
                                         }
@@ -209,8 +217,11 @@ public struct MessageBubble: View {
                             VStack(alignment: .leading, spacing: 0) {
                                 Button(action: { withAnimation { isToolCallsExpanded.toggle() } }) {
                                     HStack(spacing: 4) {
-                                        Image(systemName: isToolCallsExpanded ? "chevron.down" : "chevron.right")
-                                            .font(.system(size: 8))
+                                        Image(
+                                            systemName: isToolCallsExpanded
+                                                ? "chevron.down" : "chevron.right"
+                                        )
+                                        .font(.system(size: 8))
                                         Image(systemName: "wrench.and.screwdriver.fill")
                                             .font(.system(size: 9))
                                         Text("Tool Calls (\(toolCalls.count))")
@@ -238,7 +249,9 @@ public struct MessageBubble: View {
 
                                                 if !toolCall.arguments.isEmpty {
                                                     ForEach(
-                                                        toolCall.arguments.sorted(by: { $0.key < $1.key }),
+                                                        toolCall.arguments.sorted(by: {
+                                                            $0.key < $1.key
+                                                        }),
                                                         id: \.key
                                                     ) { key, value in
                                                         Text("\(key): \(String(describing: value))")
@@ -248,14 +261,18 @@ public struct MessageBubble: View {
                                                     }
                                                     .padding(.leading, 20)
                                                 }
-                                                
+
                                                 // UI Bling: Show in Finder for filesystem paths
-                                                if (toolCall.name == "ls" || toolCall.name == "find"),
-                                                   let path = toolCall.arguments["path"]?.value as? String {
+                                                if toolCall.name == "ls" || toolCall.name == "find",
+                                                    let path = toolCall.arguments["path"]?.value
+                                                        as? String
+                                                {
                                                     Button(action: {
                                                         #if os(macOS)
-                                                        let url = URL(fileURLWithPath: path)
-                                                        NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
+                                                            let url = URL(fileURLWithPath: path)
+                                                            NSWorkspace.shared.selectFile(
+                                                                url.path,
+                                                                inFileViewerRootedAtPath: "")
                                                         #endif
                                                     }) {
                                                         HStack(spacing: 4) {
@@ -299,12 +316,15 @@ public struct MessageBubble: View {
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(isStreaming ? Color.blue.opacity(0.1) : Color.clear, lineWidth: 1)
+                            .stroke(
+                                isStreaming ? Color.blue.opacity(0.1) : Color.clear, lineWidth: 1)
                     )
 
                     // Tags and Stats (Under the bubble)
                     HStack(spacing: 4) {
-                        if role == .user, let progress = message?.gatheringProgress, progress != .complete {
+                        if role == .user, let progress = message?.gatheringProgress,
+                            progress != .complete
+                        {
                             Button {
                                 showingDebugInfo = true
                             } label: {
@@ -312,9 +332,11 @@ public struct MessageBubble: View {
                                     ProgressView()
                                         .scaleEffect(0.3)
                                         .frame(width: 8, height: 8)
-                                    
+
                                     Text(progress.rawValue)
-                                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                        .font(
+                                            .system(size: 8, weight: .medium, design: .monospaced)
+                                        )
                                         .textCase(.uppercase)
                                 }
                                 .padding(.horizontal, 4)
@@ -345,7 +367,9 @@ public struct MessageBubble: View {
                     }
                     .padding(.horizontal, 4)
 
-                    if let stats = message?.stats, (stats.tokensPerSecond != nil || stats.totalTokens != nil) {
+                    if let stats = message?.stats,
+                        stats.tokensPerSecond != nil || stats.totalTokens != nil
+                    {
                         HStack(spacing: 8) {
                             if let tps = stats.tokensPerSecond {
                                 Text(String(format: "%.1f tokens/sec", tps))
@@ -353,7 +377,7 @@ public struct MessageBubble: View {
                             if let total = stats.totalTokens {
                                 Text("\(total) tokens")
                             }
-                            
+
                             if role == .assistant && message?.debugInfo != nil {
                                 Button {
                                     showingDebugInfo = true
@@ -397,7 +421,8 @@ public struct MessageBubble: View {
             }
             .contextMenu {
                 if let message = message {
-                    if message.debugInfo != nil {
+                    // Show debug info for user and assistant messages
+                    if message.role == .user || message.role == .assistant {
                         Button("Show Debug Info") {
                             showingDebugInfo = true
                         }
@@ -414,8 +439,9 @@ public struct MessageBubble: View {
                 }
             }
             .sheet(isPresented: $showingDebugInfo) {
-                if let message = message, let debugInfo = message.debugInfo {
-                    MessageDebugView(message: message, debugInfo: debugInfo)
+                if let message = message {
+                    MessageDebugView(
+                        message: message, debugInfo: message.debugInfo ?? MessageDebugInfo())
                 }
             }
             .sheet(isPresented: $showingSubagentInfo) {
@@ -433,9 +459,9 @@ public struct MessageBubble: View {
                 Text(attributedString(from: displayContent))
                     .background(Color.clear)
                     .textSelection(.enabled)
-                
+
                 // Subagent Context Bling
-                if let _ = message?.subagentContext {
+                if message?.subagentContext != nil {
                     Button(action: { showingSubagentInfo = true }) {
                         HStack(spacing: 4) {
                             Image(systemName: "person.2.fill")
@@ -513,7 +539,7 @@ public struct MessageBubble: View {
                 }
             }
             .dotMatchesNewlines()
-            
+
             // Regex for open <tool_call>... (at the end)
             let openToolCallPattern = Regex {
                 "<tool_call>"
@@ -521,13 +547,14 @@ public struct MessageBubble: View {
             }
             .dotMatchesNewlines()
 
-            return streamingContent
+            return
+                streamingContent
                 .replacing(toolCallPattern, with: "")
                 .replacing(openToolCallPattern, with: "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        
-        // ONLY strip tool calls for assistant role. 
+
+        // ONLY strip tool calls for assistant role.
         // Tool role messages might contain content we want to see (like subagent results).
         if role == .assistant {
             return message?.displayContent ?? ""
@@ -538,7 +565,9 @@ public struct MessageBubble: View {
 
     private func attributedString(from markdown: String) -> AttributedString {
         do {
-            return try AttributedString(markdown: markdown, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
+            return try AttributedString(
+                markdown: markdown,
+                options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
         } catch {
             return AttributedString(markdown)
         }

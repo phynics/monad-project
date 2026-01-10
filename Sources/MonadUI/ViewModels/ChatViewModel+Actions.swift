@@ -1,21 +1,22 @@
 import Foundation
-import OSLog
 import MonadCore
+import OSLog
 
 extension ChatViewModel {
     public func sendMessage() {
         // Input Validation
         let cleanedInput = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedInput.isEmpty else { return }
-        
+
         guard llmService.isConfigured else {
             errorMessage = "LLM Service is not configured."
             return
         }
-        
+
         // Basic sanity check for extremely long input to prevent accidental massive pastes hanging the UI
         if cleanedInput.count > 100_000 {
-            errorMessage = "Input is too long (\(cleanedInput.count) characters). Please shorten your message."
+            errorMessage =
+                "Input is too long (\(cleanedInput.count) characters). Please shorten your message."
             return
         }
 
@@ -24,11 +25,11 @@ extension ChatViewModel {
         isLoading = true
         errorMessage = nil
         Logger.chat.debug("Starting message generation for prompt length: \(prompt.count)")
-        
+
         // Add user message immediately to track progress in UI
         let userMessage = Message(content: prompt, role: .user, gatheringProgress: .augmenting)
         messages.append(userMessage)
-        
+
         let userMsgId = userMessage.id
 
         // Reset loop detection for the new interaction
@@ -42,10 +43,10 @@ extension ChatViewModel {
                 let tagGenerator: @Sendable (String) async throws -> [String] = { text in
                     try await service.generateTags(for: text)
                 }
-                
+
                 let contextData = try await contextManager.gatherContext(
-                    for: prompt, 
-                    history: messages, // History before this message
+                    for: prompt,
+                    history: messages,  // History before this message
                     limit: llmService.configuration.memoryContextLimit,
                     tagGenerator: tagGenerator,
                     onProgress: { [weak self] progress in
@@ -57,16 +58,16 @@ extension ChatViewModel {
                         }
                     }
                 )
-                
+
                 // Merge found memories into chat-level active memories
                 updateActiveMemories(with: contextData.memories.map { $0.memory })
-                
+
                 let enabledTools = tools.getEnabledTools()
-                
+
                 // Use computed properties for injection
                 let contextDocuments = injectedDocuments
                 let contextMemories = injectedMemories
-                
+
                 // 2. Build the prompt for debug info without starting a stream
                 let (_, initialRawPrompt, structuredContext) = await llmService.buildPrompt(
                     userQuery: prompt,
@@ -78,24 +79,28 @@ extension ChatViewModel {
                 )
 
                 // Persist the user message now that we have context data (memories)
+                var userMessageSaved = false
                 do {
                     try await persistenceManager.addMessage(
-                        id: userMsgId, // Use the same ID
+                        id: userMsgId,  // Use the same ID
                         role: .user,
                         content: prompt,
                         recalledMemories: contextData.memories.map { $0.memory }
                     )
                     // Sync UI messages from forest only on success
                     messages = persistenceManager.uiMessages
+                    userMessageSaved = true
                 } catch {
                     Logger.chat.error("Failed to save user message: \(error.localizedDescription)")
-                    errorMessage = "Failed to save message. It is shown locally but may be lost on restart."
+                    errorMessage =
+                        "Failed to save message. It is shown locally but may be lost on restart."
                 }
 
                 // 3. Start the conversation loop
+                // Only pass parentId if user message was successfully saved to avoid FK constraint violations
                 try await runConversationLoop(
-                    userPrompt: nil, // Already added and persisted
-                    parentId: userMsgId,
+                    userPrompt: nil,  // Already added and persisted
+                    parentId: userMessageSaved ? userMsgId : nil,
                     contextData: contextData
                 )
 
@@ -123,14 +128,15 @@ extension ChatViewModel {
                 try await persistenceManager.addMessage(role: .user, content: prompt)
                 messages = persistenceManager.uiMessages
             } catch {
-                Logger.chat.error("Failed to save user message (loop): \(error.localizedDescription)")
+                Logger.chat.error(
+                    "Failed to save user message (loop): \(error.localizedDescription)")
             }
         }
 
         var shouldContinue = true
         var turnCount = 0
         var currentParentId = parentId
-        
+
         while shouldContinue {
             // ... (rest of loop setup) ...
             turnCount += 1
@@ -139,7 +145,7 @@ extension ChatViewModel {
                 shouldContinue = false
                 break
             }
-            
+
             let contextNotes = try await persistenceManager.fetchAlwaysAppendNotes()
             let enabledTools = tools.getEnabledTools()
             let contextDocuments = injectedDocuments
@@ -178,9 +184,12 @@ extension ChatViewModel {
                         streamingCoordinator.processToolCalls(toolCalls)
                     }
                 }
-                Logger.chat.debug("Stream consumption finished for turn \(turnCount). Total chunks: \(chunkCount)")
+                Logger.chat.debug(
+                    "Stream consumption finished for turn \(turnCount). Total chunks: \(chunkCount)"
+                )
             } catch {
-                Logger.chat.error("Stream error in turn \(turnCount): \(error.localizedDescription)")
+                Logger.chat.error(
+                    "Stream error in turn \(turnCount): \(error.localizedDescription)")
                 throw error
             }
 
@@ -189,14 +198,16 @@ extension ChatViewModel {
                 rawPrompt: rawPrompt,
                 structuredContext: structuredContext
             )
-            
+
             // Record performance
             if let speed = assistantMessage.stats?.tokensPerSecond {
                 performanceMetrics.recordSpeed(speed)
-                
+
                 // Trigger logic: after 5 messages, if speed < 75% of average
                 if messages.count >= 5 && performanceMetrics.isSlow {
-                    Logger.chat.warning("Performance drop detected (\(speed) t/s). Injecting long context for next turn.")
+                    Logger.chat.warning(
+                        "Performance drop detected (\(speed) t/s). Injecting long context for next turn."
+                    )
                     shouldInjectLongContext = true
                 }
             }
@@ -213,10 +224,10 @@ extension ChatViewModel {
                 // OPTIMISTIC UPDATE:
                 // 1. Append the finalized message to the UI immediately
                 messages.append(assistantMessage)
-                
+
                 // 2. Stop streaming (removes the "Streaming..." bubble)
                 streamingCoordinator.stopStreaming()
-                
+
                 // 3. Persist to DB using the SAME ID so the eventual consistency update matches
                 do {
                     try await persistenceManager.addMessage(
@@ -228,14 +239,16 @@ extension ChatViewModel {
                         toolCalls: assistantMessage.toolCalls,
                         debugInfo: assistantMessage.debugInfo
                     )
-                    
+
                     // 4. Sync from forest only on success
                     messages = persistenceManager.uiMessages
                 } catch {
-                    Logger.chat.error("Failed to save assistant message: \(error.localizedDescription)")
-                    errorMessage = "Failed to save message. It is shown locally but may be lost on restart."
+                    Logger.chat.error(
+                        "Failed to save assistant message: \(error.localizedDescription)")
+                    errorMessage =
+                        "Failed to save message. It is shown locally but may be lost on restart."
                 }
-                
+
                 // Get the assistant message ID for nesting tool results
                 // Since it's the last assistant message in flat view too
                 let assistantMsgId = assistantMessage.id
@@ -251,7 +264,7 @@ extension ChatViewModel {
                     isExecutingTools = true
                     let toolResults = await executor.executeAll(toolCalls)
                     isExecutingTools = false
-                    
+
                     // Persist tool results under assistant message
                     for var toolResult in toolResults {
                         do {
@@ -261,22 +274,24 @@ extension ChatViewModel {
                                 parentId: assistantMsgId
                             )
                         } catch {
-                            Logger.chat.error("Failed to save tool result: \(error.localizedDescription)")
+                            Logger.chat.error(
+                                "Failed to save tool result: \(error.localizedDescription)")
                         }
                     }
-                    
+
                     // Sync again
                     messages = persistenceManager.uiMessages
-                    
+
                     // Check for topic change signal and compress if needed
                     if toolCalls.contains(where: { $0.name == "mark_topic_change" }) {
-                        Logger.chat.info("Topic change detected via tool call. Triggering compression.")
+                        Logger.chat.info(
+                            "Topic change detected via tool call. Triggering compression.")
                         await compressContext()
                     }
 
                     // Continue loop to send tool results back to LLM
                     currentParentId = assistantMsgId
-                    
+
                     shouldContinue = true
                 } else {
                     // No more tool calls, we are done
@@ -284,7 +299,8 @@ extension ChatViewModel {
                 }
             } else {
                 streamingCoordinator.stopStreaming()
-                Logger.chat.warning("Assistant returned an empty response (no content, no thinking, no tool calls)")
+                Logger.chat.warning(
+                    "Assistant returned an empty response (no content, no thinking, no tool calls)")
                 errorMessage = "The model returned an empty response. You might want to try again."
                 shouldContinue = false
             }
@@ -293,15 +309,19 @@ extension ChatViewModel {
         currentTask = nil
         isLoading = false
     }
-    
+
     public func compressContext(scope: CompressionScope = .topic) async {
         Logger.chat.info("Attempting context compression (scope: \(scope))...")
         do {
             let compressed = try await contextCompressor.compress(messages: messages, scope: scope)
-            
+
             // If the compressed array is different (shorter) than original, update persistence
-            if compressed.count < messages.count || (scope == .broad && compressed.contains(where: { $0.summaryType == .broad })) {
-                Logger.chat.notice("Compression successful. Replacing \(self.messages.count) messages with \(compressed.count).")
+            if compressed.count < messages.count
+                || (scope == .broad && compressed.contains(where: { $0.summaryType == .broad }))
+            {
+                Logger.chat.notice(
+                    "Compression successful. Replacing \(self.messages.count) messages with \(compressed.count)."
+                )
                 try await persistenceManager.replaceMessages(with: compressed)
                 messages = persistenceManager.uiMessages
             } else {
@@ -311,7 +331,7 @@ extension ChatViewModel {
             Logger.chat.error("Context compression failed: \(error.localizedDescription)")
         }
     }
-    
+
     public func triggerMemoryVacuum() async {
         do {
             let count = try await persistenceManager.vacuumMemories()
@@ -345,20 +365,20 @@ extension ChatViewModel {
 
     public func retry() {
         guard errorMessage != nil else { return }
-        
+
         // Find last user message
-        guard let lastUserMessageIndex = messages.lastIndex(where: { $0.role == .user }) else { 
+        guard let lastUserMessageIndex = messages.lastIndex(where: { $0.role == .user }) else {
             errorMessage = "Nothing to retry."
             return
         }
-        
+
         let prompt = messages[lastUserMessageIndex].content
         errorMessage = nil
         isLoading = true
-        
+
         // Remove everything after this user message (including any failed assistant/tool messages)
         messages = Array(messages.prefix(through: lastUserMessageIndex))
-        
+
         currentTask = Task {
             do {
                 // Define tag generator closure
@@ -366,7 +386,7 @@ extension ChatViewModel {
                 let tagGenerator: @Sendable (String) async throws -> [String] = { text in
                     try await service.generateTags(for: text)
                 }
-                
+
                 // Re-gather context
                 let contextData = try await contextManager.gatherContext(
                     for: prompt,
@@ -379,13 +399,13 @@ extension ChatViewModel {
                         }
                     }
                 )
-                
+
                 updateActiveMemories(with: contextData.memories.map { $0.memory })
-                
+
                 let enabledTools = tools.getEnabledTools()
                 let contextDocuments = injectedDocuments
                 let contextMemories = injectedMemories
-                
+
                 // Refresh debug info
                 let (_, rawPrompt, structuredContext) = await llmService.chatStreamWithContext(
                     userQuery: prompt,
@@ -395,7 +415,7 @@ extension ChatViewModel {
                     chatHistory: Array(messages.prefix(lastUserMessageIndex)),
                     tools: enabledTools
                 )
-                
+
                 messages[lastUserMessageIndex].recalledMemories = contextMemories
                 messages[lastUserMessageIndex].recalledDocuments = contextDocuments
                 messages[lastUserMessageIndex].debugInfo = .userMessage(
@@ -408,9 +428,9 @@ extension ChatViewModel {
                     tagResults: contextData.tagResults,
                     structuredContext: structuredContext
                 )
-                
+
                 let lastUserMessage = messages[lastUserMessageIndex]
-                
+
                 try await runConversationLoop(
                     userPrompt: nil,
                     parentId: lastUserMessage.id,
