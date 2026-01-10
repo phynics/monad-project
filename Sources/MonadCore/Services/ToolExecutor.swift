@@ -6,15 +6,21 @@ import OSLog
 public final class ToolExecutor {
     private let toolManager: SessionToolManager
     private let logger = Logger.tools
-    
+
+    /// Active tool context session
+    public let contextSession: ToolContextSession
+
     // Loop detection
     private var callCounts: [ToolCall: Int] = [:]
     private let maxRepeatedCalls = 3
 
-    public init(toolManager: SessionToolManager) {
+    public init(
+        toolManager: SessionToolManager, contextSession: ToolContextSession = ToolContextSession()
+    ) {
         self.toolManager = toolManager
+        self.contextSession = contextSession
     }
-    
+
     /// Reset loop detection state
     public func reset() {
         callCounts.removeAll()
@@ -25,14 +31,25 @@ public final class ToolExecutor {
         // Loop detection check
         let count = callCounts[toolCall, default: 0] + 1
         callCounts[toolCall] = count
-        
+
         if count >= maxRepeatedCalls {
             logger.warning("Loop detected for tool: \(toolCall.name)")
             return Message(
-                content: "Error: Loop detected. Tool '\(toolCall.name)' has been called \(count) times with the exact same parameters. Please try a different approach or verify your logic.",
+                content:
+                    "Error: Loop detected. Tool '\(toolCall.name)' has been called \(count) times with the exact same parameters. Please try a different approach or verify your logic.",
                 role: .tool,
                 think: nil
             )
+        }
+
+        // Check for context auto-exit: if a context is active and this is NOT a context tool,
+        // deactivate the context before proceeding
+        let isContextTool = contextSession.isContextTool(toolCall.name)
+        let isGatewayForActiveContext = contextSession.isActiveContextGateway(toolCall.name)
+
+        if contextSession.hasActiveContext && !isContextTool && !isGatewayForActiveContext {
+            logger.info("Non-context tool called, deactivating active context")
+            await contextSession.deactivate()
         }
 
         guard let tool = toolManager.getTool(id: toolCall.name) else {
@@ -54,10 +71,20 @@ public final class ToolExecutor {
 
         do {
             let result = try await tool.execute(parameters: anyArgs)
-            let responseContent =
+            var responseContent =
                 result.success
                 ? result.output
                 : "Error: \(result.error ?? "Unknown error")"
+
+            // Append context state if a context is active and this is a context tool
+            if contextSession.hasActiveContext && isContextTool,
+                let context = contextSession.activeContext
+            {
+                let contextState = await context.formatState()
+                if !contextState.isEmpty {
+                    responseContent += "\n\n---\n\(contextState)"
+                }
+            }
 
             if result.success {
                 logger.info("Tool \(tool.name) executed successfully")
@@ -84,19 +111,20 @@ public final class ToolExecutor {
     /// Execute multiple tool calls concurrently
     public func executeAll(_ toolCalls: [ToolCall]) async -> [Message] {
         logger.debug("Executing \(toolCalls.count) tool calls concurrently")
-        
+
         return await withTaskGroup(of: (Int, Message).self) { group in
             for (index, toolCall) in toolCalls.enumerated() {
                 group.addTask {
                     do {
                         // Capture the actor-isolated execute method call properly
-                        // Since we are inside the actor, we can call it directly, but `addTask` closure 
+                        // Since we are inside the actor, we can call it directly, but `addTask` closure
                         // is non-isolated. We need to await the call on `self`.
                         let result = try await self.execute(toolCall)
                         return (index, result)
                     } catch {
                         let errorMessage = Message(
-                            content: "Failed to execute tool \(toolCall.name): \(error.localizedDescription)",
+                            content:
+                                "Failed to execute tool \(toolCall.name): \(error.localizedDescription)",
                             role: .tool,
                             think: nil
                         )
@@ -104,12 +132,12 @@ public final class ToolExecutor {
                     }
                 }
             }
-            
+
             var results: [(Int, Message)] = []
             for await result in group {
                 results.append(result)
             }
-            
+
             // Restore original order
             return results.sorted { $0.0 < $1.0 }.map { $0.1 }
         }

@@ -110,7 +110,9 @@ public struct ToolResult: Sendable {
     public let error: String?
     public let subagentContext: SubagentContext?
 
-    public static func success(_ output: String, subagentContext: SubagentContext? = nil) -> ToolResult {
+    public static func success(_ output: String, subagentContext: SubagentContext? = nil)
+        -> ToolResult
+    {
         ToolResult(success: true, output: output, error: nil, subagentContext: subagentContext)
     }
 
@@ -139,15 +141,26 @@ public final class SessionToolManager {
     /// Available tools in the system
     public let availableTools: [Tool]
 
-    public init(availableTools: [Tool]) {
+    /// Context session for dynamic tool injection
+    public var contextSession: ToolContextSession?
+
+    public init(availableTools: [Tool], contextSession: ToolContextSession? = nil) {
         self.availableTools = availableTools
+        self.contextSession = contextSession
         // Enable all tools by default
         self.enabledTools = Set(availableTools.map { $0.id })
     }
 
-    /// Get tools that are currently enabled
+    /// Get tools that are currently enabled, including context tools if a context is active
     public func getEnabledTools() -> [Tool] {
-        availableTools.filter { enabledTools.contains($0.id) }
+        var tools = availableTools.filter { enabledTools.contains($0.id) }
+
+        // Include context tools if a context is active
+        if let session = contextSession, session.hasActiveContext {
+            tools.append(contentsOf: session.getContextTools())
+        }
+
+        return tools
     }
 
     /// Toggle tool enabled state
@@ -159,8 +172,18 @@ public final class SessionToolManager {
         }
     }
 
-    /// Get tool by ID
+    /// Get tool by ID (checks both regular tools and context tools)
     public func getTool(id: String) -> Tool? {
-        availableTools.first { $0.id == id }
+        // First check regular tools
+        if let tool = availableTools.first(where: { $0.id == id }) {
+            return tool
+        }
+
+        // Then check context tools if a context is active
+        if let session = contextSession, session.hasActiveContext {
+            return session.getContextTools().first { $0.id == id }
+        }
+
+        return nil
     }
 }
