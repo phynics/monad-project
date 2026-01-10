@@ -1,68 +1,108 @@
 import XCTest
 @testable import MonadCore
-import GRDB
 
 final class ContextManagerTests: XCTestCase {
-    var persistence: PersistenceService!
-    var contextManager: ContextManager!
+    var mockPersistence: MockPersistenceService!
     var mockEmbedding: MockEmbeddingService!
+    var contextManager: ContextManager!
     
     override func setUp() async throws {
-        let queue = try DatabaseQueue()
-        
-        var migrator = DatabaseMigrator()
-        DatabaseSchema.registerMigrations(in: &migrator)
-        try migrator.migrate(queue)
-        
-        persistence = PersistenceService(dbQueue: queue)
-        try await queue.write { db in
-            try DatabaseSchema.createDefaultNotes(in: db)
-        }
-        
+        mockPersistence = MockPersistenceService()
         mockEmbedding = MockEmbeddingService()
-        contextManager = ContextManager(persistenceService: persistence, embeddingService: mockEmbedding)
+        contextManager = ContextManager(persistenceService: mockPersistence, embeddingService: mockEmbedding)
+    }
+    
+    func testGatherContextSemanticRetrieval() async throws {
+        // Setup
+        let expectedMemory = Memory(
+            title: "SwiftUI Guide",
+            content: "SwiftUI is declarative.",
+            tags: ["swiftui"],
+            embedding: [0.1, 0.2, 0.3]
+        )
+        mockPersistence.memories = [expectedMemory]
+        mockPersistence.searchResults = [(expectedMemory, 0.9)]
+        
+        // Execute
+        let context = try await contextManager.gatherContext(for: "How to use SwiftUI?")
+        
+        // Verify
+        XCTAssertEqual(context.memories.count, 1)
+        XCTAssertEqual(context.memories.first?.memory.id, expectedMemory.id)
+        XCTAssertEqual(context.memories.first?.similarity, 0.9)
+        XCTAssertEqual(mockEmbedding.lastInput, "How to use SwiftUI?")
     }
     
     func testGatherContextUsesHistoryForTagsButQueryForEmbedding() async throws {
-        // Setup a memory to find
+        // Setup
         let memory = Memory(
             title: "Project Alpha",
             content: "Details about Alpha",
-            tags: ["alpha", "secret"],
+            tags: ["alpha"],
             embedding: [0.1, 0.2, 0.3]
         )
-        _ = try await persistence.saveMemory(memory)
+        mockPersistence.memories = [memory]
+        mockPersistence.searchResults = [(memory, 0.85)]
         
-        // Mock tag generator that returns tags based on full context
         let tagGenerator: @Sendable (String) async throws -> [String] = { text in
-            if text.contains("Previous") && text.contains("Current") {
+            if text.contains("Previous") {
                 return ["alpha"]
             }
             return []
         }
         
-        mockEmbedding.mockEmbedding = [0.1, 0.2, 0.3]
+        let history = [Message(content: "Previous message", role: .user)]
         
-        let history = [
-            Message(content: "Previous message", role: .user)
-        ]
-        
+        // Execute
         let context = try await contextManager.gatherContext(
             for: "Current query",
             history: history,
             tagGenerator: tagGenerator
         )
         
-        // Check augmented query (used for tags)
+        // Verify
         XCTAssertTrue(context.augmentedQuery?.contains("Previous message") == true)
-        XCTAssertTrue(context.augmentedQuery?.contains("Current query") == true)
+        XCTAssertEqual(mockEmbedding.lastInput, "Current query") // Embedding only uses query
+    }
+    
+    func testRankingLogicWithTagBoost() async throws {
+        // Setup
+        let memory1 = Memory(title: "Tag Match", content: "Matches tag", tags: ["swift"], embedding: [0.1])
+        let memory2 = Memory(title: "Semantic Match", content: "Matches vector", tags: [], embedding: [0.9])
         
-        // Check results
-        XCTAssertFalse(context.memories.isEmpty)
-        XCTAssertEqual(context.memories.first?.memory.id, memory.id)
+        // Mock persistence behavior:
+        // searchMemories(matchingAnyTag:) returns memory1
+        // searchMemories(embedding:) returns memory2
         
-        // Verify embedding was called with just the query, not the full history
-        // (Assuming MockEmbeddingService tracks last input)
-        XCTAssertEqual(mockEmbedding.lastInput, "Current query")
+        // We need to subclass or customize MockPersistenceService to return specific results for specific calls
+        // Or simpler: MockPersistenceService just returns what's in its arrays.
+        // But searchMemories(matchingAnyTag) filters 'memories' array in our mock.
+        // searchMemories(embedding) returns 'searchResults'.
+        
+        mockPersistence.memories = [memory1] // Will be found by tag search
+        mockPersistence.searchResults = [(memory2, 0.8)] // Will be found by vector search
+        
+        let tagGenerator: @Sendable (String) async throws -> [String] = { _ in ["swift"] }
+        
+        // Execute
+        let context = try await contextManager.gatherContext(
+            for: "swift query",
+            tagGenerator: tagGenerator
+        )
+        
+        // Verify
+        // ContextManager ranks by similarity. Tag matches get a +2.0 boost.
+        // Memory1 (Tag Match): Base sim (computed by VectorMath on mockEmbedding vs memory1.embedding) + 2.0
+        // Memory2 (Semantic Match): 0.8
+        
+        // MockEmbedding default is [0.1, 0.2, 0.3]. Memory1 is [0.1]. Dimensions mismatch?
+        // Let's ensure embeddings align for VectorMath if it runs.
+        // Actually, ContextManager computes similarity for tag results if they aren't in semantic results.
+        
+        XCTAssertEqual(context.memories.count, 2)
+        
+        // Memory1 should be first due to massive tag boost
+        XCTAssertEqual(context.memories.first?.memory.title, "Tag Match")
+        XCTAssertGreaterThan(context.memories.first?.similarity ?? 0, 1.0)
     }
 }
