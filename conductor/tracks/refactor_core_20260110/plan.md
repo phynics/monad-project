@@ -10,8 +10,8 @@ Prepare the testing infrastructure by creating mocks for external dependencies.
 ## Phase 2: ContextManager Refactoring
 Isolate `ContextManager` and apply dependency injection.
 
-- [ ] Task: Refactor `ContextManager` to accept injected service protocols.
-- [ ] Task: Write Tests: Create `ContextManagerTests.swift` and implement tests for semantic retrieval.
+- [x] Task: Refactor `ContextManager` to accept injected service protocols. 2a0ee3d
+- [~] Task: Write Tests: Create `ContextManagerTests.swift` and implement tests for semantic retrieval.
 - [ ] Task: Implement Feature: Ensure `ContextManager` passes all tests using mocks.
 - [ ] Task: Conductor - User Manual Verification 'ContextManager Refactoring' (Protocol in workflow.md)
 
