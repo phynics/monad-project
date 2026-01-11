@@ -3,10 +3,10 @@
 ## Phase 1: Context Management Refinement
 Optimize context handling logic in MonadCore.
 
-- [x] Task: Write Tests: Enhance `ContextManagerTests` to cover "Always Append" clutter scenarios.
-- [x] Task: Implement Feature: Update `ContextManager` to filter or summarize "Always Append" notes based on query relevance.
-- [x] Task: Write Tests: Add stress tests for `ContextCompressor` with very long histories.
-- [x] Task: Implement Feature: Optimize `ContextCompressor` chunking and summarization strategies.
+- [x] Task: Write Tests: Enhance `ContextManagerTests` to cover "Always Append" clutter scenarios. 6f0ddbf
+- [x] Task: Implement Feature: Update `ContextManager` to filter or summarize "Always Append" notes based on query relevance. 6f0ddbf
+- [x] Task: Write Tests: Add stress tests for `ContextCompressor` with very long histories. 6f0ddbf
+- [x] Task: Implement Feature: Optimize `ContextCompressor` chunking and summarization strategies. 6f0ddbf
 - [ ] Task: Conductor - User Manual Verification 'Context Management Refinement' (Protocol in workflow.md)
 
 ## Phase 2: UI Layer Modularization
