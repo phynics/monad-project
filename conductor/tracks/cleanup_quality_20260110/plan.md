@@ -1,13 +1,13 @@
 # Track Plan: MonadCore and UI Quality Improvement
 
-## Phase 1: Context Management Refinement
+## Phase 1: Context Management Refinement [checkpoint: 9ca76a9]
 Optimize context handling logic in MonadCore.
 
 - [x] Task: Write Tests: Enhance `ContextManagerTests` to cover "Always Append" clutter scenarios. 6f0ddbf
 - [x] Task: Implement Feature: Update `ContextManager` to filter or summarize "Always Append" notes based on query relevance. 6f0ddbf
 - [x] Task: Write Tests: Add stress tests for `ContextCompressor` with very long histories. 6f0ddbf
 - [x] Task: Implement Feature: Optimize `ContextCompressor` chunking and summarization strategies. 6f0ddbf
-- [ ] Task: Conductor - User Manual Verification 'Context Management Refinement' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Context Management Refinement' (Protocol in workflow.md) [checkpoint: 9ca76a9]
 
 ## Phase 2: UI Layer Modularization
 Refactor `ChatViewModel` and extract non-UI concerns.
