@@ -13,7 +13,7 @@ public enum CompressionScope: String, Sendable, CustomStringConvertible {
 
 /// Service to compress conversation context using summarization
 public actor ContextCompressor {
-    private let llmService: LLMService
+    private let llmService: any LLMServiceProtocol
     private let logger = Logger(subsystem: "com.monad.core", category: "ContextCompressor")
     
     // Configuration
@@ -21,7 +21,7 @@ public actor ContextCompressor {
     private let recentMessageBuffer = 10 // Keep last N messages raw
     private let broadSummaryThreshold = 2000 // Tokens before triggering broad summary
     
-    public init(llmService: LLMService) {
+    public init(llmService: any LLMServiceProtocol) {
         self.llmService = llmService
     }
     
@@ -103,16 +103,27 @@ public actor ContextCompressor {
         var chunks: [[Message]] = []
         var currentChunk: [Message] = []
         
-        for msg in messages {
+        for (index, msg) in messages.enumerated() {
             currentChunk.append(msg)
             
             // Check if this message initiated a topic change
             let hasTopicChangeSignal = msg.toolCalls?.contains { $0.name == "mark_topic_change" } ?? false
             
+            // Optimization: Avoid breaking tool sequences (Call -> Result)
+            // If current message is a tool call, we should try to include the next message if it's a result.
+            let isToolCall = msg.toolCalls != nil && !msg.toolCalls!.isEmpty
+            var shouldDeferChunking = false
+            if isToolCall && index + 1 < messages.count {
+                let nextMsg = messages[index + 1]
+                if nextMsg.role == .tool {
+                    shouldDeferChunking = true
+                }
+            }
+            
             if hasTopicChangeSignal {
                 chunks.append(currentChunk)
                 currentChunk = []
-            } else if currentChunk.count >= topicGroupSize {
+            } else if currentChunk.count >= topicGroupSize && !shouldDeferChunking {
                 // Fallback limit
                 chunks.append(currentChunk)
                 currentChunk = []
@@ -127,13 +138,6 @@ public actor ContextCompressor {
     }
     
     private func generateSummary(for messages: [Message]) async -> String {
-        let utilityClient = await llmService.getUtilityClient()
-        let mainClient = await llmService.getClient()
-        
-        guard let client = utilityClient ?? mainClient else {
-            return "Topic Summary: \(messages.count) messages."
-        }
-        
         let transcript = messages.map { "[\($0.role.rawValue.uppercased())] \($0.content)" }.joined(separator: "\n")
         let prompt = """
         Summarize the following discussion topic concisely (max 100 words). Focus on key decisions, technical details, and outcomes.
@@ -143,7 +147,7 @@ public actor ContextCompressor {
         """
         
         do {
-            let summary = try await client.sendMessage(prompt, responseFormat: nil)
+            let summary = try await llmService.sendMessage(prompt, responseFormat: nil, useUtilityModel: true)
             return summary
         } catch {
             logger.error("Failed to generate summary: \(error.localizedDescription)")
@@ -152,13 +156,6 @@ public actor ContextCompressor {
     }
     
     private func generateBroadSummary(from summaries: [Message]) async -> String {
-        let utilityClient = await llmService.getUtilityClient()
-        let mainClient = await llmService.getClient()
-        
-        guard let client = utilityClient ?? mainClient else {
-            return "Broad Summary covering \(summaries.count) topics."
-        }
-        
         let transcript = summaries.map { $0.content }.joined(separator: "\n\n")
         let prompt = """
         Create a high-level "Broad Summary" of the conversation so far, based on the following topic summaries.
@@ -169,7 +166,7 @@ public actor ContextCompressor {
         """
         
         do {
-            let summary = try await client.sendMessage(prompt, responseFormat: nil)
+            let summary = try await llmService.sendMessage(prompt, responseFormat: nil, useUtilityModel: true)
             return summary
         } catch {
             logger.error("Failed to generate broad summary: \(error.localizedDescription)")

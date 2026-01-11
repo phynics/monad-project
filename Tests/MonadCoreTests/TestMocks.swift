@@ -11,11 +11,11 @@ final class MockEmbeddingService: EmbeddingService, @unchecked Sendable {
         lastInput = text
         if useDistinctEmbeddings {
             let hash = abs(text.hashValue)
-            return [
-                Double(hash % 100) / 100.0,
-                Double((hash / 100) % 100) / 100.0,
-                Double((hash / 10000) % 100) / 100.0
-            ]
+            var vector: [Double] = []
+            for i in 1...16 {
+                vector.append(Double((hash / (i * i)) % 100) / 100.0)
+            }
+            return VectorMath.normalize(vector)
         }
         return mockEmbedding
     }
@@ -100,6 +100,10 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
     func importConfiguration(from data: Data) async throws {}
 
     func sendMessage(_ content: String) async throws -> String {
+        return nextResponse
+    }
+    
+    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool) async throws -> String {
         return nextResponse
     }
     

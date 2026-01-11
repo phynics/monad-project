@@ -17,6 +17,7 @@ public protocol LLMServiceProtocol: Sendable {
     
     // Core LLM Interaction
     func sendMessage(_ content: String) async throws -> String
+    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool) async throws -> String
     
     func chatStreamWithContext(
         userQuery: String,

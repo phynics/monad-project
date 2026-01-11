@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: MonadCore and UI Quality Improvement
+## [~] Track: MonadCore and UI Quality Improvement
 *Link: [./conductor/tracks/cleanup_quality_20260110/](./conductor/tracks/cleanup_quality_20260110/)*

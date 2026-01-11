@@ -169,10 +169,21 @@ public final class LLMService: LLMServiceProtocol {
     }
 
     public func sendMessage(_ content: String) async throws -> String {
-        guard let client = client else {
+        try await sendMessage(content, responseFormat: nil, useUtilityModel: false)
+    }
+
+    public func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool) async throws -> String {
+        let selectedClient: (any LLMClientProtocol)?
+        if useUtilityModel {
+            selectedClient = utilityClient ?? client
+        } else {
+            selectedClient = client
+        }
+        
+        guard let client = selectedClient else {
             throw LLMServiceError.notConfigured
         }
-        return try await client.sendMessage(content, responseFormat: nil)
+        return try await client.sendMessage(content, responseFormat: responseFormat)
     }
     
     public func buildPrompt(

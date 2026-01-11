@@ -51,7 +51,7 @@ public actor ContextManager {
         let tagGenerationContext = buildAugmentedContext(query: query, history: history)
         
         // Parallel execution of tasks
-        async let notesTask = persistenceService.fetchAlwaysAppendNotes()
+        async let notesTask = fetchFilteredAlwaysAppendNotes(for: query)
         async let memoriesDataTask = fetchRelevantMemories(
             for: query, 
             tagContext: tagGenerationContext,
@@ -81,6 +81,31 @@ public actor ContextManager {
             logger.error("Context gathering failed: \(error.localizedDescription)")
             throw error
         }
+    }
+    
+    private func fetchFilteredAlwaysAppendNotes(for query: String) async throws -> [Note] {
+        let allAlwaysAppend = try await persistenceService.fetchAlwaysAppendNotes()
+        
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQuery.isEmpty else { return allAlwaysAppend }
+        
+        // Simple relevance: split query into keywords and check if any keyword matches
+        // Exclude common short words
+        let keywords = trimmedQuery.lowercased()
+            .components(separatedBy: .punctuationCharacters).joined()
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { $0.count > 3 }
+        
+        if keywords.isEmpty {
+            // Fallback to full query if no long keywords
+            return Array(allAlwaysAppend.filter { $0.matches(query: trimmedQuery) }.prefix(3))
+        }
+        
+        return Array(allAlwaysAppend.filter { note in
+            keywords.contains { keyword in
+                note.matches(query: keyword)
+            }
+        }.prefix(3))
     }
     
     private func buildAugmentedContext(query: String, history: [Message]) -> String {
