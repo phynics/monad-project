@@ -1,12 +1,12 @@
 # Track Plan: Unified Agent Interface and SQL-Driven Persistence Refactor
 
-## Phase 1: Database-Level Protection
+## Phase 1: Database-Level Protection [checkpoint: c13df42]
 Implement strict immutability for core data types using SQLite-level constraints.
 
-- [ ] Task: Write Tests: Verify that `DELETE` operations on the `note` table and `UPDATE/DELETE` on the `message` (archive) table fail at the database level.
-- [ ] Task: Implement Feature: Update `DatabaseSchema.swift` to add SQLite triggers or an authorizer callback to enforce immutability for Notes and Archives.
-- [ ] Task: Refactor: Remove the `alwaysAppend` property from the `Note` model and update related database migrations.
-- [ ] Task: Conductor - User Manual Verification 'Database-Level Protection' (Protocol in workflow.md)
+- [x] Task: Write Tests: Verify that `DELETE` operations on the `note` table and `UPDATE/DELETE` on the `message` (archive) table fail at the database level. c13946b
+- [x] Task: Implement Feature: Update `DatabaseSchema.swift` to add SQLite triggers or an authorizer callback to enforce immutability for Notes and Archives. c13946b
+- [x] Task: Refactor: Remove the `alwaysAppend` property from the `Note` model and update related database migrations. c13946b
+- [x] Task: Conductor - User Manual Verification 'Database-Level Protection' (Protocol in workflow.md) [checkpoint: c13df42]
 
 ## Phase 2: RAW SQL Tool and Interface Unification
 Enable the agent to manage its own persistence while consolidating the tool surface.
