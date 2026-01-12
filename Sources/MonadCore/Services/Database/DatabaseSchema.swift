@@ -157,20 +157,23 @@ public enum DatabaseSchema {
             """)
         }
 
-        // v12: Remove alwaysAppend from Note
+        // v12: Remove alwaysAppend, isEnabled, and priority from Note
         migrator.registerMigration("v12") { db in
-            // Since SQLite doesn't support DROP COLUMN easily before 3.35.0, 
-            // and we might be on older versions in some environments,
-            // we will just leave the column in the DB but we won't use it in the model.
-            // However, we SHOULD remove the index and the column if we want a clean schema.
-            
             try db.execute(sql: "DROP INDEX IF EXISTS idx_note_alwaysAppend")
             
-            // If we really want to drop it:
-            // try db.alter(table: "note") { t in
-            //     t.drop(column: "alwaysAppend")
-            // }
-            // But for safety and simplicity, we'll just ignore it in the Swift model.
+            let columns = try db.columns(in: "note").map { $0.name }
+            
+            try db.alter(table: "note") { t in
+                if columns.contains("alwaysAppend") {
+                    t.drop(column: "alwaysAppend")
+                }
+                if columns.contains("isEnabled") {
+                    t.drop(column: "isEnabled")
+                }
+                if columns.contains("priority") {
+                    t.drop(column: "priority")
+                }
+            }
         }
     }
 
@@ -233,8 +236,6 @@ public enum DatabaseSchema {
             t.column("content", .text).notNull()
             t.column("isReadonly", .boolean).notNull().defaults(to: false)
             t.column("tags", .text).notNull().defaults(to: "[]")
-            t.column("isEnabled", .boolean).notNull().defaults(to: true)
-            t.column("priority", .integer).notNull().defaults(to: 0)
             t.column("createdAt", .datetime).notNull()
             t.column("updatedAt", .datetime).notNull()
         }
