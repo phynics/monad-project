@@ -26,7 +26,7 @@ Implement the core logic for routing messages and handling streaming responses.
 - [x] Task: Write Tests: Functional tests for the bridge logic using mocked gRPC server responses and mock Discord events. 962e61b
 - [ ] Task: Conductor - User Manual Verification 'Discord-to-gRPC Integration' (Protocol in workflow.md)
 
-## Phase 4: Reliability and UX Polish
+## Phase 4: Reliability and UX Polish [checkpoint: ed266df]
 Add final touches for a stable and responsive bot experience.
 
 - [x] Task: Implement Feature: Update Bot Activity/Status to show "Thinking..." or "Typing..." during generation. fa1c70d
