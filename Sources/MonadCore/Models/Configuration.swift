@@ -70,9 +70,18 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
 
 /// Configuration for LLM service
 public struct LLMConfiguration: Codable, Sendable, Equatable {
+    public enum ConnectionMode: String, Codable, CaseIterable, Identifiable, Sendable {
+        case local = "Local"
+        case remote = "Remote (Server)"
+        public var id: String { rawValue }
+    }
+
     public var activeProvider: LLMProvider
     public var providers: [LLMProvider: ProviderConfiguration]
     
+    public var connectionMode: ConnectionMode
+    public var monadServer: MonadServerConfiguration
+
     public var mcpServers: [MCPServerConfiguration]
     public var memoryContextLimit: Int
     public var documentContextLimit: Int
@@ -118,12 +127,16 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
     public init(
         activeProvider: LLMProvider = .openAI,
         providers: [LLMProvider: ProviderConfiguration]? = nil,
+        connectionMode: ConnectionMode = .local,
+        monadServer: MonadServerConfiguration = .default,
         mcpServers: [MCPServerConfiguration] = [],
         memoryContextLimit: Int = 5,
         documentContextLimit: Int = 5,
-        version: Int = 5
+        version: Int = 6
     ) {
         self.activeProvider = activeProvider
+        self.connectionMode = connectionMode
+        self.monadServer = monadServer
         self.mcpServers = mcpServers
         self.memoryContextLimit = memoryContextLimit
         self.documentContextLimit = documentContextLimit
@@ -152,7 +165,7 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         utilityModel: String = "gpt-4o-mini",
         fastModel: String = "gpt-4o-mini",
         apiKey: String = "",
-        version: Int = 5,
+        version: Int = 6,
         provider: LLMProvider = .openAI,
         toolFormat: ToolCallFormat = .openAI,
         mcpServers: [MCPServerConfiguration] = [],
@@ -160,6 +173,8 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         documentContextLimit: Int = 5
     ) {
         self.activeProvider = provider
+        self.connectionMode = .local
+        self.monadServer = .default
         self.mcpServers = mcpServers
         self.memoryContextLimit = memoryContextLimit
         self.documentContextLimit = documentContextLimit
@@ -196,6 +211,10 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
 
     /// Validate configuration
     public var isValid: Bool {
+        if connectionMode == .remote {
+            return !monadServer.host.isEmpty && monadServer.port > 0
+        }
+
         guard let config = providers[activeProvider] else { return false }
         
         let modelsValid = !config.modelName.isEmpty && !config.utilityModel.isEmpty && !config.fastModel.isEmpty
@@ -210,6 +229,22 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
     private func isValidEndpoint(_ endpoint: String) -> Bool {
         guard let url = URL(string: endpoint) else { return false }
         return url.scheme == "http" || url.scheme == "https"
+    }
+}
+
+public struct MonadServerConfiguration: Codable, Sendable, Equatable {
+    public var host: String
+    public var port: Int
+    public var useTLS: Bool
+    
+    public init(host: String, port: Int, useTLS: Bool = false) {
+        self.host = host
+        self.port = port
+        self.useTLS = useTLS
+    }
+    
+    public static var `default`: MonadServerConfiguration {
+        MonadServerConfiguration(host: "localhost", port: 50051)
     }
 }
 
@@ -414,10 +449,12 @@ public actor ConfigurationStorage {
                 let newConfig = LLMConfiguration(
                     activeProvider: oldConfig.provider,
                     providers: newProviders,
+                    connectionMode: .local,
+                    monadServer: .default,
                     mcpServers: oldConfig.mcpServers,
                     memoryContextLimit: oldConfig.memoryContextLimit,
                     documentContextLimit: oldConfig.documentContextLimit,
-                    version: 5
+                    version: 6
                 )
                 
                 try? save(newConfig)

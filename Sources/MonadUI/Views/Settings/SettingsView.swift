@@ -89,6 +89,19 @@ public struct SettingsView<PlatformContent: View>: View {
     
     private var generalSection: some View {
         Section {
+            Picker("Connection Mode", selection: $workingConfig.connectionMode) {
+                ForEach(LLMConfiguration.ConnectionMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            
+            if workingConfig.connectionMode == .remote {
+                remoteServerSettings
+            }
+            
+            Divider()
+
             // Active Provider Picker (Global setting)
             Picker("Active Provider", selection: $workingConfig.activeProvider) {
                 ForEach(LLMProvider.allCases) { provider in
@@ -96,6 +109,7 @@ public struct SettingsView<PlatformContent: View>: View {
                 }
             }
             .pickerStyle(.menu)
+            .disabled(workingConfig.connectionMode == .remote)
             
             Divider()
             
@@ -124,12 +138,28 @@ public struct SettingsView<PlatformContent: View>: View {
         }
     }
     
+    @ViewBuilder
+    private var remoteServerSettings: some View {
+        LabeledContent("Server Host") {
+            TextField("localhost", text: $workingConfig.monadServer.host)
+                .textFieldStyle(.roundedBorder)
+        }
+        
+        LabeledContent("Server Port") {
+            TextField("50051", value: $workingConfig.monadServer.port, format: .number)
+                .textFieldStyle(.roundedBorder)
+        }
+        
+        Toggle("Use TLS", isOn: $workingConfig.monadServer.useTLS)
+    }
+    
     private var providerConfigSection: some View {
         Section {
             providerSettings
         } header: {
             Text(selectedProvider.rawValue + " Configuration")
         }
+        .disabled(workingConfig.connectionMode == .remote)
     }
     
     private var statusSection: some View {
