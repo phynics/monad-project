@@ -27,7 +27,7 @@ Update the macOS/iOS applications to communicate with the remote server.
 ## Phase 4: Signal Client PoC
 Implement the secondary interface to prove architectural flexibility.
 
-- [ ] Task: Implement Feature: Create a standalone `MonadSignalBridge` (PoC) that listens for Signal messages and forwards them to the Monad gRPC server.
+- [x] Task: Implement Feature: Create a standalone `MonadSignalBridge` (PoC) that listens for Signal messages and forwards them to the Monad gRPC server. ca55a02
 - [ ] Task: Implement Feature: Support basic session management within the Signal bridge to map Signal users to assistant conversations.
 - [ ] Task: Write Tests: Functional tests for the bridge logic, ensuring messages flow correctly from the bridge to the server and back.
 - [ ] Task: Conductor - User Manual Verification 'Signal Client PoC' (Protocol in workflow.md)
