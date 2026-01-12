@@ -6,12 +6,22 @@ extension ChatViewModel {
     // MARK: - Startup Logic
 
     public func checkStartupState() async {
-        // Load active sessions
-        await persistenceManager.loadActiveSessions()
-        await persistenceManager.loadArchivedSessions()
-        
-        // Refresh jobs
-        await refreshJobs()
+        do {
+            let shouldAddWelcome = try await sessionOrchestrator.checkStartupState()
+            
+            // Refresh local state from manager
+            messages = persistenceManager.uiMessages
+            
+            if shouldAddWelcome {
+                await addWelcomeMessage()
+            }
+            
+            await persistenceManager.loadActiveSessions()
+            await persistenceManager.loadArchivedSessions()
+            await refreshJobs()
+        } catch {
+            logger.error("Failed to check startup state: \(error.localizedDescription)")
+        }
     }
     
     /// Handle configuration updates from settings

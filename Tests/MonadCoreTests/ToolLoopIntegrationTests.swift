@@ -26,6 +26,7 @@ final class ToolLoopIntegrationTests: XCTestCase {
         llmService = LLMService(embeddingService: mockEmbedding, client: mockLLMClient)
         
         viewModel = ChatViewModel(llmService: llmService, persistenceManager: persistenceManager)
+        await viewModel.startup()
         
         // Wait for startup logic
         try? await Task.sleep(nanoseconds: 100_000_000)
