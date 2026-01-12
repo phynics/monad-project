@@ -1,0 +1,183 @@
+syntax = "proto3";
+
+package monad;
+
+import "google/protobuf/timestamp.proto";
+
+option swift_prefix = "Monad";
+
+// --- Common Types ---
+
+message UUID {
+  string value = 1;
+}
+
+// --- Models ---
+
+enum MessageRole {
+  USER = 0;
+  ASSISTANT = 1;
+  SYSTEM = 2;
+  TOOL = 3;
+  SUMMARY = 4;
+}
+
+message Message {
+  string id = 1;
+  string content = 2;
+  MessageRole role = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  optional string think = 5;
+  repeated ToolCall tool_calls = 6;
+  optional string parent_id = 7;
+  bool is_summary = 8;
+  optional string summary_type = 9;
+}
+
+message ToolCall {
+  string id = 1;
+  string name = 2;
+  string arguments_json = 3; // JSON string for AnyCodable
+}
+
+message Memory {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  repeated string tags = 6;
+  map<string, string> metadata = 7;
+  repeated double embedding = 8;
+}
+
+message Note {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string content = 4;
+  bool is_readonly = 5;
+  repeated string tags = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message Job {
+  string id = 1;
+  string title = 2;
+  optional string description = 3;
+  int32 priority = 4;
+  JobStatus status = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+enum JobStatus {
+  PENDING = 0;
+  IN_PROGRESS = 1;
+  COMPLETED = 2;
+  CANCELLED = 3;
+}
+
+// --- Services ---
+
+service ChatService {
+  // Main streaming chat interaction
+  rpc ChatStream(ChatRequest) returns (stream ChatResponse);
+  
+  // Single message interaction (utility/fast models)
+  rpc SendMessage(ChatRequest) returns (Message);
+  
+  // Title generation
+  rpc GenerateTitle(GenerateTitleRequest) returns (GenerateTitleResponse);
+}
+
+message ChatRequest {
+  string user_query = 1;
+  repeated Message history = 2;
+  repeated string tool_ids = 3;
+  optional string system_instructions = 4;
+  bool use_fast_model = 5;
+}
+
+message ChatResponse {
+  // Chunks of the response
+  oneof payload {
+    string content_delta = 1;
+    string think_delta = 2;
+    ToolCall tool_call = 3;
+    Message final_message = 4; // Full message when complete
+    Metadata metadata = 5;
+  }
+  
+  message Metadata {
+    string model = 1;
+    optional int32 prompt_tokens = 2;
+    optional int32 completion_tokens = 3;
+    optional double tokens_per_second = 4;
+  }
+}
+
+message GenerateTitleRequest {
+  repeated Message messages = 1;
+}
+
+message GenerateTitleResponse {
+  string title = 1;
+}
+
+service MemoryService {
+  rpc SearchMemories(SearchRequest) returns (SearchResponse);
+  rpc SaveMemory(Memory) returns (UUID);
+  rpc DeleteMemory(UUID) returns (Empty);
+  rpc FetchAllMemories(Empty) returns (MemoryList);
+}
+
+message SearchRequest {
+  oneof query {
+    string text = 1;
+    EmbeddingQuery vector = 2;
+  }
+  int32 limit = 3;
+}
+
+message EmbeddingQuery {
+  repeated double vector = 1;
+  double min_similarity = 2;
+}
+
+message SearchResponse {
+  repeated SearchResult results = 1;
+}
+
+message SearchResult {
+  Memory memory = 1;
+  optional double similarity = 2;
+}
+
+message MemoryList {
+  repeated Memory memories = 1;
+}
+
+service NoteService {
+  rpc FetchAllNotes(Empty) returns (NoteList);
+  rpc SaveNote(Note) returns (Empty);
+  rpc DeleteNote(UUID) returns (Empty);
+}
+
+message NoteList {
+  repeated Note notes = 1;
+}
+
+service JobService {
+  rpc FetchAllJobs(Empty) returns (JobList);
+  rpc SaveJob(Job) returns (Empty);
+  rpc DeleteJob(UUID) returns (Empty);
+  rpc DequeueNextJob(Empty) returns (Job);
+}
+
+message JobList {
+  repeated Job jobs = 1;
+}
+
+message Empty {}
