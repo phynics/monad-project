@@ -5,7 +5,7 @@ import SwiftUI
 
 public struct ContentView: View {
     @Bindable public var viewModel: ChatViewModel
-    public var llmService: LLMService
+    public var llmService: any LLMServiceProtocol
     public var persistenceManager: PersistenceManager
 
     @State private var showingArchive = false
@@ -18,7 +18,7 @@ public struct ContentView: View {
     @Environment(\.openWindow) private var openWindow
 
     public init(
-        viewModel: ChatViewModel, llmService: LLMService, persistenceManager: PersistenceManager
+        viewModel: ChatViewModel, llmService: any LLMServiceProtocol, persistenceManager: PersistenceManager
     ) {
         self.viewModel = viewModel
         self.llmService = llmService
@@ -57,7 +57,7 @@ public struct ContentView: View {
 
                 MessageListView(
                     viewModel: viewModel,
-                    llmServiceConfigured: llmService.isConfigured,
+                    llmService: llmService,
                     onConfigureSettings: { openWindow(id: "settings") }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

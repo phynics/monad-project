@@ -2,7 +2,7 @@ import MonadCore
 import SwiftUI
 
 public struct ChatHeaderView: View {
-    public var llmService: LLMService
+    public var llmService: any LLMServiceProtocol
     @Binding public var showSidebar: Bool
     public var performanceMetrics: PerformanceMetrics
     public let messagesEmpty: Bool
@@ -17,7 +17,7 @@ public struct ChatHeaderView: View {
     public let onVacuum: () -> Void
 
     public init(
-        llmService: LLMService,
+        llmService: any LLMServiceProtocol,
         showSidebar: Binding<Bool>,
         performanceMetrics: PerformanceMetrics,
         messagesEmpty: Bool,

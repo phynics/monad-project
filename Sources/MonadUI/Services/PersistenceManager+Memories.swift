@@ -23,6 +23,6 @@ extension PersistenceManager {
     }
     
     public func vacuumMemories() async throws -> Int {
-        try await persistence.vacuumMemories()
+        try await persistence.vacuumMemories(threshold: 0.95)
     }
 }

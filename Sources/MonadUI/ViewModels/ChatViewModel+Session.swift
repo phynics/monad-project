@@ -5,18 +5,28 @@ import OSLog
 extension ChatViewModel {
     // MARK: - Startup Logic
 
-    internal func checkStartupState() async {
-        do {
-            if try await sessionOrchestrator.checkStartupState() {
-                await addWelcomeMessage()
-            }
-            messages = persistenceManager.uiMessages
-        } catch {
-            Logger.chat.error("Failed to check startup state: \(error.localizedDescription)")
-            try? await sessionOrchestrator.startNewSession(deleteOld: false)
-            await addWelcomeMessage()
-            messages = persistenceManager.uiMessages
-        }
+    public func checkStartupState() async {
+        // Load active sessions
+        await persistenceManager.loadActiveSessions()
+        await persistenceManager.loadArchivedSessions()
+        
+        // Refresh jobs
+        await refreshJobs()
+    }
+    
+    /// Handle configuration updates from settings
+    public func applyConfiguration(_ config: LLMConfiguration) async throws {
+        // 1. Update coordinator (switches between Local/Remote)
+        try await coordinator.update(with: config)
+        
+        // 2. Sync persistence manager with active persistence service
+        persistenceManager.persistence = coordinator.activePersistenceService
+        
+        // 3. Update job queue context
+        self.jobQueueContext.updatePersistence(coordinator.activePersistenceService)
+        
+        // 4. Refresh UI state from new source of truth
+        await checkStartupState()
     }
 
     public func startNewSession(deleteOld: Bool = false) {

@@ -3,18 +3,18 @@ import SwiftUI
 
 public struct MessageListView: View {
     @Bindable var viewModel: ChatViewModel
-    public let llmServiceConfigured: Bool
+    public var llmService: any LLMServiceProtocol
     public let onConfigureSettings: () -> Void
 
     @State private var isAtBottom = true
 
     public init(
         viewModel: ChatViewModel,
-        llmServiceConfigured: Bool,
+        llmService: any LLMServiceProtocol,
         onConfigureSettings: @escaping () -> Void
     ) {
         self.viewModel = viewModel
-        self.llmServiceConfigured = llmServiceConfigured
+        self.llmService = llmService
         self.onConfigureSettings = onConfigureSettings
     }
 
@@ -116,7 +116,7 @@ public struct MessageListView: View {
                 .font(.headline)
                 .foregroundColor(.secondary)
 
-            if !llmServiceConfigured {
+            if !llmService.isConfigured {
                 Button("Configure Settings") {
                     onConfigureSettings()
                 }

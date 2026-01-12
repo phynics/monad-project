@@ -40,11 +40,14 @@ extension ChatViewModel {
             let (stream, rawPrompt, structuredContext) = await llmService.chatStreamWithContext(
                 userQuery: "",
                 contextNotes: contextNotes,
-                documents: contextDocuments,
-                memories: currentContextData.memories.map { $0.memory },
-                databaseDirectory: dbDirectory,
+                documents: injectedDocuments,
+                memories: injectedMemories,
+                databaseDirectory: contextData.databaseDirectory,
                 chatHistory: messages,
-                tools: enabledTools
+                tools: toolManager.getEnabledTools(),
+                systemInstructions: nil,
+                responseFormat: nil,
+                useFastModel: false
             )
 
             streamingCoordinator.startStreaming()

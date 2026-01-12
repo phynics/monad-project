@@ -21,10 +21,10 @@ public final class PersistenceManager {
         currentMessages.flattened()
     }
 
-    public let persistence: PersistenceService
+    public var persistence: any PersistenceServiceProtocol
     internal let logger = Logger.database
 
-    public init(persistence: PersistenceService) {
+    public init(persistence: any PersistenceServiceProtocol) {
         self.persistence = persistence
     }
 

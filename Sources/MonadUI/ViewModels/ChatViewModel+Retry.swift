@@ -49,11 +49,14 @@ extension ChatViewModel {
                 let (_, rawPrompt, structuredContext) = await llmService.chatStreamWithContext(
                     userQuery: prompt,
                     contextNotes: contextData.notes,
-                    documents: contextDocuments,
-                    memories: contextMemories,
+                    documents: injectedDocuments,
+                    memories: injectedMemories,
                     databaseDirectory: contextData.databaseDirectory,
-                    chatHistory: Array(messages.prefix(lastUserMessageIndex)),
-                    tools: enabledTools
+                    chatHistory: messages,
+                    tools: toolManager.getEnabledTools(),
+                    systemInstructions: nil,
+                    responseFormat: nil,
+                    useFastModel: false
                 )
 
                 messages[lastUserMessageIndex].recalledMemories = contextMemories

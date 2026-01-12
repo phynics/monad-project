@@ -9,24 +9,29 @@ import OSLog
 /// for adding, removing, prioritizing, and managing jobs in a queue.
 public final class JobQueueContext: ToolContext, @unchecked Sendable {
     public static let contextId = "job_queue"
-    public static let displayName = "Job Queue Manager"
-    public static let contextDescription = "Manage a queue of jobs with priorities and statuses"
+    public static let displayName = "Job Queue"
+    public static let contextDescription = "Manage a persistent queue of jobs and tasks"
 
+    private var persistenceService: any PersistenceServiceProtocol
     private let logger = Logger.tools
-    private let persistenceService: any PersistenceServiceProtocol
 
-    /// Context tools (lazy to allow self-reference)
-    public private(set) lazy var contextTools: [any Tool] = [
-        AddJobTool(context: self),
-        RemoveJobTool(context: self),
-        ChangePriorityTool(context: self),
-        ListJobsTool(context: self),
-        UpdateJobStatusTool(context: self),
-        ClearQueueTool(context: self),
-    ]
+    public var contextTools: [any Tool] {
+        [
+            AddJobTool(context: self),
+            RemoveJobTool(context: self),
+            ChangePriorityTool(context: self),
+            ListJobsTool(context: self),
+            UpdateJobStatusTool(context: self),
+            ClearQueueTool(context: self),
+        ]
+    }
 
     public init(persistenceService: any PersistenceServiceProtocol) {
         self.persistenceService = persistenceService
+    }
+    
+    public func updatePersistence(_ service: any PersistenceServiceProtocol) {
+        self.persistenceService = service
     }
 
     public func activate() async {

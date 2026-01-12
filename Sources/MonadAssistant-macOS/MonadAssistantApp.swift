@@ -21,7 +21,8 @@ struct MonadAssistantApp: App {
         let llm = LLMService()
         self._llmService = State(initialValue: llm)
         
-        self._chatViewModel = State(initialValue: ChatViewModel(llmService: llm, persistenceManager: manager))
+        let chatViewModel = ChatViewModel(llmService: llm, persistenceManager: manager)
+        self._chatViewModel = State(initialValue: chatViewModel)
 
         // Setup MCP (macOS only)
         let transport = StdioTransport(
@@ -32,6 +33,10 @@ struct MonadAssistantApp: App {
 
         // Register MCP as a tool provider
         llm.registerToolProvider(client)
+        
+        Task {
+            await chatViewModel.startup()
+        }
     }
 
     var body: some Scene {
@@ -51,7 +56,7 @@ struct MonadAssistantApp: App {
 
         // Separate Settings Window - works better on macOS for text field focus
         Window("Settings", id: "settings") {
-            SettingsView(llmService: llmService, persistenceManager: persistenceManager) {
+            SettingsView(llmService: llmService, persistenceManager: persistenceManager, chatViewModel: chatViewModel) {
                 Section {
                     NavigationLink {
                         MCPSettingsView(servers: $llmService.configuration.mcpServers)

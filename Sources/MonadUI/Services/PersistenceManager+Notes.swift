@@ -23,6 +23,7 @@ extension PersistenceManager {
     }
 
     public func getContextNotes() async throws -> String {
-        try await persistence.getContextNotes()
+        let notes = try await persistence.fetchAllNotes()
+        return notes.promptContent
     }
 }

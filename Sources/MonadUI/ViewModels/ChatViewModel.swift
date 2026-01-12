@@ -25,9 +25,9 @@ public final class ChatViewModel {
     public var autoDequeueEnabled = false
 
     // MARK: - Service Dependencies
-    public let llmService: LLMService
-    public let persistenceManager: PersistenceManager
-    public let contextManager: ContextManager
+    public var llmService: any LLMServiceProtocol { coordinator.activeLLMService }
+    public var persistenceManager: PersistenceManager
+    public var contextManager: ContextManager
     public let documentManager: DocumentManager
     public let streamingCoordinator: StreamingCoordinator
     public let conversationArchiver: ConversationArchiver
@@ -37,9 +37,11 @@ public final class ChatViewModel {
     public var sessionOrchestrator: SessionOrchestrator!
     public var maintenanceOrchestrator: MaintenanceOrchestrator!
 
+    internal let coordinator: ServiceCoordinator
+
     // MARK: - Tool Infrastructure (owned by ChatViewModel)
-    public let jobQueueContext: JobQueueContext
-    public let toolContextSession: ToolContextSession
+    public var jobQueueContext: JobQueueContext
+    public var toolContextSession: ToolContextSession
 
     /// Tool manager - lazily initialized via computed property
     private var _toolManager: SessionToolManager?
@@ -83,7 +85,7 @@ public final class ChatViewModel {
 
     public var injectedDocuments: [DocumentContext] {
         documentManager.getEffectiveDocuments(
-            limit: llmService.configuration.documentContextLimit)
+            limit: (llmService.configuration.documentContextLimit))
     }
 
     // Expose streaming state
@@ -101,14 +103,24 @@ public final class ChatViewModel {
 
     // MARK: - Initialization
     public init(llmService: LLMService, persistenceManager: PersistenceManager) {
-        self.llmService = llmService
         self.persistenceManager = persistenceManager
-        self.contextManager = ContextManager(
+        
+        // 1. Stored properties
+        self.jobQueueContext = JobQueueContext(persistenceService: persistenceManager.persistence)
+        self.toolContextSession = ToolContextSession()
+        self.documentManager = DocumentManager()
+        self.streamingCoordinator = StreamingCoordinator()
+        
+        self.coordinator = ServiceCoordinator(localLLM: llmService, localPersistence: persistenceManager.persistence as! PersistenceService)
+        
+        // 2. Initialize contextManager
+        let contextManager = ContextManager(
             persistenceService: persistenceManager.persistence,
             embeddingService: llmService.embeddingService
         )
-        self.documentManager = DocumentManager()
-        self.streamingCoordinator = StreamingCoordinator()
+        self.contextManager = contextManager
+        
+        // 3. Initialize properties that depend on contextManager
         self.conversationArchiver = ConversationArchiver(
             persistence: persistenceManager.persistence,
             llmService: llmService,
@@ -116,28 +128,31 @@ public final class ChatViewModel {
         )
         self.contextCompressor = ContextCompressor(llmService: llmService)
 
-        // Initialize tool infrastructure
-        self.jobQueueContext = JobQueueContext(persistenceService: persistenceManager.persistence)
-        self.toolContextSession = ToolContextSession()
-        
+        // 4. Initialize orchestrators (late-init)
         self.sessionOrchestrator = SessionOrchestrator(
             persistenceManager: persistenceManager,
             llmService: llmService
         )
         self.maintenanceOrchestrator = MaintenanceOrchestrator(
-            contextCompressor: contextCompressor,
+            contextCompressor: self.contextCompressor,
             persistenceManager: persistenceManager
         )
+        
+        // 5. Setup tool orchestrator
         self.toolOrchestrator = ToolOrchestrator(
             toolExecutor: self.toolExecutor,
             persistenceManager: persistenceManager,
             jobQueueContext: jobQueueContext
         )
         self.toolOrchestrator.delegate = self
-
-        Task {
-            await checkStartupState()
-        }
+    }
+    
+    /// Initialize the view model state and services.
+    /// Should be called after init.
+    public func startup() async {
+        // Apply current connection mode from config
+        try? await coordinator.update(with: llmService.configuration)
+        await checkStartupState()
     }
 
     // MARK: - Tool Infrastructure Management

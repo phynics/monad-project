@@ -11,12 +11,12 @@ public enum MemoryVacuumPolicy: Sendable {
 
 /// Service to archive conversations and index them for semantic recall
 public actor ConversationArchiver {
-    private let persistence: PersistenceService
-    private let llmService: LLMService
+    private let persistence: any PersistenceServiceProtocol
+    private let llmService: any LLMServiceProtocol
     private let contextManager: ContextManager
     private let logger = Logger(subsystem: "com.monad.core", category: "ConversationArchiver")
     
-    public init(persistence: PersistenceService, llmService: LLMService, contextManager: ContextManager) {
+    public init(persistence: any PersistenceServiceProtocol, llmService: any LLMServiceProtocol, contextManager: ContextManager) {
         self.persistence = persistence
         self.llmService = llmService
         self.contextManager = contextManager
@@ -31,12 +31,14 @@ public actor ConversationArchiver {
     ) async throws -> UUID {
         // 1. Title Generation
         var title = "Archived Conversation"
-        if let firstUserMessage = messages.first(where: { $0.role == .user })?.content {
+        if !messages.isEmpty {
             do {
-                title = try await generateTitle(for: firstUserMessage)
+                title = try await llmService.generateTitle(for: messages)
             } catch {
                 logger.error("Failed to generate descriptive title: \(error.localizedDescription)")
-                title = String(firstUserMessage.prefix(40))
+                if let firstUserMessage = messages.first(where: { $0.role == .user })?.content {
+                    title = String(firstUserMessage.prefix(40))
+                }
             }
         }
         
@@ -106,23 +108,5 @@ public actor ConversationArchiver {
         }
         
         return session.id
-    }
-    
-    private func generateTitle(for userMessage: String) async throws -> String {
-        let utilityClient = await llmService.getUtilityClient()
-        let defaultClient = await llmService.getClient()
-        guard let client = utilityClient ?? defaultClient else {
-            return String(userMessage.prefix(40))
-        }
-        
-        let prompt = """
-        Generate a very short, descriptive title (max 5 words) for a conversation that starts with:
-        \(userMessage)
-        Title:
-        """
-        
-        return try await client.sendMessage(prompt, responseFormat: nil)
-            .replacingOccurrences(of: "\"", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

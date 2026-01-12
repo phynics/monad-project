@@ -18,7 +18,12 @@ struct MonadAssistantApp: App {
         let llm = LLMService()
         self._llmService = State(initialValue: llm)
         
-        self._chatViewModel = State(initialValue: ChatViewModel(llmService: llm, persistenceManager: manager))
+        let chatViewModel = ChatViewModel(llmService: llm, persistenceManager: manager)
+        self._chatViewModel = State(initialValue: chatViewModel)
+        
+        Task {
+            await chatViewModel.startup()
+        }
     }
 
     var body: some Scene {

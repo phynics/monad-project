@@ -45,7 +45,7 @@ extension PersistenceManager {
             try await persistence.saveMessage(message)
         }
         for memory in backup.memories {
-            _ = try await persistence.saveMemory(memory)
+            _ = try await persistence.saveMemory(memory, policy: .always)
         }
         for note in backup.notes {
             try await persistence.saveNote(note)

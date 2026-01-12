@@ -110,6 +110,7 @@ final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
 final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
     var isConfigured: Bool = true
     var configuration: LLMConfiguration = .openAI
+    var embeddingService: any EmbeddingService = MockEmbeddingService()
     var nextResponse: String = ""
     var nextTags: [String] = []
     

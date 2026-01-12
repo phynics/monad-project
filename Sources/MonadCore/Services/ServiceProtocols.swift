@@ -7,6 +7,7 @@ import GRDB
 public protocol LLMServiceProtocol: Sendable {
     var isConfigured: Bool { get }
     var configuration: LLMConfiguration { get }
+    var embeddingService: any EmbeddingService { get }
     
     // Configuration Management
     func loadConfiguration() async

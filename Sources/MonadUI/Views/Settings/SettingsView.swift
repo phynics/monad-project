@@ -7,8 +7,9 @@ import UniformTypeIdentifiers
 #endif
 
 public struct SettingsView<PlatformContent: View>: View {
-    public var llmService: LLMService
+    public var llmService: any LLMServiceProtocol
     public let persistenceManager: PersistenceManager
+    public var chatViewModel: ChatViewModel? = nil
     @Environment(\.dismiss) var dismiss
 
     /// Platform-specific configuration sections (like MCP on macOS)
@@ -26,12 +27,14 @@ public struct SettingsView<PlatformContent: View>: View {
     @State internal var isFetchingModels = false
 
     public init(
-        llmService: LLMService,
+        llmService: any LLMServiceProtocol,
         persistenceManager: PersistenceManager,
+        chatViewModel: ChatViewModel? = nil,
         @ViewBuilder platformContent: () -> PlatformContent
     ) {
         self.llmService = llmService
         self.persistenceManager = persistenceManager
+        self.chatViewModel = chatViewModel
         self.platformContent = platformContent()
     }
     

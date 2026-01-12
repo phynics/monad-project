@@ -67,7 +67,8 @@ extension ChatViewModel {
                     memories: injectedMemories,
                     databaseDirectory: contextData.databaseDirectory,
                     chatHistory: messages,
-                    tools: toolManager.getEnabledTools()
+                    tools: toolManager.getEnabledTools(),
+                    systemInstructions: nil
                 )
 
                 // Persist the user message now that we have context data (memories)

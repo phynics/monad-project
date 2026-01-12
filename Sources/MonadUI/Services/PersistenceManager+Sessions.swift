@@ -24,14 +24,15 @@ extension PersistenceManager {
             throw PersistenceError.sessionNotFound
         }
         currentSession = session
-        let flatMessages = try await persistence.fetchMessages(for: id).map { [weak self] dbMsg -> Message in
+        let flatMessages = try await persistence.fetchMessages(for: id)
+        let messages = flatMessages.map { [weak self] dbMsg -> Message in
             var msg = dbMsg.toMessage()
             if let self = self, let info = self.debugInfoCache[msg.id] {
                 msg.debugInfo = info
             }
             return msg
         }
-        currentMessages = .constructForest(from: flatMessages)
+        currentMessages = .constructForest(from: messages)
     }
 
     public func updateSession(_ session: ConversationSession) async throws {
@@ -89,6 +90,11 @@ extension PersistenceManager {
             currentSession = nil
             currentMessages = []
         }
+    }
+
+    public func loadSessions() async {
+        await loadActiveSessions()
+        await loadArchivedSessions()
     }
 
     public func loadActiveSessions() async {

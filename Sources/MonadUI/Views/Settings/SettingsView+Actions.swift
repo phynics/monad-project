@@ -25,6 +25,11 @@ extension SettingsView {
         Task {
             do {
                 try await llmService.updateConfiguration(workingConfig)
+                
+                if let vm = chatViewModel {
+                    try await vm.applyConfiguration(workingConfig)
+                }
+                
                 showingSaveSuccess = true
 
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
