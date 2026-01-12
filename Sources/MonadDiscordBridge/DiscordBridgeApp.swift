@@ -17,7 +17,13 @@ struct DiscordBridgeApp {
         print("Configuration loaded for User: \(config.authorizedUserId)")
         
         // 2. Setup Engine
-        let engine = await DiscordBridgeEngine(config: config)
+        let engine: DiscordBridgeEngine
+        do {
+            engine = try await DiscordBridgeEngine(config: config)
+        } catch {
+            print("Failed to initialize engine: \(error.localizedDescription)")
+            exit(1)
+        }
         
         // 3. Connect
         await engine.connect()
