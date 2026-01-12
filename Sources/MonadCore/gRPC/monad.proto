@@ -8,9 +8,7 @@ option swift_prefix = "Monad";
 
 // --- Common Types ---
 
-message UUID {
-  string value = 1;
-}
+message Empty {}
 
 // --- Models ---
 
@@ -79,6 +77,16 @@ enum JobStatus {
   CANCELLED = 3;
 }
 
+message Session {
+  string id = 1;
+  string title = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
+  bool is_archived = 5;
+  repeated string tags = 6;
+  optional string working_directory = 7;
+}
+
 // --- Services ---
 
 service ChatService {
@@ -93,11 +101,12 @@ service ChatService {
 }
 
 message ChatRequest {
-  string user_query = 1;
-  repeated Message history = 2;
-  repeated string tool_ids = 3;
-  optional string system_instructions = 4;
-  bool use_fast_model = 5;
+  string session_id = 1;
+  string user_query = 2;
+  repeated Message history = 3;
+  repeated string tool_ids = 4;
+  optional string system_instructions = 5;
+  bool use_fast_model = 6;
 }
 
 message ChatResponse {
@@ -126,10 +135,36 @@ message GenerateTitleResponse {
   string title = 1;
 }
 
+service SessionService {
+  rpc FetchAllSessions(Empty) returns (SessionList);
+  rpc FetchSession(FetchSessionRequest) returns (Session);
+  rpc CreateSession(Session) returns (Session);
+  rpc UpdateSession(Session) returns (Session);
+  rpc DeleteSession(DeleteSessionRequest) returns (Empty);
+  rpc ArchiveSession(ArchiveSessionRequest) returns (Empty);
+}
+
+message SessionList {
+  repeated Session sessions = 1;
+}
+
+message FetchSessionRequest {
+  string id = 1;
+}
+
+message DeleteSessionRequest {
+  string id = 1;
+}
+
+message ArchiveSessionRequest {
+  string id = 1;
+  bool is_archived = 2;
+}
+
 service MemoryService {
   rpc SearchMemories(SearchRequest) returns (SearchResponse);
-  rpc SaveMemory(Memory) returns (UUID);
-  rpc DeleteMemory(UUID) returns (Empty);
+  rpc SaveMemory(Memory) returns (Memory);
+  rpc DeleteMemory(DeleteMemoryRequest) returns (Empty);
   rpc FetchAllMemories(Empty) returns (MemoryList);
 }
 
@@ -159,20 +194,28 @@ message MemoryList {
   repeated Memory memories = 1;
 }
 
+message DeleteMemoryRequest {
+  string id = 1;
+}
+
 service NoteService {
   rpc FetchAllNotes(Empty) returns (NoteList);
-  rpc SaveNote(Note) returns (Empty);
-  rpc DeleteNote(UUID) returns (Empty);
+  rpc SaveNote(Note) returns (Note);
+  rpc DeleteNote(DeleteNoteRequest) returns (Empty);
 }
 
 message NoteList {
   repeated Note notes = 1;
 }
 
+message DeleteNoteRequest {
+  string id = 1;
+}
+
 service JobService {
   rpc FetchAllJobs(Empty) returns (JobList);
-  rpc SaveJob(Job) returns (Empty);
-  rpc DeleteJob(UUID) returns (Empty);
+  rpc SaveJob(Job) returns (Job);
+  rpc DeleteJob(DeleteJobRequest) returns (Empty);
   rpc DequeueNextJob(Empty) returns (Job);
 }
 
@@ -180,4 +223,6 @@ message JobList {
   repeated Job jobs = 1;
 }
 
-message Empty {}
+message DeleteJobRequest {
+  string id = 1;
+}
