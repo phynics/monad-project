@@ -13,6 +13,7 @@
     - **Protocol-Oriented Programming:** Services are defined by protocols to enable mocking and isolation.
     - **Dependency Injection:** Core components like `ContextManager` receive their dependencies via constructor injection, facilitating testability and modularity.
     - **Comprehensive Testing:** Commitment to high code coverage (>80% for core logic) using XCTest and mocking for all external interactions.
+    - **Database-Level Protection:** Utilizes SQLite triggers to enforce strict immutability for core data types like Notes and Archives.
 
 ## Database and Persistence
 - **GRDB.swift:** A robust toolkit for SQLite databases, providing high-level Swift interfaces for concurrent database access.
