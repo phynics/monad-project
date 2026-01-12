@@ -85,6 +85,25 @@ targets:
         INSTALL_PATH: "@rpath"
         DEFINES_MODULE: YES
 
+  # Monad Server - macOS/Linux
+  MonadServer:
+    type: executable
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadServer
+    dependencies:
+      - target: MonadCore
+      - package: gRPC
+        product: GRPC
+      - package: SwiftProtobuf
+        product: SwiftProtobuf
+    settings:
+      base:
+        PRODUCT_NAME: MonadServer
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.server
+
   # UI - macOS
   MonadUI:
     type: framework

@@ -10,7 +10,8 @@ let package = Package(
     products: [
         .library(name: "MonadCore", targets: ["MonadCore"]),
         .library(name: "MonadMCP", targets: ["MonadMCP"]),
-        .library(name: "MonadUI", targets: ["MonadUI"])
+        .library(name: "MonadUI", targets: ["MonadUI"]),
+        .executable(name: "MonadServer", targets: ["MonadServer"])
     ],
     dependencies: [
         .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main"),
@@ -19,6 +20,14 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.28.0"),
     ],
     targets: [
+        .executableTarget(
+            name: "MonadServer",
+            dependencies: [
+                "MonadCore",
+                .product(name: "GRPC", package: "grpc-swift")
+            ],
+            path: "Sources/MonadServer"
+        ),
         .target(
             name: "MonadCore",
             dependencies: [
