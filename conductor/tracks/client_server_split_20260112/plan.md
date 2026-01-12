@@ -16,7 +16,7 @@ Build the Swift-based server and containerize it.
 - [x] Task: Write Tests: Implement server-side integration tests that verify service handlers against a live (or mocked) database. b08b390
 - [ ] Task: Conductor - User Manual Verification 'MonadServer Implementation' (Protocol in workflow.md)
 
-## Phase 3: Main Client Transition
+## Phase 3: Main Client Transition [checkpoint: f2e2733]
 Update the macOS/iOS applications to communicate with the remote server.
 
 - [x] Task: Implement Feature: Create a `gRPCLLMService` and `gRPCPersistenceService` that implement the existing protocols but delegate to the gRPC server. f60d569
