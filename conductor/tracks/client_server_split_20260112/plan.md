@@ -20,7 +20,7 @@ Build the Swift-based server and containerize it.
 Update the macOS/iOS applications to communicate with the remote server.
 
 - [x] Task: Implement Feature: Create a `gRPCLLMService` and `gRPCPersistenceService` that implement the existing protocols but delegate to the gRPC server. f60d569
-- [ ] Task: Implement Feature: Update `SettingsView` to allow users to toggle between "Local" and "Remote" modes and configure server endpoints.
+- [x] Task: Implement Feature: Update `SettingsView` to allow users to toggle between "Local" and "Remote" modes and configure server endpoints. 320b426
 - [ ] Task: Write Tests: Verify that the UI remains reactive and handles network-related errors gracefully using mocked gRPC responses.
 - [ ] Task: Conductor - User Manual Verification 'Main Client Transition' (Protocol in workflow.md)
 
