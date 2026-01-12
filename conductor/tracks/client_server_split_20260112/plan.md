@@ -8,7 +8,7 @@ Define the communication contract and set up code generation.
 - [x] Task: Write Tests: Verify Protobuf-to-Model mapping and serialization for all core types. 61779d1
 - [ ] Task: Conductor - User Manual Verification 'gRPC Schema and Infrastructure' (Protocol in workflow.md)
 
-## Phase 2: MonadServer Implementation
+## Phase 2: MonadServer Implementation [checkpoint: ed1f55b]
 Build the Swift-based server and containerize it.
 
 - [x] Task: Implement Feature: Create the `MonadServer` target and implement gRPC service handlers that wrap `MonadCore` logic. 5bd21eb
