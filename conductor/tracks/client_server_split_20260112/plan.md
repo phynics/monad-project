@@ -11,7 +11,7 @@ Define the communication contract and set up code generation.
 ## Phase 2: MonadServer Implementation
 Build the Swift-based server and containerize it.
 
-- [ ] Task: Implement Feature: Create the `MonadServer` target and implement gRPC service handlers that wrap `MonadCore` logic.
+- [x] Task: Implement Feature: Create the `MonadServer` target and implement gRPC service handlers that wrap `MonadCore` logic. 5bd21eb
 - [ ] Task: Implement Feature: Create a `Dockerfile` and `docker-compose.yml` to build and run the server on Linux with persistent volume mounting for the SQLite database.
 - [ ] Task: Write Tests: Implement server-side integration tests that verify service handlers against a live (or mocked) database.
 - [ ] Task: Conductor - User Manual Verification 'MonadServer Implementation' (Protocol in workflow.md)
