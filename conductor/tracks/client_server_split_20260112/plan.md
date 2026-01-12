@@ -24,7 +24,7 @@ Update the macOS/iOS applications to communicate with the remote server.
 - [x] Task: Write Tests: Verify that the UI remains reactive and handles network-related errors gracefully using mocked gRPC responses. cbbf3f4
 - [ ] Task: Conductor - User Manual Verification 'Main Client Transition' (Protocol in workflow.md)
 
-## Phase 4: Signal Client PoC
+## Phase 4: Signal Client PoC [checkpoint: 47c2df3]
 Implement the secondary interface to prove architectural flexibility.
 
 - [x] Task: Implement Feature: Create a standalone `MonadSignalBridge` (PoC) that listens for Signal messages and forwards them to the Monad gRPC server. ca55a02
