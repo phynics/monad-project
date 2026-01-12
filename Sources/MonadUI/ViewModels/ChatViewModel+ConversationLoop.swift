@@ -38,7 +38,7 @@ extension ChatViewModel {
             // 2. Call LLM with empty userQuery, relying on chatHistory
             let (stream, rawPrompt, structuredContext) = await llmService.chatStreamWithContext(
                 userQuery: "",
-                contextNotes: currentContextData.notes,
+                contextNotes: contextNotes,
                 documents: contextDocuments,
                 memories: currentContextData.memories.map { $0.memory },
                 chatHistory: messages,
