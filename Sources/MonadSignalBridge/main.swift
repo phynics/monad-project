@@ -19,22 +19,54 @@ struct MonadSignalBridge {
         )
         
         let chatClient = MonadChatServiceAsyncClient(channel: channel)
+        let sessionClient = MonadSessionServiceAsyncClient(channel: channel)
         
         print("Connected to MonadServer at localhost:50051")
         
-        // 2. PoC: Simulate Signal Message Loop
-        print("Waiting for simulated Signal messages... (Type a message and press Enter)")
+        // In-memory mapping: Signal User ID -> Monad Session ID
+        var userSessions: [String: String] = [:]
+        
+        // 2. PoC: Simulate Signal Message Loop with multiple users
+        print("Waiting for simulated Signal messages... Format: '<user_id>: <message>'")
         
         while let line = readLine() {
-            let input = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !input.isEmpty else { continue }
+            let parts = line.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            guard parts.count == 2 else {
+                print("Invalid format. Use '<user_id>: <message>'")
+                continue
+            }
             
-            print("Signal [User]: \(input)")
+            let userId = parts[0]
+            let message = parts[1]
             
-            // Forward to gRPC
+            print("Signal [User \(userId)]: \(message)")
+            
+            // 3. Session Management
+            let sessionId: String
+            if let existing = userSessions[userId] {
+                sessionId = existing
+            } else {
+                print("Creating new session for User \(userId)...")
+                var sessionReq = MonadSession()
+                sessionReq.id = UUID().uuidString
+                sessionReq.title = "Signal Chat: \(userId)"
+                sessionReq.tags = ["signal", userId]
+                
+                do {
+                    let created = try await sessionClient.createSession(sessionReq)
+                    sessionId = created.id
+                    userSessions[userId] = sessionId
+                    print("New Monad Session: \(sessionId)")
+                } catch {
+                    print("Failed to create session on server: \(error.localizedDescription)")
+                    continue
+                }
+            }
+            
+            // 4. Forward to gRPC
             var request = MonadChatRequest()
-            request.userQuery = input
-            request.sessionID = UUID().uuidString
+            request.userQuery = message
+            request.sessionID = sessionId
             
             print("Monad [Thinking...]")
             
@@ -48,7 +80,7 @@ struct MonadSignalBridge {
                     }
                 }
                 print("Monad [Assistant]: \(fullResponse)")
-                print("Signal [Outgoing]: \(fullResponse)")
+                print("Signal [Outgoing to \(userId)]: \(fullResponse)")
             } catch {
                 print("Error from MonadServer: \(error.localizedDescription)")
             }
