@@ -16,13 +16,13 @@ Enable the agent to manage its own persistence while consolidating the tool surf
 - [x] Task: Implement Feature: Consolidate existing search/load tools into a unified interface that encourages SQL-based data retrieval. 18ece97
 - [x] Task: Conductor - User Manual Verification 'RAW SQL Tool and Interface Unification' (Protocol in workflow.md) [checkpoint: 1136460]
 
-## Phase 3: Context Engine Refinement and UI Proxy [checkpoint: 1136460]
+## Phase 3: Context Engine Refinement and UI Proxy [checkpoint: eeff2bd]
 Update the prompt construction logic and implement the user confirmation safety layer.
 
-- [x] Task: Implement Feature: Refine `ContextManager` to inject all notes globally and use vector-based recall for memories only. 18ece97
-- [x] Task: Write Tests: Verify that the SQL execution proxy correctly identifies "sensitive" operations and requests user confirmation. 18ece97
-- [x] Task: Implement Feature: Add a confirmation proxy in `ChatViewModel` that intercepts `ExecuteSQLTool` calls and triggers a SwiftUI confirmation dialog for specific patterns (e.g., `CREATE TABLE`, `DROP TABLE`). 18ece97
-- [x] Task: Conductor - User Manual Verification 'Context Engine Refinement and UI Proxy' (Protocol in workflow.md) [checkpoint: 1136460]
+- [x] Task: Implement Feature: Refine `ContextManager` to inject all notes globally and use vector-based recall for memories only. 48a5e3c
+- [x] Task: Write Tests: Verify that the SQL execution proxy correctly identifies "sensitive" operations and requests user confirmation. 48a5e3c
+- [x] Task: Implement Feature: Add a confirmation proxy in `ChatViewModel` that intercepts `ExecuteSQLTool` calls and triggers a SwiftUI confirmation dialog for specific patterns (e.g., `CREATE TABLE`, `DROP TABLE`). 48a5e3c
+- [x] Task: Conductor - User Manual Verification 'Context Engine Refinement and UI Proxy' (Protocol in workflow.md) [checkpoint: eeff2bd]
 
 ## Phase 4: Prompting and Instruction Updates
 Update all system instructions and default notes to reflect the new agent capabilities and persistence rules.
