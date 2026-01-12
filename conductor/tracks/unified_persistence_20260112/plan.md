@@ -17,7 +17,7 @@ Implement the self-documenting schema system and the unified agent tool.
 - [x] Task: Write Tests: Verify `table_directory` sync and `ExecuteSQLTool` functionality for custom table management. 025f795
 - [ ] Task: Conductor - User Manual Verification 'Table Directory and RAW SQL Tool' (Protocol in workflow.md)
 
-## Phase 3: UI Proxy and Safety Layer
+## Phase 3: UI Proxy and Safety Layer [checkpoint: 3771ef1]
 Add the user-confirmation step for sensitive database operations.
 
 - [x] Task: Implement Feature: Add a confirmation proxy in `ChatViewModel` that intercepts SQL calls and detects sensitive patterns (CREATE, DROP, DELETE). 489a7bb
