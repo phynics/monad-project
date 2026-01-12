@@ -11,7 +11,7 @@ Remove the legacy Signal PoC to prepare the codebase for the new architecture.
 ## Phase 2: Discord Bridge Infrastructure
 Set up the new target and the foundations for Discord communication.
 
-- [ ] Task: Update `Package.swift` and `project.yml` to add the `DiscordBM` dependency and the `MonadDiscordBridge` target.
+- [x] Task: Update `Package.swift` and `project.yml` to add the `DiscordBM` dependency and the `MonadDiscordBridge` target. 0360f4f
 - [ ] Task: Implement Feature: Create the configuration loader supporting both Environment Variables and `discord_config.json`.
 - [ ] Task: Implement Feature: Set up the basic `DiscordClient` and Gateway connection boilerplate using `DiscordBM`.
 - [ ] Task: Write Tests: Verify configuration priority logic and the "Authorized User Only" filter.
