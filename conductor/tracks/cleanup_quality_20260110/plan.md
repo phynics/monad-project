@@ -21,7 +21,7 @@ Refactor `ChatViewModel` and extract non-UI concerns.
 ## Phase 3: Final Integration and Quality Assurance
 Ensure overall system stability and performance.
 
-- [x] Task: Write Tests: Implement integration tests for the multi-step tool-calling loop. cc34a6f
-- [x] Task: Implement Feature: Refine the tool-calling loop to eliminate redundant context retrieval calls. cc34a6f
-- [x] Task: Verify overall code coverage for refactored modules and ensure it meets the >80% target. cc34a6f
+- [x] Task: Write Tests: Implement integration tests for the multi-step tool-calling loop. 2fa046d
+- [x] Task: Implement Feature: Refine the tool-calling loop to eliminate redundant context retrieval calls. 2fa046d
+- [x] Task: Verify overall code coverage for refactored modules and ensure it meets the >80% target. 2fa046d
 - [ ] Task: Conductor - User Manual Verification 'Final Integration and QA' (Protocol in workflow.md)
