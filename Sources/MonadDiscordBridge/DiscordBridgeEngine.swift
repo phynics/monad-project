@@ -10,7 +10,7 @@ public actor DiscordBridgeEngine {
     private let gatewayManager: any GatewayManager
     private let discordClient: any DiscordClient
     private let chatClient: MonadChatServiceAsyncClient
-    private let channel: GRPCChannel
+    private let channel: GRPCChannel?
     private let logger = Logger(label: "com.monad.discord-bridge")
     
     public init(config: DiscordConfig) async throws {
@@ -30,12 +30,27 @@ public actor DiscordBridgeEngine {
         
         // Setup gRPC
         let group = NIOSingletons.posixEventLoopGroup
-        self.channel = try GRPCChannelPool.with(
+        let channel = try GRPCChannelPool.with(
             target: .host(config.serverHost, port: config.serverPort),
             transportSecurity: .plaintext,
             eventLoopGroup: group
         )
+        self.channel = channel
         self.chatClient = MonadChatServiceAsyncClient(channel: channel)
+    }
+    
+    /// Test-only initializer
+    internal init(
+        config: DiscordConfig,
+        gatewayManager: any GatewayManager,
+        discordClient: any DiscordClient,
+        chatClient: MonadChatServiceAsyncClient
+    ) {
+        self.config = config
+        self.gatewayManager = gatewayManager
+        self.discordClient = discordClient
+        self.chatClient = chatClient
+        self.channel = nil
     }
     
     public func connect() async {
@@ -135,6 +150,6 @@ public actor DiscordBridgeEngine {
     }
     
     deinit {
-        _ = channel.close()
+        _ = channel?.close()
     }
 }
