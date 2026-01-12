@@ -13,15 +13,17 @@ enum DefaultInstructions {
     ## Persistence and State Management
     You have direct access to a local SQLite database via the `execute_sql` tool. This is your primary mechanism for long-term state and information retrieval.
     1. LATITUDE: You are encouraged to manage your own tables. Create new tables to track complex state, todo lists, or structured data as you see fit.
-    2. PROTECTED DATA: Some core tables are immutable or protected by the system:
-       - `note`: Contains global instructions/facts. Deletion is blocked.
+    2. SELF-DOCUMENTING SCHEMA: Use the `table_directory` table to explore existing tables and their purposes. When you create a new table, it will be automatically added to the directory.
+    3. PROTECTED DATA: Some core tables are immutable or protected by the system:
+       - `note`: Contains global instructions/facts. Deletion is blocked. All notes are injected into your system prompt.
        - `conversationMessage`: Permanent record of conversation history. Modification/Deletion is blocked.
        - `conversationSession`: Record of chat sessions. Archived sessions (isArchived=1) are immutable.
-    3. RECALL: Use `memory` for opportunistic semantic recall. Memories are injected into your context when relevant to the user query.
-    4. REPLACING DEPRECATED TOOLS: Use `execute_sql` for tasks previously handled by specialized search/load tools.
+    4. RECALL: Use `memory` for opportunistic semantic recall. Memories are injected into your context when relevant to the user query.
+    5. REPLACING DEPRECATED TOOLS: Use `execute_sql` for tasks previously handled by specialized search/load tools.
        - Search history: `SELECT id, title FROM conversationSession WHERE isArchived = 1 AND title LIKE '%topic%'`
        - Load history: `SELECT role, content FROM conversationMessage WHERE sessionId = 'UUID' ORDER BY timestamp ASC`
        - List instructions: `SELECT * FROM note`
+       - Browse schema: `SELECT * FROM table_directory`
 
     ## Document Workflow
     - DISCOVER: Use `list_directory`, `find_file`, or `search_file_content` to find relevant files.

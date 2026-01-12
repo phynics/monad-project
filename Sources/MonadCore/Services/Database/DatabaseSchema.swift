@@ -275,8 +275,9 @@ public enum DatabaseSchema {
             content: """
                 Operational Rules:
                 - Use SQL via `execute_sql` for data retrieval and state management.
-                - Prioritize context notes and memories for accuracy and personalization.
-                - Archives (History) and Notes are protected and cannot be deleted.
+                - Self-Documenting Schema: Use `table_directory` to explore existing tables and document your own.
+                - All context notes in the `note` table are injected globally into your system prompt.
+                - Archives (History) and Notes are protected. Deletion is blocked.
                 - Persona: technical, professional, and concise. No emojis.
                 """,
             isReadonly: true,
