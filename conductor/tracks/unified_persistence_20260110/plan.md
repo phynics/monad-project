@@ -8,13 +8,13 @@ Implement strict immutability for core data types using SQLite-level constraints
 - [x] Task: Refactor: Remove the `alwaysAppend` property from the `Note` model and update related database migrations. c13946b
 - [x] Task: Conductor - User Manual Verification 'Database-Level Protection' (Protocol in workflow.md) [checkpoint: c13df42]
 
-## Phase 2: RAW SQL Tool and Interface Unification
+## Phase 2: RAW SQL Tool and Interface Unification [checkpoint: 1136460]
 Enable the agent to manage its own persistence while consolidating the tool surface.
 
-- [~] Task: Write Tests: Verify that a new `ExecuteSQLTool` can successfully create custom tables, insert data, and query it.
-- [ ] Task: Implement Feature: Create `ExecuteSQLTool` in `MonadCore` using `GRDB`'s raw execution capabilities.
-- [ ] Task: Implement Feature: Consolidate existing search/load tools into a unified interface that encourages SQL-based data retrieval.
-- [ ] Task: Conductor - User Manual Verification 'RAW SQL Tool and Interface Unification' (Protocol in workflow.md)
+- [x] Task: Write Tests: Verify that a new `ExecuteSQLTool` can successfully create custom tables, insert data, and query it. 18ece97
+- [x] Task: Implement Feature: Create `ExecuteSQLTool` in `MonadCore` using `GRDB`'s raw execution capabilities. 18ece97
+- [x] Task: Implement Feature: Consolidate existing search/load tools into a unified interface that encourages SQL-based data retrieval. 18ece97
+- [x] Task: Conductor - User Manual Verification 'RAW SQL Tool and Interface Unification' (Protocol in workflow.md) [checkpoint: 1136460]
 
 ## Phase 3: Context Engine Refinement and UI Proxy
 Update the prompt construction logic and implement the user confirmation safety layer.
