@@ -273,6 +273,7 @@ targets:
     dependencies:
       - target: MonadCore
       - target: MonadUI
+      - target: MonadDiscordBridge
       - package: OpenAI
         product: OpenAI
       - package: GRDB
