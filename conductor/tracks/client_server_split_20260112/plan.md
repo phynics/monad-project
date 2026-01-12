@@ -29,7 +29,7 @@ Implement the secondary interface to prove architectural flexibility.
 
 - [x] Task: Implement Feature: Create a standalone `MonadSignalBridge` (PoC) that listens for Signal messages and forwards them to the Monad gRPC server. ca55a02
 - [x] Task: Implement Feature: Support basic session management within the Signal bridge to map Signal users to assistant conversations. 3a26f65
-- [ ] Task: Write Tests: Functional tests for the bridge logic, ensuring messages flow correctly from the bridge to the server and back.
+- [x] Task: Write Tests: Functional tests for the bridge logic, ensuring messages flow correctly from the bridge to the server and back. 4f62e4c
 - [ ] Task: Conductor - User Manual Verification 'Signal Client PoC' (Protocol in workflow.md)
 
 ## Phase 5: Distributed Loop Verification
