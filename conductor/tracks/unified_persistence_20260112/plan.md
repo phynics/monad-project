@@ -1,6 +1,6 @@
 # Track Plan: Unified Agent Interface and SQL-Driven Persistence Refactor
 
-## Phase 1: Database-Level Protection and Note Refactor
+## Phase 1: Database-Level Protection and Note Refactor [checkpoint: 8ea3fe2]
 Enforce core immutability and simplify the Note model.
 
 - [x] Task: Refactor: Remove the `alwaysAppend` property from the `Note` model and update all related database schema definitions. 97f992b
