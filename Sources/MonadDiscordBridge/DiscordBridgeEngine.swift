@@ -28,13 +28,20 @@ public actor DiscordBridgeEngine {
         self.gatewayManager = botManager
         self.discordClient = botManager.client
         
-        // Setup gRPC
+        // Setup gRPC with better defaults
         let group = NIOSingletons.posixEventLoopGroup
         let channel = try GRPCChannelPool.with(
             target: .host(config.serverHost, port: config.serverPort),
             transportSecurity: .plaintext,
             eventLoopGroup: group
-        )
+        ) {
+            // Connection management
+            $0.connectionBackoff = ConnectionBackoff(
+                initialBackoff: 1.0,
+                maximumBackoff: 30.0,
+                multiplier: 1.6
+            )
+        }
         self.channel = channel
         self.chatClient = MonadChatServiceAsyncClient(channel: channel)
     }
@@ -70,6 +77,8 @@ public actor DiscordBridgeEngine {
             Task {
                 await handleMessage(message)
             }
+        case .ready:
+            logger.info("Discord Gateway is Ready.")
         default:
             break
         }
@@ -107,7 +116,7 @@ public actor DiscordBridgeEngine {
             request.userQuery = message.content
             request.sessionID = "discord-\(config.authorizedUserId)"
             
-            let call = chatClient.makeChatStreamCall(request)
+            let call = chatClient.makeChatStreamCall(request, callOptions: .init(timeLimit: .timeout(.seconds(60))))
             
             var fullContent = ""
             var lastUpdate = Date()
