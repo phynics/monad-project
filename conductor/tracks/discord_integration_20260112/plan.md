@@ -1,12 +1,12 @@
 # Plan: Discord Integration and Signal Removal
 
-## Phase 1: Cleanup and Removal of Signal
+## Phase 1: Cleanup and Removal of Signal [checkpoint: 4e0e71f]
 Remove the legacy Signal PoC to prepare the codebase for the new architecture.
 
-- [~] Task: Remove `Sources/MonadSignalBridge/` directory and `Sources/MonadCore/Services/gRPC/SignalBridgeEngine.swift`.
-- [ ] Task: Update `Package.swift` and `project.yml` to remove the `MonadSignalBridge` target.
-- [ ] Task: Write Tests: Ensure `MonadCore` and remaining targets still compile and run existing tests without Signal components.
-- [ ] Task: Conductor - User Manual Verification 'Cleanup and Removal of Signal' (Protocol in workflow.md)
+- [x] Task: Remove `Sources/MonadSignalBridge/` directory and `Sources/MonadCore/Services/gRPC/SignalBridgeEngine.swift`. 4e0e71f
+- [x] Task: Update `Package.swift` and `project.yml` to remove the `MonadSignalBridge` target. 4e0e71f
+- [x] Task: Write Tests: Ensure `MonadCore` and remaining targets still compile and run existing tests without Signal components. 4e0e71f
+- [x] Task: Conductor - User Manual Verification 'Cleanup and Removal of Signal' (Protocol in workflow.md) 4e0e71f
 
 ## Phase 2: Discord Bridge Infrastructure
 Set up the new target and the foundations for Discord communication.
