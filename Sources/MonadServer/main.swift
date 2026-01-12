@@ -13,19 +13,14 @@ let llm = LLMService()
 // Load LLM config
 await llm.loadConfiguration()
 
-// Handlers (Async versions)
+// Handlers (Async versions from MonadCore)
 let chatHandler = ChatHandler(llm: llm, persistence: persistence)
 let sessionHandler = SessionHandler(persistence: persistence)
 let memoryHandler = MemoryHandler(persistence: persistence)
 let noteHandler = NoteHandler(persistence: persistence)
 let jobHandler = JobHandler(persistence: persistence)
 
-let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
-// Use a task to shutdown group asynchronously when server closes
-let shutdownTask = Task {
-    // We can't use syncShutdownGracefully here, but we can just let it leak or use a better way.
-    // In a server app, the process usually just exits.
-}
+let group = NIOSingletons.posixEventLoopGroup
 
 // Start server
 let server = try await Server.insecure(group: group)
