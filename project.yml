@@ -104,6 +104,25 @@ targets:
         PRODUCT_NAME: MonadServer
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.server
 
+  # Monad Signal Bridge - PoC
+  MonadSignalBridge:
+    type: executable
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadSignalBridge
+    dependencies:
+      - target: MonadCore
+      - package: gRPC
+        product: GRPC
+      - package: SwiftProtobuf
+        product: SwiftProtobuf
+    settings:
+      base:
+        PRODUCT_NAME: MonadSignalBridge
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.signal-bridge
+
   # UI - macOS
   MonadUI:
     type: framework
