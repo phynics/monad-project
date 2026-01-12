@@ -29,6 +29,6 @@ Add the user-confirmation step for sensitive database operations.
 Finalize the prompting logic and update system-level guidance.
 
 - [x] Task: Implement Feature: Update `ContextManager` to inject all database notes globally into the system prompt. 3fd2354
-- [ ] Task: Implement Feature: Refine `DefaultInstructions.swift` and default system notes to explain the new SQL latitude and persistence constraints.
+- [x] Task: Implement Feature: Refine `DefaultInstructions.swift` and default system notes to explain the new SQL latitude and persistence constraints. 58cb52c
 - [ ] Task: Refactor: Remove all obsolete tool implementation files from `MonadCore`.
 - [ ] Task: Conductor - User Manual Verification 'Context Engine Refinement and Instructions' (Protocol in workflow.md)
