@@ -65,6 +65,7 @@ extension ChatViewModel {
                     contextNotes: contextData.notes,
                     documents: injectedDocuments,
                     memories: injectedMemories,
+                    databaseDirectory: contextData.databaseDirectory,
                     chatHistory: messages,
                     tools: toolManager.getEnabledTools()
                 )

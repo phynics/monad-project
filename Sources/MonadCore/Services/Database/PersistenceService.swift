@@ -108,7 +108,8 @@ public actor PersistenceService: PersistenceServiceProtocol {
         }
         
         // Sync table directory after potential schema changes
-        if sql.lowercased().contains("create table") || sql.lowercased().contains("drop table") {
+        let lowerSQL = sql.lowercased()
+        if lowerSQL.contains("create table") || lowerSQL.contains("drop table") || lowerSQL.contains("alter table") {
             try await syncTableDirectory()
         }
         
@@ -141,6 +142,12 @@ public actor PersistenceService: PersistenceServiceProtocol {
                     try db.execute(sql: "INSERT INTO table_directory (name, description, createdAt) VALUES (?, ?, ?)", arguments: [table, "", now])
                 }
             }
+        }
+    }
+
+    public func fetchTableDirectory() async throws -> [TableDirectoryEntry] {
+        try await dbQueue.read { db in
+            try TableDirectoryEntry.fetchAll(db)
         }
     }
 }

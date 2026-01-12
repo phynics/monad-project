@@ -42,9 +42,9 @@ public final class LLMService: LLMServiceProtocol {
     /// Service for generating text embeddings
     public let embeddingService: any EmbeddingService
 
-    private var client: (any LLMClientProtocol)?
-    private var utilityClient: (any LLMClientProtocol)?
-    private var fastClient: (any LLMClientProtocol)?
+    internal var client: (any LLMClientProtocol)?
+    internal var utilityClient: (any LLMClientProtocol)?
+    internal var fastClient: (any LLMClientProtocol)?
     
     private let storage: ConfigurationStorage
     public let promptBuilder: PromptBuilder
@@ -191,6 +191,7 @@ public final class LLMService: LLMServiceProtocol {
         contextNotes: [Note],
         documents: [DocumentContext] = [],
         memories: [Memory] = [],
+        databaseDirectory: [TableDirectoryEntry] = [],
         chatHistory: [Message],
         tools: [Tool] = [],
         systemInstructions: String? = nil
@@ -204,6 +205,7 @@ public final class LLMService: LLMServiceProtocol {
             contextNotes: contextNotes,
             documents: documents,
             memories: memories,
+            databaseDirectory: databaseDirectory,
             tools: tools,
             chatHistory: chatHistory,
             userQuery: userQuery

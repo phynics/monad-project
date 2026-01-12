@@ -21,6 +21,7 @@ public actor PromptBuilder {
         contextNotes: [Note],
         documents: [DocumentContext] = [],
         memories: [Memory] = [],
+        databaseDirectory: [TableDirectoryEntry] = [],
         tools: [Tool] = [],
         chatHistory: [Message],
         userQuery: String
@@ -30,13 +31,17 @@ public actor PromptBuilder {
         structuredContext: [String: String]
     ) {
 
-        // ... (existing component building logic)
         // Build components in priority order
         var components: [any PromptSection] = []
 
         // System instructions (use default if not provided)
         let instructions = systemInstructions ?? DefaultInstructions.system
         components.append(SystemInstructionsComponent(instructions: instructions))
+
+        // Database directory
+        if !databaseDirectory.isEmpty {
+            components.append(DatabaseDirectoryComponent(tables: databaseDirectory))
+        }
 
         // Context notes
         if !contextNotes.isEmpty {

@@ -137,6 +137,7 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
         contextNotes: [Note],
         documents: [DocumentContext],
         memories: [Memory],
+        databaseDirectory: [TableDirectoryEntry],
         chatHistory: [Message],
         tools: [MonadCore.Tool],
         systemInstructions: String?,
@@ -158,6 +159,7 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
         contextNotes: [Note],
         documents: [DocumentContext],
         memories: [Memory],
+        databaseDirectory: [TableDirectoryEntry],
         chatHistory: [Message],
         tools: [MonadCore.Tool],
         systemInstructions: String?
@@ -334,6 +336,11 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
     
     func deleteJob(id: UUID) async throws {
         jobs.removeAll(where: { $0.id == id })
+    }
+    
+    // Table Directory
+    func fetchTableDirectory() async throws -> [TableDirectoryEntry] {
+        return []
     }
     
     // RAW SQL Support

@@ -25,6 +25,7 @@ public protocol LLMServiceProtocol: Sendable {
         contextNotes: [Note],
         documents: [DocumentContext],
         memories: [Memory],
+        databaseDirectory: [TableDirectoryEntry],
         chatHistory: [Message],
         tools: [Tool],
         systemInstructions: String?,
@@ -41,6 +42,7 @@ public protocol LLMServiceProtocol: Sendable {
         contextNotes: [Note],
         documents: [DocumentContext],
         memories: [Memory],
+        databaseDirectory: [TableDirectoryEntry],
         chatHistory: [Message],
         tools: [Tool],
         systemInstructions: String?
@@ -96,6 +98,9 @@ public protocol PersistenceServiceProtocol: Sendable {
     func fetchJob(id: UUID) async throws -> Job?
     func fetchAllJobs() async throws -> [Job]
     func deleteJob(id: UUID) async throws
+    
+    // Table Directory
+    func fetchTableDirectory() async throws -> [TableDirectoryEntry]
     
     // RAW SQL Support
     func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]]

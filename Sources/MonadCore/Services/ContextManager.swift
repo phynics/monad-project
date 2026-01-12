@@ -52,6 +52,7 @@ public actor ContextManager {
         
         // Parallel execution of tasks
         async let notesTask = persistenceService.fetchAllNotes()
+        async let dbDirectoryTask = persistenceService.fetchTableDirectory()
         async let memoriesDataTask = fetchRelevantMemories(
             for: query, 
             tagContext: tagGenerationContext,
@@ -61,7 +62,7 @@ public actor ContextManager {
         )
         
         do {
-            let (notes, memoriesData) = try await (notesTask, memoriesDataTask)
+            let (notes, dbDirectory, memoriesData) = try await (notesTask, dbDirectoryTask, memoriesDataTask)
             
             let duration = CFAbsoluteTimeGetCurrent() - startTime
             logger.info("Context gathered in \(String(format: "%.3f", duration))s")
@@ -70,6 +71,7 @@ public actor ContextManager {
             return ContextData(
                 notes: notes,
                 memories: memoriesData.memories,
+                databaseDirectory: dbDirectory,
                 generatedTags: memoriesData.tags,
                 queryVector: memoriesData.vector,
                 augmentedQuery: tagGenerationContext,
@@ -278,6 +280,7 @@ public actor ContextManager {
 public struct ContextData: Sendable {
     public let notes: [Note]
     public let memories: [SemanticSearchResult]
+    public let databaseDirectory: [TableDirectoryEntry]
     public let generatedTags: [String]
     public let queryVector: [Double]
     public let augmentedQuery: String?
@@ -288,6 +291,7 @@ public struct ContextData: Sendable {
     public init(
         notes: [Note] = [],
         memories: [SemanticSearchResult] = [],
+        databaseDirectory: [TableDirectoryEntry] = [],
         generatedTags: [String] = [],
         queryVector: [Double] = [],
         augmentedQuery: String? = nil,
@@ -297,6 +301,7 @@ public struct ContextData: Sendable {
     ) {
         self.notes = notes
         self.memories = memories
+        self.databaseDirectory = databaseDirectory
         self.generatedTags = generatedTags
         self.queryVector = queryVector
         self.augmentedQuery = augmentedQuery

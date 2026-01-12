@@ -9,5 +9,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [x] Track: Persistent and Autonomous Job Queue
-*Link: [./conductor/tracks/persistent_job_queue_20260112/](./conductor/tracks/persistent_job_queue_20260112/)*
+## [~] Track: Client-Server Split and Dockerization
+*Link: [./conductor/tracks/client_server_split_20260112/](./conductor/tracks/client_server_split_20260112/)*

@@ -195,3 +195,31 @@ public struct DocumentsComponent: PromptSection {
         documents.reduce(0) { $0 + TokenEstimator.estimate(text: $1.visibleContent) }
     }
 }
+
+/// Database directory component
+public struct DatabaseDirectoryComponent: PromptSection {
+    public let sectionId = "database_directory"
+    public let priority = 98 // Very high, just below system instructions
+    public let tables: [TableDirectoryEntry]
+
+    public init(tables: [TableDirectoryEntry]) {
+        self.tables = tables
+    }
+
+    public func generateContent() async -> String? {
+        guard !tables.isEmpty else { return nil }
+
+        let tableList = tables.map { "- `\($0.name)`\($0.description.isEmpty ? "" : ": \($0.description)")" }.joined(separator: "\n")
+
+        return """
+            === DATABASE DIRECTORY ===
+            The following tables are available in your local SQLite database. You can manage and query them using `execute_sql`.
+            
+            \(tableList)
+            """
+    }
+
+    public var estimatedTokens: Int {
+        tables.count * 20 // Rough estimate
+    }
+}

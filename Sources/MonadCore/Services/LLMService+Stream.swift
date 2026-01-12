@@ -7,10 +7,11 @@ extension LLMService {
     public func chatStreamWithContext(
         userQuery: String,
         contextNotes: [Note],
-        documents: [DocumentContext] = [],
-        memories: [Memory] = [],
+        documents: [DocumentContext],
+        memories: [Memory],
+        databaseDirectory: [TableDirectoryEntry],
         chatHistory: [Message],
-        tools: [Tool] = [],
+        tools: [Tool],
         systemInstructions: String? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil,
         useFastModel: Bool = false
@@ -19,29 +20,38 @@ extension LLMService {
         rawPrompt: String,
         structuredContext: [String: String]
     ) {
-        let clientToUse = useFastModel ? (getFastClient() ?? getClient()) : getClient()
-        
-        guard let client = clientToUse else {
-            let stream = AsyncThrowingStream<ChatStreamResult, Error> { continuation in
-                continuation.finish(throwing: LLMServiceError.notConfigured)
-            }
-            return (stream, "Error: Not configured", [:])
-        }
-
-        // Build prompt with all components
-        let (messages, rawPrompt, structuredContext) = await promptBuilder.buildPrompt(
-            systemInstructions: systemInstructions,
+        let (messages, rawPrompt, structuredContext) = await buildPrompt(
+            userQuery: userQuery,
             contextNotes: contextNotes,
             documents: documents,
             memories: memories,
-            tools: tools,
+            databaseDirectory: databaseDirectory,
             chatHistory: chatHistory,
-            userQuery: userQuery
+            tools: tools,
+            systemInstructions: systemInstructions
         )
 
         // Delegate to client for streaming
         let toolParams = tools.isEmpty ? nil : tools.map { $0.toToolParam() }
-        let stream = await client.chatStream(messages: messages, tools: toolParams, responseFormat: responseFormat)
+        
+        let selectedClient: (any LLMClientProtocol)?
+        if useFastModel {
+            selectedClient = fastClient ?? client
+        } else {
+            selectedClient = client
+        }
+        
+        guard let llmClient = selectedClient else {
+            return (
+                stream: AsyncThrowingStream { continuation in
+                    continuation.finish(throwing: LLMServiceError.notConfigured)
+                },
+                rawPrompt: rawPrompt,
+                structuredContext: structuredContext
+            )
+        }
+        
+        let stream = await llmClient.chatStream(messages: messages, tools: toolParams, responseFormat: responseFormat)
 
         return (stream, rawPrompt, structuredContext)
     }

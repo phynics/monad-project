@@ -32,6 +32,7 @@ extension ChatViewModel {
             }
 
             let contextNotes = try await persistenceManager.fetchAllNotes()
+            let dbDirectory = try await persistenceManager.persistence.fetchTableDirectory()
             let enabledTools = toolManager.getEnabledTools()
             let contextDocuments = injectedDocuments
 
@@ -41,6 +42,7 @@ extension ChatViewModel {
                 contextNotes: contextNotes,
                 documents: contextDocuments,
                 memories: currentContextData.memories.map { $0.memory },
+                databaseDirectory: dbDirectory,
                 chatHistory: messages,
                 tools: enabledTools
             )

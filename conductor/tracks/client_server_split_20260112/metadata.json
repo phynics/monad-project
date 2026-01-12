@@ -1,0 +1,8 @@
+{
+  "track_id": "client_server_split_20260112",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-01-12T12:15:00Z",
+  "updated_at": "2026-01-12T12:15:00Z",
+  "description": "Split the app into a Dockerized Swift server and a native client communicating via gRPC, with a Signal client PoC."
+}

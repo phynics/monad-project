@@ -51,6 +51,7 @@ extension ChatViewModel {
                     contextNotes: contextData.notes,
                     documents: contextDocuments,
                     memories: contextMemories,
+                    databaseDirectory: contextData.databaseDirectory,
                     chatHistory: Array(messages.prefix(lastUserMessageIndex)),
                     tools: enabledTools
                 )

@@ -87,6 +87,7 @@ public struct LaunchSubagentTool: Tool, @unchecked Sendable {
             contextNotes: [], // Subagent starts fresh? Or should it inherit notes? Let's say fresh for "focused" task.
             documents: subagentDocs,
             memories: [],
+            databaseDirectory: [],
             chatHistory: [],
             tools: [], // Subagent doesn't use tools for now (to avoid recursion depth issues)
             systemInstructions: "You are a focused subagent. You have been provided with specific documents to analyze. Answer the user's prompt based ONLY on these documents and your general knowledge. IMPORTANT: Be extremely brief and to the point. Provide only the facts and requested analysis without conversational filler.",

@@ -6,7 +6,7 @@ struct MessageDebugPromptContextView: View {
     
     @State private var selectedTab = 0
     private let sectionOrder = [
-        "system", "context_notes", "documents", "memories", "tools", "chat_history", "user_query"
+        "system", "context_notes", "documents", "memories", "database_directory", "tools", "chat_history", "user_query"
     ]
     
     var body: some View {
@@ -83,6 +83,7 @@ struct MessageDebugPromptContextView: View {
         case "context_notes": return "Context Notes"
         case "documents": return "Active Documents"
         case "memories": return "Recalled Memories"
+        case "database_directory": return "Database Directory"
         case "tools": return "Available Tools"
         case "chat_history": return "Chat History"
         case "user_query": return "User Query"

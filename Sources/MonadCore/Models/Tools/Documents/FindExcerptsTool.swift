@@ -80,6 +80,7 @@ public struct FindExcerptsTool: Tool, Sendable {
             contextNotes: [],
             documents: [rawDoc],
             memories: [],
+            databaseDirectory: [],
             chatHistory: [],
             tools: [],
             systemInstructions:
