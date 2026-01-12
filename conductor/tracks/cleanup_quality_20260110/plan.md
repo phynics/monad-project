@@ -9,14 +9,14 @@ Optimize context handling logic in MonadCore.
 - [x] Task: Implement Feature: Optimize `ContextCompressor` chunking and summarization strategies. 6f0ddbf
 - [x] Task: Conductor - User Manual Verification 'Context Management Refinement' (Protocol in workflow.md) [checkpoint: 9ca76a9]
 
-## Phase 2: UI Layer Modularization
+## Phase 2: UI Layer Modularization [checkpoint: d0fc98e]
 Refactor `ChatViewModel` and extract non-UI concerns.
 
-- [ ] Task: Write Tests: Create `ChatViewModel` unit tests for state transitions (loading, error, success).
-- [ ] Task: Implement Feature: Refactor `ChatViewModel` by extracting tool coordination into a `ToolOrchestrator` service.
-- [ ] Task: Implement Feature: Extract persistence orchestration from `ChatViewModel` into dedicated methods or extensions.
-- [ ] Task: Implement Feature: Remove identified vestigial code (unused views and helpers).
-- [ ] Task: Conductor - User Manual Verification 'UI Layer Modularization' (Protocol in workflow.md)
+- [x] Task: Write Tests: Create `ChatViewModel` unit tests for state transitions (loading, error, success). 146fd73
+- [x] Task: Implement Feature: Refactor `ChatViewModel` by extracting tool coordination into a `ToolOrchestrator` service. 146fd73
+- [x] Task: Implement Feature: Extract persistence orchestration from `ChatViewModel` into dedicated methods or extensions. 146fd73
+- [x] Task: Implement Feature: Remove identified vestigial code (unused views and helpers). 146fd73
+- [x] Task: Conductor - User Manual Verification 'UI Layer Modularization' (Protocol in workflow.md) [checkpoint: d0fc98e]
 
 ## Phase 3: Final Integration and Quality Assurance
 Ensure overall system stability and performance.
