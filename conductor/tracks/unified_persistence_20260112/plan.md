@@ -5,7 +5,7 @@ Enforce core immutability and simplify the Note model.
 
 - [x] Task: Refactor: Remove the `alwaysAppend` property from the `Note` model and update all related database schema definitions. 97f992b
 - [x] Task: Implement Feature: Update `DatabaseSchema.swift` to add SQLite triggers that block `DELETE` on notes and `DELETE/UPDATE` on archived messages and sessions. 489a7bb
-- [ ] Task: Write Tests: Create `PersistenceImmutabilityTests.swift` to verify that trigger violations correctly throw errors at the database level.
+- [x] Task: Write Tests: Create `PersistenceImmutabilityTests.swift` to verify that trigger violations correctly throw errors at the database level. 489a7bb
 - [ ] Task: Conductor - User Manual Verification 'Database-Level Protection and Note Refactor' (Protocol in workflow.md)
 
 ## Phase 2: Table Directory and RAW SQL Tool
