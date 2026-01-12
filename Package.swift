@@ -29,8 +29,7 @@ let package = Package(
             ],
             path: "Sources/MonadCore",
             exclude: [
-                "monad.proto",
-                "swift-protobuf-config.json"
+                "monad.proto"
             ]
         ),
         .target(

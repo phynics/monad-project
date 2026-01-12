@@ -153,6 +153,12 @@ public struct ToolCall: Identifiable, Equatable, Codable, Sendable, Hashable {
     public let name: String
     public let arguments: [String: AnyCodable]
 
+    public init(id: UUID = UUID(), name: String, arguments: [String: AnyCodable]) {
+        self.id = id
+        self.name = name
+        self.arguments = arguments
+    }
+
     public init(name: String, arguments: [String: AnyCodable]) {
         self.id = UUID()
         self.name = name
@@ -171,7 +177,7 @@ public struct ToolCall: Identifiable, Equatable, Codable, Sendable, Hashable {
     }
 
     public static func == (lhs: ToolCall, rhs: ToolCall) -> Bool {
-        lhs.name == rhs.name && lhs.arguments == rhs.arguments
+        lhs.id == rhs.id && lhs.name == rhs.name && lhs.arguments == rhs.arguments
     }
 
     public func hash(into hasher: inout Hasher) {

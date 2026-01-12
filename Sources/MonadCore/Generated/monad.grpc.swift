@@ -12,7 +12,7 @@ import SwiftProtobuf
 
 
 /// Usage: instantiate `MonadChatServiceClient`, then call methods of this protocol to make API calls.
-internal protocol MonadChatServiceClientProtocol: GRPCClient {
+public protocol MonadChatServiceClientProtocol: GRPCClient {
   var serviceName: String { get }
   var interceptors: MonadChatServiceClientInterceptorFactoryProtocol? { get }
 
@@ -34,7 +34,7 @@ internal protocol MonadChatServiceClientProtocol: GRPCClient {
 }
 
 extension MonadChatServiceClientProtocol {
-  internal var serviceName: String {
+  public var serviceName: String {
     return "monad.ChatService"
   }
 
@@ -45,7 +45,7 @@ extension MonadChatServiceClientProtocol {
   ///   - callOptions: Call options.
   ///   - handler: A closure called when each response is received from the server.
   /// - Returns: A `ServerStreamingCall` with futures for the metadata and status.
-  internal func chatStream(
+  public func chatStream(
     _ request: MonadChatRequest,
     callOptions: CallOptions? = nil,
     handler: @escaping (MonadChatResponse) -> Void
@@ -65,7 +65,7 @@ extension MonadChatServiceClientProtocol {
   ///   - request: Request to send to SendMessage.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func sendMessage(
+  public func sendMessage(
     _ request: MonadChatRequest,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadChatRequest, MonadMessage> {
@@ -83,7 +83,7 @@ extension MonadChatServiceClientProtocol {
   ///   - request: Request to send to GenerateTitle.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func generateTitle(
+  public func generateTitle(
     _ request: MonadGenerateTitleRequest,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadGenerateTitleRequest, MonadGenerateTitleResponse> {
@@ -100,16 +100,16 @@ extension MonadChatServiceClientProtocol {
 extension MonadChatServiceClient: @unchecked Sendable {}
 
 @available(*, deprecated, renamed: "MonadChatServiceNIOClient")
-internal final class MonadChatServiceClient: MonadChatServiceClientProtocol {
+public final class MonadChatServiceClient: MonadChatServiceClientProtocol {
   private let lock = Lock()
   private var _defaultCallOptions: CallOptions
   private var _interceptors: MonadChatServiceClientInterceptorFactoryProtocol?
-  internal let channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions {
+  public let channel: GRPCChannel
+  public var defaultCallOptions: CallOptions {
     get { self.lock.withLock { return self._defaultCallOptions } }
     set { self.lock.withLockVoid { self._defaultCallOptions = newValue } }
   }
-  internal var interceptors: MonadChatServiceClientInterceptorFactoryProtocol? {
+  public var interceptors: MonadChatServiceClientInterceptorFactoryProtocol? {
     get { self.lock.withLock { return self._interceptors } }
     set { self.lock.withLockVoid { self._interceptors = newValue } }
   }
@@ -120,7 +120,7 @@ internal final class MonadChatServiceClient: MonadChatServiceClientProtocol {
   ///   - channel: `GRPCChannel` to the service host.
   ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
   ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadChatServiceClientInterceptorFactoryProtocol? = nil
@@ -131,10 +131,10 @@ internal final class MonadChatServiceClient: MonadChatServiceClientProtocol {
   }
 }
 
-internal struct MonadChatServiceNIOClient: MonadChatServiceClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: MonadChatServiceClientInterceptorFactoryProtocol?
+public struct MonadChatServiceNIOClient: MonadChatServiceClientProtocol {
+  public var channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: MonadChatServiceClientInterceptorFactoryProtocol?
 
   /// Creates a client for the monad.ChatService service.
   ///
@@ -142,7 +142,7 @@ internal struct MonadChatServiceNIOClient: MonadChatServiceClientProtocol {
   ///   - channel: `GRPCChannel` to the service host.
   ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
   ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadChatServiceClientInterceptorFactoryProtocol? = nil
@@ -154,7 +154,7 @@ internal struct MonadChatServiceNIOClient: MonadChatServiceClientProtocol {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal protocol MonadChatServiceAsyncClientProtocol: GRPCClient {
+public protocol MonadChatServiceAsyncClientProtocol: GRPCClient {
   static var serviceDescriptor: GRPCServiceDescriptor { get }
   var interceptors: MonadChatServiceClientInterceptorFactoryProtocol? { get }
 
@@ -176,15 +176,15 @@ internal protocol MonadChatServiceAsyncClientProtocol: GRPCClient {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadChatServiceAsyncClientProtocol {
-  internal static var serviceDescriptor: GRPCServiceDescriptor {
+  public static var serviceDescriptor: GRPCServiceDescriptor {
     return MonadChatServiceClientMetadata.serviceDescriptor
   }
 
-  internal var interceptors: MonadChatServiceClientInterceptorFactoryProtocol? {
+  public var interceptors: MonadChatServiceClientInterceptorFactoryProtocol? {
     return nil
   }
 
-  internal func makeChatStreamCall(
+  public func makeChatStreamCall(
     _ request: MonadChatRequest,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncServerStreamingCall<MonadChatRequest, MonadChatResponse> {
@@ -196,7 +196,7 @@ extension MonadChatServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeSendMessageCall(
+  public func makeSendMessageCall(
     _ request: MonadChatRequest,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadChatRequest, MonadMessage> {
@@ -208,7 +208,7 @@ extension MonadChatServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeGenerateTitleCall(
+  public func makeGenerateTitleCall(
     _ request: MonadGenerateTitleRequest,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadGenerateTitleRequest, MonadGenerateTitleResponse> {
@@ -223,7 +223,7 @@ extension MonadChatServiceAsyncClientProtocol {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadChatServiceAsyncClientProtocol {
-  internal func chatStream(
+  public func chatStream(
     _ request: MonadChatRequest,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncResponseStream<MonadChatResponse> {
@@ -235,7 +235,7 @@ extension MonadChatServiceAsyncClientProtocol {
     )
   }
 
-  internal func sendMessage(
+  public func sendMessage(
     _ request: MonadChatRequest,
     callOptions: CallOptions? = nil
   ) async throws -> MonadMessage {
@@ -247,7 +247,7 @@ extension MonadChatServiceAsyncClientProtocol {
     )
   }
 
-  internal func generateTitle(
+  public func generateTitle(
     _ request: MonadGenerateTitleRequest,
     callOptions: CallOptions? = nil
   ) async throws -> MonadGenerateTitleResponse {
@@ -261,12 +261,12 @@ extension MonadChatServiceAsyncClientProtocol {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal struct MonadChatServiceAsyncClient: MonadChatServiceAsyncClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: MonadChatServiceClientInterceptorFactoryProtocol?
+public struct MonadChatServiceAsyncClient: MonadChatServiceAsyncClientProtocol {
+  public var channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: MonadChatServiceClientInterceptorFactoryProtocol?
 
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadChatServiceClientInterceptorFactoryProtocol? = nil
@@ -277,7 +277,7 @@ internal struct MonadChatServiceAsyncClient: MonadChatServiceAsyncClientProtocol
   }
 }
 
-internal protocol MonadChatServiceClientInterceptorFactoryProtocol: Sendable {
+public protocol MonadChatServiceClientInterceptorFactoryProtocol: Sendable {
 
   /// - Returns: Interceptors to use when invoking 'chatStream'.
   func makeChatStreamInterceptors() -> [ClientInterceptor<MonadChatRequest, MonadChatResponse>]
@@ -289,8 +289,8 @@ internal protocol MonadChatServiceClientInterceptorFactoryProtocol: Sendable {
   func makeGenerateTitleInterceptors() -> [ClientInterceptor<MonadGenerateTitleRequest, MonadGenerateTitleResponse>]
 }
 
-internal enum MonadChatServiceClientMetadata {
-  internal static let serviceDescriptor = GRPCServiceDescriptor(
+public enum MonadChatServiceClientMetadata {
+  public static let serviceDescriptor = GRPCServiceDescriptor(
     name: "ChatService",
     fullName: "monad.ChatService",
     methods: [
@@ -300,20 +300,20 @@ internal enum MonadChatServiceClientMetadata {
     ]
   )
 
-  internal enum Methods {
-    internal static let chatStream = GRPCMethodDescriptor(
+  public enum Methods {
+    public static let chatStream = GRPCMethodDescriptor(
       name: "ChatStream",
       path: "/monad.ChatService/ChatStream",
       type: GRPCCallType.serverStreaming
     )
 
-    internal static let sendMessage = GRPCMethodDescriptor(
+    public static let sendMessage = GRPCMethodDescriptor(
       name: "SendMessage",
       path: "/monad.ChatService/SendMessage",
       type: GRPCCallType.unary
     )
 
-    internal static let generateTitle = GRPCMethodDescriptor(
+    public static let generateTitle = GRPCMethodDescriptor(
       name: "GenerateTitle",
       path: "/monad.ChatService/GenerateTitle",
       type: GRPCCallType.unary
@@ -322,7 +322,7 @@ internal enum MonadChatServiceClientMetadata {
 }
 
 /// Usage: instantiate `MonadSessionServiceClient`, then call methods of this protocol to make API calls.
-internal protocol MonadSessionServiceClientProtocol: GRPCClient {
+public protocol MonadSessionServiceClientProtocol: GRPCClient {
   var serviceName: String { get }
   var interceptors: MonadSessionServiceClientInterceptorFactoryProtocol? { get }
 
@@ -358,7 +358,7 @@ internal protocol MonadSessionServiceClientProtocol: GRPCClient {
 }
 
 extension MonadSessionServiceClientProtocol {
-  internal var serviceName: String {
+  public var serviceName: String {
     return "monad.SessionService"
   }
 
@@ -368,7 +368,7 @@ extension MonadSessionServiceClientProtocol {
   ///   - request: Request to send to FetchAllSessions.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func fetchAllSessions(
+  public func fetchAllSessions(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadEmpty, MonadSessionList> {
@@ -386,7 +386,7 @@ extension MonadSessionServiceClientProtocol {
   ///   - request: Request to send to FetchSession.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func fetchSession(
+  public func fetchSession(
     _ request: MonadFetchSessionRequest,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadFetchSessionRequest, MonadSession> {
@@ -404,7 +404,7 @@ extension MonadSessionServiceClientProtocol {
   ///   - request: Request to send to CreateSession.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func createSession(
+  public func createSession(
     _ request: MonadSession,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadSession, MonadSession> {
@@ -422,7 +422,7 @@ extension MonadSessionServiceClientProtocol {
   ///   - request: Request to send to UpdateSession.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func updateSession(
+  public func updateSession(
     _ request: MonadSession,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadSession, MonadSession> {
@@ -440,7 +440,7 @@ extension MonadSessionServiceClientProtocol {
   ///   - request: Request to send to DeleteSession.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func deleteSession(
+  public func deleteSession(
     _ request: MonadDeleteSessionRequest,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadDeleteSessionRequest, MonadEmpty> {
@@ -458,7 +458,7 @@ extension MonadSessionServiceClientProtocol {
   ///   - request: Request to send to ArchiveSession.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func archiveSession(
+  public func archiveSession(
     _ request: MonadArchiveSessionRequest,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadArchiveSessionRequest, MonadEmpty> {
@@ -475,16 +475,16 @@ extension MonadSessionServiceClientProtocol {
 extension MonadSessionServiceClient: @unchecked Sendable {}
 
 @available(*, deprecated, renamed: "MonadSessionServiceNIOClient")
-internal final class MonadSessionServiceClient: MonadSessionServiceClientProtocol {
+public final class MonadSessionServiceClient: MonadSessionServiceClientProtocol {
   private let lock = Lock()
   private var _defaultCallOptions: CallOptions
   private var _interceptors: MonadSessionServiceClientInterceptorFactoryProtocol?
-  internal let channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions {
+  public let channel: GRPCChannel
+  public var defaultCallOptions: CallOptions {
     get { self.lock.withLock { return self._defaultCallOptions } }
     set { self.lock.withLockVoid { self._defaultCallOptions = newValue } }
   }
-  internal var interceptors: MonadSessionServiceClientInterceptorFactoryProtocol? {
+  public var interceptors: MonadSessionServiceClientInterceptorFactoryProtocol? {
     get { self.lock.withLock { return self._interceptors } }
     set { self.lock.withLockVoid { self._interceptors = newValue } }
   }
@@ -495,7 +495,7 @@ internal final class MonadSessionServiceClient: MonadSessionServiceClientProtoco
   ///   - channel: `GRPCChannel` to the service host.
   ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
   ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadSessionServiceClientInterceptorFactoryProtocol? = nil
@@ -506,10 +506,10 @@ internal final class MonadSessionServiceClient: MonadSessionServiceClientProtoco
   }
 }
 
-internal struct MonadSessionServiceNIOClient: MonadSessionServiceClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: MonadSessionServiceClientInterceptorFactoryProtocol?
+public struct MonadSessionServiceNIOClient: MonadSessionServiceClientProtocol {
+  public var channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: MonadSessionServiceClientInterceptorFactoryProtocol?
 
   /// Creates a client for the monad.SessionService service.
   ///
@@ -517,7 +517,7 @@ internal struct MonadSessionServiceNIOClient: MonadSessionServiceClientProtocol 
   ///   - channel: `GRPCChannel` to the service host.
   ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
   ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadSessionServiceClientInterceptorFactoryProtocol? = nil
@@ -529,7 +529,7 @@ internal struct MonadSessionServiceNIOClient: MonadSessionServiceClientProtocol 
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal protocol MonadSessionServiceAsyncClientProtocol: GRPCClient {
+public protocol MonadSessionServiceAsyncClientProtocol: GRPCClient {
   static var serviceDescriptor: GRPCServiceDescriptor { get }
   var interceptors: MonadSessionServiceClientInterceptorFactoryProtocol? { get }
 
@@ -566,15 +566,15 @@ internal protocol MonadSessionServiceAsyncClientProtocol: GRPCClient {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadSessionServiceAsyncClientProtocol {
-  internal static var serviceDescriptor: GRPCServiceDescriptor {
+  public static var serviceDescriptor: GRPCServiceDescriptor {
     return MonadSessionServiceClientMetadata.serviceDescriptor
   }
 
-  internal var interceptors: MonadSessionServiceClientInterceptorFactoryProtocol? {
+  public var interceptors: MonadSessionServiceClientInterceptorFactoryProtocol? {
     return nil
   }
 
-  internal func makeFetchAllSessionsCall(
+  public func makeFetchAllSessionsCall(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadEmpty, MonadSessionList> {
@@ -586,7 +586,7 @@ extension MonadSessionServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeFetchSessionCall(
+  public func makeFetchSessionCall(
     _ request: MonadFetchSessionRequest,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadFetchSessionRequest, MonadSession> {
@@ -598,7 +598,7 @@ extension MonadSessionServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeCreateSessionCall(
+  public func makeCreateSessionCall(
     _ request: MonadSession,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadSession, MonadSession> {
@@ -610,7 +610,7 @@ extension MonadSessionServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeUpdateSessionCall(
+  public func makeUpdateSessionCall(
     _ request: MonadSession,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadSession, MonadSession> {
@@ -622,7 +622,7 @@ extension MonadSessionServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeDeleteSessionCall(
+  public func makeDeleteSessionCall(
     _ request: MonadDeleteSessionRequest,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadDeleteSessionRequest, MonadEmpty> {
@@ -634,7 +634,7 @@ extension MonadSessionServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeArchiveSessionCall(
+  public func makeArchiveSessionCall(
     _ request: MonadArchiveSessionRequest,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadArchiveSessionRequest, MonadEmpty> {
@@ -649,7 +649,7 @@ extension MonadSessionServiceAsyncClientProtocol {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadSessionServiceAsyncClientProtocol {
-  internal func fetchAllSessions(
+  public func fetchAllSessions(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) async throws -> MonadSessionList {
@@ -661,7 +661,7 @@ extension MonadSessionServiceAsyncClientProtocol {
     )
   }
 
-  internal func fetchSession(
+  public func fetchSession(
     _ request: MonadFetchSessionRequest,
     callOptions: CallOptions? = nil
   ) async throws -> MonadSession {
@@ -673,7 +673,7 @@ extension MonadSessionServiceAsyncClientProtocol {
     )
   }
 
-  internal func createSession(
+  public func createSession(
     _ request: MonadSession,
     callOptions: CallOptions? = nil
   ) async throws -> MonadSession {
@@ -685,7 +685,7 @@ extension MonadSessionServiceAsyncClientProtocol {
     )
   }
 
-  internal func updateSession(
+  public func updateSession(
     _ request: MonadSession,
     callOptions: CallOptions? = nil
   ) async throws -> MonadSession {
@@ -697,7 +697,7 @@ extension MonadSessionServiceAsyncClientProtocol {
     )
   }
 
-  internal func deleteSession(
+  public func deleteSession(
     _ request: MonadDeleteSessionRequest,
     callOptions: CallOptions? = nil
   ) async throws -> MonadEmpty {
@@ -709,7 +709,7 @@ extension MonadSessionServiceAsyncClientProtocol {
     )
   }
 
-  internal func archiveSession(
+  public func archiveSession(
     _ request: MonadArchiveSessionRequest,
     callOptions: CallOptions? = nil
   ) async throws -> MonadEmpty {
@@ -723,12 +723,12 @@ extension MonadSessionServiceAsyncClientProtocol {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal struct MonadSessionServiceAsyncClient: MonadSessionServiceAsyncClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: MonadSessionServiceClientInterceptorFactoryProtocol?
+public struct MonadSessionServiceAsyncClient: MonadSessionServiceAsyncClientProtocol {
+  public var channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: MonadSessionServiceClientInterceptorFactoryProtocol?
 
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadSessionServiceClientInterceptorFactoryProtocol? = nil
@@ -739,7 +739,7 @@ internal struct MonadSessionServiceAsyncClient: MonadSessionServiceAsyncClientPr
   }
 }
 
-internal protocol MonadSessionServiceClientInterceptorFactoryProtocol: Sendable {
+public protocol MonadSessionServiceClientInterceptorFactoryProtocol: Sendable {
 
   /// - Returns: Interceptors to use when invoking 'fetchAllSessions'.
   func makeFetchAllSessionsInterceptors() -> [ClientInterceptor<MonadEmpty, MonadSessionList>]
@@ -760,8 +760,8 @@ internal protocol MonadSessionServiceClientInterceptorFactoryProtocol: Sendable 
   func makeArchiveSessionInterceptors() -> [ClientInterceptor<MonadArchiveSessionRequest, MonadEmpty>]
 }
 
-internal enum MonadSessionServiceClientMetadata {
-  internal static let serviceDescriptor = GRPCServiceDescriptor(
+public enum MonadSessionServiceClientMetadata {
+  public static let serviceDescriptor = GRPCServiceDescriptor(
     name: "SessionService",
     fullName: "monad.SessionService",
     methods: [
@@ -774,38 +774,38 @@ internal enum MonadSessionServiceClientMetadata {
     ]
   )
 
-  internal enum Methods {
-    internal static let fetchAllSessions = GRPCMethodDescriptor(
+  public enum Methods {
+    public static let fetchAllSessions = GRPCMethodDescriptor(
       name: "FetchAllSessions",
       path: "/monad.SessionService/FetchAllSessions",
       type: GRPCCallType.unary
     )
 
-    internal static let fetchSession = GRPCMethodDescriptor(
+    public static let fetchSession = GRPCMethodDescriptor(
       name: "FetchSession",
       path: "/monad.SessionService/FetchSession",
       type: GRPCCallType.unary
     )
 
-    internal static let createSession = GRPCMethodDescriptor(
+    public static let createSession = GRPCMethodDescriptor(
       name: "CreateSession",
       path: "/monad.SessionService/CreateSession",
       type: GRPCCallType.unary
     )
 
-    internal static let updateSession = GRPCMethodDescriptor(
+    public static let updateSession = GRPCMethodDescriptor(
       name: "UpdateSession",
       path: "/monad.SessionService/UpdateSession",
       type: GRPCCallType.unary
     )
 
-    internal static let deleteSession = GRPCMethodDescriptor(
+    public static let deleteSession = GRPCMethodDescriptor(
       name: "DeleteSession",
       path: "/monad.SessionService/DeleteSession",
       type: GRPCCallType.unary
     )
 
-    internal static let archiveSession = GRPCMethodDescriptor(
+    public static let archiveSession = GRPCMethodDescriptor(
       name: "ArchiveSession",
       path: "/monad.SessionService/ArchiveSession",
       type: GRPCCallType.unary
@@ -814,7 +814,7 @@ internal enum MonadSessionServiceClientMetadata {
 }
 
 /// Usage: instantiate `MonadMemoryServiceClient`, then call methods of this protocol to make API calls.
-internal protocol MonadMemoryServiceClientProtocol: GRPCClient {
+public protocol MonadMemoryServiceClientProtocol: GRPCClient {
   var serviceName: String { get }
   var interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol? { get }
 
@@ -840,7 +840,7 @@ internal protocol MonadMemoryServiceClientProtocol: GRPCClient {
 }
 
 extension MonadMemoryServiceClientProtocol {
-  internal var serviceName: String {
+  public var serviceName: String {
     return "monad.MemoryService"
   }
 
@@ -850,7 +850,7 @@ extension MonadMemoryServiceClientProtocol {
   ///   - request: Request to send to SearchMemories.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func searchMemories(
+  public func searchMemories(
     _ request: MonadSearchRequest,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadSearchRequest, MonadSearchResponse> {
@@ -868,7 +868,7 @@ extension MonadMemoryServiceClientProtocol {
   ///   - request: Request to send to SaveMemory.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func saveMemory(
+  public func saveMemory(
     _ request: MonadMemory,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadMemory, MonadMemory> {
@@ -886,7 +886,7 @@ extension MonadMemoryServiceClientProtocol {
   ///   - request: Request to send to DeleteMemory.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func deleteMemory(
+  public func deleteMemory(
     _ request: MonadDeleteMemoryRequest,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadDeleteMemoryRequest, MonadEmpty> {
@@ -904,7 +904,7 @@ extension MonadMemoryServiceClientProtocol {
   ///   - request: Request to send to FetchAllMemories.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func fetchAllMemories(
+  public func fetchAllMemories(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadEmpty, MonadMemoryList> {
@@ -921,16 +921,16 @@ extension MonadMemoryServiceClientProtocol {
 extension MonadMemoryServiceClient: @unchecked Sendable {}
 
 @available(*, deprecated, renamed: "MonadMemoryServiceNIOClient")
-internal final class MonadMemoryServiceClient: MonadMemoryServiceClientProtocol {
+public final class MonadMemoryServiceClient: MonadMemoryServiceClientProtocol {
   private let lock = Lock()
   private var _defaultCallOptions: CallOptions
   private var _interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol?
-  internal let channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions {
+  public let channel: GRPCChannel
+  public var defaultCallOptions: CallOptions {
     get { self.lock.withLock { return self._defaultCallOptions } }
     set { self.lock.withLockVoid { self._defaultCallOptions = newValue } }
   }
-  internal var interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol? {
+  public var interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol? {
     get { self.lock.withLock { return self._interceptors } }
     set { self.lock.withLockVoid { self._interceptors = newValue } }
   }
@@ -941,7 +941,7 @@ internal final class MonadMemoryServiceClient: MonadMemoryServiceClientProtocol 
   ///   - channel: `GRPCChannel` to the service host.
   ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
   ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol? = nil
@@ -952,10 +952,10 @@ internal final class MonadMemoryServiceClient: MonadMemoryServiceClientProtocol 
   }
 }
 
-internal struct MonadMemoryServiceNIOClient: MonadMemoryServiceClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol?
+public struct MonadMemoryServiceNIOClient: MonadMemoryServiceClientProtocol {
+  public var channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol?
 
   /// Creates a client for the monad.MemoryService service.
   ///
@@ -963,7 +963,7 @@ internal struct MonadMemoryServiceNIOClient: MonadMemoryServiceClientProtocol {
   ///   - channel: `GRPCChannel` to the service host.
   ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
   ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol? = nil
@@ -975,7 +975,7 @@ internal struct MonadMemoryServiceNIOClient: MonadMemoryServiceClientProtocol {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal protocol MonadMemoryServiceAsyncClientProtocol: GRPCClient {
+public protocol MonadMemoryServiceAsyncClientProtocol: GRPCClient {
   static var serviceDescriptor: GRPCServiceDescriptor { get }
   var interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol? { get }
 
@@ -1002,15 +1002,15 @@ internal protocol MonadMemoryServiceAsyncClientProtocol: GRPCClient {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadMemoryServiceAsyncClientProtocol {
-  internal static var serviceDescriptor: GRPCServiceDescriptor {
+  public static var serviceDescriptor: GRPCServiceDescriptor {
     return MonadMemoryServiceClientMetadata.serviceDescriptor
   }
 
-  internal var interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol? {
+  public var interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol? {
     return nil
   }
 
-  internal func makeSearchMemoriesCall(
+  public func makeSearchMemoriesCall(
     _ request: MonadSearchRequest,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadSearchRequest, MonadSearchResponse> {
@@ -1022,7 +1022,7 @@ extension MonadMemoryServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeSaveMemoryCall(
+  public func makeSaveMemoryCall(
     _ request: MonadMemory,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadMemory, MonadMemory> {
@@ -1034,7 +1034,7 @@ extension MonadMemoryServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeDeleteMemoryCall(
+  public func makeDeleteMemoryCall(
     _ request: MonadDeleteMemoryRequest,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadDeleteMemoryRequest, MonadEmpty> {
@@ -1046,7 +1046,7 @@ extension MonadMemoryServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeFetchAllMemoriesCall(
+  public func makeFetchAllMemoriesCall(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadEmpty, MonadMemoryList> {
@@ -1061,7 +1061,7 @@ extension MonadMemoryServiceAsyncClientProtocol {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadMemoryServiceAsyncClientProtocol {
-  internal func searchMemories(
+  public func searchMemories(
     _ request: MonadSearchRequest,
     callOptions: CallOptions? = nil
   ) async throws -> MonadSearchResponse {
@@ -1073,7 +1073,7 @@ extension MonadMemoryServiceAsyncClientProtocol {
     )
   }
 
-  internal func saveMemory(
+  public func saveMemory(
     _ request: MonadMemory,
     callOptions: CallOptions? = nil
   ) async throws -> MonadMemory {
@@ -1085,7 +1085,7 @@ extension MonadMemoryServiceAsyncClientProtocol {
     )
   }
 
-  internal func deleteMemory(
+  public func deleteMemory(
     _ request: MonadDeleteMemoryRequest,
     callOptions: CallOptions? = nil
   ) async throws -> MonadEmpty {
@@ -1097,7 +1097,7 @@ extension MonadMemoryServiceAsyncClientProtocol {
     )
   }
 
-  internal func fetchAllMemories(
+  public func fetchAllMemories(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) async throws -> MonadMemoryList {
@@ -1111,12 +1111,12 @@ extension MonadMemoryServiceAsyncClientProtocol {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal struct MonadMemoryServiceAsyncClient: MonadMemoryServiceAsyncClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol?
+public struct MonadMemoryServiceAsyncClient: MonadMemoryServiceAsyncClientProtocol {
+  public var channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol?
 
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadMemoryServiceClientInterceptorFactoryProtocol? = nil
@@ -1127,7 +1127,7 @@ internal struct MonadMemoryServiceAsyncClient: MonadMemoryServiceAsyncClientProt
   }
 }
 
-internal protocol MonadMemoryServiceClientInterceptorFactoryProtocol: Sendable {
+public protocol MonadMemoryServiceClientInterceptorFactoryProtocol: Sendable {
 
   /// - Returns: Interceptors to use when invoking 'searchMemories'.
   func makeSearchMemoriesInterceptors() -> [ClientInterceptor<MonadSearchRequest, MonadSearchResponse>]
@@ -1142,8 +1142,8 @@ internal protocol MonadMemoryServiceClientInterceptorFactoryProtocol: Sendable {
   func makeFetchAllMemoriesInterceptors() -> [ClientInterceptor<MonadEmpty, MonadMemoryList>]
 }
 
-internal enum MonadMemoryServiceClientMetadata {
-  internal static let serviceDescriptor = GRPCServiceDescriptor(
+public enum MonadMemoryServiceClientMetadata {
+  public static let serviceDescriptor = GRPCServiceDescriptor(
     name: "MemoryService",
     fullName: "monad.MemoryService",
     methods: [
@@ -1154,26 +1154,26 @@ internal enum MonadMemoryServiceClientMetadata {
     ]
   )
 
-  internal enum Methods {
-    internal static let searchMemories = GRPCMethodDescriptor(
+  public enum Methods {
+    public static let searchMemories = GRPCMethodDescriptor(
       name: "SearchMemories",
       path: "/monad.MemoryService/SearchMemories",
       type: GRPCCallType.unary
     )
 
-    internal static let saveMemory = GRPCMethodDescriptor(
+    public static let saveMemory = GRPCMethodDescriptor(
       name: "SaveMemory",
       path: "/monad.MemoryService/SaveMemory",
       type: GRPCCallType.unary
     )
 
-    internal static let deleteMemory = GRPCMethodDescriptor(
+    public static let deleteMemory = GRPCMethodDescriptor(
       name: "DeleteMemory",
       path: "/monad.MemoryService/DeleteMemory",
       type: GRPCCallType.unary
     )
 
-    internal static let fetchAllMemories = GRPCMethodDescriptor(
+    public static let fetchAllMemories = GRPCMethodDescriptor(
       name: "FetchAllMemories",
       path: "/monad.MemoryService/FetchAllMemories",
       type: GRPCCallType.unary
@@ -1182,7 +1182,7 @@ internal enum MonadMemoryServiceClientMetadata {
 }
 
 /// Usage: instantiate `MonadNoteServiceClient`, then call methods of this protocol to make API calls.
-internal protocol MonadNoteServiceClientProtocol: GRPCClient {
+public protocol MonadNoteServiceClientProtocol: GRPCClient {
   var serviceName: String { get }
   var interceptors: MonadNoteServiceClientInterceptorFactoryProtocol? { get }
 
@@ -1203,7 +1203,7 @@ internal protocol MonadNoteServiceClientProtocol: GRPCClient {
 }
 
 extension MonadNoteServiceClientProtocol {
-  internal var serviceName: String {
+  public var serviceName: String {
     return "monad.NoteService"
   }
 
@@ -1213,7 +1213,7 @@ extension MonadNoteServiceClientProtocol {
   ///   - request: Request to send to FetchAllNotes.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func fetchAllNotes(
+  public func fetchAllNotes(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadEmpty, MonadNoteList> {
@@ -1231,7 +1231,7 @@ extension MonadNoteServiceClientProtocol {
   ///   - request: Request to send to SaveNote.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func saveNote(
+  public func saveNote(
     _ request: MonadNote,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadNote, MonadNote> {
@@ -1249,7 +1249,7 @@ extension MonadNoteServiceClientProtocol {
   ///   - request: Request to send to DeleteNote.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func deleteNote(
+  public func deleteNote(
     _ request: MonadDeleteNoteRequest,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadDeleteNoteRequest, MonadEmpty> {
@@ -1266,16 +1266,16 @@ extension MonadNoteServiceClientProtocol {
 extension MonadNoteServiceClient: @unchecked Sendable {}
 
 @available(*, deprecated, renamed: "MonadNoteServiceNIOClient")
-internal final class MonadNoteServiceClient: MonadNoteServiceClientProtocol {
+public final class MonadNoteServiceClient: MonadNoteServiceClientProtocol {
   private let lock = Lock()
   private var _defaultCallOptions: CallOptions
   private var _interceptors: MonadNoteServiceClientInterceptorFactoryProtocol?
-  internal let channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions {
+  public let channel: GRPCChannel
+  public var defaultCallOptions: CallOptions {
     get { self.lock.withLock { return self._defaultCallOptions } }
     set { self.lock.withLockVoid { self._defaultCallOptions = newValue } }
   }
-  internal var interceptors: MonadNoteServiceClientInterceptorFactoryProtocol? {
+  public var interceptors: MonadNoteServiceClientInterceptorFactoryProtocol? {
     get { self.lock.withLock { return self._interceptors } }
     set { self.lock.withLockVoid { self._interceptors = newValue } }
   }
@@ -1286,7 +1286,7 @@ internal final class MonadNoteServiceClient: MonadNoteServiceClientProtocol {
   ///   - channel: `GRPCChannel` to the service host.
   ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
   ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadNoteServiceClientInterceptorFactoryProtocol? = nil
@@ -1297,10 +1297,10 @@ internal final class MonadNoteServiceClient: MonadNoteServiceClientProtocol {
   }
 }
 
-internal struct MonadNoteServiceNIOClient: MonadNoteServiceClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: MonadNoteServiceClientInterceptorFactoryProtocol?
+public struct MonadNoteServiceNIOClient: MonadNoteServiceClientProtocol {
+  public var channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: MonadNoteServiceClientInterceptorFactoryProtocol?
 
   /// Creates a client for the monad.NoteService service.
   ///
@@ -1308,7 +1308,7 @@ internal struct MonadNoteServiceNIOClient: MonadNoteServiceClientProtocol {
   ///   - channel: `GRPCChannel` to the service host.
   ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
   ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadNoteServiceClientInterceptorFactoryProtocol? = nil
@@ -1320,7 +1320,7 @@ internal struct MonadNoteServiceNIOClient: MonadNoteServiceClientProtocol {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal protocol MonadNoteServiceAsyncClientProtocol: GRPCClient {
+public protocol MonadNoteServiceAsyncClientProtocol: GRPCClient {
   static var serviceDescriptor: GRPCServiceDescriptor { get }
   var interceptors: MonadNoteServiceClientInterceptorFactoryProtocol? { get }
 
@@ -1342,15 +1342,15 @@ internal protocol MonadNoteServiceAsyncClientProtocol: GRPCClient {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadNoteServiceAsyncClientProtocol {
-  internal static var serviceDescriptor: GRPCServiceDescriptor {
+  public static var serviceDescriptor: GRPCServiceDescriptor {
     return MonadNoteServiceClientMetadata.serviceDescriptor
   }
 
-  internal var interceptors: MonadNoteServiceClientInterceptorFactoryProtocol? {
+  public var interceptors: MonadNoteServiceClientInterceptorFactoryProtocol? {
     return nil
   }
 
-  internal func makeFetchAllNotesCall(
+  public func makeFetchAllNotesCall(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadEmpty, MonadNoteList> {
@@ -1362,7 +1362,7 @@ extension MonadNoteServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeSaveNoteCall(
+  public func makeSaveNoteCall(
     _ request: MonadNote,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadNote, MonadNote> {
@@ -1374,7 +1374,7 @@ extension MonadNoteServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeDeleteNoteCall(
+  public func makeDeleteNoteCall(
     _ request: MonadDeleteNoteRequest,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadDeleteNoteRequest, MonadEmpty> {
@@ -1389,7 +1389,7 @@ extension MonadNoteServiceAsyncClientProtocol {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadNoteServiceAsyncClientProtocol {
-  internal func fetchAllNotes(
+  public func fetchAllNotes(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) async throws -> MonadNoteList {
@@ -1401,7 +1401,7 @@ extension MonadNoteServiceAsyncClientProtocol {
     )
   }
 
-  internal func saveNote(
+  public func saveNote(
     _ request: MonadNote,
     callOptions: CallOptions? = nil
   ) async throws -> MonadNote {
@@ -1413,7 +1413,7 @@ extension MonadNoteServiceAsyncClientProtocol {
     )
   }
 
-  internal func deleteNote(
+  public func deleteNote(
     _ request: MonadDeleteNoteRequest,
     callOptions: CallOptions? = nil
   ) async throws -> MonadEmpty {
@@ -1427,12 +1427,12 @@ extension MonadNoteServiceAsyncClientProtocol {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal struct MonadNoteServiceAsyncClient: MonadNoteServiceAsyncClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: MonadNoteServiceClientInterceptorFactoryProtocol?
+public struct MonadNoteServiceAsyncClient: MonadNoteServiceAsyncClientProtocol {
+  public var channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: MonadNoteServiceClientInterceptorFactoryProtocol?
 
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadNoteServiceClientInterceptorFactoryProtocol? = nil
@@ -1443,7 +1443,7 @@ internal struct MonadNoteServiceAsyncClient: MonadNoteServiceAsyncClientProtocol
   }
 }
 
-internal protocol MonadNoteServiceClientInterceptorFactoryProtocol: Sendable {
+public protocol MonadNoteServiceClientInterceptorFactoryProtocol: Sendable {
 
   /// - Returns: Interceptors to use when invoking 'fetchAllNotes'.
   func makeFetchAllNotesInterceptors() -> [ClientInterceptor<MonadEmpty, MonadNoteList>]
@@ -1455,8 +1455,8 @@ internal protocol MonadNoteServiceClientInterceptorFactoryProtocol: Sendable {
   func makeDeleteNoteInterceptors() -> [ClientInterceptor<MonadDeleteNoteRequest, MonadEmpty>]
 }
 
-internal enum MonadNoteServiceClientMetadata {
-  internal static let serviceDescriptor = GRPCServiceDescriptor(
+public enum MonadNoteServiceClientMetadata {
+  public static let serviceDescriptor = GRPCServiceDescriptor(
     name: "NoteService",
     fullName: "monad.NoteService",
     methods: [
@@ -1466,20 +1466,20 @@ internal enum MonadNoteServiceClientMetadata {
     ]
   )
 
-  internal enum Methods {
-    internal static let fetchAllNotes = GRPCMethodDescriptor(
+  public enum Methods {
+    public static let fetchAllNotes = GRPCMethodDescriptor(
       name: "FetchAllNotes",
       path: "/monad.NoteService/FetchAllNotes",
       type: GRPCCallType.unary
     )
 
-    internal static let saveNote = GRPCMethodDescriptor(
+    public static let saveNote = GRPCMethodDescriptor(
       name: "SaveNote",
       path: "/monad.NoteService/SaveNote",
       type: GRPCCallType.unary
     )
 
-    internal static let deleteNote = GRPCMethodDescriptor(
+    public static let deleteNote = GRPCMethodDescriptor(
       name: "DeleteNote",
       path: "/monad.NoteService/DeleteNote",
       type: GRPCCallType.unary
@@ -1488,7 +1488,7 @@ internal enum MonadNoteServiceClientMetadata {
 }
 
 /// Usage: instantiate `MonadJobServiceClient`, then call methods of this protocol to make API calls.
-internal protocol MonadJobServiceClientProtocol: GRPCClient {
+public protocol MonadJobServiceClientProtocol: GRPCClient {
   var serviceName: String { get }
   var interceptors: MonadJobServiceClientInterceptorFactoryProtocol? { get }
 
@@ -1514,7 +1514,7 @@ internal protocol MonadJobServiceClientProtocol: GRPCClient {
 }
 
 extension MonadJobServiceClientProtocol {
-  internal var serviceName: String {
+  public var serviceName: String {
     return "monad.JobService"
   }
 
@@ -1524,7 +1524,7 @@ extension MonadJobServiceClientProtocol {
   ///   - request: Request to send to FetchAllJobs.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func fetchAllJobs(
+  public func fetchAllJobs(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadEmpty, MonadJobList> {
@@ -1542,7 +1542,7 @@ extension MonadJobServiceClientProtocol {
   ///   - request: Request to send to SaveJob.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func saveJob(
+  public func saveJob(
     _ request: MonadJob,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadJob, MonadJob> {
@@ -1560,7 +1560,7 @@ extension MonadJobServiceClientProtocol {
   ///   - request: Request to send to DeleteJob.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func deleteJob(
+  public func deleteJob(
     _ request: MonadDeleteJobRequest,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadDeleteJobRequest, MonadEmpty> {
@@ -1578,7 +1578,7 @@ extension MonadJobServiceClientProtocol {
   ///   - request: Request to send to DequeueNextJob.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func dequeueNextJob(
+  public func dequeueNextJob(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) -> UnaryCall<MonadEmpty, MonadJob> {
@@ -1595,16 +1595,16 @@ extension MonadJobServiceClientProtocol {
 extension MonadJobServiceClient: @unchecked Sendable {}
 
 @available(*, deprecated, renamed: "MonadJobServiceNIOClient")
-internal final class MonadJobServiceClient: MonadJobServiceClientProtocol {
+public final class MonadJobServiceClient: MonadJobServiceClientProtocol {
   private let lock = Lock()
   private var _defaultCallOptions: CallOptions
   private var _interceptors: MonadJobServiceClientInterceptorFactoryProtocol?
-  internal let channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions {
+  public let channel: GRPCChannel
+  public var defaultCallOptions: CallOptions {
     get { self.lock.withLock { return self._defaultCallOptions } }
     set { self.lock.withLockVoid { self._defaultCallOptions = newValue } }
   }
-  internal var interceptors: MonadJobServiceClientInterceptorFactoryProtocol? {
+  public var interceptors: MonadJobServiceClientInterceptorFactoryProtocol? {
     get { self.lock.withLock { return self._interceptors } }
     set { self.lock.withLockVoid { self._interceptors = newValue } }
   }
@@ -1615,7 +1615,7 @@ internal final class MonadJobServiceClient: MonadJobServiceClientProtocol {
   ///   - channel: `GRPCChannel` to the service host.
   ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
   ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadJobServiceClientInterceptorFactoryProtocol? = nil
@@ -1626,10 +1626,10 @@ internal final class MonadJobServiceClient: MonadJobServiceClientProtocol {
   }
 }
 
-internal struct MonadJobServiceNIOClient: MonadJobServiceClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: MonadJobServiceClientInterceptorFactoryProtocol?
+public struct MonadJobServiceNIOClient: MonadJobServiceClientProtocol {
+  public var channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: MonadJobServiceClientInterceptorFactoryProtocol?
 
   /// Creates a client for the monad.JobService service.
   ///
@@ -1637,7 +1637,7 @@ internal struct MonadJobServiceNIOClient: MonadJobServiceClientProtocol {
   ///   - channel: `GRPCChannel` to the service host.
   ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
   ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadJobServiceClientInterceptorFactoryProtocol? = nil
@@ -1649,7 +1649,7 @@ internal struct MonadJobServiceNIOClient: MonadJobServiceClientProtocol {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal protocol MonadJobServiceAsyncClientProtocol: GRPCClient {
+public protocol MonadJobServiceAsyncClientProtocol: GRPCClient {
   static var serviceDescriptor: GRPCServiceDescriptor { get }
   var interceptors: MonadJobServiceClientInterceptorFactoryProtocol? { get }
 
@@ -1676,15 +1676,15 @@ internal protocol MonadJobServiceAsyncClientProtocol: GRPCClient {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadJobServiceAsyncClientProtocol {
-  internal static var serviceDescriptor: GRPCServiceDescriptor {
+  public static var serviceDescriptor: GRPCServiceDescriptor {
     return MonadJobServiceClientMetadata.serviceDescriptor
   }
 
-  internal var interceptors: MonadJobServiceClientInterceptorFactoryProtocol? {
+  public var interceptors: MonadJobServiceClientInterceptorFactoryProtocol? {
     return nil
   }
 
-  internal func makeFetchAllJobsCall(
+  public func makeFetchAllJobsCall(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadEmpty, MonadJobList> {
@@ -1696,7 +1696,7 @@ extension MonadJobServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeSaveJobCall(
+  public func makeSaveJobCall(
     _ request: MonadJob,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadJob, MonadJob> {
@@ -1708,7 +1708,7 @@ extension MonadJobServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeDeleteJobCall(
+  public func makeDeleteJobCall(
     _ request: MonadDeleteJobRequest,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadDeleteJobRequest, MonadEmpty> {
@@ -1720,7 +1720,7 @@ extension MonadJobServiceAsyncClientProtocol {
     )
   }
 
-  internal func makeDequeueNextJobCall(
+  public func makeDequeueNextJobCall(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) -> GRPCAsyncUnaryCall<MonadEmpty, MonadJob> {
@@ -1735,7 +1735,7 @@ extension MonadJobServiceAsyncClientProtocol {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadJobServiceAsyncClientProtocol {
-  internal func fetchAllJobs(
+  public func fetchAllJobs(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) async throws -> MonadJobList {
@@ -1747,7 +1747,7 @@ extension MonadJobServiceAsyncClientProtocol {
     )
   }
 
-  internal func saveJob(
+  public func saveJob(
     _ request: MonadJob,
     callOptions: CallOptions? = nil
   ) async throws -> MonadJob {
@@ -1759,7 +1759,7 @@ extension MonadJobServiceAsyncClientProtocol {
     )
   }
 
-  internal func deleteJob(
+  public func deleteJob(
     _ request: MonadDeleteJobRequest,
     callOptions: CallOptions? = nil
   ) async throws -> MonadEmpty {
@@ -1771,7 +1771,7 @@ extension MonadJobServiceAsyncClientProtocol {
     )
   }
 
-  internal func dequeueNextJob(
+  public func dequeueNextJob(
     _ request: MonadEmpty,
     callOptions: CallOptions? = nil
   ) async throws -> MonadJob {
@@ -1785,12 +1785,12 @@ extension MonadJobServiceAsyncClientProtocol {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal struct MonadJobServiceAsyncClient: MonadJobServiceAsyncClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: MonadJobServiceClientInterceptorFactoryProtocol?
+public struct MonadJobServiceAsyncClient: MonadJobServiceAsyncClientProtocol {
+  public var channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: MonadJobServiceClientInterceptorFactoryProtocol?
 
-  internal init(
+  public init(
     channel: GRPCChannel,
     defaultCallOptions: CallOptions = CallOptions(),
     interceptors: MonadJobServiceClientInterceptorFactoryProtocol? = nil
@@ -1801,7 +1801,7 @@ internal struct MonadJobServiceAsyncClient: MonadJobServiceAsyncClientProtocol {
   }
 }
 
-internal protocol MonadJobServiceClientInterceptorFactoryProtocol: Sendable {
+public protocol MonadJobServiceClientInterceptorFactoryProtocol: Sendable {
 
   /// - Returns: Interceptors to use when invoking 'fetchAllJobs'.
   func makeFetchAllJobsInterceptors() -> [ClientInterceptor<MonadEmpty, MonadJobList>]
@@ -1816,8 +1816,8 @@ internal protocol MonadJobServiceClientInterceptorFactoryProtocol: Sendable {
   func makeDequeueNextJobInterceptors() -> [ClientInterceptor<MonadEmpty, MonadJob>]
 }
 
-internal enum MonadJobServiceClientMetadata {
-  internal static let serviceDescriptor = GRPCServiceDescriptor(
+public enum MonadJobServiceClientMetadata {
+  public static let serviceDescriptor = GRPCServiceDescriptor(
     name: "JobService",
     fullName: "monad.JobService",
     methods: [
@@ -1828,26 +1828,26 @@ internal enum MonadJobServiceClientMetadata {
     ]
   )
 
-  internal enum Methods {
-    internal static let fetchAllJobs = GRPCMethodDescriptor(
+  public enum Methods {
+    public static let fetchAllJobs = GRPCMethodDescriptor(
       name: "FetchAllJobs",
       path: "/monad.JobService/FetchAllJobs",
       type: GRPCCallType.unary
     )
 
-    internal static let saveJob = GRPCMethodDescriptor(
+    public static let saveJob = GRPCMethodDescriptor(
       name: "SaveJob",
       path: "/monad.JobService/SaveJob",
       type: GRPCCallType.unary
     )
 
-    internal static let deleteJob = GRPCMethodDescriptor(
+    public static let deleteJob = GRPCMethodDescriptor(
       name: "DeleteJob",
       path: "/monad.JobService/DeleteJob",
       type: GRPCCallType.unary
     )
 
-    internal static let dequeueNextJob = GRPCMethodDescriptor(
+    public static let dequeueNextJob = GRPCMethodDescriptor(
       name: "DequeueNextJob",
       path: "/monad.JobService/DequeueNextJob",
       type: GRPCCallType.unary
@@ -1856,7 +1856,7 @@ internal enum MonadJobServiceClientMetadata {
 }
 
 /// To build a server, implement a class that conforms to this protocol.
-internal protocol MonadChatServiceProvider: CallHandlerProvider {
+public protocol MonadChatServiceProvider: CallHandlerProvider {
   var interceptors: MonadChatServiceServerInterceptorFactoryProtocol? { get }
 
   /// Main streaming chat interaction
@@ -1870,13 +1870,13 @@ internal protocol MonadChatServiceProvider: CallHandlerProvider {
 }
 
 extension MonadChatServiceProvider {
-  internal var serviceName: Substring {
+  public var serviceName: Substring {
     return MonadChatServiceServerMetadata.serviceDescriptor.fullName[...]
   }
 
   /// Determines, calls and returns the appropriate request handler, depending on the request's method.
   /// Returns nil for methods not handled by this service.
-  internal func handle(
+  public func handle(
     method name: Substring,
     context: CallHandlerContext
   ) -> GRPCServerHandlerProtocol? {
@@ -1916,7 +1916,7 @@ extension MonadChatServiceProvider {
 
 /// To implement a server, implement an object which conforms to this protocol.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal protocol MonadChatServiceAsyncProvider: CallHandlerProvider, Sendable {
+public protocol MonadChatServiceAsyncProvider: CallHandlerProvider, Sendable {
   static var serviceDescriptor: GRPCServiceDescriptor { get }
   var interceptors: MonadChatServiceServerInterceptorFactoryProtocol? { get }
 
@@ -1942,19 +1942,19 @@ internal protocol MonadChatServiceAsyncProvider: CallHandlerProvider, Sendable {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadChatServiceAsyncProvider {
-  internal static var serviceDescriptor: GRPCServiceDescriptor {
+  public static var serviceDescriptor: GRPCServiceDescriptor {
     return MonadChatServiceServerMetadata.serviceDescriptor
   }
 
-  internal var serviceName: Substring {
+  public var serviceName: Substring {
     return MonadChatServiceServerMetadata.serviceDescriptor.fullName[...]
   }
 
-  internal var interceptors: MonadChatServiceServerInterceptorFactoryProtocol? {
+  public var interceptors: MonadChatServiceServerInterceptorFactoryProtocol? {
     return nil
   }
 
-  internal func handle(
+  public func handle(
     method name: Substring,
     context: CallHandlerContext
   ) -> GRPCServerHandlerProtocol? {
@@ -1992,7 +1992,7 @@ extension MonadChatServiceAsyncProvider {
   }
 }
 
-internal protocol MonadChatServiceServerInterceptorFactoryProtocol: Sendable {
+public protocol MonadChatServiceServerInterceptorFactoryProtocol: Sendable {
 
   /// - Returns: Interceptors to use when handling 'chatStream'.
   ///   Defaults to calling `self.makeInterceptors()`.
@@ -2007,8 +2007,8 @@ internal protocol MonadChatServiceServerInterceptorFactoryProtocol: Sendable {
   func makeGenerateTitleInterceptors() -> [ServerInterceptor<MonadGenerateTitleRequest, MonadGenerateTitleResponse>]
 }
 
-internal enum MonadChatServiceServerMetadata {
-  internal static let serviceDescriptor = GRPCServiceDescriptor(
+public enum MonadChatServiceServerMetadata {
+  public static let serviceDescriptor = GRPCServiceDescriptor(
     name: "ChatService",
     fullName: "monad.ChatService",
     methods: [
@@ -2018,20 +2018,20 @@ internal enum MonadChatServiceServerMetadata {
     ]
   )
 
-  internal enum Methods {
-    internal static let chatStream = GRPCMethodDescriptor(
+  public enum Methods {
+    public static let chatStream = GRPCMethodDescriptor(
       name: "ChatStream",
       path: "/monad.ChatService/ChatStream",
       type: GRPCCallType.serverStreaming
     )
 
-    internal static let sendMessage = GRPCMethodDescriptor(
+    public static let sendMessage = GRPCMethodDescriptor(
       name: "SendMessage",
       path: "/monad.ChatService/SendMessage",
       type: GRPCCallType.unary
     )
 
-    internal static let generateTitle = GRPCMethodDescriptor(
+    public static let generateTitle = GRPCMethodDescriptor(
       name: "GenerateTitle",
       path: "/monad.ChatService/GenerateTitle",
       type: GRPCCallType.unary
@@ -2039,7 +2039,7 @@ internal enum MonadChatServiceServerMetadata {
   }
 }
 /// To build a server, implement a class that conforms to this protocol.
-internal protocol MonadSessionServiceProvider: CallHandlerProvider {
+public protocol MonadSessionServiceProvider: CallHandlerProvider {
   var interceptors: MonadSessionServiceServerInterceptorFactoryProtocol? { get }
 
   func fetchAllSessions(request: MonadEmpty, context: StatusOnlyCallContext) -> EventLoopFuture<MonadSessionList>
@@ -2056,13 +2056,13 @@ internal protocol MonadSessionServiceProvider: CallHandlerProvider {
 }
 
 extension MonadSessionServiceProvider {
-  internal var serviceName: Substring {
+  public var serviceName: Substring {
     return MonadSessionServiceServerMetadata.serviceDescriptor.fullName[...]
   }
 
   /// Determines, calls and returns the appropriate request handler, depending on the request's method.
   /// Returns nil for methods not handled by this service.
-  internal func handle(
+  public func handle(
     method name: Substring,
     context: CallHandlerContext
   ) -> GRPCServerHandlerProtocol? {
@@ -2129,7 +2129,7 @@ extension MonadSessionServiceProvider {
 
 /// To implement a server, implement an object which conforms to this protocol.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal protocol MonadSessionServiceAsyncProvider: CallHandlerProvider, Sendable {
+public protocol MonadSessionServiceAsyncProvider: CallHandlerProvider, Sendable {
   static var serviceDescriptor: GRPCServiceDescriptor { get }
   var interceptors: MonadSessionServiceServerInterceptorFactoryProtocol? { get }
 
@@ -2166,19 +2166,19 @@ internal protocol MonadSessionServiceAsyncProvider: CallHandlerProvider, Sendabl
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadSessionServiceAsyncProvider {
-  internal static var serviceDescriptor: GRPCServiceDescriptor {
+  public static var serviceDescriptor: GRPCServiceDescriptor {
     return MonadSessionServiceServerMetadata.serviceDescriptor
   }
 
-  internal var serviceName: Substring {
+  public var serviceName: Substring {
     return MonadSessionServiceServerMetadata.serviceDescriptor.fullName[...]
   }
 
-  internal var interceptors: MonadSessionServiceServerInterceptorFactoryProtocol? {
+  public var interceptors: MonadSessionServiceServerInterceptorFactoryProtocol? {
     return nil
   }
 
-  internal func handle(
+  public func handle(
     method name: Substring,
     context: CallHandlerContext
   ) -> GRPCServerHandlerProtocol? {
@@ -2243,7 +2243,7 @@ extension MonadSessionServiceAsyncProvider {
   }
 }
 
-internal protocol MonadSessionServiceServerInterceptorFactoryProtocol: Sendable {
+public protocol MonadSessionServiceServerInterceptorFactoryProtocol: Sendable {
 
   /// - Returns: Interceptors to use when handling 'fetchAllSessions'.
   ///   Defaults to calling `self.makeInterceptors()`.
@@ -2270,8 +2270,8 @@ internal protocol MonadSessionServiceServerInterceptorFactoryProtocol: Sendable 
   func makeArchiveSessionInterceptors() -> [ServerInterceptor<MonadArchiveSessionRequest, MonadEmpty>]
 }
 
-internal enum MonadSessionServiceServerMetadata {
-  internal static let serviceDescriptor = GRPCServiceDescriptor(
+public enum MonadSessionServiceServerMetadata {
+  public static let serviceDescriptor = GRPCServiceDescriptor(
     name: "SessionService",
     fullName: "monad.SessionService",
     methods: [
@@ -2284,38 +2284,38 @@ internal enum MonadSessionServiceServerMetadata {
     ]
   )
 
-  internal enum Methods {
-    internal static let fetchAllSessions = GRPCMethodDescriptor(
+  public enum Methods {
+    public static let fetchAllSessions = GRPCMethodDescriptor(
       name: "FetchAllSessions",
       path: "/monad.SessionService/FetchAllSessions",
       type: GRPCCallType.unary
     )
 
-    internal static let fetchSession = GRPCMethodDescriptor(
+    public static let fetchSession = GRPCMethodDescriptor(
       name: "FetchSession",
       path: "/monad.SessionService/FetchSession",
       type: GRPCCallType.unary
     )
 
-    internal static let createSession = GRPCMethodDescriptor(
+    public static let createSession = GRPCMethodDescriptor(
       name: "CreateSession",
       path: "/monad.SessionService/CreateSession",
       type: GRPCCallType.unary
     )
 
-    internal static let updateSession = GRPCMethodDescriptor(
+    public static let updateSession = GRPCMethodDescriptor(
       name: "UpdateSession",
       path: "/monad.SessionService/UpdateSession",
       type: GRPCCallType.unary
     )
 
-    internal static let deleteSession = GRPCMethodDescriptor(
+    public static let deleteSession = GRPCMethodDescriptor(
       name: "DeleteSession",
       path: "/monad.SessionService/DeleteSession",
       type: GRPCCallType.unary
     )
 
-    internal static let archiveSession = GRPCMethodDescriptor(
+    public static let archiveSession = GRPCMethodDescriptor(
       name: "ArchiveSession",
       path: "/monad.SessionService/ArchiveSession",
       type: GRPCCallType.unary
@@ -2323,7 +2323,7 @@ internal enum MonadSessionServiceServerMetadata {
   }
 }
 /// To build a server, implement a class that conforms to this protocol.
-internal protocol MonadMemoryServiceProvider: CallHandlerProvider {
+public protocol MonadMemoryServiceProvider: CallHandlerProvider {
   var interceptors: MonadMemoryServiceServerInterceptorFactoryProtocol? { get }
 
   func searchMemories(request: MonadSearchRequest, context: StatusOnlyCallContext) -> EventLoopFuture<MonadSearchResponse>
@@ -2336,13 +2336,13 @@ internal protocol MonadMemoryServiceProvider: CallHandlerProvider {
 }
 
 extension MonadMemoryServiceProvider {
-  internal var serviceName: Substring {
+  public var serviceName: Substring {
     return MonadMemoryServiceServerMetadata.serviceDescriptor.fullName[...]
   }
 
   /// Determines, calls and returns the appropriate request handler, depending on the request's method.
   /// Returns nil for methods not handled by this service.
-  internal func handle(
+  public func handle(
     method name: Substring,
     context: CallHandlerContext
   ) -> GRPCServerHandlerProtocol? {
@@ -2391,7 +2391,7 @@ extension MonadMemoryServiceProvider {
 
 /// To implement a server, implement an object which conforms to this protocol.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal protocol MonadMemoryServiceAsyncProvider: CallHandlerProvider, Sendable {
+public protocol MonadMemoryServiceAsyncProvider: CallHandlerProvider, Sendable {
   static var serviceDescriptor: GRPCServiceDescriptor { get }
   var interceptors: MonadMemoryServiceServerInterceptorFactoryProtocol? { get }
 
@@ -2418,19 +2418,19 @@ internal protocol MonadMemoryServiceAsyncProvider: CallHandlerProvider, Sendable
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadMemoryServiceAsyncProvider {
-  internal static var serviceDescriptor: GRPCServiceDescriptor {
+  public static var serviceDescriptor: GRPCServiceDescriptor {
     return MonadMemoryServiceServerMetadata.serviceDescriptor
   }
 
-  internal var serviceName: Substring {
+  public var serviceName: Substring {
     return MonadMemoryServiceServerMetadata.serviceDescriptor.fullName[...]
   }
 
-  internal var interceptors: MonadMemoryServiceServerInterceptorFactoryProtocol? {
+  public var interceptors: MonadMemoryServiceServerInterceptorFactoryProtocol? {
     return nil
   }
 
-  internal func handle(
+  public func handle(
     method name: Substring,
     context: CallHandlerContext
   ) -> GRPCServerHandlerProtocol? {
@@ -2477,7 +2477,7 @@ extension MonadMemoryServiceAsyncProvider {
   }
 }
 
-internal protocol MonadMemoryServiceServerInterceptorFactoryProtocol: Sendable {
+public protocol MonadMemoryServiceServerInterceptorFactoryProtocol: Sendable {
 
   /// - Returns: Interceptors to use when handling 'searchMemories'.
   ///   Defaults to calling `self.makeInterceptors()`.
@@ -2496,8 +2496,8 @@ internal protocol MonadMemoryServiceServerInterceptorFactoryProtocol: Sendable {
   func makeFetchAllMemoriesInterceptors() -> [ServerInterceptor<MonadEmpty, MonadMemoryList>]
 }
 
-internal enum MonadMemoryServiceServerMetadata {
-  internal static let serviceDescriptor = GRPCServiceDescriptor(
+public enum MonadMemoryServiceServerMetadata {
+  public static let serviceDescriptor = GRPCServiceDescriptor(
     name: "MemoryService",
     fullName: "monad.MemoryService",
     methods: [
@@ -2508,26 +2508,26 @@ internal enum MonadMemoryServiceServerMetadata {
     ]
   )
 
-  internal enum Methods {
-    internal static let searchMemories = GRPCMethodDescriptor(
+  public enum Methods {
+    public static let searchMemories = GRPCMethodDescriptor(
       name: "SearchMemories",
       path: "/monad.MemoryService/SearchMemories",
       type: GRPCCallType.unary
     )
 
-    internal static let saveMemory = GRPCMethodDescriptor(
+    public static let saveMemory = GRPCMethodDescriptor(
       name: "SaveMemory",
       path: "/monad.MemoryService/SaveMemory",
       type: GRPCCallType.unary
     )
 
-    internal static let deleteMemory = GRPCMethodDescriptor(
+    public static let deleteMemory = GRPCMethodDescriptor(
       name: "DeleteMemory",
       path: "/monad.MemoryService/DeleteMemory",
       type: GRPCCallType.unary
     )
 
-    internal static let fetchAllMemories = GRPCMethodDescriptor(
+    public static let fetchAllMemories = GRPCMethodDescriptor(
       name: "FetchAllMemories",
       path: "/monad.MemoryService/FetchAllMemories",
       type: GRPCCallType.unary
@@ -2535,7 +2535,7 @@ internal enum MonadMemoryServiceServerMetadata {
   }
 }
 /// To build a server, implement a class that conforms to this protocol.
-internal protocol MonadNoteServiceProvider: CallHandlerProvider {
+public protocol MonadNoteServiceProvider: CallHandlerProvider {
   var interceptors: MonadNoteServiceServerInterceptorFactoryProtocol? { get }
 
   func fetchAllNotes(request: MonadEmpty, context: StatusOnlyCallContext) -> EventLoopFuture<MonadNoteList>
@@ -2546,13 +2546,13 @@ internal protocol MonadNoteServiceProvider: CallHandlerProvider {
 }
 
 extension MonadNoteServiceProvider {
-  internal var serviceName: Substring {
+  public var serviceName: Substring {
     return MonadNoteServiceServerMetadata.serviceDescriptor.fullName[...]
   }
 
   /// Determines, calls and returns the appropriate request handler, depending on the request's method.
   /// Returns nil for methods not handled by this service.
-  internal func handle(
+  public func handle(
     method name: Substring,
     context: CallHandlerContext
   ) -> GRPCServerHandlerProtocol? {
@@ -2592,7 +2592,7 @@ extension MonadNoteServiceProvider {
 
 /// To implement a server, implement an object which conforms to this protocol.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal protocol MonadNoteServiceAsyncProvider: CallHandlerProvider, Sendable {
+public protocol MonadNoteServiceAsyncProvider: CallHandlerProvider, Sendable {
   static var serviceDescriptor: GRPCServiceDescriptor { get }
   var interceptors: MonadNoteServiceServerInterceptorFactoryProtocol? { get }
 
@@ -2614,19 +2614,19 @@ internal protocol MonadNoteServiceAsyncProvider: CallHandlerProvider, Sendable {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadNoteServiceAsyncProvider {
-  internal static var serviceDescriptor: GRPCServiceDescriptor {
+  public static var serviceDescriptor: GRPCServiceDescriptor {
     return MonadNoteServiceServerMetadata.serviceDescriptor
   }
 
-  internal var serviceName: Substring {
+  public var serviceName: Substring {
     return MonadNoteServiceServerMetadata.serviceDescriptor.fullName[...]
   }
 
-  internal var interceptors: MonadNoteServiceServerInterceptorFactoryProtocol? {
+  public var interceptors: MonadNoteServiceServerInterceptorFactoryProtocol? {
     return nil
   }
 
-  internal func handle(
+  public func handle(
     method name: Substring,
     context: CallHandlerContext
   ) -> GRPCServerHandlerProtocol? {
@@ -2664,7 +2664,7 @@ extension MonadNoteServiceAsyncProvider {
   }
 }
 
-internal protocol MonadNoteServiceServerInterceptorFactoryProtocol: Sendable {
+public protocol MonadNoteServiceServerInterceptorFactoryProtocol: Sendable {
 
   /// - Returns: Interceptors to use when handling 'fetchAllNotes'.
   ///   Defaults to calling `self.makeInterceptors()`.
@@ -2679,8 +2679,8 @@ internal protocol MonadNoteServiceServerInterceptorFactoryProtocol: Sendable {
   func makeDeleteNoteInterceptors() -> [ServerInterceptor<MonadDeleteNoteRequest, MonadEmpty>]
 }
 
-internal enum MonadNoteServiceServerMetadata {
-  internal static let serviceDescriptor = GRPCServiceDescriptor(
+public enum MonadNoteServiceServerMetadata {
+  public static let serviceDescriptor = GRPCServiceDescriptor(
     name: "NoteService",
     fullName: "monad.NoteService",
     methods: [
@@ -2690,20 +2690,20 @@ internal enum MonadNoteServiceServerMetadata {
     ]
   )
 
-  internal enum Methods {
-    internal static let fetchAllNotes = GRPCMethodDescriptor(
+  public enum Methods {
+    public static let fetchAllNotes = GRPCMethodDescriptor(
       name: "FetchAllNotes",
       path: "/monad.NoteService/FetchAllNotes",
       type: GRPCCallType.unary
     )
 
-    internal static let saveNote = GRPCMethodDescriptor(
+    public static let saveNote = GRPCMethodDescriptor(
       name: "SaveNote",
       path: "/monad.NoteService/SaveNote",
       type: GRPCCallType.unary
     )
 
-    internal static let deleteNote = GRPCMethodDescriptor(
+    public static let deleteNote = GRPCMethodDescriptor(
       name: "DeleteNote",
       path: "/monad.NoteService/DeleteNote",
       type: GRPCCallType.unary
@@ -2711,7 +2711,7 @@ internal enum MonadNoteServiceServerMetadata {
   }
 }
 /// To build a server, implement a class that conforms to this protocol.
-internal protocol MonadJobServiceProvider: CallHandlerProvider {
+public protocol MonadJobServiceProvider: CallHandlerProvider {
   var interceptors: MonadJobServiceServerInterceptorFactoryProtocol? { get }
 
   func fetchAllJobs(request: MonadEmpty, context: StatusOnlyCallContext) -> EventLoopFuture<MonadJobList>
@@ -2724,13 +2724,13 @@ internal protocol MonadJobServiceProvider: CallHandlerProvider {
 }
 
 extension MonadJobServiceProvider {
-  internal var serviceName: Substring {
+  public var serviceName: Substring {
     return MonadJobServiceServerMetadata.serviceDescriptor.fullName[...]
   }
 
   /// Determines, calls and returns the appropriate request handler, depending on the request's method.
   /// Returns nil for methods not handled by this service.
-  internal func handle(
+  public func handle(
     method name: Substring,
     context: CallHandlerContext
   ) -> GRPCServerHandlerProtocol? {
@@ -2779,7 +2779,7 @@ extension MonadJobServiceProvider {
 
 /// To implement a server, implement an object which conforms to this protocol.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal protocol MonadJobServiceAsyncProvider: CallHandlerProvider, Sendable {
+public protocol MonadJobServiceAsyncProvider: CallHandlerProvider, Sendable {
   static var serviceDescriptor: GRPCServiceDescriptor { get }
   var interceptors: MonadJobServiceServerInterceptorFactoryProtocol? { get }
 
@@ -2806,19 +2806,19 @@ internal protocol MonadJobServiceAsyncProvider: CallHandlerProvider, Sendable {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension MonadJobServiceAsyncProvider {
-  internal static var serviceDescriptor: GRPCServiceDescriptor {
+  public static var serviceDescriptor: GRPCServiceDescriptor {
     return MonadJobServiceServerMetadata.serviceDescriptor
   }
 
-  internal var serviceName: Substring {
+  public var serviceName: Substring {
     return MonadJobServiceServerMetadata.serviceDescriptor.fullName[...]
   }
 
-  internal var interceptors: MonadJobServiceServerInterceptorFactoryProtocol? {
+  public var interceptors: MonadJobServiceServerInterceptorFactoryProtocol? {
     return nil
   }
 
-  internal func handle(
+  public func handle(
     method name: Substring,
     context: CallHandlerContext
   ) -> GRPCServerHandlerProtocol? {
@@ -2865,7 +2865,7 @@ extension MonadJobServiceAsyncProvider {
   }
 }
 
-internal protocol MonadJobServiceServerInterceptorFactoryProtocol: Sendable {
+public protocol MonadJobServiceServerInterceptorFactoryProtocol: Sendable {
 
   /// - Returns: Interceptors to use when handling 'fetchAllJobs'.
   ///   Defaults to calling `self.makeInterceptors()`.
@@ -2884,8 +2884,8 @@ internal protocol MonadJobServiceServerInterceptorFactoryProtocol: Sendable {
   func makeDequeueNextJobInterceptors() -> [ServerInterceptor<MonadEmpty, MonadJob>]
 }
 
-internal enum MonadJobServiceServerMetadata {
-  internal static let serviceDescriptor = GRPCServiceDescriptor(
+public enum MonadJobServiceServerMetadata {
+  public static let serviceDescriptor = GRPCServiceDescriptor(
     name: "JobService",
     fullName: "monad.JobService",
     methods: [
@@ -2896,26 +2896,26 @@ internal enum MonadJobServiceServerMetadata {
     ]
   )
 
-  internal enum Methods {
-    internal static let fetchAllJobs = GRPCMethodDescriptor(
+  public enum Methods {
+    public static let fetchAllJobs = GRPCMethodDescriptor(
       name: "FetchAllJobs",
       path: "/monad.JobService/FetchAllJobs",
       type: GRPCCallType.unary
     )
 
-    internal static let saveJob = GRPCMethodDescriptor(
+    public static let saveJob = GRPCMethodDescriptor(
       name: "SaveJob",
       path: "/monad.JobService/SaveJob",
       type: GRPCCallType.unary
     )
 
-    internal static let deleteJob = GRPCMethodDescriptor(
+    public static let deleteJob = GRPCMethodDescriptor(
       name: "DeleteJob",
       path: "/monad.JobService/DeleteJob",
       type: GRPCCallType.unary
     )
 
-    internal static let dequeueNextJob = GRPCMethodDescriptor(
+    public static let dequeueNextJob = GRPCMethodDescriptor(
       name: "DequeueNextJob",
       path: "/monad.JobService/DequeueNextJob",
       type: GRPCCallType.unary

@@ -67,9 +67,6 @@ targets:
         excludes:
           - "**/.DS_Store"
           - "monad.proto"
-          - "swift-protobuf-config.json"
-          - "monad.proto"
-          - "swift-protobuf-config.json"
     dependencies:
       - sdk: NaturalLanguage.framework
       - package: OpenAI

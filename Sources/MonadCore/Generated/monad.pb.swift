@@ -20,8 +20,8 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-enum MonadMessageRole: SwiftProtobuf.Enum, Swift.CaseIterable {
-  typealias RawValue = Int
+public enum MonadMessageRole: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
   case user // = 0
   case assistant // = 1
   case system // = 2
@@ -29,11 +29,11 @@ enum MonadMessageRole: SwiftProtobuf.Enum, Swift.CaseIterable {
   case summary // = 4
   case UNRECOGNIZED(Int)
 
-  init() {
+  public init() {
     self = .user
   }
 
-  init?(rawValue: Int) {
+  public init?(rawValue: Int) {
     switch rawValue {
     case 0: self = .user
     case 1: self = .assistant
@@ -44,7 +44,7 @@ enum MonadMessageRole: SwiftProtobuf.Enum, Swift.CaseIterable {
     }
   }
 
-  var rawValue: Int {
+  public var rawValue: Int {
     switch self {
     case .user: return 0
     case .assistant: return 1
@@ -56,7 +56,7 @@ enum MonadMessageRole: SwiftProtobuf.Enum, Swift.CaseIterable {
   }
 
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static let allCases: [MonadMessageRole] = [
+  public static let allCases: [MonadMessageRole] = [
     .user,
     .assistant,
     .system,
@@ -66,19 +66,19 @@ enum MonadMessageRole: SwiftProtobuf.Enum, Swift.CaseIterable {
 
 }
 
-enum MonadJobStatus: SwiftProtobuf.Enum, Swift.CaseIterable {
-  typealias RawValue = Int
+public enum MonadJobStatus: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
   case pending // = 0
   case inProgress // = 1
   case completed // = 2
   case cancelled // = 3
   case UNRECOGNIZED(Int)
 
-  init() {
+  public init() {
     self = .pending
   }
 
-  init?(rawValue: Int) {
+  public init?(rawValue: Int) {
     switch rawValue {
     case 0: self = .pending
     case 1: self = .inProgress
@@ -88,7 +88,7 @@ enum MonadJobStatus: SwiftProtobuf.Enum, Swift.CaseIterable {
     }
   }
 
-  var rawValue: Int {
+  public var rawValue: Int {
     switch self {
     case .pending: return 0
     case .inProgress: return 1
@@ -99,7 +99,7 @@ enum MonadJobStatus: SwiftProtobuf.Enum, Swift.CaseIterable {
   }
 
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static let allCases: [MonadJobStatus] = [
+  public static let allCases: [MonadJobStatus] = [
     .pending,
     .inProgress,
     .completed,
@@ -108,70 +108,70 @@ enum MonadJobStatus: SwiftProtobuf.Enum, Swift.CaseIterable {
 
 }
 
-struct MonadEmpty: Sendable {
+public struct MonadEmpty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadMessage: Sendable {
+public struct MonadMessage: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var content: String = String()
+  public var content: String = String()
 
-  var role: MonadMessageRole = .user
+  public var role: MonadMessageRole = .user
 
-  var timestamp: SwiftProtobuf.Google_Protobuf_Timestamp {
+  public var timestamp: SwiftProtobuf.Google_Protobuf_Timestamp {
     get {return _timestamp ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
     set {_timestamp = newValue}
   }
   /// Returns true if `timestamp` has been explicitly set.
-  var hasTimestamp: Bool {return self._timestamp != nil}
+  public var hasTimestamp: Bool {return self._timestamp != nil}
   /// Clears the value of `timestamp`. Subsequent reads from it will return its default value.
-  mutating func clearTimestamp() {self._timestamp = nil}
+  public mutating func clearTimestamp() {self._timestamp = nil}
 
-  var think: String {
+  public var think: String {
     get {return _think ?? String()}
     set {_think = newValue}
   }
   /// Returns true if `think` has been explicitly set.
-  var hasThink: Bool {return self._think != nil}
+  public var hasThink: Bool {return self._think != nil}
   /// Clears the value of `think`. Subsequent reads from it will return its default value.
-  mutating func clearThink() {self._think = nil}
+  public mutating func clearThink() {self._think = nil}
 
-  var toolCalls: [MonadToolCall] = []
+  public var toolCalls: [MonadToolCall] = []
 
-  var parentID: String {
+  public var parentID: String {
     get {return _parentID ?? String()}
     set {_parentID = newValue}
   }
   /// Returns true if `parentID` has been explicitly set.
-  var hasParentID: Bool {return self._parentID != nil}
+  public var hasParentID: Bool {return self._parentID != nil}
   /// Clears the value of `parentID`. Subsequent reads from it will return its default value.
-  mutating func clearParentID() {self._parentID = nil}
+  public mutating func clearParentID() {self._parentID = nil}
 
-  var isSummary: Bool = false
+  public var isSummary: Bool = false
 
-  var summaryType: String {
+  public var summaryType: String {
     get {return _summaryType ?? String()}
     set {_summaryType = newValue}
   }
   /// Returns true if `summaryType` has been explicitly set.
-  var hasSummaryType: Bool {return self._summaryType != nil}
+  public var hasSummaryType: Bool {return self._summaryType != nil}
   /// Clears the value of `summaryType`. Subsequent reads from it will return its default value.
-  mutating func clearSummaryType() {self._summaryType = nil}
+  public mutating func clearSummaryType() {self._summaryType = nil}
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 
   fileprivate var _timestamp: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
   fileprivate var _think: String? = nil
@@ -179,247 +179,247 @@ struct MonadMessage: Sendable {
   fileprivate var _summaryType: String? = nil
 }
 
-struct MonadToolCall: Sendable {
+public struct MonadToolCall: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var name: String = String()
+  public var name: String = String()
 
   /// JSON string for AnyCodable
-  var argumentsJson: String = String()
+  public var argumentsJson: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadMemory: Sendable {
+public struct MonadMemory: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var title: String = String()
+  public var title: String = String()
 
-  var content: String = String()
+  public var content: String = String()
 
-  var createdAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+  public var createdAt: SwiftProtobuf.Google_Protobuf_Timestamp {
     get {return _createdAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
     set {_createdAt = newValue}
   }
   /// Returns true if `createdAt` has been explicitly set.
-  var hasCreatedAt: Bool {return self._createdAt != nil}
+  public var hasCreatedAt: Bool {return self._createdAt != nil}
   /// Clears the value of `createdAt`. Subsequent reads from it will return its default value.
-  mutating func clearCreatedAt() {self._createdAt = nil}
+  public mutating func clearCreatedAt() {self._createdAt = nil}
 
-  var updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+  public var updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
     get {return _updatedAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
     set {_updatedAt = newValue}
   }
   /// Returns true if `updatedAt` has been explicitly set.
-  var hasUpdatedAt: Bool {return self._updatedAt != nil}
+  public var hasUpdatedAt: Bool {return self._updatedAt != nil}
   /// Clears the value of `updatedAt`. Subsequent reads from it will return its default value.
-  mutating func clearUpdatedAt() {self._updatedAt = nil}
+  public mutating func clearUpdatedAt() {self._updatedAt = nil}
 
-  var tags: [String] = []
+  public var tags: [String] = []
 
-  var metadata: Dictionary<String,String> = [:]
+  public var metadata: Dictionary<String,String> = [:]
 
-  var embedding: [Double] = []
+  public var embedding: [Double] = []
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 
   fileprivate var _createdAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
   fileprivate var _updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
-struct MonadNote: Sendable {
+public struct MonadNote: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var name: String = String()
+  public var name: String = String()
 
-  var description_p: String = String()
+  public var description_p: String = String()
 
-  var content: String = String()
+  public var content: String = String()
 
-  var isReadonly: Bool = false
+  public var isReadonly: Bool = false
 
-  var tags: [String] = []
+  public var tags: [String] = []
 
-  var createdAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+  public var createdAt: SwiftProtobuf.Google_Protobuf_Timestamp {
     get {return _createdAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
     set {_createdAt = newValue}
   }
   /// Returns true if `createdAt` has been explicitly set.
-  var hasCreatedAt: Bool {return self._createdAt != nil}
+  public var hasCreatedAt: Bool {return self._createdAt != nil}
   /// Clears the value of `createdAt`. Subsequent reads from it will return its default value.
-  mutating func clearCreatedAt() {self._createdAt = nil}
+  public mutating func clearCreatedAt() {self._createdAt = nil}
 
-  var updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+  public var updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
     get {return _updatedAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
     set {_updatedAt = newValue}
   }
   /// Returns true if `updatedAt` has been explicitly set.
-  var hasUpdatedAt: Bool {return self._updatedAt != nil}
+  public var hasUpdatedAt: Bool {return self._updatedAt != nil}
   /// Clears the value of `updatedAt`. Subsequent reads from it will return its default value.
-  mutating func clearUpdatedAt() {self._updatedAt = nil}
+  public mutating func clearUpdatedAt() {self._updatedAt = nil}
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 
   fileprivate var _createdAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
   fileprivate var _updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
-struct MonadJob: Sendable {
+public struct MonadJob: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var title: String = String()
+  public var title: String = String()
 
-  var description_p: String {
+  public var description_p: String {
     get {return _description_p ?? String()}
     set {_description_p = newValue}
   }
   /// Returns true if `description_p` has been explicitly set.
-  var hasDescription_p: Bool {return self._description_p != nil}
+  public var hasDescription_p: Bool {return self._description_p != nil}
   /// Clears the value of `description_p`. Subsequent reads from it will return its default value.
-  mutating func clearDescription_p() {self._description_p = nil}
+  public mutating func clearDescription_p() {self._description_p = nil}
 
-  var priority: Int32 = 0
+  public var priority: Int32 = 0
 
-  var status: MonadJobStatus = .pending
+  public var status: MonadJobStatus = .pending
 
-  var createdAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+  public var createdAt: SwiftProtobuf.Google_Protobuf_Timestamp {
     get {return _createdAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
     set {_createdAt = newValue}
   }
   /// Returns true if `createdAt` has been explicitly set.
-  var hasCreatedAt: Bool {return self._createdAt != nil}
+  public var hasCreatedAt: Bool {return self._createdAt != nil}
   /// Clears the value of `createdAt`. Subsequent reads from it will return its default value.
-  mutating func clearCreatedAt() {self._createdAt = nil}
+  public mutating func clearCreatedAt() {self._createdAt = nil}
 
-  var updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+  public var updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
     get {return _updatedAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
     set {_updatedAt = newValue}
   }
   /// Returns true if `updatedAt` has been explicitly set.
-  var hasUpdatedAt: Bool {return self._updatedAt != nil}
+  public var hasUpdatedAt: Bool {return self._updatedAt != nil}
   /// Clears the value of `updatedAt`. Subsequent reads from it will return its default value.
-  mutating func clearUpdatedAt() {self._updatedAt = nil}
+  public mutating func clearUpdatedAt() {self._updatedAt = nil}
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 
   fileprivate var _description_p: String? = nil
   fileprivate var _createdAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
   fileprivate var _updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
-struct MonadSession: Sendable {
+public struct MonadSession: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var title: String = String()
+  public var title: String = String()
 
-  var createdAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+  public var createdAt: SwiftProtobuf.Google_Protobuf_Timestamp {
     get {return _createdAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
     set {_createdAt = newValue}
   }
   /// Returns true if `createdAt` has been explicitly set.
-  var hasCreatedAt: Bool {return self._createdAt != nil}
+  public var hasCreatedAt: Bool {return self._createdAt != nil}
   /// Clears the value of `createdAt`. Subsequent reads from it will return its default value.
-  mutating func clearCreatedAt() {self._createdAt = nil}
+  public mutating func clearCreatedAt() {self._createdAt = nil}
 
-  var updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+  public var updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp {
     get {return _updatedAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
     set {_updatedAt = newValue}
   }
   /// Returns true if `updatedAt` has been explicitly set.
-  var hasUpdatedAt: Bool {return self._updatedAt != nil}
+  public var hasUpdatedAt: Bool {return self._updatedAt != nil}
   /// Clears the value of `updatedAt`. Subsequent reads from it will return its default value.
-  mutating func clearUpdatedAt() {self._updatedAt = nil}
+  public mutating func clearUpdatedAt() {self._updatedAt = nil}
 
-  var isArchived: Bool = false
+  public var isArchived: Bool = false
 
-  var tags: [String] = []
+  public var tags: [String] = []
 
-  var workingDirectory: String {
+  public var workingDirectory: String {
     get {return _workingDirectory ?? String()}
     set {_workingDirectory = newValue}
   }
   /// Returns true if `workingDirectory` has been explicitly set.
-  var hasWorkingDirectory: Bool {return self._workingDirectory != nil}
+  public var hasWorkingDirectory: Bool {return self._workingDirectory != nil}
   /// Clears the value of `workingDirectory`. Subsequent reads from it will return its default value.
-  mutating func clearWorkingDirectory() {self._workingDirectory = nil}
+  public mutating func clearWorkingDirectory() {self._workingDirectory = nil}
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 
   fileprivate var _createdAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
   fileprivate var _updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
   fileprivate var _workingDirectory: String? = nil
 }
 
-struct MonadChatRequest: Sendable {
+public struct MonadChatRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var sessionID: String = String()
+  public var sessionID: String = String()
 
-  var userQuery: String = String()
+  public var userQuery: String = String()
 
-  var history: [MonadMessage] = []
+  public var history: [MonadMessage] = []
 
-  var toolIds: [String] = []
+  public var toolIds: [String] = []
 
-  var systemInstructions: String {
+  public var systemInstructions: String {
     get {return _systemInstructions ?? String()}
     set {_systemInstructions = newValue}
   }
   /// Returns true if `systemInstructions` has been explicitly set.
-  var hasSystemInstructions: Bool {return self._systemInstructions != nil}
+  public var hasSystemInstructions: Bool {return self._systemInstructions != nil}
   /// Clears the value of `systemInstructions`. Subsequent reads from it will return its default value.
-  mutating func clearSystemInstructions() {self._systemInstructions = nil}
+  public mutating func clearSystemInstructions() {self._systemInstructions = nil}
 
-  var useFastModel: Bool = false
+  public var useFastModel: Bool = false
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 
   fileprivate var _systemInstructions: String? = nil
 }
 
-struct MonadChatResponse: Sendable {
+public struct MonadChatResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   /// Chunks of the response
-  var payload: MonadChatResponse.OneOf_Payload? = nil
+  public var payload: MonadChatResponse.OneOf_Payload? = nil
 
-  var contentDelta: String {
+  public var contentDelta: String {
     get {
       if case .contentDelta(let v)? = payload {return v}
       return String()
@@ -427,7 +427,7 @@ struct MonadChatResponse: Sendable {
     set {payload = .contentDelta(newValue)}
   }
 
-  var thinkDelta: String {
+  public var thinkDelta: String {
     get {
       if case .thinkDelta(let v)? = payload {return v}
       return String()
@@ -435,7 +435,7 @@ struct MonadChatResponse: Sendable {
     set {payload = .thinkDelta(newValue)}
   }
 
-  var toolCall: MonadToolCall {
+  public var toolCall: MonadToolCall {
     get {
       if case .toolCall(let v)? = payload {return v}
       return MonadToolCall()
@@ -444,7 +444,7 @@ struct MonadChatResponse: Sendable {
   }
 
   /// Full message when complete
-  var finalMessage: MonadMessage {
+  public var finalMessage: MonadMessage {
     get {
       if case .finalMessage(let v)? = payload {return v}
       return MonadMessage()
@@ -452,7 +452,7 @@ struct MonadChatResponse: Sendable {
     set {payload = .finalMessage(newValue)}
   }
 
-  var metadata: MonadChatResponse.Metadata {
+  public var metadata: MonadChatResponse.Metadata {
     get {
       if case .metadata(let v)? = payload {return v}
       return MonadChatResponse.Metadata()
@@ -460,10 +460,10 @@ struct MonadChatResponse: Sendable {
     set {payload = .metadata(newValue)}
   }
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   /// Chunks of the response
-  enum OneOf_Payload: Equatable, Sendable {
+  public enum OneOf_Payload: Equatable, Sendable {
     case contentDelta(String)
     case thinkDelta(String)
     case toolCall(MonadToolCall)
@@ -473,134 +473,134 @@ struct MonadChatResponse: Sendable {
 
   }
 
-  struct Metadata: Sendable {
+  public struct Metadata: Sendable {
     // SwiftProtobuf.Message conformance is added in an extension below. See the
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
 
-    var model: String = String()
+    public var model: String = String()
 
-    var promptTokens: Int32 {
+    public var promptTokens: Int32 {
       get {return _promptTokens ?? 0}
       set {_promptTokens = newValue}
     }
     /// Returns true if `promptTokens` has been explicitly set.
-    var hasPromptTokens: Bool {return self._promptTokens != nil}
+    public var hasPromptTokens: Bool {return self._promptTokens != nil}
     /// Clears the value of `promptTokens`. Subsequent reads from it will return its default value.
-    mutating func clearPromptTokens() {self._promptTokens = nil}
+    public mutating func clearPromptTokens() {self._promptTokens = nil}
 
-    var completionTokens: Int32 {
+    public var completionTokens: Int32 {
       get {return _completionTokens ?? 0}
       set {_completionTokens = newValue}
     }
     /// Returns true if `completionTokens` has been explicitly set.
-    var hasCompletionTokens: Bool {return self._completionTokens != nil}
+    public var hasCompletionTokens: Bool {return self._completionTokens != nil}
     /// Clears the value of `completionTokens`. Subsequent reads from it will return its default value.
-    mutating func clearCompletionTokens() {self._completionTokens = nil}
+    public mutating func clearCompletionTokens() {self._completionTokens = nil}
 
-    var tokensPerSecond: Double {
+    public var tokensPerSecond: Double {
       get {return _tokensPerSecond ?? 0}
       set {_tokensPerSecond = newValue}
     }
     /// Returns true if `tokensPerSecond` has been explicitly set.
-    var hasTokensPerSecond: Bool {return self._tokensPerSecond != nil}
+    public var hasTokensPerSecond: Bool {return self._tokensPerSecond != nil}
     /// Clears the value of `tokensPerSecond`. Subsequent reads from it will return its default value.
-    mutating func clearTokensPerSecond() {self._tokensPerSecond = nil}
+    public mutating func clearTokensPerSecond() {self._tokensPerSecond = nil}
 
-    var unknownFields = SwiftProtobuf.UnknownStorage()
+    public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-    init() {}
+    public init() {}
 
     fileprivate var _promptTokens: Int32? = nil
     fileprivate var _completionTokens: Int32? = nil
     fileprivate var _tokensPerSecond: Double? = nil
   }
 
-  init() {}
+  public init() {}
 }
 
-struct MonadGenerateTitleRequest: Sendable {
+public struct MonadGenerateTitleRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var messages: [MonadMessage] = []
+  public var messages: [MonadMessage] = []
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadGenerateTitleResponse: Sendable {
+public struct MonadGenerateTitleResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var title: String = String()
+  public var title: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadSessionList: Sendable {
+public struct MonadSessionList: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var sessions: [MonadSession] = []
+  public var sessions: [MonadSession] = []
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadFetchSessionRequest: Sendable {
+public struct MonadFetchSessionRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadDeleteSessionRequest: Sendable {
+public struct MonadDeleteSessionRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadArchiveSessionRequest: Sendable {
+public struct MonadArchiveSessionRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var isArchived: Bool = false
+  public var isArchived: Bool = false
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadSearchRequest: Sendable {
+public struct MonadSearchRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var query: MonadSearchRequest.OneOf_Query? = nil
+  public var query: MonadSearchRequest.OneOf_Query? = nil
 
-  var text: String {
+  public var text: String {
     get {
       if case .text(let v)? = query {return v}
       return String()
@@ -608,7 +608,7 @@ struct MonadSearchRequest: Sendable {
     set {query = .text(newValue)}
   }
 
-  var vector: MonadEmbeddingQuery {
+  public var vector: MonadEmbeddingQuery {
     get {
       if case .vector(let v)? = query {return v}
       return MonadEmbeddingQuery()
@@ -616,146 +616,146 @@ struct MonadSearchRequest: Sendable {
     set {query = .vector(newValue)}
   }
 
-  var limit: Int32 = 0
+  public var limit: Int32 = 0
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  enum OneOf_Query: Equatable, Sendable {
+  public enum OneOf_Query: Equatable, Sendable {
     case text(String)
     case vector(MonadEmbeddingQuery)
 
   }
 
-  init() {}
+  public init() {}
 }
 
-struct MonadEmbeddingQuery: Sendable {
+public struct MonadEmbeddingQuery: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var vector: [Double] = []
+  public var vector: [Double] = []
 
-  var minSimilarity: Double = 0
+  public var minSimilarity: Double = 0
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadSearchResponse: Sendable {
+public struct MonadSearchResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var results: [MonadSearchResult] = []
+  public var results: [MonadSearchResult] = []
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadSearchResult: Sendable {
+public struct MonadSearchResult: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var memory: MonadMemory {
+  public var memory: MonadMemory {
     get {return _memory ?? MonadMemory()}
     set {_memory = newValue}
   }
   /// Returns true if `memory` has been explicitly set.
-  var hasMemory: Bool {return self._memory != nil}
+  public var hasMemory: Bool {return self._memory != nil}
   /// Clears the value of `memory`. Subsequent reads from it will return its default value.
-  mutating func clearMemory() {self._memory = nil}
+  public mutating func clearMemory() {self._memory = nil}
 
-  var similarity: Double {
+  public var similarity: Double {
     get {return _similarity ?? 0}
     set {_similarity = newValue}
   }
   /// Returns true if `similarity` has been explicitly set.
-  var hasSimilarity: Bool {return self._similarity != nil}
+  public var hasSimilarity: Bool {return self._similarity != nil}
   /// Clears the value of `similarity`. Subsequent reads from it will return its default value.
-  mutating func clearSimilarity() {self._similarity = nil}
+  public mutating func clearSimilarity() {self._similarity = nil}
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 
   fileprivate var _memory: MonadMemory? = nil
   fileprivate var _similarity: Double? = nil
 }
 
-struct MonadMemoryList: Sendable {
+public struct MonadMemoryList: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var memories: [MonadMemory] = []
+  public var memories: [MonadMemory] = []
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadDeleteMemoryRequest: Sendable {
+public struct MonadDeleteMemoryRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadNoteList: Sendable {
+public struct MonadNoteList: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var notes: [MonadNote] = []
+  public var notes: [MonadNote] = []
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadDeleteNoteRequest: Sendable {
+public struct MonadDeleteNoteRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadJobList: Sendable {
+public struct MonadJobList: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var jobs: [MonadJob] = []
+  public var jobs: [MonadJob] = []
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct MonadDeleteJobRequest: Sendable {
+public struct MonadDeleteJobRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -763,37 +763,37 @@ struct MonadDeleteJobRequest: Sendable {
 fileprivate let _protobuf_package = "monad"
 
 extension MonadMessageRole: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0USER\0\u{1}ASSISTANT\0\u{1}SYSTEM\0\u{1}TOOL\0\u{1}SUMMARY\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0USER\0\u{1}ASSISTANT\0\u{1}SYSTEM\0\u{1}TOOL\0\u{1}SUMMARY\0")
 }
 
 extension MonadJobStatus: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PENDING\0\u{1}IN_PROGRESS\0\u{1}COMPLETED\0\u{1}CANCELLED\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PENDING\0\u{1}IN_PROGRESS\0\u{1}COMPLETED\0\u{1}CANCELLED\0")
 }
 
 extension MonadEmpty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".Empty"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+  public static let protoMessageName: String = _protobuf_package + ".Empty"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     // Load everything into unknown fields
     while try decoder.nextFieldNumber() != nil {}
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadEmpty, rhs: MonadEmpty) -> Bool {
+  public static func ==(lhs: MonadEmpty, rhs: MonadEmpty) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
 extension MonadMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".Message"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}content\0\u{1}role\0\u{1}timestamp\0\u{1}think\0\u{3}tool_calls\0\u{3}parent_id\0\u{3}is_summary\0\u{3}summary_type\0")
+  public static let protoMessageName: String = _protobuf_package + ".Message"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}content\0\u{1}role\0\u{1}timestamp\0\u{1}think\0\u{3}tool_calls\0\u{3}parent_id\0\u{3}is_summary\0\u{3}summary_type\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -813,7 +813,7 @@ extension MonadMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementat
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     // The use of inline closures is to circumvent an issue where the compiler
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
@@ -848,7 +848,7 @@ extension MonadMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementat
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadMessage, rhs: MonadMessage) -> Bool {
+  public static func ==(lhs: MonadMessage, rhs: MonadMessage) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.content != rhs.content {return false}
     if lhs.role != rhs.role {return false}
@@ -864,10 +864,10 @@ extension MonadMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementat
 }
 
 extension MonadToolCall: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".ToolCall"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{3}arguments_json\0")
+  public static let protoMessageName: String = _protobuf_package + ".ToolCall"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{3}arguments_json\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -881,7 +881,7 @@ extension MonadToolCall: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
@@ -894,7 +894,7 @@ extension MonadToolCall: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadToolCall, rhs: MonadToolCall) -> Bool {
+  public static func ==(lhs: MonadToolCall, rhs: MonadToolCall) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.name != rhs.name {return false}
     if lhs.argumentsJson != rhs.argumentsJson {return false}
@@ -904,10 +904,10 @@ extension MonadToolCall: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
 }
 
 extension MonadMemory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".Memory"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}title\0\u{1}content\0\u{3}created_at\0\u{3}updated_at\0\u{1}tags\0\u{1}metadata\0\u{1}embedding\0")
+  public static let protoMessageName: String = _protobuf_package + ".Memory"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}title\0\u{1}content\0\u{3}created_at\0\u{3}updated_at\0\u{1}tags\0\u{1}metadata\0\u{1}embedding\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -926,7 +926,7 @@ extension MonadMemory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     // The use of inline closures is to circumvent an issue where the compiler
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
@@ -958,7 +958,7 @@ extension MonadMemory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadMemory, rhs: MonadMemory) -> Bool {
+  public static func ==(lhs: MonadMemory, rhs: MonadMemory) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.title != rhs.title {return false}
     if lhs.content != rhs.content {return false}
@@ -973,10 +973,10 @@ extension MonadMemory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
 }
 
 extension MonadNote: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".Note"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{1}description\0\u{1}content\0\u{3}is_readonly\0\u{1}tags\0\u{3}created_at\0\u{3}updated_at\0")
+  public static let protoMessageName: String = _protobuf_package + ".Note"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{1}description\0\u{1}content\0\u{3}is_readonly\0\u{1}tags\0\u{3}created_at\0\u{3}updated_at\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -995,7 +995,7 @@ extension MonadNote: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementation
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     // The use of inline closures is to circumvent an issue where the compiler
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
@@ -1027,7 +1027,7 @@ extension MonadNote: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementation
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadNote, rhs: MonadNote) -> Bool {
+  public static func ==(lhs: MonadNote, rhs: MonadNote) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.name != rhs.name {return false}
     if lhs.description_p != rhs.description_p {return false}
@@ -1042,10 +1042,10 @@ extension MonadNote: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementation
 }
 
 extension MonadJob: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".Job"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}title\0\u{1}description\0\u{1}priority\0\u{1}status\0\u{3}created_at\0\u{3}updated_at\0")
+  public static let protoMessageName: String = _protobuf_package + ".Job"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}title\0\u{1}description\0\u{1}priority\0\u{1}status\0\u{3}created_at\0\u{3}updated_at\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1063,7 +1063,7 @@ extension MonadJob: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationB
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     // The use of inline closures is to circumvent an issue where the compiler
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
@@ -1092,7 +1092,7 @@ extension MonadJob: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationB
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadJob, rhs: MonadJob) -> Bool {
+  public static func ==(lhs: MonadJob, rhs: MonadJob) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.title != rhs.title {return false}
     if lhs._description_p != rhs._description_p {return false}
@@ -1106,10 +1106,10 @@ extension MonadJob: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationB
 }
 
 extension MonadSession: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".Session"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}title\0\u{3}created_at\0\u{3}updated_at\0\u{3}is_archived\0\u{1}tags\0\u{3}working_directory\0")
+  public static let protoMessageName: String = _protobuf_package + ".Session"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}title\0\u{3}created_at\0\u{3}updated_at\0\u{3}is_archived\0\u{1}tags\0\u{3}working_directory\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1127,7 +1127,7 @@ extension MonadSession: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementat
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     // The use of inline closures is to circumvent an issue where the compiler
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
@@ -1156,7 +1156,7 @@ extension MonadSession: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementat
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadSession, rhs: MonadSession) -> Bool {
+  public static func ==(lhs: MonadSession, rhs: MonadSession) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.title != rhs.title {return false}
     if lhs._createdAt != rhs._createdAt {return false}
@@ -1170,10 +1170,10 @@ extension MonadSession: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementat
 }
 
 extension MonadChatRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".ChatRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}session_id\0\u{3}user_query\0\u{1}history\0\u{3}tool_ids\0\u{3}system_instructions\0\u{3}use_fast_model\0")
+  public static let protoMessageName: String = _protobuf_package + ".ChatRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}session_id\0\u{3}user_query\0\u{1}history\0\u{3}tool_ids\0\u{3}system_instructions\0\u{3}use_fast_model\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1190,7 +1190,7 @@ extension MonadChatRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImpleme
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     // The use of inline closures is to circumvent an issue where the compiler
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
@@ -1216,7 +1216,7 @@ extension MonadChatRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImpleme
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadChatRequest, rhs: MonadChatRequest) -> Bool {
+  public static func ==(lhs: MonadChatRequest, rhs: MonadChatRequest) -> Bool {
     if lhs.sessionID != rhs.sessionID {return false}
     if lhs.userQuery != rhs.userQuery {return false}
     if lhs.history != rhs.history {return false}
@@ -1229,10 +1229,10 @@ extension MonadChatRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImpleme
 }
 
 extension MonadChatResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".ChatResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}content_delta\0\u{3}think_delta\0\u{3}tool_call\0\u{3}final_message\0\u{1}metadata\0")
+  public static let protoMessageName: String = _protobuf_package + ".ChatResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}content_delta\0\u{3}think_delta\0\u{3}tool_call\0\u{3}final_message\0\u{1}metadata\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1298,7 +1298,7 @@ extension MonadChatResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplem
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     // The use of inline closures is to circumvent an issue where the compiler
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
@@ -1329,7 +1329,7 @@ extension MonadChatResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplem
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadChatResponse, rhs: MonadChatResponse) -> Bool {
+  public static func ==(lhs: MonadChatResponse, rhs: MonadChatResponse) -> Bool {
     if lhs.payload != rhs.payload {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1337,10 +1337,10 @@ extension MonadChatResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplem
 }
 
 extension MonadChatResponse.Metadata: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = MonadChatResponse.protoMessageName + ".Metadata"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}model\0\u{3}prompt_tokens\0\u{3}completion_tokens\0\u{3}tokens_per_second\0")
+  public static let protoMessageName: String = MonadChatResponse.protoMessageName + ".Metadata"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}model\0\u{3}prompt_tokens\0\u{3}completion_tokens\0\u{3}tokens_per_second\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1355,7 +1355,7 @@ extension MonadChatResponse.Metadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     // The use of inline closures is to circumvent an issue where the compiler
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
@@ -1375,7 +1375,7 @@ extension MonadChatResponse.Metadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadChatResponse.Metadata, rhs: MonadChatResponse.Metadata) -> Bool {
+  public static func ==(lhs: MonadChatResponse.Metadata, rhs: MonadChatResponse.Metadata) -> Bool {
     if lhs.model != rhs.model {return false}
     if lhs._promptTokens != rhs._promptTokens {return false}
     if lhs._completionTokens != rhs._completionTokens {return false}
@@ -1386,10 +1386,10 @@ extension MonadChatResponse.Metadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
 }
 
 extension MonadGenerateTitleRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".GenerateTitleRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}messages\0")
+  public static let protoMessageName: String = _protobuf_package + ".GenerateTitleRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}messages\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1401,14 +1401,14 @@ extension MonadGenerateTitleRequest: SwiftProtobuf.Message, SwiftProtobuf._Messa
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.messages.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.messages, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadGenerateTitleRequest, rhs: MonadGenerateTitleRequest) -> Bool {
+  public static func ==(lhs: MonadGenerateTitleRequest, rhs: MonadGenerateTitleRequest) -> Bool {
     if lhs.messages != rhs.messages {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1416,10 +1416,10 @@ extension MonadGenerateTitleRequest: SwiftProtobuf.Message, SwiftProtobuf._Messa
 }
 
 extension MonadGenerateTitleResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".GenerateTitleResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}title\0")
+  public static let protoMessageName: String = _protobuf_package + ".GenerateTitleResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}title\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1431,14 +1431,14 @@ extension MonadGenerateTitleResponse: SwiftProtobuf.Message, SwiftProtobuf._Mess
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.title.isEmpty {
       try visitor.visitSingularStringField(value: self.title, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadGenerateTitleResponse, rhs: MonadGenerateTitleResponse) -> Bool {
+  public static func ==(lhs: MonadGenerateTitleResponse, rhs: MonadGenerateTitleResponse) -> Bool {
     if lhs.title != rhs.title {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1446,10 +1446,10 @@ extension MonadGenerateTitleResponse: SwiftProtobuf.Message, SwiftProtobuf._Mess
 }
 
 extension MonadSessionList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".SessionList"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}sessions\0")
+  public static let protoMessageName: String = _protobuf_package + ".SessionList"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}sessions\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1461,14 +1461,14 @@ extension MonadSessionList: SwiftProtobuf.Message, SwiftProtobuf._MessageImpleme
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.sessions.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.sessions, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadSessionList, rhs: MonadSessionList) -> Bool {
+  public static func ==(lhs: MonadSessionList, rhs: MonadSessionList) -> Bool {
     if lhs.sessions != rhs.sessions {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1476,10 +1476,10 @@ extension MonadSessionList: SwiftProtobuf.Message, SwiftProtobuf._MessageImpleme
 }
 
 extension MonadFetchSessionRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".FetchSessionRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
+  public static let protoMessageName: String = _protobuf_package + ".FetchSessionRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1491,14 +1491,14 @@ extension MonadFetchSessionRequest: SwiftProtobuf.Message, SwiftProtobuf._Messag
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadFetchSessionRequest, rhs: MonadFetchSessionRequest) -> Bool {
+  public static func ==(lhs: MonadFetchSessionRequest, rhs: MonadFetchSessionRequest) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1506,10 +1506,10 @@ extension MonadFetchSessionRequest: SwiftProtobuf.Message, SwiftProtobuf._Messag
 }
 
 extension MonadDeleteSessionRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".DeleteSessionRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
+  public static let protoMessageName: String = _protobuf_package + ".DeleteSessionRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1521,14 +1521,14 @@ extension MonadDeleteSessionRequest: SwiftProtobuf.Message, SwiftProtobuf._Messa
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadDeleteSessionRequest, rhs: MonadDeleteSessionRequest) -> Bool {
+  public static func ==(lhs: MonadDeleteSessionRequest, rhs: MonadDeleteSessionRequest) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1536,10 +1536,10 @@ extension MonadDeleteSessionRequest: SwiftProtobuf.Message, SwiftProtobuf._Messa
 }
 
 extension MonadArchiveSessionRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".ArchiveSessionRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}is_archived\0")
+  public static let protoMessageName: String = _protobuf_package + ".ArchiveSessionRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}is_archived\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1552,7 +1552,7 @@ extension MonadArchiveSessionRequest: SwiftProtobuf.Message, SwiftProtobuf._Mess
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
@@ -1562,7 +1562,7 @@ extension MonadArchiveSessionRequest: SwiftProtobuf.Message, SwiftProtobuf._Mess
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadArchiveSessionRequest, rhs: MonadArchiveSessionRequest) -> Bool {
+  public static func ==(lhs: MonadArchiveSessionRequest, rhs: MonadArchiveSessionRequest) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.isArchived != rhs.isArchived {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -1571,10 +1571,10 @@ extension MonadArchiveSessionRequest: SwiftProtobuf.Message, SwiftProtobuf._Mess
 }
 
 extension MonadSearchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".SearchRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}vector\0\u{1}limit\0")
+  public static let protoMessageName: String = _protobuf_package + ".SearchRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}vector\0\u{1}limit\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1607,7 +1607,7 @@ extension MonadSearchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     // The use of inline closures is to circumvent an issue where the compiler
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
@@ -1629,7 +1629,7 @@ extension MonadSearchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadSearchRequest, rhs: MonadSearchRequest) -> Bool {
+  public static func ==(lhs: MonadSearchRequest, rhs: MonadSearchRequest) -> Bool {
     if lhs.query != rhs.query {return false}
     if lhs.limit != rhs.limit {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -1638,10 +1638,10 @@ extension MonadSearchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
 }
 
 extension MonadEmbeddingQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".EmbeddingQuery"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}vector\0\u{3}min_similarity\0")
+  public static let protoMessageName: String = _protobuf_package + ".EmbeddingQuery"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}vector\0\u{3}min_similarity\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1654,7 +1654,7 @@ extension MonadEmbeddingQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.vector.isEmpty {
       try visitor.visitPackedDoubleField(value: self.vector, fieldNumber: 1)
     }
@@ -1664,7 +1664,7 @@ extension MonadEmbeddingQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadEmbeddingQuery, rhs: MonadEmbeddingQuery) -> Bool {
+  public static func ==(lhs: MonadEmbeddingQuery, rhs: MonadEmbeddingQuery) -> Bool {
     if lhs.vector != rhs.vector {return false}
     if lhs.minSimilarity != rhs.minSimilarity {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -1673,10 +1673,10 @@ extension MonadEmbeddingQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
 }
 
 extension MonadSearchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".SearchResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}results\0")
+  public static let protoMessageName: String = _protobuf_package + ".SearchResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}results\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1688,14 +1688,14 @@ extension MonadSearchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.results.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.results, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadSearchResponse, rhs: MonadSearchResponse) -> Bool {
+  public static func ==(lhs: MonadSearchResponse, rhs: MonadSearchResponse) -> Bool {
     if lhs.results != rhs.results {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1703,10 +1703,10 @@ extension MonadSearchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
 }
 
 extension MonadSearchResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".SearchResult"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}memory\0\u{1}similarity\0")
+  public static let protoMessageName: String = _protobuf_package + ".SearchResult"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}memory\0\u{1}similarity\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1719,7 +1719,7 @@ extension MonadSearchResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplem
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     // The use of inline closures is to circumvent an issue where the compiler
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
@@ -1733,7 +1733,7 @@ extension MonadSearchResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplem
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadSearchResult, rhs: MonadSearchResult) -> Bool {
+  public static func ==(lhs: MonadSearchResult, rhs: MonadSearchResult) -> Bool {
     if lhs._memory != rhs._memory {return false}
     if lhs._similarity != rhs._similarity {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -1742,10 +1742,10 @@ extension MonadSearchResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplem
 }
 
 extension MonadMemoryList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".MemoryList"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}memories\0")
+  public static let protoMessageName: String = _protobuf_package + ".MemoryList"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}memories\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1757,14 +1757,14 @@ extension MonadMemoryList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplemen
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.memories.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.memories, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadMemoryList, rhs: MonadMemoryList) -> Bool {
+  public static func ==(lhs: MonadMemoryList, rhs: MonadMemoryList) -> Bool {
     if lhs.memories != rhs.memories {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1772,10 +1772,10 @@ extension MonadMemoryList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplemen
 }
 
 extension MonadDeleteMemoryRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".DeleteMemoryRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
+  public static let protoMessageName: String = _protobuf_package + ".DeleteMemoryRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1787,14 +1787,14 @@ extension MonadDeleteMemoryRequest: SwiftProtobuf.Message, SwiftProtobuf._Messag
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadDeleteMemoryRequest, rhs: MonadDeleteMemoryRequest) -> Bool {
+  public static func ==(lhs: MonadDeleteMemoryRequest, rhs: MonadDeleteMemoryRequest) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1802,10 +1802,10 @@ extension MonadDeleteMemoryRequest: SwiftProtobuf.Message, SwiftProtobuf._Messag
 }
 
 extension MonadNoteList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".NoteList"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}notes\0")
+  public static let protoMessageName: String = _protobuf_package + ".NoteList"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}notes\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1817,14 +1817,14 @@ extension MonadNoteList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.notes.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.notes, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadNoteList, rhs: MonadNoteList) -> Bool {
+  public static func ==(lhs: MonadNoteList, rhs: MonadNoteList) -> Bool {
     if lhs.notes != rhs.notes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1832,10 +1832,10 @@ extension MonadNoteList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
 }
 
 extension MonadDeleteNoteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".DeleteNoteRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
+  public static let protoMessageName: String = _protobuf_package + ".DeleteNoteRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1847,14 +1847,14 @@ extension MonadDeleteNoteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadDeleteNoteRequest, rhs: MonadDeleteNoteRequest) -> Bool {
+  public static func ==(lhs: MonadDeleteNoteRequest, rhs: MonadDeleteNoteRequest) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1862,10 +1862,10 @@ extension MonadDeleteNoteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageI
 }
 
 extension MonadJobList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".JobList"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}jobs\0")
+  public static let protoMessageName: String = _protobuf_package + ".JobList"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}jobs\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1877,14 +1877,14 @@ extension MonadJobList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementat
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.jobs.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.jobs, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadJobList, rhs: MonadJobList) -> Bool {
+  public static func ==(lhs: MonadJobList, rhs: MonadJobList) -> Bool {
     if lhs.jobs != rhs.jobs {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1892,10 +1892,10 @@ extension MonadJobList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementat
 }
 
 extension MonadDeleteJobRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".DeleteJobRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
+  public static let protoMessageName: String = _protobuf_package + ".DeleteJobRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1907,14 +1907,14 @@ extension MonadDeleteJobRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: MonadDeleteJobRequest, rhs: MonadDeleteJobRequest) -> Bool {
+  public static func ==(lhs: MonadDeleteJobRequest, rhs: MonadDeleteJobRequest) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
