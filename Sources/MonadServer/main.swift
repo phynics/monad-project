@@ -20,7 +20,7 @@ let memoryHandler = MemoryHandler(persistence: persistence)
 let noteHandler = NoteHandler(persistence: persistence)
 let jobHandler = JobHandler(persistence: persistence)
 
-let group = NIOSingletons.posixEventLoopGroup
+let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 
 // Start server
 let server = try await Server.insecure(group: group)
