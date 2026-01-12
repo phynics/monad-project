@@ -22,7 +22,7 @@ Implement the core logic for routing messages and handling streaming responses.
 
 - [x] Task: Implement Feature: Message handler that maps incoming Discord DMs to gRPC `ChatStream` calls. f6653f0
 - [x] Task: Implement Feature: Streaming logic to periodically edit the Discord message with received LLM deltas. 1c3fbde
-- [ ] Task: Implement Feature: Formatting logic to convert tool results and metadata into Discord Rich Embeds.
+- [x] Task: Implement Feature: Formatting logic to convert tool results and metadata into Discord Rich Embeds. 989bf25
 - [ ] Task: Write Tests: Functional tests for the bridge logic using mocked gRPC server responses and mock Discord events.
 - [ ] Task: Conductor - User Manual Verification 'Discord-to-gRPC Integration' (Protocol in workflow.md)
 
