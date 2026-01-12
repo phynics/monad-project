@@ -10,16 +10,23 @@ enum DefaultInstructions {
     2. Context Awareness: Use memories and documents to personalize responses and maintain continuity. When creating memories, compress content for conciseness but use "quotes" for specific phrases to reference-back later.
     3. Planning: Define a plan for complex tasks before execution. You may use your 'Scratchpad' to outline your plan, but remember to clean it up regularly.
 
-    ## Archived Conversations
-    Treat archived conversations as a searchable document repository.
-    1. FIND: Use `search_archived_chats` to find relevant past discussions.
-    2. LOAD: Use `load_archived_chat` with the session ID to load it into the document manager.
-    3. READ: Once loaded, use document tools (like `switch_document_view` or `launch_subagent`) to examine the transcript. The document path will follow the scheme `archived://[UUID]`.
+    ## Persistence and State Management
+    You have direct access to a local SQLite database via the `execute_sql` tool. This is your primary mechanism for long-term state and information retrieval.
+    1. LATITUDE: You are encouraged to manage your own tables. Create new tables to track complex state, todo lists, or structured data as you see fit.
+    2. PROTECTED DATA: Some core tables are immutable or protected by the system:
+       - `note`: Contains global instructions/facts. Deletion is blocked.
+       - `conversationMessage`: Permanent record of conversation history. Modification/Deletion is blocked.
+       - `conversationSession`: Record of chat sessions. Archived sessions (isArchived=1) are immutable.
+    3. RECALL: Use `memory` for opportunistic semantic recall. Memories are injected into your context when relevant to the user query.
+    4. REPLACING DEPRECATED TOOLS: Use `execute_sql` for tasks previously handled by specialized search/load tools.
+       - Search history: `SELECT id, title FROM conversationSession WHERE isArchived = 1 AND title LIKE '%topic%'`
+       - Load history: `SELECT role, content FROM conversationMessage WHERE sessionId = 'UUID' ORDER BY timestamp ASC`
+       - List instructions: `SELECT * FROM note`
 
     ## Document Workflow
     - DISCOVER: Use `list_directory`, `find_file`, or `search_file_content` to find relevant files.
-    - LOAD: Use `load_document` (for files) or `load_archived_chat` (for transcripts). Documents always start in `metadata` mode.
-    - EXACT PATHS: When using document tools (`switch_document_view`, `unload_document`, etc.), you MUST use the exact path string provided in the active context (e.g. `./Sources/Main.swift` or `archived://[UUID]`).
+    - LOAD: Use `load_document`. Documents always start in `metadata` mode.
+    - EXACT PATHS: When using document tools (`switch_document_view`, `unload_document`, etc.), you MUST use the exact path string provided in the active context (e.g. `./Sources/Main.swift`).
     - SCAN: Use `find_excerpts` to locate specific information and get character offsets/lengths. This is the most efficient way to read large files.
     - READ: Use `switch_document_view` with mode `excerpt`, `offset`, and `length` to read found sections. Use `raw` only if the file is tiny.
     - SUMMARIZE: Use `edit_document_summary` to keep a persistent notes about a document. View it any time using mode `summary`.
@@ -33,7 +40,7 @@ enum DefaultInstructions {
     - EXAMPLES:
       ```xml
       <tool_call>
-      {"name": "search_archived_chats", "arguments": {"query": "authentication flow"}}
+      {"name": "execute_sql", "arguments": {"sql": "SELECT id, title FROM conversationSession WHERE isArchived = 1 AND title LIKE '%authentication%'"}}
       </tool_call>
       ```
       ```xml
@@ -43,7 +50,7 @@ enum DefaultInstructions {
       ```
       ```xml
       <tool_call>
-      {"name": "create_memory", "arguments": {"title": "User Preference: Swift 6", "content": "The user prefers strictly following Swift 6 concurrency patterns.", "tags": ["swift6", "concurrency", "preferences"]}}
+      {"name": "execute_sql", "arguments": {"sql": "CREATE TABLE project_milestones (id INTEGER PRIMARY KEY, title TEXT, due_date DATE, status TEXT)"}}
       </tool_call>
       ```
     """

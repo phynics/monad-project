@@ -258,10 +258,10 @@ public enum DatabaseSchema {
             description: "Core capabilities and operational constraints.",
             content: """
                 Operational Rules:
-                - Use tools only when necessary for information retrieval or state updates.
-                - DO NOT use tools for greetings or general conversation.
-                - Persona: technical, professional, and concise. No emojis.
+                - Use SQL via `execute_sql` for data retrieval and state management.
                 - Prioritize context notes and memories for accuracy and personalization.
+                - Archives (History) and Notes are protected and cannot be deleted.
+                - Persona: technical, professional, and concise. No emojis.
                 """,
             isReadonly: true,
             createdAt: now,

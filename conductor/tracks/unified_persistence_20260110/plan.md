@@ -27,6 +27,6 @@ Update the prompt construction logic and implement the user confirmation safety 
 ## Phase 4: Prompting and Instruction Updates
 Update all system instructions and default notes to reflect the new agent capabilities and persistence rules.
 
-- [ ] Task: Implement Feature: Update `DefaultInstructions.swift` and system prompt building logic to explain the `ExecuteSQLTool` and the latitude provided for database management.
+- [~] Task: Implement Feature: Update `DefaultInstructions.swift` and system prompt building logic to explain the `ExecuteSQLTool` and the latitude provided for database management.
 - [ ] Task: Implement Feature: Update default system notes to remove outdated `alwaysAppend` references and provide clear guidance on the protected status of Archives and Notes.
 - [ ] Task: Conductor - User Manual Verification 'Prompting and Instruction Updates' (Protocol in workflow.md)
