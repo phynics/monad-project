@@ -29,6 +29,9 @@ public struct ChatSidebarView: View {
         .sheet(item: $selectedDocument) { doc in
             DocumentContextDetailView(document: doc)
         }
+        .task {
+            await viewModel.refreshJobs()
+        }
     }
 
     private var header: some View {
@@ -137,9 +140,8 @@ public struct ChatSidebarView: View {
 
     @ViewBuilder
     private var jobQueueSection: some View {
-        let jobs = viewModel.jobQueueContext.listJobs()
-        let pendingJobs = jobs.filter { $0.status == .pending }
-        let inProgressJobs = jobs.filter { $0.status == .inProgress }
+        let pendingJobs = viewModel.jobs.filter { $0.status == .pending }
+        let inProgressJobs = viewModel.jobs.filter { $0.status == .inProgress }
 
         VStack(alignment: .leading, spacing: 12) {
             if !inProgressJobs.isEmpty {

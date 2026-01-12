@@ -190,6 +190,22 @@ public enum DatabaseSchema {
                 t.column("createdAt", .datetime).notNull()
             }
         }
+
+        // v14: Add job table for persistent task queue
+        migrator.registerMigration("v14") { db in
+            try db.create(table: "job") { t in
+                t.column("id", .blob).primaryKey()
+                t.column("title", .text).notNull()
+                t.column("description", .text)
+                t.column("priority", .integer).notNull().defaults(to: 0)
+                t.column("status", .text).notNull().defaults(to: "pending")
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+            }
+            
+            try db.create(index: "idx_job_status", on: "job", columns: ["status"])
+            try db.create(index: "idx_job_priority", on: "job", columns: ["priority"])
+        }
     }
 
     // MARK: - Conversation Tables

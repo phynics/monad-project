@@ -16,6 +16,7 @@ enum DefaultInstructions {
     2. SELF-DOCUMENTING SCHEMA: Use the `table_directory` table to explore existing tables and their purposes. When you create a new table, it will be automatically added to the directory.
     3. PROTECTED DATA: Some core tables are immutable or protected by the system:
        - `note`: Contains global instructions/facts. Deletion is blocked. All notes are injected into your system prompt.
+       - `job`: Persistent task queue for long-term and background work. Use `manage_jobs` or SQL to manage.
        - `conversationMessage`: Permanent record of conversation history. Modification/Deletion is blocked.
        - `conversationSession`: Record of chat sessions. Archived sessions (isArchived=1) are immutable.
     4. RECALL: Use `memory` for opportunistic semantic recall. Memories are injected into your context when relevant to the user query.

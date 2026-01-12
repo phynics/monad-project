@@ -61,6 +61,7 @@ public actor PersistenceService: PersistenceServiceProtocol {
             // Memory is used for recall and injected opportunistically, 
             // it can be reset as it's not part of the protected 'Archive'.
             try Memory.deleteAll(db)
+            try Job.deleteAll(db)
             
             // Note: Notes and conversationMessage/Session are now protected by triggers
             // and cannot be deleted or modified (for archived sessions).

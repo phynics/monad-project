@@ -4,5 +4,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: Unified Agent Interface and SQL-Driven Persistence Refactor
+## [x] Track: Unified Agent Interface and SQL-Driven Persistence Refactor
 *Link: [./conductor/tracks/unified_persistence_20260112/](./conductor/tracks/unified_persistence_20260112/)*
+
+---
+
+## [x] Track: Persistent and Autonomous Job Queue
+*Link: [./conductor/tracks/persistent_job_queue_20260112/](./conductor/tracks/persistent_job_queue_20260112/)*

@@ -1,9 +1,10 @@
 import Foundation
+import GRDB
 
 // MARK: - Job Model
 
 /// Represents a single job in the queue
-public struct Job: Identifiable, Codable, Sendable, Equatable {
+public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, PersistableRecord {
     public let id: UUID
     public var title: String
     public var description: String?
@@ -36,6 +37,12 @@ public struct Job: Identifiable, Codable, Sendable, Equatable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
+}
+
+// MARK: - Persistence
+
+extension Job {
+    public static let databaseTableName = "job"
 }
 
 // MARK: - Formatting

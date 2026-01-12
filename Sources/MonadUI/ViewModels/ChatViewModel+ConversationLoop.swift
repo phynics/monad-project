@@ -122,6 +122,7 @@ extension ChatViewModel {
                         assistantMsgId: assistantMsgId
                     )
                     isExecutingTools = false
+                    await refreshJobs()
 
                     messages = persistenceManager.uiMessages
 
@@ -136,7 +137,7 @@ extension ChatViewModel {
                     shouldContinue = true
                 } else {
                     // No more tool calls - check for auto-dequeue
-                    if autoDequeueEnabled, let syntheticUserMsg = toolOrchestrator.autoDequeueNextJob() {
+                    if autoDequeueEnabled, let syntheticUserMsg = await toolOrchestrator.autoDequeueNextJob() {
                         messages.append(syntheticUserMsg)
 
                         // For auto-dequeued jobs, we should probably gather fresh context 

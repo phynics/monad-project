@@ -11,6 +11,7 @@ public final class ChatViewModel {
     public var inputText: String = ""
     public var messages: [Message] = []
     public var activeMemories: [ActiveMemory] = []
+    public var jobs: [Job] = []
     public var isLoading = false
     public var isExecutingTools = false
     public var errorMessage: String?
@@ -116,7 +117,7 @@ public final class ChatViewModel {
         self.contextCompressor = ContextCompressor(llmService: llmService)
 
         // Initialize tool infrastructure
-        self.jobQueueContext = JobQueueContext()
+        self.jobQueueContext = JobQueueContext(persistenceService: persistenceManager.persistence)
         self.toolContextSession = ToolContextSession()
         
         self.sessionOrchestrator = SessionOrchestrator(
@@ -146,6 +147,14 @@ public final class ChatViewModel {
         _toolsNeedRecreation = true
         _toolManager = nil
         _toolExecutor = nil
+    }
+
+    public func refreshJobs() async {
+        do {
+            self.jobs = try await jobQueueContext.listJobs()
+        } catch {
+            logger.error("Failed to refresh jobs: \(error.localizedDescription)")
+        }
     }
 }
 

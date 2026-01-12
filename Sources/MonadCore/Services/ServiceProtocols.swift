@@ -91,6 +91,12 @@ public protocol PersistenceServiceProtocol: Sendable {
     func searchArchivedSessions(query: String) async throws -> [ConversationSession]
     func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession]
     
+    // Jobs
+    func saveJob(_ job: Job) async throws
+    func fetchJob(id: UUID) async throws -> Job?
+    func fetchAllJobs() async throws -> [Job]
+    func deleteJob(id: UUID) async throws
+    
     // RAW SQL Support
     func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]]
     

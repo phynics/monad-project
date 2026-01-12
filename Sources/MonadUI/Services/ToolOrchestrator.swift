@@ -51,8 +51,9 @@ public final class ToolOrchestrator {
     
     /// Checks for and dequeues the next job from the queue if auto-dequeue is enabled.
     /// Returns a synthetic user message if a job was dequeued.
-    public func autoDequeueNextJob() -> Message? {
-        guard jobQueueContext.hasPendingJobs, let nextJob = jobQueueContext.dequeueNext() else {
+    public func autoDequeueNextJob() async -> Message? {
+        guard let hasPending = try? await jobQueueContext.hasPendingJobs(), hasPending,
+              let nextJob = try? await jobQueueContext.dequeueNext() else {
             return nil
         }
         

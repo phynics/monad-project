@@ -192,6 +192,7 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
     var messages: [ConversationMessage] = []
     var sessions: [ConversationSession] = []
     var notes: [Note] = []
+    var jobs: [Job] = []
     
     // Notes
     func saveNote(_ note: Note) async throws {
@@ -314,6 +315,27 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
         }
     }
     
+    // Jobs
+    func saveJob(_ job: Job) async throws {
+        if let index = jobs.firstIndex(where: { $0.id == job.id }) {
+            jobs[index] = job
+        } else {
+            jobs.append(job)
+        }
+    }
+    
+    func fetchJob(id: UUID) async throws -> Job? {
+        return jobs.first(where: { $0.id == id })
+    }
+    
+    func fetchAllJobs() async throws -> [Job] {
+        return jobs
+    }
+    
+    func deleteJob(id: UUID) async throws {
+        jobs.removeAll(where: { $0.id == id })
+    }
+    
     // RAW SQL Support
     func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]] {
         // Simple mock implementation: return an error if it looks like a deletion we should block
@@ -329,5 +351,6 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
         memories.removeAll()
         messages.removeAll()
         sessions.removeAll()
+        jobs.removeAll()
     }
 }
