@@ -138,8 +138,8 @@ public struct ToolConfiguration: Codable, Identifiable, Sendable {
 public final class SessionToolManager {
     public var enabledTools: Set<String> = []
 
-    /// Available tools in the system
-    public let availableTools: [Tool]
+    /// available tools in the system
+    public var availableTools: [Tool]
 
     /// Context session for dynamic tool injection
     public var contextSession: ToolContextSession?
@@ -149,6 +149,18 @@ public final class SessionToolManager {
         self.contextSession = contextSession
         // Enable all tools by default
         self.enabledTools = Set(availableTools.map { $0.id })
+    }
+
+    /// Update available tools
+    public func updateAvailableTools(_ tools: [Tool]) {
+        self.availableTools = tools
+        // Keep enabledTools set in sync with available tools (don't remove enabled status if tool still exists)
+        let newIds = Set(tools.map { $0.id })
+        self.enabledTools = self.enabledTools.intersection(newIds)
+        // Auto-enable new tools? Let's say yes for now to avoid breaking changes.
+        for id in newIds where !self.enabledTools.contains(id) {
+            self.enabledTools.insert(id)
+        }
     }
 
     /// Get tools that are currently enabled, including context tools if a context is active

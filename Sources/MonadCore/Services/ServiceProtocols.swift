@@ -97,3 +97,11 @@ public protocol PersistenceServiceProtocol: Sendable {
     // Database Management
     func resetDatabase() async throws
 }
+
+/// Delegate for requesting user confirmation for sensitive operations
+public protocol SQLConfirmationDelegate: AnyObject, Sendable {
+    /// Request confirmation for a sensitive SQL operation
+    /// - Parameter sql: The SQL command to be executed
+    /// - Returns: True if user approved, false otherwise
+    func requestConfirmation(for sql: String) async -> Bool
+}

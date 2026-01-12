@@ -10,7 +10,7 @@ extension ChatViewModel {
             ?? FileManager.default.currentDirectoryPath
 
         let availableTools: [MonadCore.Tool] = [
-            ExecuteSQLTool(persistenceService: persistenceManager.persistence),
+            ExecuteSQLTool(persistenceService: persistenceManager.persistence, confirmationDelegate: self),
             // Filesystem Tools
             ChangeDirectoryTool(
                 currentPath: currentWD,

@@ -2,16 +2,10 @@ import Foundation
 import MonadCore
 import OSLog
 
-/// Delegate for handling sensitive operations that require user confirmation.
-@MainActor
-public protocol SQLConfirmationDelegate: AnyObject {
-    func requestConfirmation(for sql: String) async -> Bool
-}
-
 /// Orchestrates tool execution and integrates results back into the conversation state.
 @MainActor
 public final class ToolOrchestrator {
-    public weak var delegate: SQLConfirmationDelegate?
+    public weak var delegate: (any SQLConfirmationDelegate)?
     
     private let toolExecutorProvider: @MainActor () -> ToolExecutor
     private var toolExecutor: ToolExecutor { toolExecutorProvider() }
@@ -37,28 +31,6 @@ public final class ToolOrchestrator {
         assistantMsgId: UUID
     ) async throws -> Bool {
         logger.info("Executing \(toolCalls.count) tool calls")
-        
-        // Filter for SQL tool calls and check for sensitivity
-        for call in toolCalls where call.name == "execute_sql" {
-            if let sql = call.arguments["sql"]?.value as? String {
-                if let sqlTool = toolExecutor.getTool(id: "execute_sql") as? ExecuteSQLTool {
-                    if sqlTool.isSensitive(sql: sql) {
-                        if let delegate = delegate {
-                            let confirmed = await delegate.requestConfirmation(for: sql)
-                            if !confirmed {
-                                // User cancelled. Save a 'cancelled' message and return.
-                                try await persistenceManager.addMessage(
-                                    role: .tool,
-                                    content: "Error: Operation cancelled by user.",
-                                    parentId: assistantMsgId
-                                )
-                                return false
-                            }
-                        }
-                    }
-                }
-            }
-        }
         
         let toolResults = await toolExecutor.executeAll(toolCalls)
         

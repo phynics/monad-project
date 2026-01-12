@@ -29,9 +29,11 @@ public struct ExecuteSQLTool: Tool {
     public let requiresPermission = false
     
     private let persistenceService: any PersistenceServiceProtocol
+    public weak var confirmationDelegate: (any SQLConfirmationDelegate)?
     
-    public init(persistenceService: any PersistenceServiceProtocol) {
+    public init(persistenceService: any PersistenceServiceProtocol, confirmationDelegate: (any SQLConfirmationDelegate)? = nil) {
         self.persistenceService = persistenceService
+        self.confirmationDelegate = confirmationDelegate
     }
     
     public func canExecute() async -> Bool {
@@ -61,6 +63,15 @@ public struct ExecuteSQLTool: Tool {
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
         guard let sql = parameters["sql"] as? String else {
             return .failure("Missing required parameter 'sql'")
+        }
+        
+        if isSensitive(sql: sql) {
+            if let delegate = confirmationDelegate {
+                let approved = await delegate.requestConfirmation(for: sql)
+                if !approved {
+                    return .failure("User cancelled the operation.")
+                }
+            }
         }
         
         do {

@@ -153,7 +153,7 @@ public final class ChatViewModel {
 
 extension ChatViewModel: SQLConfirmationDelegate {
     public func requestConfirmation(for sql: String) async -> Bool {
-        await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { continuation in
             self.pendingSQLOperation = (
                 sql: sql,
                 onConfirm: {
