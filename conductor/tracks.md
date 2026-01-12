@@ -9,5 +9,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: Client-Server Split and Dockerization
-*Link: [./conductor/tracks/client_server_split_20260112/](./conductor/tracks/client_server_split_20260112/)*
+## [~] Track: Distributed Memory Synchronization and Vector Search Performance
+*Link: [./conductor/tracks/distributed_memory_20260112/](./conductor/tracks/distributed_memory_20260112/)*
+
+---
+
+## [~] Track: Discord Integration and Signal Removal
+*Link: [./conductor/tracks/discord_integration_20260112/](./conductor/tracks/discord_integration_20260112/)*

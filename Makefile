@@ -37,7 +37,9 @@ generate-proto:
 	@protoc --plugin=protoc-gen-swift=.build/release/protoc-gen-swift \
 		--plugin=protoc-gen-grpc-swift=.build/release/protoc-gen-grpc-swift \
 		--swift_out=Sources/MonadCore/Generated \
+		--swift_opt=Visibility=Public \
 		--grpc-swift_out=Sources/MonadCore/Generated \
+		--grpc-swift_opt=Visibility=Public \
 		Sources/MonadCore/monad.proto \
 		-I Sources/MonadCore \
 		-I /opt/homebrew/include

@@ -8,6 +8,11 @@
 
 ## Logic and Architecture
 - **MonadCore:** A dedicated pure logic framework (Linux-compatible) responsible for context management, persistence, and tool execution.
+- **MonadServer:** A Swift-based gRPC server that hosts `MonadCore` on Linux environments.
+- **Distributed System:**
+    - **gRPC:** High-performance, typed communication protocol between clients and server.
+    - **Protocol Buffers:** Schema definition for cross-platform data serialization.
+    - **Signal Bridge:** A Proof-of-Concept client allowing interaction via the Signal messaging protocol.
 - **Modular Design:** Separation of concerns into Core, UI, and specialized modules (like MonadMCP).
 - **Architectural Integrity:**
     - **Protocol-Oriented Programming:** Services are defined by protocols to enable mocking and isolation.
@@ -28,3 +33,5 @@
 ## Build and Dependency Management
 - **xcodegen:** For project generation from `project.yml`, ensuring a consistent Xcode environment.
 - **Swift Package Manager (SPM):** For managing external library dependencies.
+- **Docker:** For containerizing the server environment, ensuring portability across Linux distributions.
+- **docker-compose:** For managing multi-container deployments and persistent volumes.

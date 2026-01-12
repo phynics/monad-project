@@ -61,18 +61,22 @@ struct DistributedIntegrationTests {
         remoteConfig.monadServer = MonadServerConfiguration(host: "localhost", port: port)
         try await viewModel.applyConfiguration(remoteConfig)
         
-        // 4. Setup Client 2: Signal Client (SignalBridgeEngine)
-        let bridgeEngine = SignalBridgeEngine(channel: channel)
+        // 4. Setup Client 2: Second Client (Another ChatViewModel)
+        let localLLM2 = LLMService()
+        let localPersistence2 = try await PersistenceService.create()
+        let persistenceManager2 = PersistenceManager(persistence: localPersistence2)
+        let viewModel2 = ChatViewModel(llmService: localLLM2, persistenceManager: persistenceManager2)
+        await viewModel2.startup()
+        try await viewModel2.applyConfiguration(remoteConfig)
         
-        // 5. Execution: Signal client creates a session and message
-        let signalUserId = "signal-user-123"
-        let signalResponse = try await bridgeEngine.handleMessage(userId: signalUserId, content: "Hello from Signal")
-        #expect(!signalResponse.isEmpty)
+        // 5. Execution: Second client creates a session
+        let secondClientSessionId = UUID()
+        var session = ConversationSession(id: secondClientSessionId, title: "Second Client Session")
+        try await persistenceManager2.persistence.saveSession(session)
         
-        // 6. Execution: Main client should be able to see the session created by Signal client
-        // (If we use the same gRPC server)
+        // 6. Execution: Main client should be able to see the session created by Second client
         await viewModel.checkStartupState()
-        #expect(persistenceManager.activeSessions.contains { $0.title.contains(signalUserId) })
+        #expect(persistenceManager.activeSessions.contains { $0.id == secondClientSessionId })
         
         // Cleanup
         _ = channel.close()
