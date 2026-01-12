@@ -1,6 +1,6 @@
 # Plan: Client-Server Split and Dockerization
 
-## Phase 1: gRPC Schema and Infrastructure
+## Phase 1: gRPC Schema and Infrastructure [checkpoint: 148b207]
 Define the communication contract and set up code generation.
 
 - [x] Task: Implement Feature: Define the `monad.proto` file covering Chat, Memory, Notes, and Job services. dee891c
