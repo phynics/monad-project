@@ -5,7 +5,7 @@ Define the communication contract and set up code generation.
 
 - [x] Task: Implement Feature: Define the `monad.proto` file covering Chat, Memory, Notes, and Job services. dee891c
 - [x] Task: Implement Feature: Update `Package.swift` and `project.yml` with gRPC Swift dependencies and configure the build system for code generation. b18ecb8
-- [ ] Task: Write Tests: Verify Protobuf-to-Model mapping and serialization for all core types.
+- [x] Task: Write Tests: Verify Protobuf-to-Model mapping and serialization for all core types. 61779d1
 - [ ] Task: Conductor - User Manual Verification 'gRPC Schema and Infrastructure' (Protocol in workflow.md)
 
 ## Phase 2: MonadServer Implementation
