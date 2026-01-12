@@ -125,8 +125,10 @@ public enum DatabaseSchema {
             try db.execute(sql: """
                 CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
                 BEFORE DELETE ON conversationSession
+                FOR EACH ROW
+                WHEN OLD.isArchived = 1
                 BEGIN
-                    SELECT RAISE(ABORT, 'Archives cannot be deleted');
+                    SELECT RAISE(ABORT, 'Archived sessions cannot be deleted');
                 END;
             """)
             
@@ -136,23 +138,27 @@ public enum DatabaseSchema {
                 FOR EACH ROW
                 WHEN OLD.isArchived = 1
                 BEGIN
-                    SELECT RAISE(ABORT, 'Archives cannot be modified');
+                    SELECT RAISE(ABORT, 'Archived sessions cannot be modified');
                 END;
             """)
             
             try db.execute(sql: """
                 CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
                 BEFORE DELETE ON conversationMessage
+                FOR EACH ROW
+                WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
                 BEGIN
-                    SELECT RAISE(ABORT, 'Archives cannot be deleted');
+                    SELECT RAISE(ABORT, 'Archived messages cannot be deleted');
                 END;
             """)
             
             try db.execute(sql: """
                 CREATE TRIGGER IF NOT EXISTS prevent_message_modification
                 BEFORE UPDATE ON conversationMessage
+                FOR EACH ROW
+                WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
                 BEGIN
-                    SELECT RAISE(ABORT, 'Archives cannot be modified');
+                    SELECT RAISE(ABORT, 'Archived messages cannot be modified');
                 END;
             """)
         }

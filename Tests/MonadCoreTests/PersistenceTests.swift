@@ -75,15 +75,16 @@ struct PersistenceTests {
         #expect(uiMessage.recalledMemories?[0].title == "Memory 1")
     }
 
-    @Test("Test cascading deletes: Deleting a session is now blocked")
+    @Test("Test cascading deletes: Deleting an archived session is now blocked")
     func cascadingDeletes() async throws {
-        let session = ConversationSession(title: "Test Session")
+        var session = ConversationSession(title: "Test Session")
+        session.isArchived = true
         try await persistence.saveSession(session)
 
         let message = ConversationMessage(sessionId: session.id, role: .user, content: "Delete me")
         try await persistence.saveMessage(message)
 
-        // Attempting to delete a session should now throw due to the SQLite trigger
+        // Attempting to delete an archived session should now throw due to the SQLite trigger
         await #expect(throws: Error.self) {
             try await persistence.deleteSession(id: session.id)
         }

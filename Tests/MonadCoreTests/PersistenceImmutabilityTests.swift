@@ -47,7 +47,8 @@ struct PersistenceImmutabilityTests {
 
     @Test("Test that archived messages cannot be deleted or modified")
     func archiveImmutability() async throws {
-        let session = ConversationSession(title: "Archived Session")
+        var session = ConversationSession(title: "Archived Session")
+        session.isArchived = true
         try await persistence.saveSession(session)
 
         let message = ConversationMessage(
@@ -79,6 +80,37 @@ struct PersistenceImmutabilityTests {
         #expect(fetchedMessages.count == 1)
         #expect(fetchedMessages.first?.content == "Permanent Message")
     }
+
+    @Test("Test that non-archived messages CAN be deleted or modified")
+    func nonArchivedImmutability() async throws {
+        var session = ConversationSession(title: "Live Session")
+        session.isArchived = false
+        try await persistence.saveSession(session)
+
+        let message = ConversationMessage(
+            sessionId: session.id,
+            role: .user,
+            content: "Temporary Message"
+        )
+        try await persistence.saveMessage(message)
+
+        let messageId = message.id
+        let sessionId = session.id
+
+        // Attempt to update message content - SHOULD SUCCESS
+        try await dbQueue.write { db in
+            try db.execute(sql: "UPDATE conversationMessage SET content = 'Changed' WHERE id = ?", arguments: [messageId])
+        }
+
+        // Attempt to delete message - SHOULD SUCCESS
+        try await dbQueue.write { db in
+            try db.execute(sql: "DELETE FROM conversationMessage WHERE id = ?", arguments: [messageId])
+        }
+
+        // Verify message is gone
+        let fetchedMessages = try await persistence.fetchMessages(for: sessionId)
+        #expect(fetchedMessages.isEmpty)
+    }
     
     @Test("Test that archived sessions cannot be deleted or modified")
     func sessionImmutability() async throws {
@@ -87,9 +119,6 @@ struct PersistenceImmutabilityTests {
         try await persistence.saveSession(session)
         
         let sessionId = session.id
-        
-        // Requirement says "Archive can't be deleted or modified". 
-        // Sessions are part of the archive.
         
         // Attempt to delete session
         await #expect(throws: Error.self) {
@@ -104,5 +133,27 @@ struct PersistenceImmutabilityTests {
                 try db.execute(sql: "UPDATE conversationSession SET title = 'Changed' WHERE id = ?", arguments: [sessionId])
             }
         }
+    }
+
+    @Test("Test that non-archived sessions CAN be deleted or modified")
+    func nonArchivedSessionImmutability() async throws {
+        var session = ConversationSession(title: "Temporary Session")
+        session.isArchived = false
+        try await persistence.saveSession(session)
+        
+        let sessionId = session.id
+        
+        // Attempt to update session title - SHOULD SUCCESS
+        try await dbQueue.write { db in
+            try db.execute(sql: "UPDATE conversationSession SET title = 'Changed' WHERE id = ?", arguments: [sessionId])
+        }
+        
+        // Attempt to delete session - SHOULD SUCCESS
+        try await dbQueue.write { db in
+            try db.execute(sql: "DELETE FROM conversationSession WHERE id = ?", arguments: [sessionId])
+        }
+        
+        let fetched = try await persistence.fetchSession(id: sessionId)
+        #expect(fetched == nil)
     }
 }
