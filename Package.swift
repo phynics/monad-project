@@ -15,15 +15,23 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main"),
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
+        .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.23.0"),
+        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.28.0"),
     ],
     targets: [
         .target(
             name: "MonadCore",
             dependencies: [
                 .product(name: "OpenAI", package: "OpenAI"),
-                .product(name: "GRDB", package: "GRDB.swift")
+                .product(name: "GRDB", package: "GRDB.swift"),
+                .product(name: "GRPC", package: "grpc-swift"),
+                .product(name: "SwiftProtobuf", package: "swift-protobuf")
             ],
-            path: "Sources/MonadCore"
+            path: "Sources/MonadCore",
+            exclude: [
+                "monad.proto",
+                "swift-protobuf-config.json"
+            ]
         ),
         .target(
             name: "MonadMCP",

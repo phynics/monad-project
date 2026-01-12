@@ -25,10 +25,25 @@ help:
 install-deps:
 	@echo "Installing development dependencies..."
 	@which xcodegen > /dev/null || brew install xcodegen
+	@which protoc > /dev/null || brew install protobuf
 	@echo "Dependencies installed!"
 
+# Generate Swift code from proto
+generate-proto:
+	@echo "Generating Swift code from proto..."
+	@mkdir -p Sources/MonadCore/Generated
+	@swift build -c release --product protoc-gen-swift
+	@swift build -c release --product protoc-gen-grpc-swift
+	@protoc --plugin=protoc-gen-swift=.build/release/protoc-gen-swift \
+		--plugin=protoc-gen-grpc-swift=.build/release/protoc-gen-grpc-swift \
+		--swift_out=Sources/MonadCore/Generated \
+		--grpc-swift_out=Sources/MonadCore/Generated \
+		Sources/MonadCore/monad.proto \
+		-I Sources/MonadCore \
+		-I /opt/homebrew/include
+
 # Generate Xcode project
-generate:
+generate: generate-proto
 	@echo "Generating Xcode project..."
 	@xcodegen generate
 	@echo "Project generated at MonadAssistant.xcodeproj"
