@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Unified Agent Interface and SQL-Driven Persistence Refactor
+## [~] Track: Unified Agent Interface and SQL-Driven Persistence Refactor
 *Link: [./conductor/tracks/unified_persistence_20260112/](./conductor/tracks/unified_persistence_20260112/)*
