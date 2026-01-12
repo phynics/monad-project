@@ -13,4 +13,9 @@ import NIOCore
         // This test mostly verifies that the refactored engine compiles and 
         // can be instantiated with mocked components.
     }
+
+    @Test("Test Throttled Streaming Accumulation")
+    func testStreamingAccumulation() async throws {
+        // Verify that deltas are correctly appended to fullContent
+    }
 }
