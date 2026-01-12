@@ -24,9 +24,9 @@ Update the prompt construction logic and implement the user confirmation safety 
 - [x] Task: Implement Feature: Add a confirmation proxy in `ChatViewModel` that intercepts `ExecuteSQLTool` calls and triggers a SwiftUI confirmation dialog for specific patterns (e.g., `CREATE TABLE`, `DROP TABLE`). 48a5e3c
 - [x] Task: Conductor - User Manual Verification 'Context Engine Refinement and UI Proxy' (Protocol in workflow.md) [checkpoint: eeff2bd]
 
-## Phase 4: Prompting and Instruction Updates
+## Phase 4: Prompting and Instruction Updates [checkpoint: c28fa40]
 Update all system instructions and default notes to reflect the new agent capabilities and persistence rules.
 
-- [~] Task: Implement Feature: Update `DefaultInstructions.swift` and system prompt building logic to explain the `ExecuteSQLTool` and the latitude provided for database management.
-- [ ] Task: Implement Feature: Update default system notes to remove outdated `alwaysAppend` references and provide clear guidance on the protected status of Archives and Notes.
-- [ ] Task: Conductor - User Manual Verification 'Prompting and Instruction Updates' (Protocol in workflow.md)
+- [x] Task: Implement Feature: Update `DefaultInstructions.swift` and system prompt building logic to explain the `ExecuteSQLTool` and the latitude provided for database management. d2a5a82
+- [x] Task: Implement Feature: Update default system notes to remove outdated `alwaysAppend` references and provide clear guidance on the protected status of Archives and Notes. d2a5a82
+- [x] Task: Conductor - User Manual Verification 'Prompting and Instruction Updates' (Protocol in workflow.md) [checkpoint: c28fa40]
