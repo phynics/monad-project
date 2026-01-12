@@ -26,6 +26,7 @@ public struct DiscordConfig: Codable, Sendable {
         
         let finalToken = envToken ?? fileConfig?.token
         let finalUserId = envUserId ?? fileConfig?.authorizedUserId
+        
         let finalHost = envHost ?? fileConfig?.serverHost ?? "localhost"
         let finalPort = envPort ?? fileConfig?.serverPort ?? 50051
         
