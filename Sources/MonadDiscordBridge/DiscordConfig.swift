@@ -1,19 +1,19 @@
 import Foundation
 
-struct DiscordConfig: Codable, Sendable {
-    let token: String
-    let authorizedUserId: String
-    let serverHost: String
-    let serverPort: Int
+public struct DiscordConfig: Codable, Sendable {
+    public let token: String
+    public let authorizedUserId: String
+    public let serverHost: String
+    public let serverPort: Int
     
-    enum CodingKeys: String, CodingKey {
+    public enum CodingKeys: String, CodingKey {
         case token
         case authorizedUserId = "authorized_user_id"
         case serverHost = "server_host"
         case serverPort = "server_port"
     }
     
-    static func load() throws -> DiscordConfig {
+    public static func load() throws -> DiscordConfig {
         // 1. Try to load from file first as base
         let fileConfig = loadFromFile()
         

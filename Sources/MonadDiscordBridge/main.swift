@@ -1,3 +1,3 @@
 import Foundation
 
-print("Monad Discord Bridge starting...")
+try await DiscordBridgeApp.run()
