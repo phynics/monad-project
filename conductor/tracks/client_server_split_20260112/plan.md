@@ -32,7 +32,7 @@ Implement the secondary interface to prove architectural flexibility.
 - [x] Task: Write Tests: Functional tests for the bridge logic, ensuring messages flow correctly from the bridge to the server and back. 4f62e4c
 - [ ] Task: Conductor - User Manual Verification 'Signal Client PoC' (Protocol in workflow.md)
 
-## Phase 5: Distributed Loop Verification
+## Phase 5: Distributed Loop Verification [checkpoint: 806bff3]
 Final end-to-end testing of the entire ecosystem.
 
 - [x] Task: Write Tests: Create a multi-client integration test where both the Main Client and Signal Client interact with the same shared server state. e6c2988
