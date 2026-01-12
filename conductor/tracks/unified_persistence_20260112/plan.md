@@ -21,7 +21,7 @@ Implement the self-documenting schema system and the unified agent tool.
 Add the user-confirmation step for sensitive database operations.
 
 - [x] Task: Implement Feature: Add a confirmation proxy in `ChatViewModel` that intercepts SQL calls and detects sensitive patterns (CREATE, DROP, DELETE). 489a7bb
-- [ ] Task: Implement Feature: Update `ContentView` to display a SwiftUI confirmation dialog for intercepted SQL operations.
+- [x] Task: Implement Feature: Update `ContentView` to display a SwiftUI confirmation dialog for intercepted SQL operations. 489a7bb
 - [ ] Task: Write Tests: Verify that the proxy correctly pauses execution and respects user 'Cancel' vs 'Execute' decisions.
 - [ ] Task: Conductor - User Manual Verification 'UI Proxy and Safety Layer' (Protocol in workflow.md)
 
