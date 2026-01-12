@@ -89,7 +89,14 @@ public actor DiscordBridgeEngine {
         logger.info("Received authorized DM: \(message.content)")
         
         do {
-            // 3. Initial "Thinking..." response
+            // 3. Update status and typing
+            await gatewayManager.updatePresence(payload: .init(
+                activities: [.init(name: "Thinking...", type: .game)],
+                status: .online,
+                afk: false
+            ))
+            
+            // 3.1 Initial "Thinking..." response
             let initialResponse = try await discordClient.createMessage(
                 channelId: message.channel_id,
                 payload: .init(content: "*Thinking...*")
@@ -140,12 +147,25 @@ public actor DiscordBridgeEngine {
                 payload: .init(content: fullContent, embeds: accumulatedEmbeds)
             )
             
+            // 6. Reset status
+            await gatewayManager.updatePresence(payload: .init(
+                activities: [.init(name: "Monad Assistant", type: .game)],
+                status: .online,
+                afk: false
+            ))
+            
         } catch {
             logger.error("Error handling message: \(error)")
             _ = try? await discordClient.createMessage(
                 channelId: message.channel_id,
                 payload: .init(content: "❌ Error: \(error.localizedDescription)")
             )
+            // Reset status on error
+            await gatewayManager.updatePresence(payload: .init(
+                activities: [.init(name: "Monad Assistant", type: .game)],
+                status: .online,
+                afk: false
+            ))
         }
     }
     
