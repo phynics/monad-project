@@ -57,6 +57,11 @@ build: generate
 		-scheme MonadAssistant \
 		-configuration Debug \
 		build
+	@echo "Building MonadDiscordBridge..."
+	@xcodebuild -project MonadAssistant.xcodeproj \
+		-scheme MonadDiscordBridge \
+		-configuration Debug \
+		build
 
 # Clean build artifacts
 clean:

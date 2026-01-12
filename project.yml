@@ -21,6 +21,9 @@ packages:
   SwiftProtobuf:
     url: https://github.com/apple/swift-protobuf.git
     from: 1.28.0
+  DiscordBM:
+    url: https://github.com/DiscordBM/DiscordBM.git
+    from: 1.0.0
 
 settings:
   base:
@@ -38,6 +41,7 @@ targets:
   # Core Logic - macOS
   MonadCore:
     type: framework
+    platform: macOS
     dependencies:
       - sdk: NaturalLanguage.framework
       - package: OpenAI
@@ -87,7 +91,7 @@ targets:
 
   # Monad Server - macOS/Linux
   MonadServer:
-    type: executable
+    type: tool
     platform: macOS
     deploymentTarget:
       macOS: "14.0"
@@ -103,6 +107,27 @@ targets:
       base:
         PRODUCT_NAME: MonadServer
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.server
+
+  # Monad Discord Bridge
+  MonadDiscordBridge:
+    type: tool
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadDiscordBridge
+    dependencies:
+      - target: MonadCore
+      - package: gRPC
+        product: GRPC
+      - package: SwiftProtobuf
+        product: SwiftProtobuf
+      - package: DiscordBM
+        product: DiscordBM
+    settings:
+      base:
+        PRODUCT_NAME: MonadDiscordBridge
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.discord-bridge
 
   # UI - macOS
   MonadUI:

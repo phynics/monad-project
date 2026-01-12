@@ -11,15 +11,26 @@ let package = Package(
         .library(name: "MonadCore", targets: ["MonadCore"]),
         .library(name: "MonadMCP", targets: ["MonadMCP"]),
         .library(name: "MonadUI", targets: ["MonadUI"]),
-        .executable(name: "MonadServer", targets: ["MonadServer"])
+        .executable(name: "MonadServer", targets: ["MonadServer"]),
+        .executable(name: "MonadDiscordBridge", targets: ["MonadDiscordBridge"])
     ],
     dependencies: [
         .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main"),
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
         .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.23.0"),
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.28.0"),
+        .package(url: "https://github.com/DiscordBM/DiscordBM.git", from: "1.0.0"),
     ],
     targets: [
+        .executableTarget(
+            name: "MonadDiscordBridge",
+            dependencies: [
+                "MonadCore",
+                .product(name: "GRPC", package: "grpc-swift"),
+                .product(name: "DiscordBM", package: "DiscordBM")
+            ],
+            path: "Sources/MonadDiscordBridge"
+        ),
         .executableTarget(
             name: "MonadServer",
             dependencies: [
