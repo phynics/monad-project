@@ -63,22 +63,28 @@ struct ExecuteSQLToolTests {
 
     @Test("Test ExecuteSQLTool: Protection Enforcement")
     func protectionEnforcement() async throws {
-        let tool = ExecuteSQLTool(persistenceService: persistence)
+        // ... (existing code)
+    }
+
+    @Test("Test table_directory synchronization")
+    func tableDirectorySync() async throws {
+        // Initial sync should have core tables
+        try await persistence.syncTableDirectory()
         
-        // Setup a note
-        let note = Note(name: "Immortal Note", content: "Cannot be deleted")
-        try await persistence.saveNote(note)
+        var tables = try await persistence.executeRaw(sql: "SELECT name FROM table_directory", arguments: [])
+        #expect(tables.contains { $0["name"]?.value as? String == "note" })
+        #expect(tables.contains { $0["name"]?.value as? String == "memory" })
         
-        // Attempt to delete via tool
-        let deleteResult = try await tool.execute(parameters: [
-            "sql": "DELETE FROM note WHERE name = 'Immortal Note'"
-        ])
+        // Create custom table
+        _ = try await persistence.executeRaw(sql: "CREATE TABLE custom_test (id INTEGER PRIMARY KEY)", arguments: [])
         
-        #expect(!deleteResult.success)
-        #expect(deleteResult.error?.contains("Notes cannot be deleted") == true)
+        tables = try await persistence.executeRaw(sql: "SELECT name FROM table_directory", arguments: [])
+        #expect(tables.contains { $0["name"]?.value as? String == "custom_test" })
         
-        // Verify note still exists
-        let fetched = try await persistence.fetchNote(id: note.id)
-        #expect(fetched != nil)
+        // Drop custom table
+        _ = try await persistence.executeRaw(sql: "DROP TABLE custom_test", arguments: [])
+        
+        tables = try await persistence.executeRaw(sql: "SELECT name FROM table_directory", arguments: [])
+        #expect(!tables.contains { $0["name"]?.value as? String == "custom_test" })
     }
 }

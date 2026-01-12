@@ -181,6 +181,15 @@ public enum DatabaseSchema {
                 }
             }
         }
+
+        // v13: Add table_directory for self-documenting schema
+        migrator.registerMigration("v13") { db in
+            try db.create(table: "table_directory") { t in
+                t.column("name", .text).primaryKey()
+                t.column("description", .text).notNull().defaults(to: "")
+                t.column("createdAt", .datetime).notNull()
+            }
+        }
     }
 
     // MARK: - Conversation Tables

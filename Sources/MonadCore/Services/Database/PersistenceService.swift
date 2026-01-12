@@ -23,7 +23,14 @@ public actor PersistenceService: PersistenceServiceProtocol {
         
         let queue = try DatabaseQueue(path: databasePath)
         try Self.performMigration(on: queue)
-        return PersistenceService(dbQueue: queue)
+        let service = PersistenceService(dbQueue: queue)
+        
+        // Initial sync
+        Task {
+            try? await service.syncTableDirectory()
+        }
+        
+        return service
     }
 
     /// Default database path in Application Support
@@ -64,7 +71,7 @@ public actor PersistenceService: PersistenceServiceProtocol {
 
     /// Execute raw SQL and return results as JSON-compatible dictionaries
     public func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]] {
-        try await dbQueue.write { db in
+        let results: [[String: AnyCodable]] = try await dbQueue.write { db in
             let rows = try Row.fetchAll(db, sql: sql, arguments: StatementArguments(arguments))
             return rows.map { row in
                 var dict: [String: AnyCodable] = [:]
@@ -94,6 +101,42 @@ public actor PersistenceService: PersistenceServiceProtocol {
                     dict[column] = AnyCodable(jsonValue)
                 }
                 return dict
+            }
+        }
+        
+        // Sync table directory after potential schema changes
+        if sql.lowercased().contains("create table") || sql.lowercased().contains("drop table") {
+            try await syncTableDirectory()
+        }
+        
+        return results
+    }
+
+    /// Synchronize table_directory with actual SQLite schema
+    public func syncTableDirectory() async throws {
+        try await dbQueue.write { db in
+            // Get current tables from SQLite master (excluding internal tables and the directory itself)
+            let currentTables = try String.fetchAll(db, sql: """
+                SELECT name FROM sqlite_master 
+                WHERE type='table' 
+                AND name NOT LIKE 'sqlite_%' 
+                AND name NOT LIKE 'grdb_%'
+                AND name != 'table_directory'
+            """)
+            
+            // Remove tables that no longer exist
+            try db.execute(sql: """
+                DELETE FROM table_directory 
+                WHERE name NOT IN (\(currentTables.map { "'\($0)'" }.joined(separator: ",")))
+            """)
+            
+            // Add new tables
+            let now = Date()
+            for table in currentTables {
+                let exists = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM table_directory WHERE name = ?", arguments: [table]) ?? 0
+                if exists == 0 {
+                    try db.execute(sql: "INSERT INTO table_directory (name, description, createdAt) VALUES (?, ?, ?)", arguments: [table, "", now])
+                }
             }
         }
     }
