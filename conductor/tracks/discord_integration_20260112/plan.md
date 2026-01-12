@@ -8,7 +8,7 @@ Remove the legacy Signal PoC to prepare the codebase for the new architecture.
 - [x] Task: Write Tests: Ensure `MonadCore` and remaining targets still compile and run existing tests without Signal components. 4e0e71f
 - [x] Task: Conductor - User Manual Verification 'Cleanup and Removal of Signal' (Protocol in workflow.md) 4e0e71f
 
-## Phase 2: Discord Bridge Infrastructure
+## Phase 2: Discord Bridge Infrastructure [checkpoint: 0a3f9ab]
 Set up the new target and the foundations for Discord communication.
 
 - [x] Task: Update `Package.swift` and `project.yml` to add the `DiscordBM` dependency and the `MonadDiscordBridge` target. 0360f4f
