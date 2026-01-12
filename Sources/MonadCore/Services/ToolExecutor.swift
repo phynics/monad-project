@@ -32,6 +32,11 @@ public final class ToolExecutor {
         callCounts.removeAll()
     }
 
+    /// Get a tool by ID
+    public func getTool(id: String) -> Tool? {
+        return toolManager.getTool(id: id)
+    }
+
     /// Execute a single tool call
     public func execute(_ toolCall: ToolCall) async throws -> Message {
         // Loop detection check

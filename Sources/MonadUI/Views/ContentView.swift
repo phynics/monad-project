@@ -102,5 +102,23 @@ public struct ContentView: View {
         } message: {
             Text("The current conversation is already saved in history.")
         }
+        .confirmationDialog(
+            "Execute Sensitive SQL?",
+            isPresented: $viewModel.showSQLConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Execute", role: .destructive) {
+                viewModel.pendingSQLOperation?.onConfirm()
+            }
+            Button("Cancel", role: .cancel) {
+                viewModel.pendingSQLOperation?.onCancel()
+            }
+        } message: {
+            if let sql = viewModel.pendingSQLOperation?.sql {
+                Text("The agent wants to execute a sensitive SQL command:\n\n\(sql)")
+            } else {
+                Text("The agent wants to execute a sensitive SQL command.")
+            }
+        }
     }
 }

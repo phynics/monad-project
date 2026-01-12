@@ -17,7 +17,6 @@ extension ChatViewModel {
             CreateMemoryTool(
                 persistenceService: persistenceManager.persistence,
                 embeddingService: llmService.embeddingService),
-            EditNoteTool(persistenceService: persistenceManager.persistence),
             // Filesystem Tools
             ChangeDirectoryTool(
                 currentPath: currentWD,

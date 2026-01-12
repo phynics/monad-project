@@ -22,7 +22,7 @@ public struct ExecuteSQLTool: Tool {
         1. List all notes: "SELECT id, name, description FROM note"
         2. Search archived chats by title: "SELECT id, title FROM conversationSession WHERE isArchived = 1 AND title LIKE '%topic%'"
         3. Load recent messages for a session (truncated): "SELECT role, SUBSTR(content, 1, 1000) as content, timestamp FROM conversationMessage WHERE sessionId = 'SESSION_UUID' ORDER BY timestamp ASC"
-        4. Find messages with preview: "SELECT sessionId, SUBSTR(content, 1, 200) as preview FROM conversationMessage WHERE content LIKE '%keyword%'"
+        4. Update a note: "UPDATE note SET content = 'New content' WHERE name = 'Persona'"
         5. Create a scratchpad table: "CREATE TABLE my_tasks (id INTEGER PRIMARY KEY, task TEXT, done BOOLEAN)"
         """
     
@@ -36,6 +36,13 @@ public struct ExecuteSQLTool: Tool {
     
     public func canExecute() async -> Bool {
         return true
+    }
+    
+    /// Checks if the SQL command is potentially sensitive/destructive
+    public func isSensitive(sql: String) -> Bool {
+        let sensitiveKeywords = ["create", "drop", "delete", "update", "alter", "insert"]
+        let lowerSQL = sql.lowercased()
+        return sensitiveKeywords.contains { lowerSQL.contains($0) }
     }
     
     public var parametersSchema: [String: Any] {

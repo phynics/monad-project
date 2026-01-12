@@ -15,6 +15,10 @@ public final class ChatViewModel {
     public var isExecutingTools = false
     public var errorMessage: String?
     public var performanceMetrics = PerformanceMetrics()
+    
+    // SQL Confirmation Proxy State
+    public var pendingSQLOperation: (sql: String, onConfirm: @MainActor () -> Void, onCancel: @MainActor () -> Void)?
+    public var showSQLConfirmation = false
 
     /// When enabled, automatically dequeues and processes the next job when chat awaits user input
     public var autoDequeueEnabled = false
@@ -128,6 +132,7 @@ public final class ChatViewModel {
             persistenceManager: persistenceManager,
             jobQueueContext: jobQueueContext
         )
+        self.toolOrchestrator.delegate = self
 
         Task {
             await checkStartupState()
@@ -141,5 +146,28 @@ public final class ChatViewModel {
         _toolsNeedRecreation = true
         _toolManager = nil
         _toolExecutor = nil
+    }
+}
+
+// MARK: - SQL Confirmation Proxy
+
+extension ChatViewModel: SQLConfirmationDelegate {
+    public func requestConfirmation(for sql: String) async -> Bool {
+        await withCheckedContinuation { continuation in
+            self.pendingSQLOperation = (
+                sql: sql,
+                onConfirm: {
+                    self.showSQLConfirmation = false
+                    self.pendingSQLOperation = nil
+                    continuation.resume(returning: true)
+                },
+                onCancel: {
+                    self.showSQLConfirmation = false
+                    self.pendingSQLOperation = nil
+                    continuation.resume(returning: false)
+                }
+            )
+            self.showSQLConfirmation = true
+        }
     }
 }
