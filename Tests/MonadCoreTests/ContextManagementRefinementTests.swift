@@ -16,55 +16,31 @@ final class ContextManagementRefinementTests: XCTestCase {
     }
     
     @MainActor
-    func testAlwaysAppendNotesFiltering() async throws {
-        // Setup multiple "Always Append" notes
-        let relevantNote = Note(
+    func testAllNotesIncludedGlobally() async throws {
+        // Setup multiple notes
+        let note1 = Note(
             id: UUID(),
             name: "SwiftUI Tips",
             content: "Always use declarative syntax.",
-            alwaysAppend: true,
             tags: ["swiftui"]
         )
-        let irrelevantNote = Note(
+        let note2 = Note(
             id: UUID(),
             name: "Cooking Recipe",
             content: "How to make a cake.",
-            alwaysAppend: true,
             tags: ["cooking"]
         )
         
-        mockPersistence.notes = [relevantNote, irrelevantNote]
+        mockPersistence.notes = [note1, note2]
         
-        // Execute context gathering for a SwiftUI query
+        // Execute context gathering for any query
         let context = try await contextManager.gatherContext(for: "How to build SwiftUI views?")
         
-        // Verify only the relevant "Always Append" note is included
-        // This is EXPECTED TO FAIL initially because current implementation returns ALL always-append notes.
-        XCTAssertEqual(context.notes.count, 1, "Should only include relevant always-append notes")
-        XCTAssertEqual(context.notes.first?.id, relevantNote.id)
-    }
-    
-    @MainActor
-    func testAlwaysAppendNotesLimiting() async throws {
-        // Setup many relevant always-append notes
-        var notes: [Note] = []
-        for i in 1...10 {
-            notes.append(Note(
-                id: UUID(),
-                name: "Note \(i)",
-                content: "Content \(i) about SwiftUI",
-                alwaysAppend: true,
-                tags: ["swiftui"]
-            ))
-        }
-        mockPersistence.notes = notes
-        
-        // Execute
-        let context = try await contextManager.gatherContext(for: "SwiftUI")
-        
-        // Verify it doesn't include all 10
-        // Let's say we want a limit of 3 for always-append notes to avoid clutter
-        XCTAssertLessThanOrEqual(context.notes.count, 3, "Should limit the number of always-append notes")
+        // Verify ALL notes are included
+        XCTAssertEqual(context.notes.count, 2, "Should include ALL notes")
+        let names = context.notes.map { $0.name }
+        XCTAssertTrue(names.contains("SwiftUI Tips"))
+        XCTAssertTrue(names.contains("Cooking Recipe"))
     }
     
     @MainActor

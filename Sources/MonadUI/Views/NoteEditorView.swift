@@ -12,7 +12,6 @@ struct NoteEditorView: View {
     @State private var name: String
     @State private var description: String
     @State private var content: String
-    @State private var alwaysAppend: Bool
     @State private var errorMessage: String?
     @State private var isSaving = false
     
@@ -25,7 +24,6 @@ struct NoteEditorView: View {
         _name = State(initialValue: note?.name ?? "")
         _description = State(initialValue: note?.description ?? "")
         _content = State(initialValue: note?.content ?? "")
-        _alwaysAppend = State(initialValue: note?.alwaysAppend ?? false)
     }
     
     var isValid: Bool {
@@ -70,19 +68,6 @@ struct NoteEditorView: View {
                 } footer: {
                     Text("This content will be injected into the LLM context.")
                         .font(.caption)
-                }
-                
-                Section {
-                    Toggle(isOn: $alwaysAppend) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Always Append")
-                            Text("Include this note in every prompt")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("Options")
                 }
                 
                 if let note = note {
@@ -147,7 +132,6 @@ struct NoteEditorView: View {
                         description: description,
                         content: content,
                         isReadonly: existing.isReadonly,
-                        alwaysAppend: alwaysAppend,
                         createdAt: existing.createdAt,
                         updatedAt: Date()
                     )
@@ -157,8 +141,7 @@ struct NoteEditorView: View {
                         name: name,
                         description: description,
                         content: content,
-                        isReadonly: false,
-                        alwaysAppend: alwaysAppend
+                        isReadonly: false
                     )
                 }
                 

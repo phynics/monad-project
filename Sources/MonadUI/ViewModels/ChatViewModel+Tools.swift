@@ -10,24 +10,13 @@ extension ChatViewModel {
             ?? FileManager.default.currentDirectoryPath
 
         let availableTools: [MonadCore.Tool] = [
-            SearchArchivedChatsTool(persistenceService: persistenceManager.persistence),
-            LoadArchivedChatTool(
-                persistenceService: persistenceManager.persistence, documentManager: documentManager
-            ),
-            ViewChatHistoryTool(
-                persistenceService: persistenceManager.persistence,
-                currentSessionProvider: { [weak self] in
-                    await MainActor.run {
-                        return self?.persistenceManager.currentSession?.id
-                    }
-                }),
+            ExecuteSQLTool(persistenceService: persistenceManager.persistence),
             SearchMemoriesTool(
                 persistenceService: persistenceManager.persistence,
                 embeddingService: llmService.embeddingService),
             CreateMemoryTool(
                 persistenceService: persistenceManager.persistence,
                 embeddingService: llmService.embeddingService),
-            SearchNotesTool(persistenceService: persistenceManager.persistence),
             EditNoteTool(persistenceService: persistenceManager.persistence),
             // Filesystem Tools
             ChangeDirectoryTool(

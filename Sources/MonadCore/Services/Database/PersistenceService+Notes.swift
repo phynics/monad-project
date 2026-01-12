@@ -23,15 +23,6 @@ extension PersistenceService {
         }
     }
 
-    public func fetchAlwaysAppendNotes() throws -> [Note] {
-        try dbQueue.read {
-            try Note
-                .filter(Column("alwaysAppend") == true)
-                .order(Column("name").asc)
-                .fetchAll($0)
-        }
-    }
-
     public func searchNotes(query: String) throws -> [Note] {
         guard !query.isEmpty else {
             return try fetchAllNotes()
@@ -77,8 +68,8 @@ extension PersistenceService {
         }
     }
 
-    public func getContextNotes(alwaysAppend: Bool = false) throws -> String {
-        let notes = alwaysAppend ? try fetchAlwaysAppendNotes() : try fetchAllNotes()
+    public func getContextNotes() throws -> String {
+        let notes = try fetchAllNotes()
         guard !notes.isEmpty else { return "" }
 
         return notes.map {

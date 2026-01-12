@@ -75,7 +75,7 @@ struct PersistenceTests {
         #expect(uiMessage.recalledMemories?[0].title == "Memory 1")
     }
 
-    @Test("Test cascading deletes: Deleting a session removes its messages")
+    @Test("Test cascading deletes: Deleting a session is now blocked")
     func cascadingDeletes() async throws {
         let session = ConversationSession(title: "Test Session")
         try await persistence.saveSession(session)
@@ -83,10 +83,10 @@ struct PersistenceTests {
         let message = ConversationMessage(sessionId: session.id, role: .user, content: "Delete me")
         try await persistence.saveMessage(message)
 
-        try await persistence.deleteSession(id: session.id)
-
-        let messages = try await persistence.fetchMessages(for: session.id)
-        #expect(messages.isEmpty)
+        // Attempting to delete a session should now throw due to the SQLite trigger
+        await #expect(throws: Error.self) {
+            try await persistence.deleteSession(id: session.id)
+        }
     }
 
     @Test("Test message ordering: Messages are chronological")
@@ -109,23 +109,27 @@ struct PersistenceTests {
         #expect(messages[1].content == "Second")
     }
 
-    @Test("Test archiving and filtering sessions")
+    @Test("Test archiving sessions: Once archived, they are immutable")
     func archiveSession() async throws {
         var session = ConversationSession(title: "Test Session")
         session.isArchived = false
         try await persistence.saveSession(session)
 
+        // Marking as archived should work (0 -> 1)
         session.isArchived = true
         try await persistence.saveSession(session)
 
         let archived = try await persistence.fetchAllSessions(includeArchived: true)
         #expect(archived.contains { $0.id == session.id && $0.isArchived })
 
-        let active = try await persistence.fetchAllSessions(includeArchived: false)
-        #expect(!active.contains { $0.id == session.id })
+        // Further modifications should fail
+        session.title = "Changed Title"
+        await #expect(throws: Error.self) {
+            try await persistence.saveSession(session)
+        }
     }
 
-    @Test("Test note persistence and search")
+    @Test("Test note persistence: Notes cannot be deleted")
     func notePersistence() async throws {
         let note = Note(name: "Test Note", content: "Test Content")
         try await persistence.saveNote(note)
@@ -134,39 +138,40 @@ struct PersistenceTests {
         #expect(fetched != nil)
         #expect(fetched?.name == "Test Note")
 
-        let searchResults = try await persistence.searchNotes(query: "Test")
-        #expect(searchResults.count >= 1)  // Default notes might also match
-        #expect(searchResults.contains { $0.name == "Test Note" })
+        // Deleting note should throw
+        await #expect(throws: Error.self) {
+            try await persistence.deleteNote(id: note.id)
+        }
     }
 
-    @Test("Test readonly note protection: Cannot delete system notes")
+    @Test("Test readonly note protection: ALL notes are now protected")
     func readonlyNoteProtection() async throws {
         let notes = try await persistence.fetchAllNotes()
-        let systemNote = notes.first { $0.isReadonly }
+        let anyNote = notes.first
 
-        #expect(systemNote != nil, "System note should exist by default")
+        #expect(anyNote != nil)
 
-        if let id = systemNote?.id {
-            await #expect(throws: NoteError.noteIsReadonly) {
+        if let id = anyNote?.id {
+            await #expect(throws: Error.self) {
                 try await persistence.deleteNote(id: id)
             }
         }
     }
 
-    @Test("Test database reset: Wipes data but restores defaults")
+    @Test("Test database reset: Wipes only non-immutable data")
     func databaseReset() async throws {
         // Add some custom data
-        try await persistence.saveSession(ConversationSession(title: "To Wipe"))
-        try await persistence.saveNote(Note(name: "Custom Note", content: "To Wipe"))
+        try await persistence.saveSession(ConversationSession(title: "Archive to keep"))
+        let memory = Memory(title: "Memory to wipe", content: "Should be gone")
+        _ = try await persistence.saveMemory(memory)
 
         try await persistence.resetDatabase()
 
         let sessions = try await persistence.fetchAllSessions(includeArchived: true)
-        #expect(sessions.isEmpty)
+        #expect(!sessions.isEmpty, "Archives should be preserved")
 
-        let notes = try await persistence.fetchAllNotes()
-        #expect(!notes.contains { $0.name == "Custom Note" })
-        #expect(notes.contains { $0.name == "System" })  // Default restored
+        let allMemories = try await persistence.fetchAllMemories()
+        #expect(allMemories.isEmpty, "Memories should be wiped")
     }
 
     @Test("Test advanced search with partial matches")

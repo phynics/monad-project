@@ -51,7 +51,7 @@ public actor ContextManager {
         let tagGenerationContext = buildAugmentedContext(query: query, history: history)
         
         // Parallel execution of tasks
-        async let notesTask = fetchFilteredAlwaysAppendNotes(for: query)
+        async let notesTask = persistenceService.fetchAllNotes()
         async let memoriesDataTask = fetchRelevantMemories(
             for: query, 
             tagContext: tagGenerationContext,
@@ -81,38 +81,6 @@ public actor ContextManager {
             logger.error("Context gathering failed: \(error.localizedDescription)")
             throw error
         }
-    }
-    
-    private func fetchFilteredAlwaysAppendNotes(for query: String) async throws -> [Note] {
-        let allAlwaysAppend = try await persistenceService.fetchAlwaysAppendNotes()
-        
-        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedQuery.isEmpty { return allAlwaysAppend }
-        
-        // Split into Readonly (System) and User notes
-        let systemNotes = allAlwaysAppend.filter { $0.isReadonly }
-        let userNotes = allAlwaysAppend.filter { !$0.isReadonly }
-        
-        // Simple relevance for user notes: split query into keywords and check if any keyword matches
-        // Exclude common short words
-        let keywords = trimmedQuery.lowercased()
-            .components(separatedBy: .punctuationCharacters).joined()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .filter { $0.count > 3 }
-        
-        let filteredUserNotes: [Note]
-        if keywords.isEmpty {
-            // Fallback to full query if no long keywords
-            filteredUserNotes = Array(userNotes.filter { $0.matches(query: trimmedQuery) }.prefix(3))
-        } else {
-            filteredUserNotes = Array(userNotes.filter { note in
-                keywords.contains { keyword in
-                    note.matches(query: keyword)
-                }
-            }.prefix(3))
-        }
-        
-        return systemNotes + filteredUserNotes
     }
     
     private func buildAugmentedContext(query: String, history: [Message]) -> String {

@@ -1,5 +1,6 @@
 import Foundation
 import OpenAI
+import GRDB
 
 /// Protocol for LLM Service to enable mocking and isolation
 @MainActor
@@ -62,7 +63,6 @@ public protocol PersistenceServiceProtocol: Sendable {
     func saveNote(_ note: Note) async throws
     func fetchNote(id: UUID) async throws -> Note?
     func fetchAllNotes() async throws -> [Note]
-    func fetchAlwaysAppendNotes() async throws -> [Note]
     func searchNotes(query: String) async throws -> [Note]
     func searchNotes(matchingAnyTag tags: [String]) async throws -> [Note]
     func deleteNote(id: UUID) async throws
@@ -90,6 +90,9 @@ public protocol PersistenceServiceProtocol: Sendable {
     func deleteSession(id: UUID) async throws
     func searchArchivedSessions(query: String) async throws -> [ConversationSession]
     func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession]
+    
+    // RAW SQL Support
+    func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]]
     
     // Database Management
     func resetDatabase() async throws

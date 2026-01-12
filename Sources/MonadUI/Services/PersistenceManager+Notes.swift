@@ -14,10 +14,6 @@ extension PersistenceManager {
         try await persistence.fetchAllNotes()
     }
 
-    public func fetchAlwaysAppendNotes() async throws -> [Note] {
-        try await persistence.fetchAlwaysAppendNotes()
-    }
-
     public func searchNotes(query: String) async throws -> [Note] {
         try await persistence.searchNotes(query: query)
     }
@@ -26,7 +22,7 @@ extension PersistenceManager {
         try await persistence.deleteNote(id: id)
     }
 
-    public func getContextNotes(alwaysAppend: Bool = false) async throws -> String {
-        try await persistence.getContextNotes(alwaysAppend: alwaysAppend)
+    public func getContextNotes() async throws -> String {
+        try await persistence.getContextNotes()
     }
 }

@@ -11,7 +11,7 @@ Implement strict immutability for core data types using SQLite-level constraints
 ## Phase 2: RAW SQL Tool and Interface Unification
 Enable the agent to manage its own persistence while consolidating the tool surface.
 
-- [ ] Task: Write Tests: Verify that a new `ExecuteSQLTool` can successfully create custom tables, insert data, and query it.
+- [~] Task: Write Tests: Verify that a new `ExecuteSQLTool` can successfully create custom tables, insert data, and query it.
 - [ ] Task: Implement Feature: Create `ExecuteSQLTool` in `MonadCore` using `GRDB`'s raw execution capabilities.
 - [ ] Task: Implement Feature: Consolidate existing search/load tools into a unified interface that encourages SQL-based data retrieval.
 - [ ] Task: Conductor - User Manual Verification 'RAW SQL Tool and Interface Unification' (Protocol in workflow.md)

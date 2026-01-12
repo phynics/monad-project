@@ -10,9 +10,8 @@ import Testing
 struct SearchToolsTests {
     private let persistence: PersistenceService
     
-    private let searchChatsTool: SearchArchivedChatsTool
+    private let executeSQLTool: ExecuteSQLTool
     private let searchMemoriesTool: SearchMemoriesTool
-    private let searchNotesTool: SearchNotesTool
     private let mockEmbeddingService: MockEmbeddingService
 
     init() async throws {
@@ -25,13 +24,12 @@ struct SearchToolsTests {
         
         mockEmbeddingService = MockEmbeddingService()
 
-        searchChatsTool = SearchArchivedChatsTool(persistenceService: persistence)
+        executeSQLTool = ExecuteSQLTool(persistenceService: persistence)
         searchMemoriesTool = SearchMemoriesTool(persistenceService: persistence, embeddingService: mockEmbeddingService)
-        searchNotesTool = SearchNotesTool(persistenceService: persistence)
     }
 
-    @Test("Search Archived Chats")
-    func testSearchArchivedChats() async throws {
+    @Test("Search Archived Chats via SQL")
+    func testSearchArchivedChatsSQL() async throws {
         // Setup data
         var session1 = ConversationSession(title: "SwiftUI Project")
         session1.isArchived = true
@@ -41,17 +39,35 @@ struct SearchToolsTests {
         session2.isArchived = true
         try await persistence.saveSession(session2)
         
-        // Active session (should not be found)
+        // Active session
         let session3 = ConversationSession(title: "Active SwiftUI")
         try await persistence.saveSession(session3)
         
-        // Test search
-        let result = try await searchChatsTool.execute(parameters: ["query": "SwiftUI"])
+        // Test search via SQL
+        let result = try await executeSQLTool.execute(parameters: [
+            "sql": "SELECT title FROM conversationSession WHERE isArchived = 1 AND title LIKE '%SwiftUI%'"
+        ])
         
         #expect(result.success)
         #expect(result.output.contains("SwiftUI Project"))
         #expect(!result.output.contains("Python Script"))
         #expect(!result.output.contains("Active SwiftUI"))
+    }
+    
+    @Test("Search Notes via SQL")
+    func testSearchNotesSQL() async throws {
+        let note1 = Note(name: "Meeting Notes", content: "Discussed Q1 goals")
+        let note2 = Note(name: "Shopping List", content: "Milk, Eggs")
+        try await persistence.saveNote(note1)
+        try await persistence.saveNote(note2)
+        
+        let result = try await executeSQLTool.execute(parameters: [
+            "sql": "SELECT name FROM note WHERE content LIKE '%goals%'"
+        ])
+        
+        #expect(result.success)
+        #expect(result.output.contains("Meeting Notes"))
+        #expect(!result.output.contains("Shopping List"))
     }
     
     @Test("Search Memories")
@@ -93,19 +109,5 @@ struct SearchToolsTests {
         
         #expect(result.success)
         #expect(result.output.contains("Swift Programming"))
-    }
-    
-    @Test("Search Notes")
-    func testSearchNotes() async throws {
-        let note1 = Note(name: "Meeting Notes", content: "Discussed Q1 goals")
-        let note2 = Note(name: "Shopping List", content: "Milk, Eggs")
-        try await persistence.saveNote(note1)
-        try await persistence.saveNote(note2)
-        
-        let result = try await searchNotesTool.execute(parameters: ["query": "goals"])
-        
-        #expect(result.success)
-        #expect(result.output.contains("Meeting Notes"))
-        #expect(!result.output.contains("Shopping List"))
     }
 }

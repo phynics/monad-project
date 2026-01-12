@@ -48,14 +48,53 @@ public actor PersistenceService: PersistenceServiceProtocol {
 
     // MARK: - Database Reset
 
-    /// Reset the entire database (deletes all data)
+    /// Reset the database (clears non-immutable data)
     public func resetDatabase() throws {
         try dbQueue.write { db in
-            try ConversationMessage.deleteAll(db)
-            try ConversationSession.deleteAll(db)
+            // Memory is used for recall and injected opportunistically, 
+            // it can be reset as it's not part of the protected 'Archive'.
             try Memory.deleteAll(db)
-            try Note.deleteAll(db)
-            try DatabaseSchema.createDefaultNotes(in: db)
+            
+            // Note: Notes and conversationMessage/Session are now protected by triggers
+            // and cannot be deleted or modified (for archived sessions).
+            // We do not attempt to delete them here to avoid trigger violations.
+            logger.info("Database reset: Memories cleared. Notes and Archives preserved due to immutability constraints.")
+        }
+    }
+
+    /// Execute raw SQL and return results as JSON-compatible dictionaries
+    public func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]] {
+        try await dbQueue.write { db in
+            let rows = try Row.fetchAll(db, sql: sql, arguments: StatementArguments(arguments))
+            return rows.map { row in
+                var dict: [String: AnyCodable] = [:]
+                for (column, value) in row {
+                    // Convert DatabaseValue to JSON-compatible type
+                    let jsonValue: Any
+                    if value.isNull {
+                        jsonValue = NSNull()
+                    } else if let intValue = Int64.fromDatabaseValue(value) {
+                        jsonValue = Int(intValue)
+                    } else if let doubleValue = Double.fromDatabaseValue(value) {
+                        jsonValue = doubleValue
+                    } else if let boolValue = Bool.fromDatabaseValue(value) {
+                        jsonValue = boolValue
+                    } else if let stringValue = String.fromDatabaseValue(value) {
+                        jsonValue = stringValue
+                    } else if let dataValue = Data.fromDatabaseValue(value) {
+                        // For blobs (like UUIDs), convert to string or hex if possible
+                        if dataValue.count == 16, let uuid = UUID(uuidString: dataValue.map { String(format: "%02hhx", $0) }.joined()) {
+                             jsonValue = uuid.uuidString
+                        } else {
+                             jsonValue = dataValue.base64EncodedString()
+                        }
+                    } else {
+                        jsonValue = value.description
+                    }
+                    dict[column] = AnyCodable(jsonValue)
+                }
+                return dict
+            }
         }
     }
 }

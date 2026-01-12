@@ -109,6 +109,69 @@ public enum DatabaseSchema {
                 }
             }
         }
+        
+        // v11: Add triggers for immutability
+        migrator.registerMigration("v11") { db in
+            // Protect Notes from deletion
+            try db.execute(sql: """
+                CREATE TRIGGER IF NOT EXISTS prevent_note_deletion
+                BEFORE DELETE ON note
+                BEGIN
+                    SELECT RAISE(ABORT, 'Notes cannot be deleted');
+                END;
+            """)
+            
+            // Protect Archives (Sessions and Messages) from deletion and modification
+            try db.execute(sql: """
+                CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
+                BEFORE DELETE ON conversationSession
+                BEGIN
+                    SELECT RAISE(ABORT, 'Archives cannot be deleted');
+                END;
+            """)
+            
+            try db.execute(sql: """
+                CREATE TRIGGER IF NOT EXISTS prevent_session_modification
+                BEFORE UPDATE ON conversationSession
+                FOR EACH ROW
+                WHEN OLD.isArchived = 1
+                BEGIN
+                    SELECT RAISE(ABORT, 'Archives cannot be modified');
+                END;
+            """)
+            
+            try db.execute(sql: """
+                CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
+                BEFORE DELETE ON conversationMessage
+                BEGIN
+                    SELECT RAISE(ABORT, 'Archives cannot be deleted');
+                END;
+            """)
+            
+            try db.execute(sql: """
+                CREATE TRIGGER IF NOT EXISTS prevent_message_modification
+                BEFORE UPDATE ON conversationMessage
+                BEGIN
+                    SELECT RAISE(ABORT, 'Archives cannot be modified');
+                END;
+            """)
+        }
+
+        // v12: Remove alwaysAppend from Note
+        migrator.registerMigration("v12") { db in
+            // Since SQLite doesn't support DROP COLUMN easily before 3.35.0, 
+            // and we might be on older versions in some environments,
+            // we will just leave the column in the DB but we won't use it in the model.
+            // However, we SHOULD remove the index and the column if we want a clean schema.
+            
+            try db.execute(sql: "DROP INDEX IF EXISTS idx_note_alwaysAppend")
+            
+            // If we really want to drop it:
+            // try db.alter(table: "note") { t in
+            //     t.drop(column: "alwaysAppend")
+            // }
+            // But for safety and simplicity, we'll just ignore it in the Swift model.
+        }
     }
 
     // MARK: - Conversation Tables
@@ -169,7 +232,6 @@ public enum DatabaseSchema {
             t.column("description", .text).notNull().defaults(to: "")
             t.column("content", .text).notNull()
             t.column("isReadonly", .boolean).notNull().defaults(to: false)
-            t.column("alwaysAppend", .boolean).notNull().defaults(to: false)
             t.column("tags", .text).notNull().defaults(to: "[]")
             t.column("isEnabled", .boolean).notNull().defaults(to: true)
             t.column("priority", .integer).notNull().defaults(to: 0)
@@ -178,10 +240,6 @@ public enum DatabaseSchema {
         }
 
         // Indexes for notes
-        try db.create(
-            index: "idx_note_alwaysAppend",
-            on: "note",
-            columns: ["alwaysAppend"])
         try db.create(
             index: "idx_note_readonly",
             on: "note",
@@ -194,7 +252,7 @@ public enum DatabaseSchema {
     public static func createDefaultNotes(in db: Database) throws {
         let now = Date()
 
-        // System Note (Readonly, Always Append)
+        // System Note (Readonly)
         let systemNote = Note(
             name: "System",
             description: "Core capabilities and operational constraints.",
@@ -206,13 +264,12 @@ public enum DatabaseSchema {
                 - Prioritize context notes and memories for accuracy and personalization.
                 """,
             isReadonly: true,
-            alwaysAppend: true,
             createdAt: now,
             updatedAt: now
         )
         try systemNote.insert(db)
 
-        // Persona Note (Editable, Always Append)
+        // Persona Note (Editable)
         let personaNote = Note(
             name: "Persona",
             description: "AI personality and behavioral guidelines.",
@@ -221,13 +278,12 @@ public enum DatabaseSchema {
                 [EMPTY; FILL AS NEEDED]
                 """,
             isReadonly: false,
-            alwaysAppend: true,
             createdAt: now,
             updatedAt: now
         )
         try personaNote.insert(db)
 
-        // Human Note (Editable, Always Append)
+        // Human Note (Editable)
         let humanNote = Note(
             name: "Human",
             description: "Information about the user.",
@@ -236,21 +292,19 @@ public enum DatabaseSchema {
                 [EMPTY; FILL AS NEEDED]
                 """,
             isReadonly: false,
-            alwaysAppend: true,
             createdAt: now,
             updatedAt: now
         )
         try humanNote.insert(db)
 
-        // Scratchpad Note (Editable, Always Append)
+        // Scratchpad Note (Editable)
         let scratchpadNote = Note(
             name: "Scratchpad",
             description: "Temporary storage for planning.",
             content: """
                 Temporary storage for Todo lists, planning, and short-term state tracking.
                 [EMPTY; FILL AS NEEDED]
-                """,
-            alwaysAppend: true
+                """
         )
         try scratchpadNote.insert(db)
     }

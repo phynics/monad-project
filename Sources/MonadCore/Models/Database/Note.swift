@@ -4,7 +4,6 @@ import GRDB
 /// Context note injected into prompts
 ///
 /// Notes are text blocks that provide context to the LLM. They can be:
-/// - Always appended to every prompt (alwaysAppend = true)
 /// - Selectively included based on search/relevance
 /// - Read-only for system/protected notes
 /// - Searchable by name, description, and content
@@ -23,9 +22,6 @@ public struct Note: Codable, Identifiable, Hashable, FetchableRecord, Persistabl
     /// If true, note cannot be edited or deleted (for system notes)
     public var isReadonly: Bool
 
-    /// If true, always append to every prompt (for critical context)
-    public var alwaysAppend: Bool
-
     public var tags: String // JSON array stored as string
 
     public var createdAt: Date
@@ -37,7 +33,6 @@ public struct Note: Codable, Identifiable, Hashable, FetchableRecord, Persistabl
         description: String = "",
         content: String,
         isReadonly: Bool = false,
-        alwaysAppend: Bool = false,
         tags: [String] = [],
         createdAt: Date = Date(),
         updatedAt: Date = Date()
@@ -47,7 +42,6 @@ public struct Note: Codable, Identifiable, Hashable, FetchableRecord, Persistabl
         self.description = description
         self.content = content
         self.isReadonly = isReadonly
-        self.alwaysAppend = alwaysAppend
         
         if let data = try? JSONEncoder().encode(tags), let str = String(data: data, encoding: .utf8) {
             self.tags = str
@@ -114,7 +108,7 @@ extension Array where Element == Note {
         guard !isEmpty else { return "" }
 
         return """
-            These notes that are marked 'always append'.
+            Retrieved Context Notes:
 
             \(map { $0.promptString }.joined(separator: "\n\n"))
             """

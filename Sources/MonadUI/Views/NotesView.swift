@@ -189,12 +189,6 @@ struct NoteRow: View {
 
                 Spacer()
 
-                if note.alwaysAppend {
-                    Image(systemName: "pin.fill")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                }
-
                 if note.isReadonly {
                     Image(systemName: "lock.fill")
                         .font(.caption)
@@ -244,16 +238,6 @@ struct NoteDetailView: View {
 
                 // Badges
                 HStack(spacing: 8) {
-                    if note.alwaysAppend {
-                        Label("Always Append", systemImage: "pin.fill")
-                            .font(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.orange.opacity(0.2))
-                            .foregroundColor(.orange)
-                            .cornerRadius(4)
-                    }
-
                     if note.isReadonly {
                         Label("Read Only", systemImage: "lock.fill")
                             .font(.caption)

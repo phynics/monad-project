@@ -31,6 +31,7 @@ extension ChatViewModel {
                 break
             }
 
+            let contextNotes = try await persistenceManager.fetchAllNotes()
             let enabledTools = toolManager.getEnabledTools()
             let contextDocuments = injectedDocuments
 

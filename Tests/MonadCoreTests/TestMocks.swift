@@ -1,6 +1,7 @@
 import Foundation
 import MonadCore
 import OpenAI
+import GRDB
 
 final class MockEmbeddingService: EmbeddingService, @unchecked Sendable {
     var mockEmbedding: [Double] = [0.1, 0.2, 0.3]
@@ -186,7 +187,6 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
 }
 
 final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Sendable {
-    var alwaysAppendNotes: [Note] = []
     var memories: [Memory] = []
     var searchResults: [(memory: Memory, similarity: Double)] = []
     var messages: [ConversationMessage] = []
@@ -208,10 +208,6 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
     
     func fetchAllNotes() async throws -> [Note] {
         return notes
-    }
-    
-    func fetchAlwaysAppendNotes() async throws -> [Note] {
-        return notes.filter { $0.alwaysAppend }
     }
     
     func searchNotes(query: String) async throws -> [Note] {
@@ -316,6 +312,15 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
         return sessions.filter { session in
             session.isArchived && !Set(session.tagArray).intersection(tags).isEmpty
         }
+    }
+    
+    // RAW SQL Support
+    func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]] {
+        // Simple mock implementation: return an error if it looks like a deletion we should block
+        if sql.lowercased().contains("delete from note") {
+            throw NSError(domain: "SQLite", code: 19, userInfo: [NSLocalizedDescriptionKey: "Notes cannot be deleted"])
+        }
+        return []
     }
     
     // Database Management

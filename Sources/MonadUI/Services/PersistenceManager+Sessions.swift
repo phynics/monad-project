@@ -5,7 +5,7 @@ extension PersistenceManager {
     public func createNewSession(title: String = "New Conversation") async throws {
         logger.info("Creating new session: \(title)")
         var session = ConversationSession(title: title)
-        session.isArchived = true
+        session.isArchived = false
         try await persistence.saveSession(session)
         currentSession = session
         currentMessages = []
