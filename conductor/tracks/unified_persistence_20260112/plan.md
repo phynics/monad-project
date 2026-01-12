@@ -8,7 +8,7 @@ Enforce core immutability and simplify the Note model.
 - [x] Task: Write Tests: Create `PersistenceImmutabilityTests.swift` to verify that trigger violations correctly throw errors at the database level. 489a7bb
 - [ ] Task: Conductor - User Manual Verification 'Database-Level Protection and Note Refactor' (Protocol in workflow.md)
 
-## Phase 2: Table Directory and RAW SQL Tool
+## Phase 2: Table Directory and RAW SQL Tool [checkpoint: 06264ed]
 Implement the self-documenting schema system and the unified agent tool.
 
 - [x] Task: Implement Feature: Create the `table_directory` table and implement the synchronization logic in `PersistenceService` to track table creation/deletion. 025f795
