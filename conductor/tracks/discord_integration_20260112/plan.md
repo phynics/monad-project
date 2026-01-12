@@ -17,7 +17,7 @@ Set up the new target and the foundations for Discord communication.
 - [x] Task: Write Tests: Verify configuration priority logic and the "Authorized User Only" filter. dfb0a2a
 - [ ] Task: Conductor - User Manual Verification 'Discord Bridge Infrastructure' (Protocol in workflow.md)
 
-## Phase 3: Discord-to-gRPC Integration
+## Phase 3: Discord-to-gRPC Integration [checkpoint: c252dbd]
 Implement the core logic for routing messages and handling streaming responses.
 
 - [x] Task: Implement Feature: Message handler that maps incoming Discord DMs to gRPC `ChatStream` calls. f6653f0
