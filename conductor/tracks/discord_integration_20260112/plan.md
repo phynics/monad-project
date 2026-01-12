@@ -20,7 +20,7 @@ Set up the new target and the foundations for Discord communication.
 ## Phase 3: Discord-to-gRPC Integration
 Implement the core logic for routing messages and handling streaming responses.
 
-- [ ] Task: Implement Feature: Message handler that maps incoming Discord DMs to gRPC `ChatStream` calls.
+- [x] Task: Implement Feature: Message handler that maps incoming Discord DMs to gRPC `ChatStream` calls. f6653f0
 - [ ] Task: Implement Feature: Streaming logic to periodically edit the Discord message with received LLM deltas.
 - [ ] Task: Implement Feature: Formatting logic to convert tool results and metadata into Discord Rich Embeds.
 - [ ] Task: Write Tests: Functional tests for the bridge logic using mocked gRPC server responses and mock Discord events.
