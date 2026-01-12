@@ -11,12 +11,6 @@ extension ChatViewModel {
 
         let availableTools: [MonadCore.Tool] = [
             ExecuteSQLTool(persistenceService: persistenceManager.persistence),
-            SearchMemoriesTool(
-                persistenceService: persistenceManager.persistence,
-                embeddingService: llmService.embeddingService),
-            CreateMemoryTool(
-                persistenceService: persistenceManager.persistence,
-                embeddingService: llmService.embeddingService),
             // Filesystem Tools
             ChangeDirectoryTool(
                 currentPath: currentWD,

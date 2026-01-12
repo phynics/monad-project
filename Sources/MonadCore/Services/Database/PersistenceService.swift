@@ -80,6 +80,8 @@ public actor PersistenceService: PersistenceServiceProtocol {
                     let jsonValue: Any
                     if value.isNull {
                         jsonValue = NSNull()
+                    } else if let dateValue = Date.fromDatabaseValue(value) {
+                        jsonValue = ISO8601DateFormatter().string(from: dateValue)
                     } else if let intValue = Int64.fromDatabaseValue(value) {
                         jsonValue = Int(intValue)
                     } else if let doubleValue = Double.fromDatabaseValue(value) {
