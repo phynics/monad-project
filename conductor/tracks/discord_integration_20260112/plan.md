@@ -29,7 +29,7 @@ Implement the core logic for routing messages and handling streaming responses.
 ## Phase 4: Reliability and UX Polish
 Add final touches for a stable and responsive bot experience.
 
-- [ ] Task: Implement Feature: Update Bot Activity/Status to show "Thinking..." or "Typing..." during generation.
+- [x] Task: Implement Feature: Update Bot Activity/Status to show "Thinking..." or "Typing..." during generation. fa1c70d
 - [ ] Task: Implement Feature: Graceful error handling for Discord Gateway reconnections and gRPC connection timeouts.
 - [ ] Task: Write Tests: Stress test the streaming logic with large responses and simulated network errors.
 - [ ] Task: Conductor - User Manual Verification 'Reliability and UX Polish' (Protocol in workflow.md)
