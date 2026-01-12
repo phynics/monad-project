@@ -15,7 +15,6 @@ public final class ChatViewModel {
     public var isExecutingTools = false
     public var errorMessage: String?
     public var performanceMetrics = PerformanceMetrics()
-    public var shouldInjectLongContext = false
 
     /// When enabled, automatically dequeues and processes the next job when chat awaits user input
     public var autoDequeueEnabled = false
@@ -28,6 +27,10 @@ public final class ChatViewModel {
     public let streamingCoordinator: StreamingCoordinator
     public let conversationArchiver: ConversationArchiver
     public let contextCompressor: ContextCompressor
+    
+    public var toolOrchestrator: ToolOrchestrator!
+    public var sessionOrchestrator: SessionOrchestrator!
+    public var maintenanceOrchestrator: MaintenanceOrchestrator!
 
     // MARK: - Tool Infrastructure (owned by ChatViewModel)
     public let jobQueueContext: JobQueueContext
@@ -74,19 +77,8 @@ public final class ChatViewModel {
     }
 
     public var injectedDocuments: [DocumentContext] {
-        var docs = documentManager.getEffectiveDocuments(
+        documentManager.getEffectiveDocuments(
             limit: llmService.configuration.documentContextLimit)
-
-        if shouldInjectLongContext {
-            let longText = String(
-                repeating: "This is a long context placeholder for performance testing. ",
-                count: 1000)
-            let longDoc = DocumentContext(
-                path: "performance_test_long_context.txt", content: longText)
-            docs.append(longDoc)
-        }
-
-        return docs
     }
 
     // Expose streaming state
@@ -122,6 +114,20 @@ public final class ChatViewModel {
         // Initialize tool infrastructure
         self.jobQueueContext = JobQueueContext()
         self.toolContextSession = ToolContextSession()
+        
+        self.sessionOrchestrator = SessionOrchestrator(
+            persistenceManager: persistenceManager,
+            llmService: llmService
+        )
+        self.maintenanceOrchestrator = MaintenanceOrchestrator(
+            contextCompressor: contextCompressor,
+            persistenceManager: persistenceManager
+        )
+        self.toolOrchestrator = ToolOrchestrator(
+            toolExecutor: self.toolExecutor,
+            persistenceManager: persistenceManager,
+            jobQueueContext: jobQueueContext
+        )
 
         Task {
             await checkStartupState()

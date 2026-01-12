@@ -39,7 +39,12 @@ final class MockEmbeddingService: EmbeddingService, @unchecked Sendable {
 
 final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     var nextResponse: String = ""
+    var nextResponses: [String] = []
     var lastMessages: [ChatQuery.ChatCompletionMessageParam] = []
+    var shouldThrowError: Bool = false
+    
+    // Support for tool calls in stream - use dictionaries to avoid type issues
+    var nextToolCalls: [[[String: Any]]] = []
     
     func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
@@ -47,7 +52,26 @@ final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
         responseFormat: ChatQuery.ResponseFormat?
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
         lastMessages = messages
+        
+        if shouldThrowError {
+            return AsyncThrowingStream { continuation in
+                continuation.finish(throwing: NSError(domain: "MockError", code: 1, userInfo: nil))
+            }
+        }
+        
+        let response = nextResponses.isEmpty ? nextResponse : nextResponses.removeFirst()
+        let toolCalls = nextToolCalls.isEmpty ? nil : nextToolCalls.removeFirst()
+        
         return AsyncThrowingStream { continuation in
+            var delta: [String: Any] = [
+                "role": "assistant",
+                "content": response
+            ]
+            
+            if let tc = toolCalls {
+                delta["tool_calls"] = tc
+            }
+
             let jsonDict: [String: Any] = [
                 "id": "mock",
                 "object": "chat.completion.chunk",
@@ -56,11 +80,8 @@ final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
                 "choices": [
                     [
                         "index": 0,
-                        "delta": [
-                            "role": "assistant",
-                            "content": nextResponse,
-                        ],
-                        "finish_reason": "stop",
+                        "delta": delta,
+                        "finish_reason": toolCalls != nil ? "tool_calls" : "stop",
                     ]
                 ],
             ]
@@ -77,6 +98,9 @@ final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     }
     
     func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?) async throws -> String {
+        if shouldThrowError {
+            throw NSError(domain: "MockError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Simulated failure"])
+        }
         lastMessages = [.user(.init(content: .string(content)))]
         return nextResponse
     }

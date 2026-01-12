@@ -21,6 +21,7 @@ extension ChatViewModel {
         var shouldContinue = true
         var turnCount = 0
         var currentParentId = parentId
+        var currentContextData = contextData
 
         while shouldContinue {
             turnCount += 1
@@ -30,17 +31,15 @@ extension ChatViewModel {
                 break
             }
 
-            let contextNotes = try await persistenceManager.fetchAlwaysAppendNotes()
             let enabledTools = toolManager.getEnabledTools()
             let contextDocuments = injectedDocuments
-            let contextMemories = injectedMemories
 
             // 2. Call LLM with empty userQuery, relying on chatHistory
             let (stream, rawPrompt, structuredContext) = await llmService.chatStreamWithContext(
                 userQuery: "",
-                contextNotes: contextNotes,
+                contextNotes: currentContextData.notes,
                 documents: contextDocuments,
-                memories: contextMemories,
+                memories: currentContextData.memories.map { $0.memory },
                 chatHistory: messages,
                 tools: enabledTools
             )
@@ -81,8 +80,7 @@ extension ChatViewModel {
             if let speed = assistantMessage.stats?.tokensPerSecond {
                 performanceMetrics.recordSpeed(speed)
                 if messages.count >= 5 && performanceMetrics.isSlow {
-                    Logger.chat.warning("Performance drop detected (\(speed) t/s). Injecting long context for next turn.")
-                    shouldInjectLongContext = true
+                    Logger.chat.warning("Performance drop detected (\(speed) t/s).")
                 }
             }
 
@@ -117,53 +115,41 @@ extension ChatViewModel {
 
                 // Execute tool calls if present
                 if let toolCalls = assistantMessage.toolCalls, !toolCalls.isEmpty {
-                    Logger.chat.info("Executing \(toolCalls.count) tool calls")
                     isExecutingTools = true
-                    let toolResults = await toolExecutor.executeAll(toolCalls)
+                    let topicChange = try await toolOrchestrator.handleToolCalls(
+                        toolCalls, 
+                        assistantMsgId: assistantMsgId
+                    )
                     isExecutingTools = false
-
-                    for toolResult in toolResults {
-                        do {
-                            try await persistenceManager.addMessage(
-                                role: .tool,
-                                content: toolResult.content,
-                                parentId: assistantMsgId
-                            )
-                        } catch {
-                            Logger.chat.error("Failed to save tool result: \(error.localizedDescription)")
-                        }
-                    }
 
                     messages = persistenceManager.uiMessages
 
-                    if toolCalls.contains(where: { $0.name == "mark_topic_change" }) {
+                    if topicChange {
                         Logger.chat.info("Topic change detected via tool call. Triggering compression.")
                         await compressContext()
+                        // Reset context data after topic change to ensure fresh retrieval if needed
+                        currentContextData = ContextData()
                     }
 
                     currentParentId = assistantMsgId
                     shouldContinue = true
                 } else {
                     // No more tool calls - check for auto-dequeue
-                    if autoDequeueEnabled, jobQueueContext.hasPendingJobs, let nextJob = jobQueueContext.dequeueNext() {
-                        Logger.chat.info("Auto-dequeueing job: \(nextJob.title)")
-
-                        let jobPrompt = """
-                            [Auto-Dequeued Task]
-                            **\(nextJob.title)**
-                            \(nextJob.description ?? "")
-
-                            Please complete this task.
-                            """
-
-                        let syntheticUserMsg = Message(content: jobPrompt, role: .user)
+                    if autoDequeueEnabled, let syntheticUserMsg = toolOrchestrator.autoDequeueNextJob() {
                         messages.append(syntheticUserMsg)
+
+                        // For auto-dequeued jobs, we should probably gather fresh context 
+                        // as it might be a completely different task.
+                        currentContextData = try await contextManager.gatherContext(
+                            for: syntheticUserMsg.content,
+                            history: messages
+                        )
 
                         do {
                             try await persistenceManager.addMessage(
                                 id: syntheticUserMsg.id,
                                 role: .user,
-                                content: jobPrompt
+                                content: syntheticUserMsg.content
                             )
                             messages = persistenceManager.uiMessages
                         } catch {

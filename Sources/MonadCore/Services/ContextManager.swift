@@ -87,25 +87,32 @@ public actor ContextManager {
         let allAlwaysAppend = try await persistenceService.fetchAlwaysAppendNotes()
         
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedQuery.isEmpty else { return allAlwaysAppend }
+        if trimmedQuery.isEmpty { return allAlwaysAppend }
         
-        // Simple relevance: split query into keywords and check if any keyword matches
+        // Split into Readonly (System) and User notes
+        let systemNotes = allAlwaysAppend.filter { $0.isReadonly }
+        let userNotes = allAlwaysAppend.filter { !$0.isReadonly }
+        
+        // Simple relevance for user notes: split query into keywords and check if any keyword matches
         // Exclude common short words
         let keywords = trimmedQuery.lowercased()
             .components(separatedBy: .punctuationCharacters).joined()
             .components(separatedBy: .whitespacesAndNewlines)
             .filter { $0.count > 3 }
         
+        let filteredUserNotes: [Note]
         if keywords.isEmpty {
             // Fallback to full query if no long keywords
-            return Array(allAlwaysAppend.filter { $0.matches(query: trimmedQuery) }.prefix(3))
+            filteredUserNotes = Array(userNotes.filter { $0.matches(query: trimmedQuery) }.prefix(3))
+        } else {
+            filteredUserNotes = Array(userNotes.filter { note in
+                keywords.contains { keyword in
+                    note.matches(query: keyword)
+                }
+            }.prefix(3))
         }
         
-        return Array(allAlwaysAppend.filter { note in
-            keywords.contains { keyword in
-                note.matches(query: keyword)
-            }
-        }.prefix(3))
+        return systemNotes + filteredUserNotes
     }
     
     private func buildAugmentedContext(query: String, history: [Message]) -> String {
