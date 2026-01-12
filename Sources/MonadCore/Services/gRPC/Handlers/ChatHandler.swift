@@ -37,20 +37,26 @@ public final class ChatHandler: MonadChatServiceAsyncProvider, Sendable {
             useFastModel: request.useFastModel
         )
         
-        for try await result in stream {
-            var response = MonadChatResponse()
-            
-            // Map OpenAI ChatStreamResult to MonadChatResponse
-            if let choice = result.choices.first {
-                if let content = choice.delta.content {
-                    response.contentDelta = content
-                }
-                
-                if let toolCalls = choice.delta.toolCalls, !toolCalls.isEmpty {
-                    // TODO: Map tool calls if needed
-                }
-            }
-            
+                        for try await result in stream {
+                            var response = MonadChatResponse()
+                            
+                            // Map OpenAI ChatStreamResult to MonadChatResponse
+                            if let choice = result.choices.first {
+                                if let content = choice.delta.content {
+                                    // Use Message.parseResponse logic to separate thinking
+                                    // For stream deltas, we might need a more stateful approach if tags span chunks,
+                                    // but for PoC we'll send as contentDelta.
+                                    response.contentDelta = content
+                                }
+                                
+                                if let think = choice.delta.reasoning {
+                                    response.thinkDelta = think
+                                }
+                                
+                                if let toolCalls = choice.delta.toolCalls, !toolCalls.isEmpty {
+                                    // TODO: Map tool calls if needed
+                                }
+                            }            
             if let usage = result.usage {
                 var grpcMeta = MonadChatResponse.Metadata()
                 grpcMeta.model = result.model

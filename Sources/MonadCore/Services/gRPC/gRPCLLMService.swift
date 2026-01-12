@@ -83,12 +83,15 @@ public final class gRPCLLMService: LLMServiceProtocol {
                 do {
                     for try await response in call.responseStream {
                         var content: String?
+                        var think: String?
                         var usage: ChatResult.CompletionUsage?
                         var model = "grpc-server"
                         
                         switch response.payload {
                         case .contentDelta(let delta):
                             content = delta
+                        case .thinkDelta(let delta):
+                            think = delta
                         case .metadata(let meta):
                             model = meta.model
                             usage = .init(
@@ -96,7 +99,7 @@ public final class gRPCLLMService: LLMServiceProtocol {
                                 promptTokens: Int(meta.promptTokens),
                                 totalTokens: Int(meta.promptTokens + meta.completionTokens)
                             )
-                        case .thinkDelta, .toolCall, .finalMessage, .none:
+                        case .toolCall, .finalMessage, .none:
                             // TODO: Support other payload types
                             break
                         }
@@ -107,6 +110,7 @@ public final class gRPCLLMService: LLMServiceProtocol {
                                 .mock(
                                     index: 0,
                                     content: content,
+                                    think: think,
                                     role: .assistant
                                 )
                             ],

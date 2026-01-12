@@ -48,11 +48,12 @@ extension ChatStreamResult {
 }
 
 extension ChatStreamResult.Choice {
-    public static func mock(index: Int, content: String?, role: ChatQuery.ChatCompletionMessageParam.Role? = .assistant, finishReason: FinishReason? = nil) -> ChatStreamResult.Choice {
+    public static func mock(index: Int, content: String?, think: String? = nil, role: ChatQuery.ChatCompletionMessageParam.Role? = .assistant, finishReason: FinishReason? = nil) -> ChatStreamResult.Choice {
         let dict: [String: Any] = [
             "index": index,
             "delta": [
                 "content": content as Any,
+                "reasoning": think as Any,
                 "role": role?.rawValue as Any
             ],
             "finish_reason": finishReason?.rawValue as Any

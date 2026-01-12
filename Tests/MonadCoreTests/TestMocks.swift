@@ -149,7 +149,14 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
         rawPrompt: String,
         structuredContext: [String: String]
     ) {
+        let response = nextResponse
         let stream = AsyncThrowingStream<ChatStreamResult, Error> { continuation in
+            continuation.yield(.init(
+                id: "mock",
+                choices: [.mock(index: 0, content: response)],
+                created: Date().timeIntervalSince1970,
+                model: "mock-model"
+            ))
             continuation.finish()
         }
         return (stream, "mock prompt", [:])
