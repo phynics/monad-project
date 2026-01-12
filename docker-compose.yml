@@ -1,0 +1,11 @@
+services:
+  monad-server:
+    build: .
+    ports:
+      - "50051:50051"
+    volumes:
+      - monad-data:/home/monad/.local/share/MonadAssistant
+    restart: unless-stopped
+
+volumes:
+  monad-data:
