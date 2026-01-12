@@ -88,10 +88,21 @@ public actor DiscordBridgeEngine {
             let call = chatClient.makeChatStreamCall(request)
             
             var fullContent = ""
+            var lastUpdate = Date()
+            
             for try await response in call.responseStream {
                 if case .contentDelta(let delta) = response.payload {
                     fullContent += delta
-                    // TODO: Throttled message editing in Task 2
+                    
+                    // Throttle updates to avoid Discord rate limits (approx every 1.5s)
+                    if Date().timeIntervalSince(lastUpdate) > 1.5 {
+                        _ = try? await discordClient.updateMessage(
+                            channelId: message.channel_id,
+                            messageId: initialResponse.id,
+                            payload: .init(content: fullContent + " ▌")
+                        )
+                        lastUpdate = Date()
+                    }
                 }
             }
             
