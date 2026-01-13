@@ -358,6 +358,8 @@ targets:
     dependencies:
       - target: MonadServerCore
       - target: MonadTestSupport
+      - target: MonadCore
+      - target: MonadUI
       - package: gRPC
         product: GRPC
       - package: Metrics

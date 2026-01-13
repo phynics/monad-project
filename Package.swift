@@ -12,6 +12,7 @@ let package = Package(
         .library(name: "MonadMCP", targets: ["MonadMCP"]),
         .library(name: "MonadUI", targets: ["MonadUI"]),
         .library(name: "MonadServerCore", targets: ["MonadServerCore"]),
+        .library(name: "MonadTestSupport", targets: ["MonadTestSupport"]),
         .executable(name: "MonadServer", targets: ["MonadServer"]),
         .executable(name: "MonadDiscordBridge", targets: ["MonadDiscordBridge"])
     ],
@@ -55,6 +56,15 @@ let package = Package(
             path: "Sources/MonadServerCore"
         ),
         .target(
+            name: "MonadTestSupport",
+            dependencies: [
+                "MonadCore",
+                .product(name: "OpenAI", package: "OpenAI"),
+                .product(name: "GRDB", package: "GRDB.swift"),
+            ],
+            path: "Sources/MonadTestSupport"
+        ),
+        .target(
             name: "MonadCore",
             dependencies: [
                 .product(name: "OpenAI", package: "OpenAI"),
@@ -85,13 +95,16 @@ let package = Package(
         ),
         .testTarget(
             name: "MonadCoreTests",
-            dependencies: ["MonadCore", "MonadUI", "MonadDiscordBridge"],
+            dependencies: ["MonadCore", "MonadUI", "MonadDiscordBridge", "MonadTestSupport"],
             path: "Tests/MonadCoreTests"
         ),
         .testTarget(
             name: "MonadServerTests",
             dependencies: [
                 "MonadServerCore",
+                "MonadTestSupport",
+                "MonadCore",
+                "MonadUI",
                 .product(name: "Metrics", package: "swift-metrics"),
             ],
             path: "Tests/MonadServerTests"
