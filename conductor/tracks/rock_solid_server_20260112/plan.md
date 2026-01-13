@@ -12,7 +12,7 @@ Establish the foundations for metrics collection and centralized error handling.
 ## Phase 2: Service-Provider Architectural Refactor
 Restructure the server core to use the Service-Provider pattern and enforce SOLID principles.
 
-- [ ] Task: Implement Feature: Create `ServiceProviderOrchestrator` to manage service lifecycles and dependency injection.
+- [x] Task: Implement Feature: Create `ServiceProviderOrchestrator` to manage service lifecycles and dependency injection. b5b855a
 - [ ] Task: Refactor: Decouple gRPC handlers (Chat, Session, etc.) from concrete services using protocol-based injection.
 - [ ] Task: Refactor: Migrate `MonadServer/main.swift` to use the new orchestrator and unified error handling.
 - [ ] Task: Write Tests: Unit tests for the `ServiceProviderOrchestrator` using protocol-based mocks.
