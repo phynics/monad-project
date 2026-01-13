@@ -136,6 +136,8 @@ targets:
         product: GRPC
       - package: Metrics
         product: Metrics
+      - package: SwiftPrometheus
+        product: Prometheus
     settings:
       base:
         PRODUCT_NAME: MonadServerCore

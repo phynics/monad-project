@@ -50,6 +50,7 @@ let package = Package(
                 "MonadCore",
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "Metrics", package: "swift-metrics"),
+                .product(name: "Prometheus", package: "swift-prometheus"),
             ],
             path: "Sources/MonadServerCore"
         ),
