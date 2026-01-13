@@ -108,7 +108,7 @@ targets:
     sources:
       - path: Sources/MonadServer
     dependencies:
-      - target: MonadCore
+      - target: MonadServerCore
       - package: gRPC
         product: GRPC
       - package: SwiftProtobuf
@@ -121,6 +121,28 @@ targets:
       base:
         PRODUCT_NAME: MonadServer
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.server
+
+  # Monad Server Core Logic
+  MonadServerCore:
+    type: framework
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadServerCore
+    dependencies:
+      - target: MonadCore
+      - package: gRPC
+        product: GRPC
+      - package: Metrics
+        product: Metrics
+    settings:
+      base:
+        PRODUCT_NAME: MonadServerCore
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.server.core
+        SKIP_INSTALL: YES
+        INSTALL_PATH: "@rpath"
+        DEFINES_MODULE: YES
 
   # Monad Discord Bridge
   MonadDiscordBridge:
@@ -299,6 +321,22 @@ targets:
       debug:
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Automatic
+
+  # Server Tests
+  MonadServerTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Tests/MonadServerTests
+    dependencies:
+      - target: MonadServerCore
+      - package: gRPC
+        product: GRPC
+      - package: Metrics
+        product: Metrics
+    settings:
 
   # MCP Tests
   MonadMCPTests:

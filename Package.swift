@@ -11,6 +11,7 @@ let package = Package(
         .library(name: "MonadCore", targets: ["MonadCore"]),
         .library(name: "MonadMCP", targets: ["MonadMCP"]),
         .library(name: "MonadUI", targets: ["MonadUI"]),
+        .library(name: "MonadServerCore", targets: ["MonadServerCore"]),
         .executable(name: "MonadServer", targets: ["MonadServer"]),
         .executable(name: "MonadDiscordBridge", targets: ["MonadDiscordBridge"])
     ],
@@ -36,12 +37,21 @@ let package = Package(
         .executableTarget(
             name: "MonadServer",
             dependencies: [
-                "MonadCore",
+                "MonadServerCore",
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "Metrics", package: "swift-metrics"),
                 .product(name: "Prometheus", package: "swift-prometheus"),
             ],
             path: "Sources/MonadServer"
+        ),
+        .target(
+            name: "MonadServerCore",
+            dependencies: [
+                "MonadCore",
+                .product(name: "GRPC", package: "grpc-swift"),
+                .product(name: "Metrics", package: "swift-metrics"),
+            ],
+            path: "Sources/MonadServerCore"
         ),
         .target(
             name: "MonadCore",
@@ -76,6 +86,14 @@ let package = Package(
             name: "MonadCoreTests",
             dependencies: ["MonadCore", "MonadUI", "MonadDiscordBridge"],
             path: "Tests/MonadCoreTests"
+        ),
+        .testTarget(
+            name: "MonadServerTests",
+            dependencies: [
+                "MonadServerCore",
+                .product(name: "Metrics", package: "swift-metrics"),
+            ],
+            path: "Tests/MonadServerTests"
         ),
         .testTarget(
             name: "MonadMCPTests",
