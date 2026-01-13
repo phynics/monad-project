@@ -20,6 +20,8 @@ let package = Package(
         .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.23.0"),
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.28.0"),
         .package(url: "https://github.com/DiscordBM/DiscordBM.git", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-metrics.git", from: "2.5.0"),
+        .package(url: "https://github.com/swift-server/swift-prometheus.git", from: "2.0.0"),
     ],
     targets: [
         .executableTarget(
@@ -35,7 +37,9 @@ let package = Package(
             name: "MonadServer",
             dependencies: [
                 "MonadCore",
-                .product(name: "GRPC", package: "grpc-swift")
+                .product(name: "GRPC", package: "grpc-swift"),
+                .product(name: "Metrics", package: "swift-metrics"),
+                .product(name: "Prometheus", package: "swift-prometheus"),
             ],
             path: "Sources/MonadServer"
         ),
@@ -45,7 +49,8 @@ let package = Package(
                 .product(name: "OpenAI", package: "OpenAI"),
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "GRPC", package: "grpc-swift"),
-                .product(name: "SwiftProtobuf", package: "swift-protobuf")
+                .product(name: "SwiftProtobuf", package: "swift-protobuf"),
+                .product(name: "Metrics", package: "swift-metrics"),
             ],
             path: "Sources/MonadCore",
             exclude: [

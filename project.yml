@@ -24,6 +24,12 @@ packages:
   DiscordBM:
     url: https://github.com/DiscordBM/DiscordBM.git
     from: 1.0.0
+  Metrics:
+    url: https://github.com/apple/swift-metrics.git
+    from: 2.5.0
+  SwiftPrometheus:
+    url: https://github.com/swift-server/swift-prometheus.git
+    from: 2.0.0
 
 settings:
   base:
@@ -52,6 +58,8 @@ targets:
         product: GRPC
       - package: SwiftProtobuf
         product: SwiftProtobuf
+      - package: Metrics
+        product: Metrics
     settings:
       base:
         PRODUCT_NAME: MonadCore
@@ -81,6 +89,8 @@ targets:
         product: GRPC
       - package: SwiftProtobuf
         product: SwiftProtobuf
+      - package: Metrics
+        product: Metrics
     settings:
       base:
         PRODUCT_NAME: MonadCore
@@ -103,6 +113,10 @@ targets:
         product: GRPC
       - package: SwiftProtobuf
         product: SwiftProtobuf
+      - package: Metrics
+        product: Metrics
+      - package: SwiftPrometheus
+        product: Prometheus
     settings:
       base:
         PRODUCT_NAME: MonadServer
