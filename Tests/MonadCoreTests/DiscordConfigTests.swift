@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import MonadDiscordBridge
 
-@Suite struct DiscordConfigTests {
+@Suite(.serialized) struct DiscordConfigTests {
     
     @Test("Test environment variable priority")
     func testEnvPriority() throws {
