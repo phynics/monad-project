@@ -1,13 +1,13 @@
 # Plan: Rock Solid Server Refactor
 
-## Phase 1: Infrastructure and Observability
+## Phase 1: Infrastructure and Observability [checkpoint: 064e5ff]
 Establish the foundations for metrics collection and centralized error handling.
 
 - [x] Task: Update `Package.swift` and `project.yml` to include `swift-metrics` and `SwiftPrometheus`. 6b0e6be
 - [x] Task: Implement Feature: Create the `ServerErrorHandler` utility to unify error mapping and telemetry recording. d1655d2
 - [x] Task: Implement Feature: Initialize `SwiftPrometheus` and configure standard metrics (latency, error count). 30e534e
-- [~] Task: Write Tests: Verify that `ServerErrorHandler` correctly transforms domain errors and increments metrics.
-- [ ] Task: Conductor - User Manual Verification 'Infrastructure and Observability' (Protocol in workflow.md)
+- [x] Task: Write Tests: Verify that `ServerErrorHandler` correctly transforms domain errors and increments metrics. 064e5ff
+- [x] Task: Conductor - User Manual Verification 'Infrastructure and Observability' (Protocol in workflow.md) 064e5ff
 
 ## Phase 2: Service-Provider Architectural Refactor
 Restructure the server core to use the Service-Provider pattern and enforce SOLID principles.
