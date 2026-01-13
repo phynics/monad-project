@@ -5,10 +5,13 @@ import NIOHTTP1
 import NIOCore
 import NIOPosix
 
-/// Manages server-side metrics and observability using SwiftPrometheus.
-/// Adheres to CLEAN principles by providing a simple, unified interface
-/// for metrics collection and exportation.
+/// Manages server-side metrics and observability using **SwiftPrometheus**.
+///
+/// Adheres to **CLEAN** principles by providing a simple, unified interface
+/// for metrics collection and exportation, hiding the complexity of the 
+/// underlying Prometheus registry and HTTP server.
 public final class ServerMetrics: Sendable {
+    /// The underlying Prometheus collector registry.
     public let registry = PrometheusCollectorRegistry()
     private let factory: PrometheusMetricsFactory
     
@@ -16,21 +19,29 @@ public final class ServerMetrics: Sendable {
         self.factory = PrometheusMetricsFactory(registry: registry)
     }
     
-    /// Bootstraps the global MetricsSystem with the Prometheus backend.
-    /// Should be called once during server startup.
+    /// Bootstraps the global `MetricsSystem` with the Prometheus backend.
+    ///
+    /// Should be called exactly once during server startup, before any
+    /// metrics are recorded.
     public func bootstrap() {
         MetricsSystem.bootstrap(factory)
     }
     
     /// Generates the Prometheus-formatted metrics string for scraping.
+    ///
+    /// This follows the standard Prometheus text format version 0.0.4.
+    /// - Returns: A string suitable for consumption by a Prometheus scraper.
     public func export() -> String {
         var buffer = [UInt8]()
         registry.emit(into: &buffer)
         return String(decoding: buffer, as: UTF8.self)
     }
     
-    /// Starts a minimal HTTP server to expose the /metrics endpoint.
+    /// Starts a minimal **SwiftNIO** HTTP server to expose the `/metrics` endpoint.
+    ///
+    /// This server is non-blocking and is typically run in a background `Task`.
     /// - Parameter port: The port to listen on (default 8080).
+    /// - Throws: If the server cannot bind to the requested port.
     public func startMetricsServer(port: Int = 8080) async throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let bootstrap = ServerBootstrap(group: group)
@@ -54,6 +65,8 @@ public final class ServerMetrics: Sendable {
 }
 
 /// A simple NIO handler to serve Prometheus metrics over HTTP.
+///
+/// Implements the basic logic to respond to GET requests at `/metrics`.
 private final class MetricsHttpHandler: ChannelInboundHandler, @unchecked Sendable {
     typealias InboundIn = HTTPServerRequestPart
     typealias OutboundOut = HTTPServerResponsePart
