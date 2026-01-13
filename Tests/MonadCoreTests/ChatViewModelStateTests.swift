@@ -36,14 +36,15 @@ final class ChatViewModelStateTests: XCTestCase {
     
     @MainActor
     func testSendMessageStateTransitions() async throws {
+        // 1. Initial State
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertEqual(viewModel.messages.count, 1) // Welcome message
+        
+        // 2. Mock Setup
         mockLLMClient.nextResponse = "Hello user!"
         viewModel.inputText = "Hi assistant"
         
-        // 1. Initial State
-        XCTAssertFalse(viewModel.isLoading)
-        XCTAssertNil(viewModel.errorMessage)
-        
-        // 2. Trigger Send
+        // 3. Trigger Send
         viewModel.sendMessage()
         
         // 3. Verifying Loading State

@@ -48,7 +48,7 @@ public final class ServerMetrics: Sendable {
             .serverChannelOption(ChannelOptions.backlog, value: 256)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .childChannelInitializer { channel in
-                let handler = MetricsHttpHandler(metrics: self)
+                let handler = PrometheusScrapeHandler(metrics: self)
                 return channel.pipeline.configureHTTPServerPipeline().flatMap {
                     channel.pipeline.addHandler(handler)
                 }
@@ -67,7 +67,7 @@ public final class ServerMetrics: Sendable {
 /// A simple NIO handler to serve Prometheus metrics over HTTP.
 ///
 /// Implements the basic logic to respond to GET requests at `/metrics`.
-private final class MetricsHttpHandler: ChannelInboundHandler, @unchecked Sendable {
+private final class PrometheusScrapeHandler: ChannelInboundHandler, @unchecked Sendable {
     typealias InboundIn = HTTPServerRequestPart
     typealias OutboundOut = HTTPServerResponsePart
     
