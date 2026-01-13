@@ -48,7 +48,7 @@ public final class ServiceProviderOrchestrator: Sendable {
         metrics.bootstrap()
         
         // 2. LLM configuration
-        try await llm.loadConfiguration()
+        await llm.loadConfiguration()
         
         // 3. Start additional providers
         for provider in providers {

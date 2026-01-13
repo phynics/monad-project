@@ -1,54 +1,51 @@
 import Foundation
-import GRPC
-import NIOPosix
 import MonadCore
 import MonadServerCore
-import NIOCore
+import Logging
 
-// 1. Initialize Observability
-let serverMetrics = ServerMetrics()
-serverMetrics.bootstrap()
+// 1. Initialize Core Infrastructure
+let metrics = ServerMetrics()
+let errorHandler = ServerErrorHandler()
 
-// 2. Initialize Core Services
-// TODO: Load configuration from env or file
-// For server, we might want to specify a fixed path or use a default one
+// 2. Initialize Core Domain Services
 let persistence = try await PersistenceService.create()
 let llm = LLMService()
 
-// Load LLM config
-await llm.loadConfiguration()
-
-// 3. Setup Handlers
+// 3. Initialize gRPC Handlers (Decoupled via Protocols)
 let chatHandler = ChatHandler(llm: llm, persistence: persistence)
 let sessionHandler = SessionHandler(persistence: persistence)
 let memoryHandler = MemoryHandler(persistence: persistence)
 let noteHandler = NoteHandler(persistence: persistence)
 let jobHandler = JobHandler(persistence: persistence)
 
-let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+// 4. Initialize Service Providers
+let metricsProvider = MetricsServerProvider(metrics: metrics)
+let grpcProvider = GRPCServerProvider(handlers: [
+    chatHandler,
+    sessionHandler,
+    memoryHandler,
+    noteHandler,
+    jobHandler
+])
 
-// 4. Start Metrics Server (Background)
-Task {
-    do {
-        try await serverMetrics.startMetricsServer(port: 8080)
-    } catch {
-        print("Failed to start metrics server: \(error)")
-    }
+// 5. Initialize Central Orchestrator
+let orchestrator = ServiceProviderOrchestrator(
+    persistence: persistence,
+    llm: llm,
+    errorHandler: errorHandler,
+    metrics: metrics,
+    additionalProviders: [metricsProvider, grpcProvider]
+)
+
+// 6. Startup Sequence
+do {
+    try await orchestrator.startup()
+    
+    print("Monad Server is running.")
+    
+    // Wait for the gRPC server to close
+    try await grpcProvider.onClose?.get()
+} catch {
+    print("CRITICAL: Failed to start Monad Server: \(error)")
+    exit(1)
 }
-
-// 5. Start gRPC Server
-let server = try await Server.insecure(group: group)
-    .withServiceProviders([
-        chatHandler,
-        sessionHandler,
-        memoryHandler,
-        noteHandler,
-        jobHandler
-    ])
-    .bind(host: "0.0.0.0", port: 50051)
-    .get()
-
-print("Monad Server started on \(server.channel.localAddress!)")
-
-// Wait for the server to close
-try await server.onClose.get()
