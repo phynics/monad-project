@@ -36,6 +36,13 @@ let package = Package(
             path: "Sources/MonadDiscordBridge"
         ),
         .executableTarget(
+            name: "MonadFuzzer",
+            dependencies: [
+                "MonadCore"
+            ],
+            path: "Sources/MonadFuzzer"
+        ),
+        .executableTarget(
             name: "MonadServer",
             dependencies: [
                 "MonadServerCore",

@@ -189,6 +189,23 @@ targets:
         PRODUCT_NAME: MonadDiscordBridge
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.discord-bridge
 
+  # libFuzzer Target
+  MonadFuzzer:
+    type: tool
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadFuzzer
+    dependencies:
+      - target: MonadCore
+    settings:
+      base:
+        PRODUCT_NAME: MonadFuzzer
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.fuzzer
+        OTHER_SWIFT_FLAGS: "-sanitize=fuzzer"
+        OTHER_LDFLAGS: "-fsanitize=fuzzer"
+
   # UI - macOS
   MonadUI:
     type: framework

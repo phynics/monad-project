@@ -100,5 +100,15 @@ spm-run:
 	@echo "Running with Swift Package Manager..."
 	@swift run
 
+# Fuzzing
+fuzz:
+	@echo "Building MonadFuzzer..."
+	@swift build --product MonadFuzzer -c debug \
+		-Xswiftc -target -Xswiftc arm64-apple-macosx14.0 \
+		-Xswiftc -sanitize=fuzzer,address \
+		-Xcc -fsanitize=fuzzer,address
+	@echo "Running MonadFuzzer..."
+	@.build/debug/MonadFuzzer -max_total_time=30
+
 # Quick rebuild
 rebuild: clean build
