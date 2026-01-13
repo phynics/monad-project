@@ -14,5 +14,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: Discord Integration and Signal Removal
-*Link: [./conductor/tracks/discord_integration_20260112/](./conductor/tracks/discord_integration_20260112/)*
+## [~] Track: Rock Solid Server Refactor
+*Link: [./conductor/tracks/rock_solid_server_20260112/](./conductor/tracks/rock_solid_server_20260112/)*

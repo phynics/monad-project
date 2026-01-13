@@ -12,7 +12,7 @@
 - **Distributed System:**
     - **gRPC:** High-performance, typed communication protocol between clients and server.
     - **Protocol Buffers:** Schema definition for cross-platform data serialization.
-    - **Signal Bridge:** A Proof-of-Concept client allowing interaction via the Signal messaging protocol.
+    - **Discord Bridge:** A modern bot interface using DiscordBM for real-time assistant interactions.
 - **Modular Design:** Separation of concerns into Core, UI, and specialized modules (like MonadMCP).
 - **Architectural Integrity:**
     - **Protocol-Oriented Programming:** Services are defined by protocols to enable mocking and isolation.
@@ -26,6 +26,7 @@
 
 ## LLM Integration and Services
 - **OpenAI Swift SDK:** Direct integration with OpenAI's models (e.g., GPT-4o).
+- **DiscordBM:** A NIO-based Discord library for high-performance bot interactions.
 - **Local Models (Ollama):** Support for local model execution for privacy and offline use.
 - **OpenRouter:** For accessing a wide variety of models through a single API.
 - **Model Context Protocol (MCP):** Client-side support for standardized tool and data integration.

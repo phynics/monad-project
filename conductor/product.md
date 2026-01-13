@@ -15,7 +15,7 @@ Monad Assistant aims to redefine personal AI interactions by bridging the gap be
 - **Local-First Privacy:** Build a robust architecture that prioritizes local processing and persistent storage (via GRDB/SQLite), ensuring user data remains private.
 - **Native Performance:** Deliver a top-tier macOS and iOS experience using Swift and SwiftUI, optimized for speed and responsiveness.
 - **Distributed Architecture:** Decouples core logic from the UI, allowing the assistant to run on a central server (Docker/Linux) while serving multiple native clients.
-- **Multi-Interface Access:** Enables interaction through secondary channels like Signal, providing flexibility in how users engage with their assistant.
+- **Multi-Interface Access:** Enables interaction through secondary channels like Discord, providing flexibility in how users engage with their assistant via a modern bot interface.
 
 ## Key Features
 - **Adaptive Context Management:** Automatically retrieves relevant memories and globally injects notes, leveraging direct SQL-driven persistence.
