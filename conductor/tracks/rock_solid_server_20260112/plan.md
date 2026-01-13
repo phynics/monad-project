@@ -15,7 +15,7 @@ Restructure the server core to use the Service-Provider pattern and enforce SOLI
 - [x] Task: Implement Feature: Create `ServiceProviderOrchestrator` to manage service lifecycles and dependency injection. b5b855a
 - [x] Task: Refactor: Decouple gRPC handlers (Chat, Session, etc.) from concrete services using protocol-based injection. 15a25b7
 - [x] Task: Refactor: Migrate `MonadServer/main.swift` to use the new orchestrator and unified error handling. 4ccb292
-- [ ] Task: Write Tests: Unit tests for the `ServiceProviderOrchestrator` using protocol-based mocks.
+- [x] Task: Write Tests: Unit tests for the `ServiceProviderOrchestrator` using protocol-based mocks. b5b855a
 - [ ] Task: Conductor - User Manual Verification 'Service-Provider Architectural Refactor' (Protocol in workflow.md)
 
 ## Phase 3: Gold Standard Testing Suite
