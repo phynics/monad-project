@@ -1,5 +1,6 @@
 import XCTest
 @testable import MonadCore
+import MonadTestSupport
 
 final class ContextManagementRefinementTests: XCTestCase {
     var mockPersistence: MockPersistenceService!

@@ -146,6 +146,28 @@ targets:
         INSTALL_PATH: "@rpath"
         DEFINES_MODULE: YES
 
+  # Test Support Utility
+  MonadTestSupport:
+    type: framework
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadTestSupport
+    dependencies:
+      - target: MonadCore
+      - package: OpenAI
+        product: OpenAI
+      - package: GRDB
+        product: GRDB
+    settings:
+      base:
+        PRODUCT_NAME: MonadTestSupport
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.test-support
+        SKIP_INSTALL: YES
+        INSTALL_PATH: "@rpath"
+        DEFINES_MODULE: YES
+
   # Monad Discord Bridge
   MonadDiscordBridge:
     type: tool
@@ -312,6 +334,7 @@ targets:
       - target: MonadCore
       - target: MonadUI
       - target: MonadDiscordBridge
+      - target: MonadTestSupport
       - package: OpenAI
         product: OpenAI
       - package: GRDB
@@ -334,6 +357,7 @@ targets:
       - path: Tests/MonadServerTests
     dependencies:
       - target: MonadServerCore
+      - target: MonadTestSupport
       - package: gRPC
         product: GRPC
       - package: Metrics

@@ -1,11 +1,13 @@
 import Foundation
 import Testing
 import MonadCore
+import MonadTestSupport
 import GRPC
 import NIOCore
 import SwiftProtobuf
 
 @testable import MonadCore
+import MonadTestSupport
 
 @Suite
 struct MonadServerTests {

@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 import MonadCore
+import MonadTestSupport
 import GRPC
 import NIOCore
 import NIOPosix
@@ -9,6 +10,7 @@ import OpenAI
 import GRDB
 
 @testable import MonadCore
+import MonadTestSupport
 @testable import MonadUI
 
 @Suite(.serialized)

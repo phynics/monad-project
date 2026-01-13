@@ -1,8 +1,10 @@
 import OpenAI
 import MonadCore
+import MonadTestSupport
 import Testing
 
 @testable import MonadCore
+import MonadTestSupport
 
 @Suite @MainActor
 struct LLMServiceTests {

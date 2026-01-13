@@ -1,5 +1,6 @@
 import XCTest
 @testable import MonadCore
+import MonadTestSupport
 
 final class ContextManagerTests: XCTestCase {
     var mockPersistence: MockPersistenceService!
