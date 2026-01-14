@@ -13,12 +13,18 @@
     - **gRPC:** High-performance, typed communication protocol between clients and server.
     - **Protocol Buffers:** Schema definition for cross-platform data serialization.
     - **Discord Bridge:** A modern bot interface using DiscordBM for real-time assistant interactions.
+    - **Service-Provider Pattern:** Orchestrated lifecycle management for server components, ensuring decoupled and testable services.
 - **Modular Design:** Separation of concerns into Core, UI, and specialized modules (like MonadMCP).
 - **Architectural Integrity:**
     - **Protocol-Oriented Programming:** Services are defined by protocols to enable mocking and isolation.
     - **Dependency Injection:** Core components like `ContextManager` receive their dependencies via constructor injection, facilitating testability and modularity.
     - **Comprehensive Testing:** Commitment to high code coverage (>80% for core logic) using XCTest and mocking for all external interactions.
     - **Database-Level Protection:** Utilizes SQLite triggers to enforce strict immutability for core data types like Notes and Archives.
+
+## Observability and Telemetry
+- **SwiftMetrics:** Standardized metrics collection API for Swift.
+- **SwiftPrometheus:** Prometheus client for exporting telemetry data.
+- **Centralized Error Handling:** Unified mapping of domain errors to gRPC statuses with automatic telemetry recording.
 
 ## Database and Persistence
 - **GRDB.swift:** A robust toolkit for SQLite databases, providing high-level Swift interfaces for concurrent database access.

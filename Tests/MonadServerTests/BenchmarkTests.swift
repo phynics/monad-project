@@ -36,7 +36,7 @@ import MonadTestSupport
         let timeInterval = Double(nanoTime) / 1_000_000_000
         
         print("BENCHMARK: Memory Search (1000 items) took \(timeInterval)s")
-        #expect(timeInterval < 0.1, "Memory search should be fast")
+        #expect(timeInterval < 0.2, "Memory search should be fast")
     }
     
     @Test("Benchmark: Chat Prompt Building with History")

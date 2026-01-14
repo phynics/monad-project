@@ -1,5 +1,5 @@
 # Initial Concept
-A native AI assistant for macOS and iOS, now featuring a distributed architecture with high-performance gRPC communication, focused on speed, deep context, and local-first privacy through semantic retrieval and document workspace management.
+A native AI assistant for macOS and iOS, now featuring an enterprise-grade distributed architecture with high-performance gRPC communication, professional observability, and robust error handling, focused on speed, deep context, and local-first privacy.
 
 # Product Guide
 
@@ -24,3 +24,4 @@ Monad Assistant aims to redefine personal AI interactions by bridging the gap be
 - **Multi-Model Support:** Integration with providers like OpenAI and local models via Ollama or OpenRouter.
 - **Persistent Memory:** Robust storage of conversation history, memories, and notes with semantic search capabilities.
 - **Remote Server Mode:** Support for gRPC-based communication with a remote MonadServer, enabling shared state across different client types.
+- **Professional Observability:** Integrated Prometheus metrics for tracking performance, latency, and error rates in real-time.

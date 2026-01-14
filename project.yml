@@ -108,6 +108,7 @@ targets:
     sources:
       - path: Sources/MonadServer
     dependencies:
+      - target: MonadCore
       - target: MonadServerCore
       - package: gRPC
         product: GRPC
@@ -414,6 +415,7 @@ schemes:
       targets:
         - MonadCoreTests
         - MonadMCPTests
+        - MonadServerTests
     run:
       executable: MonadAssistant
     profile:
