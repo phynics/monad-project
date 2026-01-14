@@ -21,9 +21,9 @@ packages:
   SwiftProtobuf:
     url: https://github.com/apple/swift-protobuf.git
     from: 1.28.0
-  DiscordBM:
-    url: https://github.com/DiscordBM/DiscordBM.git
-    from: 1.0.0
+  # DiscordBM:
+  #   url: https://github.com/DiscordBM/DiscordBM.git
+  #   from: 1.0.0
   Metrics:
     url: https://github.com/apple/swift-metrics.git
     from: 2.5.0
@@ -48,6 +48,11 @@ targets:
   MonadCore:
     type: framework
     platform: macOS
+    sources:
+      - path: Sources/MonadCore
+        excludes:
+          - "**/.DS_Store"
+          - "monad.proto"
     dependencies:
       - sdk: NaturalLanguage.framework
       - package: OpenAI
@@ -170,25 +175,25 @@ targets:
         DEFINES_MODULE: YES
 
   # Monad Discord Bridge
-  MonadDiscordBridge:
-    type: tool
-    platform: macOS
-    deploymentTarget:
-      macOS: "14.0"
-    sources:
-      - path: Sources/MonadDiscordBridge
-    dependencies:
-      - target: MonadCore
-      - package: gRPC
-        product: GRPC
-      - package: SwiftProtobuf
-        product: SwiftProtobuf
-      - package: DiscordBM
-        product: DiscordBM
-    settings:
-      base:
-        PRODUCT_NAME: MonadDiscordBridge
-        PRODUCT_BUNDLE_IDENTIFIER: com.monad.discord-bridge
+  # MonadDiscordBridge:
+  #   type: tool
+  #   platform: macOS
+  #   deploymentTarget:
+  #     macOS: "14.0"
+  #   sources:
+  #     - path: Sources/MonadDiscordBridge
+  #   dependencies:
+  #     - target: MonadCore
+  #     - package: gRPC
+  #       product: GRPC
+  #     - package: SwiftProtobuf
+  #       product: SwiftProtobuf
+  #     - package: DiscordBM
+  #       product: DiscordBM
+  #   settings:
+  #     base:
+  #       PRODUCT_NAME: MonadDiscordBridge
+  #       PRODUCT_BUNDLE_IDENTIFIER: com.monad.discord-bridge
 
   # libFuzzer Target
   MonadFuzzer:
@@ -351,7 +356,7 @@ targets:
     dependencies:
       - target: MonadCore
       - target: MonadUI
-      - target: MonadDiscordBridge
+      # - target: MonadDiscordBridge
       - target: MonadTestSupport
       - package: OpenAI
         product: OpenAI
