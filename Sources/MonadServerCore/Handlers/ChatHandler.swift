@@ -3,10 +3,12 @@ import GRPC
 import SwiftProtobuf
 import MonadCore
 import OpenAI
+import Logging
 
 public final class ChatHandler: MonadChatServiceAsyncProvider, Sendable {
     private let llm: any LLMServiceProtocol
     private let persistence: any PersistenceServiceProtocol
+    private let logger = Logger(label: "com.monad.server.handlers.chat")
     
     public init(llm: any LLMServiceProtocol, persistence: any PersistenceServiceProtocol) {
         self.llm = llm
@@ -14,6 +16,10 @@ public final class ChatHandler: MonadChatServiceAsyncProvider, Sendable {
     }
     
     public func chatStream(request: MonadChatRequest, responseStream: GRPCAsyncResponseStreamWriter<MonadChatResponse>, context: GRPCAsyncServerCallContext) async throws {
+        logger.info("Request received: chatStream", metadata: [
+            "peer": "\(context.remoteAddress?.description ?? "unknown")",
+            "model": "\(request.useFastModel ? "fast" : "standard")"
+        ])
         try await chatStream(request: request, responseStream: responseStream, context: context as any MonadServerContext)
     }
 
@@ -71,6 +77,9 @@ public final class ChatHandler: MonadChatServiceAsyncProvider, Sendable {
     }
     
     public func sendMessage(request: MonadChatRequest, context: GRPCAsyncServerCallContext) async throws -> MonadMessage {
+        logger.info("Request received: sendMessage", metadata: [
+            "peer": "\(context.remoteAddress?.description ?? "unknown")"
+        ])
         return try await sendMessage(request: request, context: context as any MonadServerContext)
     }
 

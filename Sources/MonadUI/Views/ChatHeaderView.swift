@@ -80,6 +80,18 @@ public struct ChatHeaderView: View {
 
             Spacer()
 
+            // Mode Badge
+            Text(llmService.configuration.connectionMode == .local ? "LOCAL" : "REMOTE")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(llmService.configuration.connectionMode == .local ? .secondary : .white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule()
+                        .fill(llmService.configuration.connectionMode == .local ? Color.gray.opacity(0.2) : Color.blue)
+                )
+                .padding(.trailing, 8)
+
             // Status Indicator
             if llmService.isConfigured {
                 HStack(spacing: 4) {

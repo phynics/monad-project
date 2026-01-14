@@ -92,12 +92,25 @@ public struct SettingsView<PlatformContent: View>: View {
     
     private var generalSection: some View {
         Section {
-            Picker("Connection Mode", selection: $workingConfig.connectionMode) {
-                ForEach(LLMConfiguration.ConnectionMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
+            VStack(alignment: .leading, spacing: 8) {
+                Picker("Connection Mode", selection: $workingConfig.connectionMode) {
+                    ForEach(LLMConfiguration.ConnectionMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
                 }
+                .pickerStyle(.segmented)
+                
+                Group {
+                    if workingConfig.connectionMode == .remote {
+                        Text("Monad Assistant connects to a centralized Monad Server. Logic and memory are handled remotely.")
+                    } else {
+                        Text("Monad Assistant runs purely on this device. Logic and memory are stored locally.")
+                    }
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
             }
-            .pickerStyle(.segmented)
+            .padding(.vertical, 4)
             
             if workingConfig.connectionMode == .remote {
                 remoteServerSettings
@@ -106,36 +119,39 @@ public struct SettingsView<PlatformContent: View>: View {
             Divider()
 
             // Active Provider Picker (Global setting)
-            Picker("Active Provider", selection: $workingConfig.activeProvider) {
-                ForEach(LLMProvider.allCases) { provider in
-                    Text(provider.rawValue).tag(provider)
+            if workingConfig.connectionMode == .local {
+                Picker("Active Provider", selection: $workingConfig.activeProvider) {
+                    ForEach(LLMProvider.allCases) { provider in
+                        Text(provider.rawValue).tag(provider)
+                    }
                 }
+                .pickerStyle(.menu)
             }
-            .pickerStyle(.menu)
-            .disabled(workingConfig.connectionMode == .remote)
             
             Divider()
             
-            // Configuration Provider Picker (What we are editing)
-            Picker("Edit Configuration For", selection: $selectedProvider) {
-                ForEach(LLMProvider.allCases) { provider in
-                    Text(provider.rawValue).tag(provider)
+            if workingConfig.connectionMode == .local {
+                // Configuration Provider Picker (What we are editing)
+                Picker("Edit Configuration For", selection: $selectedProvider) {
+                    ForEach(LLMProvider.allCases) { provider in
+                        Text(provider.rawValue).tag(provider)
+                    }
                 }
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: selectedProvider) { _, newValue in
-                // Refresh models when switching view if needed
-                if newValue == .ollama && ollamaModels.isEmpty {
-                    fetchOllamaModels()
+                .pickerStyle(.segmented)
+                .onChange(of: selectedProvider) { _, newValue in
+                    // Refresh models when switching view if needed
+                    if newValue == .ollama && ollamaModels.isEmpty {
+                        fetchOllamaModels()
+                    }
                 }
-            }
 
-            Picker("Tool Format", selection: currentProviderBinding.toolFormat) {
-                ForEach(ToolCallFormat.allCases) { format in
-                    Text(format.rawValue).tag(format)
+                Picker("Tool Format", selection: currentProviderBinding.toolFormat) {
+                    ForEach(ToolCallFormat.allCases) { format in
+                        Text(format.rawValue).tag(format)
+                    }
                 }
+                .pickerStyle(.menu)
             }
-            .pickerStyle(.menu)
         } header: {
             Text("General")
         }
@@ -157,12 +173,16 @@ public struct SettingsView<PlatformContent: View>: View {
     }
     
     private var providerConfigSection: some View {
-        Section {
-            providerSettings
-        } header: {
-            Text(selectedProvider.rawValue + " Configuration")
+        // Only show if Local mode
+        if workingConfig.connectionMode == .local {
+            Section {
+                providerSettings
+            } header: {
+                Text(selectedProvider.rawValue + " Configuration")
+            }
+        } else {
+            EmptyView()
         }
-        .disabled(workingConfig.connectionMode == .remote)
     }
     
     private var statusSection: some View {
