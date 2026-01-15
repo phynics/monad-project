@@ -46,12 +46,18 @@ extension SettingsView {
 
         Task {
             do {
-                // Temporarily update config to test connection without saving persistently to disk immediately?
-                // Actually updateConfiguration saves. 
-                // Testing connection usually implies saving first in this app context.
-                try await llmService.updateConfiguration(workingConfig)
-
-                _ = try await llmService.sendMessage("Hello")
+                if workingConfig.connectionMode == .remote {
+                    try await gRPCLLMService.testConnection(
+                        host: workingConfig.monadServer.host,
+                        port: workingConfig.monadServer.port,
+                        useTLS: workingConfig.monadServer.useTLS
+                    )
+                } else {
+                    // Test Local Connection
+                    // We must save/update config first so the local service uses the new keys/url
+                    try await llmService.updateConfiguration(workingConfig)
+                    _ = try await llmService.sendMessage("Hello")
+                }
 
                 showingSaveSuccess = true
                 errorMessage = nil

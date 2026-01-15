@@ -1,6 +1,7 @@
 import Foundation
 import GRPC
 import NIOCore
+import NIOPosix
 import SwiftProtobuf
 import OpenAI
 
@@ -22,6 +23,29 @@ public final class gRPCLLMService: LLMServiceProtocol {
         self.client = MonadChatServiceNIOClient(channel: channel)
         self.asyncClient = MonadChatServiceAsyncClient(channel: channel)
         self.embeddingService = embeddingService
+    }
+    
+    /// Static helper to test connection without instantiating a full service or managing channel lifecycle manually in UI
+    public static func testConnection(host: String, port: Int, useTLS: Bool) async throws {
+        let group = NIOSingletons.posixEventLoopGroup
+        let channel = try GRPCChannelPool.with(
+            target: .host(host, port: port),
+            transportSecurity: useTLS ? .tls : .plaintext,
+            eventLoopGroup: group
+        )
+        
+        do {
+            let client = MonadChatServiceAsyncClient(channel: channel)
+            var request = MonadChatRequest()
+            request.userQuery = "Ping"
+            request.useFastModel = true
+            
+            _ = try await client.sendMessage(request)
+            try await channel.close().get()
+        } catch {
+            try? await channel.close().get()
+            throw error
+        }
     }
     
     public func registerToolProvider(_ provider: any ToolProvider) {
