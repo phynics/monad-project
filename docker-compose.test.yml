@@ -1,0 +1,12 @@
+services:
+  monad-test:
+    image: swift:6.0-jammy
+    working_dir: /app
+    volumes:
+      - .:/app
+    # Ensure we install dependencies before testing if needed, but 'swift test' usually handles it.
+    # However, since we are on Linux, we might need system dependencies.
+    # The README mentions `apt-get install libsqlite3-dev`.
+    # We can use a custom command or build from a Dockerfile.
+    # To keep it simple, we'll install deps then test.
+    command: /bin/bash -c "apt-get update && apt-get install -y libsqlite3-dev && swift test"
