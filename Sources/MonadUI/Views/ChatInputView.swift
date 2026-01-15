@@ -49,7 +49,8 @@ struct ChatInputView: View {
                             || !viewModel.llmService.isConfigured)
                 }
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.vertical, 8)
             .background(Color.gray.opacity(0.05))
         }
     }

@@ -43,17 +43,19 @@ public struct SettingsView<PlatformContent: View>: View {
             VStack(spacing: 0) {
                 headerView
                 
-                Form {
-                    generalSection
-                    providerConfigSection
-                    platformContent
-                    statusSection
-                    messageSection
-                    saveTestSection
-                    backupRestoreSection
-                    dangerZoneSection
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        generalSection
+                        providerConfigSection
+                        platformContent
+                        statusSection
+                        messageSection
+                        saveTestSection
+                        backupRestoreSection
+                        dangerZoneSection
+                    }
+                    .padding()
                 }
-                .formStyle(.grouped)
             }
         }
         #if os(macOS)
@@ -88,10 +90,15 @@ public struct SettingsView<PlatformContent: View>: View {
         }
         .padding()
         .background(Color.gray.opacity(0.05))
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
     }
     
     private var generalSection: some View {
-        Section {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("General").font(.headline)
+            
             VStack(alignment: .leading, spacing: 8) {
                 Picker("Connection Mode", selection: $workingConfig.connectionMode) {
                     ForEach(LLMConfiguration.ConnectionMode.allCases) { mode in
@@ -99,6 +106,7 @@ public struct SettingsView<PlatformContent: View>: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
                 
                 Group {
                     if workingConfig.connectionMode == .remote {
@@ -110,7 +118,6 @@ public struct SettingsView<PlatformContent: View>: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
             }
-            .padding(.vertical, 4)
             
             if workingConfig.connectionMode == .remote {
                 remoteServerSettings
@@ -120,65 +127,81 @@ public struct SettingsView<PlatformContent: View>: View {
 
             // Active Provider Picker (Global setting)
             if workingConfig.connectionMode == .local {
-                Picker("Active Provider", selection: $workingConfig.activeProvider) {
-                    ForEach(LLMProvider.allCases) { provider in
-                        Text(provider.rawValue).tag(provider)
+                HStack {
+                    Text("Active Provider")
+                    Spacer()
+                    Picker("", selection: $workingConfig.activeProvider) {
+                        ForEach(LLMProvider.allCases) { provider in
+                            Text(provider.rawValue).tag(provider)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(width: 150)
                 }
-                .pickerStyle(.menu)
             }
             
-            Divider()
-            
             if workingConfig.connectionMode == .local {
-                // Configuration Provider Picker (What we are editing)
-                Picker("Edit Configuration For", selection: $selectedProvider) {
-                    ForEach(LLMProvider.allCases) { provider in
-                        Text(provider.rawValue).tag(provider)
+                Divider()
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Configuration Target").font(.subheadline).foregroundStyle(.secondary)
+                    Picker("Edit Configuration For", selection: $selectedProvider) {
+                        ForEach(LLMProvider.allCases) { provider in
+                            Text(provider.rawValue).tag(provider)
+                        }
                     }
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: selectedProvider) { _, newValue in
-                    // Refresh models when switching view if needed
-                    if newValue == .ollama && ollamaModels.isEmpty {
-                        fetchOllamaModels()
+                    .pickerStyle(.segmented)
+                    .onChange(of: selectedProvider) { _, newValue in
+                        // Refresh models when switching view if needed
+                        if newValue == .ollama && ollamaModels.isEmpty {
+                            fetchOllamaModels()
+                        }
                     }
                 }
 
-                Picker("Tool Format", selection: currentProviderBinding.toolFormat) {
-                    ForEach(ToolCallFormat.allCases) { format in
-                        Text(format.rawValue).tag(format)
+                HStack {
+                    Text("Tool Format")
+                    Spacer()
+                    Picker("", selection: currentProviderBinding.toolFormat) {
+                        ForEach(ToolCallFormat.allCases) { format in
+                            Text(format.rawValue).tag(format)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(width: 150)
                 }
-                .pickerStyle(.menu)
             }
-        } header: {
-            Text("General")
         }
     }
     
     @ViewBuilder
     private var remoteServerSettings: some View {
-        LabeledContent("Server Host") {
-            TextField("localhost", text: $workingConfig.monadServer.host)
-                .textFieldStyle(.roundedBorder)
+        VStack(spacing: 12) {
+            LabeledContent("Server Host") {
+                TextField("localhost", text: $workingConfig.monadServer.host)
+                    .textFieldStyle(.roundedBorder)
+            }
+            
+            LabeledContent("Server Port") {
+                TextField("50051", value: $workingConfig.monadServer.port, format: .number)
+                    .textFieldStyle(.roundedBorder)
+            }
+            
+            Toggle("Use TLS", isOn: $workingConfig.monadServer.useTLS)
         }
-        
-        LabeledContent("Server Port") {
-            TextField("50051", value: $workingConfig.monadServer.port, format: .number)
-                .textFieldStyle(.roundedBorder)
-        }
-        
-        Toggle("Use TLS", isOn: $workingConfig.monadServer.useTLS)
+        .padding(12)
+        .background(Color.gray.opacity(0.05))
+        .cornerRadius(8)
     }
     
     private var providerConfigSection: some View {
         // Only show if Local mode
         if workingConfig.connectionMode == .local {
-            Section {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(selectedProvider.rawValue + " Configuration").font(.headline)
                 providerSettings
-            } header: {
-                Text(selectedProvider.rawValue + " Configuration")
             }
         } else {
             EmptyView()
@@ -186,7 +209,8 @@ public struct SettingsView<PlatformContent: View>: View {
     }
     
     private var statusSection: some View {
-        Section {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Status").font(.headline)
             HStack {
                 Image(
                     systemName: llmService.isConfigured
@@ -195,41 +219,46 @@ public struct SettingsView<PlatformContent: View>: View {
                 .foregroundColor(llmService.isConfigured ? .green : .red)
                 Text(llmService.isConfigured ? "Connected" : "Not Configured")
             }
-        } header: {
-            Text("Status")
+            .padding(8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.gray.opacity(0.05))
+            .cornerRadius(8)
         }
     }
     
     @ViewBuilder
     private var messageSection: some View {
         if let error = errorMessage {
-            Section {
-                HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
-                    Text(error)
-                        .font(.caption)
-                    Spacer()
-                    Button("Dismiss") {
-                        errorMessage = nil
-                    }
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text(error)
+                    .font(.caption)
+                Spacer()
+                Button("Dismiss") {
+                    errorMessage = nil
                 }
             }
+            .padding(8)
+            .background(Color.orange.opacity(0.1))
+            .cornerRadius(8)
         }
 
         if showingSaveSuccess {
-            Section {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("Settings saved successfully!")
-                }
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                Text("Settings saved successfully!")
             }
+            .padding(8)
+            .background(Color.green.opacity(0.1))
+            .cornerRadius(8)
         }
     }
     
     private var saveTestSection: some View {
-        Section {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Actions").font(.headline)
             HStack(spacing: 12) {
                 Button(action: saveSettings) {
                     HStack {
@@ -240,6 +269,7 @@ public struct SettingsView<PlatformContent: View>: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!isValid)
+                .controlSize(.large)
 
                 Button(action: testConnection) {
                     HStack {
@@ -250,41 +280,45 @@ public struct SettingsView<PlatformContent: View>: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(!isValid)
+                .controlSize(.large)
             }
-        } header: {
-            Text("Save & Test")
         }
     }
     
     private var dangerZoneSection: some View {
-        Section {
-            Button(action: clearSettings) {
-                HStack {
-                    Image(systemName: "trash")
-                    Text("Clear All Settings")
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Danger Zone").font(.headline).foregroundColor(.red)
+            
+            VStack(spacing: 12) {
+                Button(action: clearSettings) {
+                    HStack {
+                        Image(systemName: "trash")
+                        Text("Clear All Settings")
+                    }
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .foregroundColor(.red)
+                .buttonStyle(.bordered)
+                .foregroundColor(.red)
 
-            Button(action: { showingResetConfirmation = true }) {
-                HStack {
-                    Image(systemName: "exclamationmark.triangle")
-                    Text("Reset Database")
+                Button(action: { showingResetConfirmation = true }) {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                        Text("Reset Database")
+                    }
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
+                .buttonStyle(.bordered)
+                .foregroundColor(.red)
+                
+                Text(
+                    "Reset Database will delete ALL conversations, notes, and memories. This cannot be undone!"
+                )
+                .font(.caption)
+                .foregroundColor(.red)
             }
-            .buttonStyle(.bordered)
-            .foregroundColor(.red)
-        } header: {
-            Text("Danger Zone")
-        } footer: {
-            Text(
-                "Reset Database will delete ALL conversations, notes, and memories. This cannot be undone!"
-            )
-            .font(.caption)
-            .foregroundColor(.red)
+            .padding()
+            .background(Color.red.opacity(0.05))
+            .cornerRadius(8)
         }
     }
 

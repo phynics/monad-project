@@ -48,7 +48,7 @@ public struct MessageListView: View {
                     }
 
                     // Bottom margin to prevent content being hidden by the floating button
-                    Spacer(minLength: 80)
+                    Spacer(minLength: 20)
                         .id("bottom-margin")
 
                     Color.clear
