@@ -17,7 +17,7 @@ public final class ChatHandler: MonadChatServiceAsyncProvider, Sendable {
     
     public func chatStream(request: MonadChatRequest, responseStream: GRPCAsyncResponseStreamWriter<MonadChatResponse>, context: GRPCAsyncServerCallContext) async throws {
         logger.info("Request received: chatStream", metadata: [
-            "peer": "\(context.remoteAddress?.description ?? "unknown")",
+            // "peer": "\(context.remoteAddress?.description ?? "unknown")",
             "model": "\(request.useFastModel ? "fast" : "standard")"
         ])
         try await chatStream(request: request, responseStream: responseStream, context: context as any MonadServerContext)
@@ -77,9 +77,7 @@ public final class ChatHandler: MonadChatServiceAsyncProvider, Sendable {
     }
     
     public func sendMessage(request: MonadChatRequest, context: GRPCAsyncServerCallContext) async throws -> MonadMessage {
-        logger.info("Request received: sendMessage", metadata: [
-            "peer": "\(context.remoteAddress?.description ?? "unknown")"
-        ])
+        logger.info("Request received: sendMessage")
         return try await sendMessage(request: request, context: context as any MonadServerContext)
     }
 

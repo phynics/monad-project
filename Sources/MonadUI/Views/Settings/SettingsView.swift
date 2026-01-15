@@ -185,7 +185,7 @@ public struct SettingsView<PlatformContent: View>: View {
             }
             
             LabeledContent("Server Port") {
-                TextField("50051", value: $workingConfig.monadServer.port, format: .number)
+                TextField("50051", value: $workingConfig.monadServer.port, format: .number.grouping(.never))
                     .textFieldStyle(.roundedBorder)
             }
             
@@ -195,7 +195,8 @@ public struct SettingsView<PlatformContent: View>: View {
         .background(Color.gray.opacity(0.05))
         .cornerRadius(8)
     }
-    
+   
+    @ViewBuilder
     private var providerConfigSection: some View {
         // Only show if Local mode
         if workingConfig.connectionMode == .local {

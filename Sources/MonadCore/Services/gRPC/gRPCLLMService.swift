@@ -30,7 +30,7 @@ public final class gRPCLLMService: LLMServiceProtocol {
         let group = NIOSingletons.posixEventLoopGroup
         let channel = try GRPCChannelPool.with(
             target: .host(host, port: port),
-            transportSecurity: useTLS ? .tls : .plaintext,
+            transportSecurity: useTLS ? .tls(.makeClientDefault(for: .best)) : .plaintext,
             eventLoopGroup: group
         )
         
