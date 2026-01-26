@@ -48,6 +48,9 @@ struct MonadServer: AsyncParsableCommand {
         
         let chatController = ChatController<BasicRequestContext>(sessionManager: sessionManager, llmService: llmService)
         chatController.addRoutes(to: protected.group("/sessions"))
+        
+        let memoryController = MemoryController<BasicRequestContext>(sessionManager: sessionManager)
+        memoryController.addRoutes(to: protected.group("/memories"))
 
         let app = Application(
             router: router,
