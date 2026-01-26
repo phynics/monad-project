@@ -56,7 +56,7 @@ Goal: Expose CRUD operations for persistent data and tools.
     - [ ] `POST /memories` (create).
     - [ ] `DELETE /memories/{id}`.
     - [ ] Connect to `PersistenceService`.
-- [ ] Task: Implement Notes API.
+- [x] Task: Implement Notes API. [892530e]
     - [ ] `GET /notes` (search/list).
     - [ ] `POST /notes` (create/update).
     - [ ] `DELETE /notes/{title}`.
