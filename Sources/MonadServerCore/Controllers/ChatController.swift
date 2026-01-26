@@ -54,11 +54,80 @@ public struct ChatController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound, message: "Session not found")
         }
         
-        // TODO: Use ContextManager to gather context
-        // let contextManager = await sessionManager.getContextManager(for: id)
+        let persistence = await sessionManager.getPersistenceService()
+        let contextManager = await sessionManager.getContextManager(for: id)
         
-        let response = try await llmService.sendMessage(chatRequest.message)
-        return ChatResponse(response: response)
+        // 1. Save User Message
+        let userMsg = ConversationMessage(sessionId: id, role: .user, content: chatRequest.message)
+        try await persistence.saveMessage(userMsg)
+        
+        // 2. Fetch History
+        let history = try await sessionManager.getHistory(for: id)
+        
+        // 3. Gather Context
+        var contextData = ContextData()
+        if let contextManager = contextManager {
+            contextData = try await contextManager.gatherContext(
+                for: chatRequest.message,
+                history: history,
+                tagGenerator: { [llmService] query in
+                    try await llmService.generateTags(for: query)
+                }
+            )
+        }
+        
+        // 4. Send Message with Context
+        do {
+            // Build Prompt manually for non-streaming sendMessage (or add sendMessageWithContext)
+            let (messages, _, _) = await llmService.promptBuilder.buildPrompt(
+                systemInstructions: nil,
+                contextNotes: contextData.notes,
+                documents: [],
+                memories: contextData.memories.map { $0.memory },
+                tools: [],
+                chatHistory: history,
+                userQuery: chatRequest.message
+            )
+            
+            // We need a way to send messages as ChatCompletionMessageParam
+            // For now, let's assume we can just use sendMessage with the raw prompt or improve ServerLLMService
+            // Actually, ServerLLMService.sendMessage only takes content string.
+            
+            // Let's use chatStreamWithContext and collect it
+            let (stream, _, _) = try await llmService.chatStreamWithContext(
+                userQuery: chatRequest.message,
+                contextNotes: contextData.notes,
+                documents: [],
+                memories: contextData.memories.map { $0.memory },
+                chatHistory: history,
+                tools: []
+            )
+            
+            var fullResponse = ""
+            for try await result in stream {
+                if let delta = result.choices.first?.delta.content {
+                    fullResponse += delta
+                }
+            }
+            
+            // 5. Save Assistant Message
+            let recalledMemoriesData = try JSONEncoder().encode(contextData.memories.map { $0.memory })
+            let recalledMemoriesString = String(decoding: recalledMemoriesData, as: UTF8.self)
+            
+            let assistantMsg = ConversationMessage(
+                sessionId: id, 
+                role: .assistant, 
+                content: fullResponse,
+                recalledMemories: recalledMemoriesString
+            )
+            try await persistence.saveMessage(assistantMsg)
+            
+            return ChatResponse(response: fullResponse)
+        } catch let error as LLMServiceError {
+            throw HTTPError(.serviceUnavailable, message: error.localizedDescription)
+        } catch {
+            throw HTTPError(.internalServerError, message: error.localizedDescription)
+        }
     }
     
     @Sendable func chatStream(_ request: Request, context: Context) async throws -> Response {
@@ -69,27 +138,76 @@ public struct ChatController<Context: RequestContext>: Sendable {
         
         let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
         
-        guard let session = await sessionManager.getSession(id: id) else {
+        guard let _ = await sessionManager.getSession(id: id) else {
             throw HTTPError(.notFound, message: "Session not found")
         }
         
-        // TODO: Context
+        let persistence = await sessionManager.getPersistenceService()
+        let contextManager = await sessionManager.getContextManager(for: id)
         
-        let messages: [ChatQuery.ChatCompletionMessageParam] = [
-            .user(.init(content: .string(chatRequest.message)))
-        ]
+        // 1. Save User Message
+        let userMsg = ConversationMessage(sessionId: id, role: .user, content: chatRequest.message)
+        try await persistence.saveMessage(userMsg)
         
-        let stream = try await llmService.chatStream(messages: messages)
+        // 2. Fetch History
+        let history = try await sessionManager.getHistory(for: id)
+        
+        // 3. Gather Context
+        var contextData = ContextData()
+        if let contextManager = contextManager {
+            contextData = try await contextManager.gatherContext(
+                for: chatRequest.message,
+                history: history,
+                tagGenerator: { [llmService] query in
+                    try await llmService.generateTags(for: query)
+                }
+            )
+        }
+        
+        let streamData: (stream: AsyncThrowingStream<ChatStreamResult, Error>, rawPrompt: String, structuredContext: [String: String])
+        do {
+            streamData = try await llmService.chatStreamWithContext(
+                userQuery: chatRequest.message,
+                contextNotes: contextData.notes,
+                documents: [],
+                memories: contextData.memories.map { $0.memory },
+                chatHistory: history,
+                tools: []
+            )
+        } catch let error as LLMServiceError {
+            throw HTTPError(.serviceUnavailable, message: error.localizedDescription)
+        } catch {
+            throw HTTPError(.internalServerError, message: error.localizedDescription)
+        }
+        
+        let memories = contextData.memories.map { $0.memory }
         
         let sseStream = AsyncStream<ByteBuffer> { continuation in
-            Task {
+            Task { [llmService, id, persistence, memories] in
                 do {
-                    for try await result in stream {
+                    var fullResponse = ""
+                    for try await result in streamData.stream {
+                        if let delta = result.choices.first?.delta.content {
+                            fullResponse += delta
+                        }
                         if let data = try? JSONEncoder().encode(result) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))
                         }
                     }
+                    
+                    // 5. Save Assistant Message
+                    let recalledMemoriesData = try? JSONEncoder().encode(memories)
+                    let recalledMemoriesString = recalledMemoriesData.flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
+                    
+                    let assistantMsg = ConversationMessage(
+                        sessionId: id, 
+                        role: .assistant, 
+                        content: fullResponse,
+                        recalledMemories: recalledMemoriesString
+                    )
+                    try? await persistence.saveMessage(assistantMsg)
+                    
                     continuation.yield(ByteBuffer(string: "data: [DONE]\n\n"))
                     continuation.finish()
                 } catch {

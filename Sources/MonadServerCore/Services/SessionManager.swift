@@ -38,6 +38,15 @@ public actor SessionManager {
         contextManagers.removeValue(forKey: id)
     }
     
+    public func getHistory(for sessionId: UUID) async throws -> [Message] {
+        let conversationMessages = try await persistenceService.fetchMessages(for: sessionId)
+        return conversationMessages.map { $0.toMessage() }
+    }
+    
+    public func getPersistenceService() -> any PersistenceServiceProtocol {
+        return persistenceService
+    }
+    
     public func cleanupStaleSessions(maxAge: TimeInterval) {
         let now = Date()
         let staleIds = sessions.values.filter { session in

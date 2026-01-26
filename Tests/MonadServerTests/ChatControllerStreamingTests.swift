@@ -50,4 +50,33 @@ import NIOCore
             }
         }
     }
+
+    @Test("Test Chat Streaming Endpoint Unconfigured")
+    func testChatStreamingEndpointUnconfigured() async throws {
+        // Setup Deps
+        let persistence = MockPersistenceService()
+        let embedding = MockEmbeddingService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let llmService = ServerLLMService() // Not configured
+        
+        // Create Session
+        let session = await sessionManager.createSession()
+        
+        // Setup App
+        let router = Router()
+        let controller = ChatController<BasicRequestContext>(sessionManager: sessionManager, llmService: llmService)
+        controller.addRoutes(to: router.group("/sessions"))
+        
+        let app = Application(router: router)
+        
+        // Test Request
+        let chatRequest = ChatRequest(message: "Hi")
+        
+        try await app.test(.router) { client in
+            let buffer = ByteBuffer(bytes: try JSONEncoder().encode(chatRequest))
+            try await client.execute(uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer) { response in
+                #expect(response.status != .ok)
+            }
+        }
+    }
 }

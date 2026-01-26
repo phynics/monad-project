@@ -43,4 +43,34 @@ import NIOCore
             }
         }
     }
+    
+    @Test("Test Chat Endpoint Unconfigured")
+    func testChatEndpointUnconfigured() async throws {
+        // Setup Deps
+        let persistence = MockPersistenceService()
+        let embedding = MockEmbeddingService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let llmService = ServerLLMService() // Not configured by default
+        
+        // Create Session
+        let session = await sessionManager.createSession()
+        
+        // Setup App
+        let router = Router()
+        let controller = ChatController<BasicRequestContext>(sessionManager: sessionManager, llmService: llmService)
+        controller.addRoutes(to: router.group("/sessions"))
+        
+        let app = Application(router: router)
+        
+        // Test Request
+        let chatRequest = ChatRequest(message: "Hello")
+        
+        try await app.test(.router) { client in
+            let buffer = ByteBuffer(bytes: try JSONEncoder().encode(chatRequest))
+            try await client.execute(uri: "/sessions/\(session.id)/chat", method: .post, body: buffer) { response in
+                // We expect an error status code, not a 200 OK with empty body
+                #expect(response.status != .ok)
+            }
+        }
+    }
 }

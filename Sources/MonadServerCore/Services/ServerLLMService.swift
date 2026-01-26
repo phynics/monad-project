@@ -164,4 +164,57 @@ public actor ServerLLMService {
         }
         return await client.chatStream(messages: messages, tools: tools, responseFormat: responseFormat)
     }
+    
+    public func chatStreamWithContext(
+        userQuery: String,
+        contextNotes: [Note],
+        documents: [DocumentContext] = [],
+        memories: [Memory] = [],
+        chatHistory: [Message],
+        tools: [MonadCore.Tool] = [],
+        systemInstructions: String? = nil,
+        responseFormat: ChatQuery.ResponseFormat? = nil,
+        useFastModel: Bool = false
+    ) async throws -> (
+        stream: AsyncThrowingStream<ChatStreamResult, Error>, 
+        rawPrompt: String,
+        structuredContext: [String: String]
+    ) {
+        let clientToUse = useFastModel ? (fastClient ?? client) : client
+        
+        guard let client = clientToUse else {
+            throw LLMServiceError.notConfigured
+        }
+
+        // Build prompt with all components
+        let (messages, rawPrompt, structuredContext) = await promptBuilder.buildPrompt(
+            systemInstructions: systemInstructions,
+            contextNotes: contextNotes,
+            documents: documents,
+            memories: memories,
+            tools: tools,
+            chatHistory: chatHistory,
+            userQuery: userQuery
+        )
+
+        // Delegate to client for streaming
+        let toolParams = tools.isEmpty ? nil : tools.map { $0.toToolParam() }
+        let stream = await client.chatStream(messages: messages, tools: toolParams, responseFormat: responseFormat)
+
+        return (stream, rawPrompt, structuredContext)
+    }
+
+    public func generateTags(for text: String) async throws -> [String] {
+        let clientToUse = utilityClient ?? client
+        guard let client = clientToUse else {
+            throw LLMServiceError.notConfigured
+        }
+        
+        let prompt = "Generate a comma-separated list of 1-3 highly relevant tags for the following user query. Return ONLY the tags, nothing else.\n\nQuery: \(text)"
+        let response = try await client.sendMessage(prompt, responseFormat: nil)
+        
+        return response.components(separatedBy: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
 }
