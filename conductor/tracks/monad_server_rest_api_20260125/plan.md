@@ -3,29 +3,29 @@
 ## Phase 1: Infrastructure & Cleanup
 Goal: Remove legacy gRPC code and set up the new Hummingbird server environment.
 
-- [~] Task: Remove existing gRPC targets and dependencies.
-    - [ ] Remove `MonadServer`, `MonadServerCore`, and any gRPC-related client targets from `project.yml`.
-    - [ ] Remove `SwiftGRPC` and `SwiftProtobuf` dependencies from `project.yml`.
-    - [ ] Delete `Sources/MonadServer`, `Sources/MonadServerCore`, and `Sources/MonadCore/Generated`.
-    - [ ] Delete gRPC-specific services in `MonadCore` (e.g., `Sources/MonadCore/Services/gRPC/`).
-    - [ ] Cleanup `MonadUI` and `MonadCore` to remove any references to gRPC services or clients.
-    - [ ] Delete gRPC-related tests (e.g., `Tests/MonadCoreTests/ChatViewModelgRPCTests.swift`, `Tests/MonadCoreTests/gRPCServiceTests.swift`).
-    - [ ] Run `make generate` to clean up the Xcode project.
-- [ ] Task: Initialize new `MonadServer` target with Hummingbird.
-    - [ ] Update `project.yml` to add a new executable target `MonadServer`.
-    - [ ] Add `Hummingbird` dependency to `project.yml`.
-    - [ ] Create `Sources/MonadServer/main.swift` with a basic "Hello World" Hummingbird app.
-    - [ ] Ensure it builds and runs via a new `make run-server` command.
-- [ ] Task: Implement Basic Configuration & Auth Middleware.
-    - [ ] Create `AppConfiguration` struct to load settings (Port, API Key, Dev Mode).
-    - [ ] Implement `APIKeyMiddleware` to check `X-API-Key`.
-    - [ ] Add unit tests for middleware (reject invalid keys, allow all in dev mode).
-- [ ] Task: Conductor - User Manual Verification 'Infrastructure & Cleanup' (Protocol in workflow.md)
+- [x] Task: Remove existing gRPC targets and dependencies.
+    - [x] Remove `MonadServer`, `MonadServerCore`, and any gRPC-related client targets from `project.yml`.
+    - [x] Remove `SwiftGRPC` and `SwiftProtobuf` dependencies from `project.yml`.
+    - [x] Delete `Sources/MonadServer`, `Sources/MonadServerCore`, and `Sources/MonadCore/Generated`.
+    - [x] Delete gRPC-specific services in `MonadCore` (e.g., `Sources/MonadCore/Services/gRPC/`).
+    - [x] Cleanup `MonadUI` and `MonadCore` to remove any references to gRPC services or clients.
+    - [x] Delete gRPC-related tests (e.g., `Tests/MonadCoreTests/ChatViewModelgRPCTests.swift`, `Tests/MonadCoreTests/gRPCServiceTests.swift`).
+    - [x] Run `make generate` to clean up the Xcode project.
+- [x] Task: Initialize new `MonadServer` target with Hummingbird.
+    - [x] Update `project.yml` to add a new executable target `MonadServer`.
+    - [x] Add `Hummingbird` dependency to `project.yml`.
+    - [x] Create `Sources/MonadServer/main.swift` with a basic "Hello World" Hummingbird app.
+    - [x] Ensure it builds and runs via a new `make run-server` command.
+- [x] Task: Implement Basic Configuration & Auth Middleware.
+    - [x] Create `AppConfiguration` struct to load settings (Port, API Key, Dev Mode).
+    - [x] Implement `APIKeyMiddleware` to check `X-API-Key`.
+    - [x] Add unit tests for middleware (reject invalid keys, allow all in dev mode).
+- [x] Task: Conductor - User Manual Verification 'Infrastructure & Cleanup' (Protocol in workflow.md)
 
 ## Phase 2: Session Management & Core Integration
 Goal: Enable multiple concurrent chat sessions and link to MonadCore.
 
-- [ ] Task: Implement Session Manager.
+- [~] Task: Implement Session Manager.
     - [ ] Create `SessionManager` actor to hold active `ContextManager` instances in memory.
     - [ ] Define `Session` struct (ID, created_at, last_active).
     - [ ] Implement `POST /sessions` to create a new session ID.

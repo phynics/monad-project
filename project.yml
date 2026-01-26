@@ -15,6 +15,12 @@ packages:
   GRDB:
     url: https://github.com/groue/GRDB.swift.git
     from: 7.0.0
+  Hummingbird:
+    url: https://github.com/hummingbird-project/hummingbird.git
+    from: 2.0.0
+  ArgumentParser:
+    url: https://github.com/apple/swift-argument-parser.git
+    from: 1.3.0
 
 settings:
   base:
@@ -210,6 +216,46 @@ targets:
         SWIFT_OPTIMIZATION_LEVEL: "-O"
         CODE_SIGN_STYLE: Automatic
 
+  # Monad Server Core
+  MonadServerCore:
+    type: framework
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadServerCore
+    dependencies:
+      - package: Hummingbird
+        product: Hummingbird
+      - target: MonadCore
+    settings:
+      base:
+        PRODUCT_NAME: MonadServerCore
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.server.core
+        SKIP_INSTALL: YES
+        INSTALL_PATH: "@rpath"
+        DEFINES_MODULE: YES
+
+  # Monad Server (REST API)
+  MonadServer:
+    type: tool
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadServer
+    dependencies:
+      - package: Hummingbird
+        product: Hummingbird
+      - package: ArgumentParser
+        product: ArgumentParser
+      - target: MonadCore
+      - target: MonadServerCore
+    settings:
+      base:
+        PRODUCT_NAME: MonadServer
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.server
+
   # Core Logic Tests
   MonadCoreTests:
     type: bundle.unit-test
@@ -252,6 +298,27 @@ targets:
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Automatic
 
+  # Monad Server Tests
+  MonadServerTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Tests/MonadServerTests
+    dependencies:
+      - package: Hummingbird
+        product: Hummingbird
+      - target: MonadCore
+      - target: MonadServerCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.server-tests
+        CODE_SIGNING_ALLOWED: NO
+      debug:
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Automatic
+
 schemes:
   MonadAssistant:
     build:
@@ -273,17 +340,28 @@ schemes:
     archive:
       config: Release
 
-  MonadAssistant-iOS:
-    build:
-      targets:
-        MonadAssistant-iOS: all
-        MonadUI-iOS: all
-        MonadCore-iOS: all
-    run:
-      executable: MonadAssistant-iOS
-    profile:
-      config: Release
-    analyze:
-      config: Debug
-    archive:
-      config: Release
+    MonadAssistant-iOS:
+      build:
+        targets:
+          MonadAssistant-iOS: all
+          MonadUI-iOS: all
+          MonadCore-iOS: all
+      run:
+        executable: MonadAssistant-iOS
+      profile:
+        config: Release
+      analyze:
+        config: Debug
+      archive:
+        config: Release
+
+    MonadServer:
+      build:
+        targets:
+          MonadServer: all
+          MonadServerCore: all
+      test:
+        targets:
+          - MonadServerTests
+      run:
+        executable: MonadServer

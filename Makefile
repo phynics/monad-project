@@ -41,6 +41,14 @@ build: generate
 		-configuration Debug \
 		build
 
+# Build the server
+build-server: generate
+	@echo "Building MonadServer..."
+	@xcodebuild -project MonadAssistant.xcodeproj \
+		-scheme MonadServer \
+		-configuration Debug \
+		build
+
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
@@ -55,6 +63,11 @@ clean:
 run: build
 	@echo "Running MonadAssistant..."
 	@open -a "$(shell find ~/Library/Developer/Xcode/DerivedData -name "MonadAssistant.app" -print -quit)"
+
+# Run the server
+run-server: build-server
+	@echo "Running MonadServer..."
+	@"$(shell find ~/Library/Developer/Xcode/DerivedData -name "MonadServer" -type f -perm +111 -print -quit)"
 
 # Open in Xcode
 open: generate
