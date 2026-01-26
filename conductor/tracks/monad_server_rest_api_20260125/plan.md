@@ -38,7 +38,7 @@ Goal: Enable multiple concurrent chat sessions and link to MonadCore.
 ## Phase 3: Chat & LLM Endpoints
 Goal: Expose chat functionality with streaming support.
 
-- [ ] Task: Implement Chat Endpoint.
+- [x] Task: Implement Chat Endpoint. [c1a1106]
     - [ ] Define Request/Response models (`ChatRequest`, `ChatResponse`).
     - [ ] Create `POST /sessions/{id}/chat` endpoint.
     - [ ] Wire up `LLMService` to handle the request using the session's context.
