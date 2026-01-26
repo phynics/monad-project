@@ -3,6 +3,7 @@ import Foundation
 import MonadCore
 import HTTPTypes
 import NIOCore
+import OpenAI
 
 public struct ChatRequest: Codable, Sendable {
     public let message: String
@@ -38,6 +39,7 @@ public struct ChatController<Context: RequestContext>: Sendable {
     
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("/{id}/chat", use: chat)
+        group.post("/{id}/chat/stream", use: chatStream)
     }
     
     @Sendable func chat(_ request: Request, context: Context) async throws -> ChatResponse {
@@ -57,5 +59,50 @@ public struct ChatController<Context: RequestContext>: Sendable {
         
         let response = try await llmService.sendMessage(chatRequest.message)
         return ChatResponse(response: response)
+    }
+    
+    @Sendable func chatStream(_ request: Request, context: Context) async throws -> Response {
+        let idString = try context.parameters.require("id")
+        guard let id = UUID(uuidString: idString) else {
+            throw HTTPError(.badRequest, message: "Invalid Session ID")
+        }
+        
+        let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
+        
+        guard let session = await sessionManager.getSession(id: id) else {
+            throw HTTPError(.notFound, message: "Session not found")
+        }
+        
+        // TODO: Context
+        
+        let messages: [ChatQuery.ChatCompletionMessageParam] = [
+            .user(.init(content: .string(chatRequest.message)))
+        ]
+        
+        let stream = try await llmService.chatStream(messages: messages)
+        
+        let sseStream = AsyncStream<ByteBuffer> { continuation in
+            Task {
+                do {
+                    for try await result in stream {
+                        if let data = try? JSONEncoder().encode(result) {
+                            let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                            continuation.yield(ByteBuffer(string: sseString))
+                        }
+                    }
+                    continuation.yield(ByteBuffer(string: "data: [DONE]\n\n"))
+                    continuation.finish()
+                } catch {
+                    continuation.finish()
+                }
+            }
+        }
+        
+        var headers = HTTPFields()
+        headers[.contentType] = "text/event-stream"
+        headers[.cacheControl] = "no-cache"
+        headers[.connection] = "keep-alive"
+        
+        return Response(status: .ok, headers: headers, body: .init(asyncSequence: sseStream))
     }
 }

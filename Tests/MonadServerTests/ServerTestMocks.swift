@@ -27,41 +27,43 @@ final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
             }
         }
         
-        let response = nextResponses.isEmpty ? nextResponse : nextResponses.removeFirst()
-        let toolCalls = nextToolCalls.isEmpty ? nil : nextToolCalls.removeFirst()
-        
         return AsyncThrowingStream { continuation in
-            var delta: [String: Any] = [
-                "role": "assistant",
-                "content": response
-            ]
+            let responses = nextResponses.isEmpty ? [nextResponse] : nextResponses
             
-            if let tc = toolCalls {
-                delta["tool_calls"] = tc
-            }
+            for response in responses {
+                var delta: [String: Any] = [
+                    "role": "assistant",
+                    "content": response
+                ]
+                
+                if let tc = nextToolCalls.isEmpty ? nil : nextToolCalls.removeFirst() {
+                    delta["tool_calls"] = tc
+                }
 
-            let jsonDict: [String: Any] = [
-                "id": "mock",
-                "object": "chat.completion.chunk",
-                "created": Date().timeIntervalSince1970,
-                "model": "mock-model",
-                "choices": [
-                    [
-                        "index": 0,
-                        "delta": delta,
-                        "finish_reason": toolCalls != nil ? "tool_calls" : "stop",
-                    ]
-                ],
-            ]
-            
-            do {
-                let data = try JSONSerialization.data(withJSONObject: jsonDict)
-                let result = try JSONDecoder().decode(ChatStreamResult.self, from: data)
-                continuation.yield(result)
-                continuation.finish()
-            } catch {
-                continuation.finish(throwing: error)
+                let jsonDict: [String: Any] = [
+                    "id": "mock",
+                    "object": "chat.completion.chunk",
+                    "created": Date().timeIntervalSince1970,
+                    "model": "mock-model",
+                    "choices": [
+                        [
+                            "index": 0,
+                            "delta": delta,
+                            "finish_reason": delta["tool_calls"] != nil ? "tool_calls" : "stop",
+                        ]
+                    ],
+                ]
+                
+                do {
+                    let data = try JSONSerialization.data(withJSONObject: jsonDict)
+                    let result = try JSONDecoder().decode(ChatStreamResult.self, from: data)
+                    continuation.yield(result)
+                } catch {
+                    continuation.finish(throwing: error)
+                    return
+                }
             }
+            continuation.finish()
         }
     }
     

@@ -153,4 +153,15 @@ public actor ServerLLMService {
         }
         return try await client.sendMessage(content, responseFormat: responseFormat)
     }
+    
+    public func chatStream(
+        messages: [ChatQuery.ChatCompletionMessageParam],
+        tools: [ChatQuery.ChatCompletionToolParam]? = nil,
+        responseFormat: ChatQuery.ResponseFormat? = nil
+    ) async throws -> AsyncThrowingStream<ChatStreamResult, Error> {
+        guard let client = client else {
+            throw LLMServiceError.notConfigured
+        }
+        return await client.chatStream(messages: messages, tools: tools, responseFormat: responseFormat)
+    }
 }
