@@ -60,7 +60,7 @@ Goal: Expose CRUD operations for persistent data and tools.
     - [ ] `GET /notes` (search/list).
     - [ ] `POST /notes` (create/update).
     - [ ] `DELETE /notes/{title}`.
-- [ ] Task: Implement Tools API.
+- [x] Task: Implement Tools API. [456f91c]
     - [ ] `GET /tools` (list available tools).
     - [ ] `POST /tools/execute` (direct execution).
 - [ ] Task: Conductor - User Manual Verification 'Data Management' (Protocol in workflow.md)
