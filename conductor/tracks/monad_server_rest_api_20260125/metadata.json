@@ -1,0 +1,8 @@
+{
+  "track_id": "monad_server_rest_api_20260125",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-01-25T14:45:00Z",
+  "updated_at": "2026-01-25T14:45:00Z",
+  "description": "Create a MonadServer implementing MonadUI functions over a REST API using Hummingbird, replacing gRPC."
+}
