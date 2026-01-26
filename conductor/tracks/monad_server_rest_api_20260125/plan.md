@@ -30,7 +30,7 @@ Goal: Enable multiple concurrent chat sessions and link to MonadCore.
     - [ ] Define `Session` struct (ID, created_at, last_active).
     - [ ] Implement `POST /sessions` to create a new session ID.
     - [ ] Implement cleanup logic for stale sessions.
-- [~] Task: Create Session-Scoped Dependency Injection.
+- [x] Task: Create Session-Scoped Dependency Injection. [bb945d4]
     - [ ] Ensure `MonadCore` services (Persistence, LLM) can be safely shared or instantiated per session.
     - [ ] Update `SessionManager` to initialize a `ContextManager` for each new session using shared core services.
 - [ ] Task: Conductor - User Manual Verification 'Session Management & Core Integration' (Protocol in workflow.md)
