@@ -298,7 +298,7 @@ targets:
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Automatic
 
-  # Monad Server Tests
+  # MonadServerTests
   MonadServerTests:
     type: bundle.unit-test
     platform: macOS
@@ -309,15 +309,10 @@ targets:
     dependencies:
       - package: Hummingbird
         product: Hummingbird
+      - package: Hummingbird
+        product: HummingbirdTesting
       - target: MonadCore
       - target: MonadServerCore
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.monad.server-tests
-        CODE_SIGNING_ALLOWED: NO
-      debug:
-        CODE_SIGN_IDENTITY: "-"
-        CODE_SIGN_STYLE: Automatic
 
 schemes:
   MonadAssistant:

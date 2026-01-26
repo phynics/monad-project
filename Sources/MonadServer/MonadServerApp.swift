@@ -4,6 +4,8 @@ import Foundation
 import MonadCore
 import MonadServerCore
 
+@main
+@available(macOS 14.0, *)
 struct MonadServer: AsyncParsableCommand {
     @Option(name: .shortAndLong)
     var hostname: String = "127.0.0.1"
@@ -54,4 +56,4 @@ struct MonadServer: AsyncParsableCommand {
     }
 }
 
-await MonadServer.main()
+

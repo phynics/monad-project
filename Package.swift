@@ -73,7 +73,11 @@ let package = Package(
         ),
         .testTarget(
             name: "MonadServerTests",
-            dependencies: ["MonadServerCore", "MonadCore"],
+            dependencies: [
+                "MonadServerCore",
+                "MonadCore",
+                .product(name: "HummingbirdTesting", package: "hummingbird")
+            ],
             path: "Tests/MonadServerTests"
         )
     ]
