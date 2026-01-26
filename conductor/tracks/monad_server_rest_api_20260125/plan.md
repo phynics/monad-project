@@ -42,7 +42,7 @@ Goal: Expose chat functionality with streaming support.
     - [ ] Define Request/Response models (`ChatRequest`, `ChatResponse`).
     - [ ] Create `POST /sessions/{id}/chat` endpoint.
     - [ ] Wire up `LLMService` to handle the request using the session's context.
-- [ ] Task: Implement Streaming Responses (SSE).
+- [x] Task: Implement Streaming Responses (SSE). [2452d4d]
     - [ ] Update `ChatController` to support Server-Sent Events (SSE).
     - [ ] Bridge `LLMService` async stream to Hummingbird's response writer.
     - [ ] Verify streaming works with `curl -N`.
