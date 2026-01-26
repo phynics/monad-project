@@ -5,6 +5,75 @@ import GRDB
 
 // MARK: - Mocks for MonadServerTests
 
+final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
+    var nextResponse: String = ""
+    var nextResponses: [String] = []
+    var lastMessages: [ChatQuery.ChatCompletionMessageParam] = []
+    var shouldThrowError: Bool = false
+    
+    // Support for tool calls in stream - use dictionaries to avoid type issues
+    var nextToolCalls: [[[String: Any]]] = []
+    
+    func chatStream(
+        messages: [ChatQuery.ChatCompletionMessageParam],
+        tools: [ChatQuery.ChatCompletionToolParam]?,
+        responseFormat: ChatQuery.ResponseFormat?
+    ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
+        lastMessages = messages
+        
+        if shouldThrowError {
+            return AsyncThrowingStream { continuation in
+                continuation.finish(throwing: NSError(domain: "MockError", code: 1, userInfo: nil))
+            }
+        }
+        
+        let response = nextResponses.isEmpty ? nextResponse : nextResponses.removeFirst()
+        let toolCalls = nextToolCalls.isEmpty ? nil : nextToolCalls.removeFirst()
+        
+        return AsyncThrowingStream { continuation in
+            var delta: [String: Any] = [
+                "role": "assistant",
+                "content": response
+            ]
+            
+            if let tc = toolCalls {
+                delta["tool_calls"] = tc
+            }
+
+            let jsonDict: [String: Any] = [
+                "id": "mock",
+                "object": "chat.completion.chunk",
+                "created": Date().timeIntervalSince1970,
+                "model": "mock-model",
+                "choices": [
+                    [
+                        "index": 0,
+                        "delta": delta,
+                        "finish_reason": toolCalls != nil ? "tool_calls" : "stop",
+                    ]
+                ],
+            ]
+            
+            do {
+                let data = try JSONSerialization.data(withJSONObject: jsonDict)
+                let result = try JSONDecoder().decode(ChatStreamResult.self, from: data)
+                continuation.yield(result)
+                continuation.finish()
+            } catch {
+                continuation.finish(throwing: error)
+            }
+        }
+    }
+    
+    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?) async throws -> String {
+        if shouldThrowError {
+            throw NSError(domain: "MockError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Simulated failure"])
+        }
+        lastMessages = [.user(.init(content: .string(content)))]
+        return nextResponse
+    }
+}
+
 final class MockEmbeddingService: EmbeddingService, @unchecked Sendable {
     var mockEmbedding: [Double] = [0.1, 0.2, 0.3]
     var lastInput: String?

@@ -48,7 +48,7 @@ public actor ServerLLMService {
         return client
     }
     
-    private func setClients(main: (any LLMClientProtocol)?, utility: (any LLMClientProtocol)?, fast: (any LLMClientProtocol)?) {
+    internal func setClients(main: (any LLMClientProtocol)?, utility: (any LLMClientProtocol)?, fast: (any LLMClientProtocol)?) {
         self.client = main
         self.utilityClient = utility
         self.fastClient = fast
