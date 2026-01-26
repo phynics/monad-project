@@ -35,7 +35,7 @@ Goal: Enable multiple concurrent chat sessions and link to MonadCore.
     - [ ] Update `SessionManager` to initialize a `ContextManager` for each new session using shared core services.
 - [x] Task: Conductor - User Manual Verification 'Session Management & Core Integration' (Protocol in workflow.md)
 
-## Phase 3: Chat & LLM Endpoints
+## Phase 3: Chat & LLM Endpoints [checkpoint: dae0703]
 Goal: Expose chat functionality with streaming support.
 
 - [x] Task: Implement Chat Endpoint. [c1a1106]
@@ -46,7 +46,7 @@ Goal: Expose chat functionality with streaming support.
     - [ ] Update `ChatController` to support Server-Sent Events (SSE).
     - [ ] Bridge `LLMService` async stream to Hummingbird's response writer.
     - [ ] Verify streaming works with `curl -N`.
-- [ ] Task: Conductor - User Manual Verification 'Chat & LLM Endpoints' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Chat & LLM Endpoints' (Protocol in workflow.md)
 
 ## Phase 4: Data Management (Memories, Notes, Tools)
 Goal: Expose CRUD operations for persistent data and tools.
