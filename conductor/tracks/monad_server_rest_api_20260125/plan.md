@@ -25,7 +25,7 @@ Goal: Remove legacy gRPC code and set up the new Hummingbird server environment.
 ## Phase 2: Session Management & Core Integration
 Goal: Enable multiple concurrent chat sessions and link to MonadCore.
 
-- [~] Task: Implement Session Manager.
+- [x] Task: Implement Session Manager. [19da5a5]
     - [ ] Create `SessionManager` actor to hold active `ContextManager` instances in memory.
     - [ ] Define `Session` struct (ID, created_at, last_active).
     - [ ] Implement `POST /sessions` to create a new session ID.
