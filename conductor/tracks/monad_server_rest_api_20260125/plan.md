@@ -22,7 +22,7 @@ Goal: Remove legacy gRPC code and set up the new Hummingbird server environment.
     - [x] Add unit tests for middleware (reject invalid keys, allow all in dev mode).
 - [x] Task: Conductor - User Manual Verification 'Infrastructure & Cleanup' (Protocol in workflow.md)
 
-## Phase 2: Session Management & Core Integration
+## Phase 2: Session Management & Core Integration [checkpoint: 5caa70c]
 Goal: Enable multiple concurrent chat sessions and link to MonadCore.
 
 - [x] Task: Implement Session Manager. [19da5a5]
@@ -33,7 +33,7 @@ Goal: Enable multiple concurrent chat sessions and link to MonadCore.
 - [x] Task: Create Session-Scoped Dependency Injection. [bb945d4]
     - [ ] Ensure `MonadCore` services (Persistence, LLM) can be safely shared or instantiated per session.
     - [ ] Update `SessionManager` to initialize a `ContextManager` for each new session using shared core services.
-- [ ] Task: Conductor - User Manual Verification 'Session Management & Core Integration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Session Management & Core Integration' (Protocol in workflow.md)
 
 ## Phase 3: Chat & LLM Endpoints
 Goal: Expose chat functionality with streaming support.
