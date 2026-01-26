@@ -51,7 +51,7 @@ Goal: Expose chat functionality with streaming support.
 ## Phase 4: Data Management (Memories, Notes, Tools)
 Goal: Expose CRUD operations for persistent data and tools.
 
-- [ ] Task: Implement Memories API.
+- [x] Task: Implement Memories API. [a6603d7]
     - [ ] `GET /memories` (search/list).
     - [ ] `POST /memories` (create).
     - [ ] `DELETE /memories/{id}`.
