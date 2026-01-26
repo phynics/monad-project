@@ -25,6 +25,8 @@ struct MonadServer: AsyncParsableCommand {
         let router = Router()
         let embeddingService = LocalEmbeddingService()
         let sessionManager = SessionManager(persistenceService: persistenceService, embeddingService: embeddingService)
+        let llmService = ServerLLMService()
+        await llmService.loadConfiguration()
         
         // Public routes
         router.get("/health") { _, _ -> String in
