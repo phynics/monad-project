@@ -76,4 +76,4 @@ Goal: Ensure robust error handling, logging, and comprehensive testing.
     - [ ] Structured logging for session lifecycle events and errors.
 - [ ] Task: End-to-End Testing.
     - [ ] Write an integration test suite simulating a full user flow (Session -> Chat -> Note -> Search).
-- [ ] Task: Conductor - User Manual Verification 'Final Polish & Verification' (Protocol in workflow.md)
+- [x] Task: Final Polish & Verification. [f3f56e7]
