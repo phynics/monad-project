@@ -25,6 +25,11 @@ struct MonadServer: AsyncParsableCommand {
         }
 
         let router = Router()
+        
+        // Add Global Middleware
+        router.add(middleware: LogMiddleware())
+        router.add(middleware: ErrorMiddleware())
+        
         let embeddingService = LocalEmbeddingService()
         let sessionManager = SessionManager(persistenceService: persistenceService, embeddingService: embeddingService)
         let llmService = ServerLLMService()
@@ -33,6 +38,10 @@ struct MonadServer: AsyncParsableCommand {
         // Public routes
         router.get("/health") { _, _ -> String in
             return "OK"
+        }
+        
+        router.get("/") { _, _ -> String in
+            return "Monad Server is running."
         }
         
         // Protected routes
