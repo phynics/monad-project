@@ -73,6 +73,57 @@ public struct Memory: Codable, Identifiable, FetchableRecord, PersistableRecord,
         }
         return dict
     }
+    
+    // MARK: - FetchableRecord
+    
+    public init(row: Row) throws {
+        // Handle ID decoding with fallback for non-hyphenated UUID strings
+        if let uuid = row["id"] as? UUID {
+            self.id = uuid
+        } else if let uuidString = row["id"] as? String {
+            if let uuid = UUID(uuidString: uuidString) {
+                self.id = uuid
+            } else {
+                // Try inserting hyphens for raw hex string (8-4-4-4-12)
+                let pattern = "([0-9a-fA-F]{8})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{12})"
+                let regex = try NSRegularExpression(pattern: pattern)
+                let range = NSRange(uuidString.startIndex..., in: uuidString)
+                if let match = regex.firstMatch(in: uuidString, range: range) {
+                    let nsString = uuidString as NSString
+                    let formatted = "\(nsString.substring(with: match.range(at: 1)))-\(nsString.substring(with: match.range(at: 2)))-\(nsString.substring(with: match.range(at: 3)))-\(nsString.substring(with: match.range(at: 4)))-\(nsString.substring(with: match.range(at: 5)))"
+                    if let uuid = UUID(uuidString: formatted) {
+                        self.id = uuid
+                    } else {
+                        throw PersistenceError.invalidUUIDFormat(uuidString)
+                    }
+                } else {
+                    throw PersistenceError.invalidUUIDFormat(uuidString)
+                }
+            }
+        } else {
+            // Try standard decoding which handles data blobs
+            self.id = try row["id"]
+        }
+        
+        self.title = try row["title"]
+        self.content = try row["content"]
+        self.createdAt = try row["createdAt"]
+        self.updatedAt = try row["updatedAt"]
+        self.tags = try row["tags"]
+        self.metadata = try row["metadata"]
+        self.embedding = try row["embedding"]
+    }
+}
+
+public enum PersistenceError: LocalizedError {
+    case invalidUUIDFormat(String)
+    
+    public var errorDescription: String? {
+        switch self {
+        case .invalidUUIDFormat(let value):
+            return "Invalid UUID format: \(value)"
+        }
+    }
 }
 
 /// Result of a semantic search including the memory and its similarity score
