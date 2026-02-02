@@ -1,6 +1,6 @@
 import Foundation
 import OpenAI
-import OSLog
+import Logging
 
 /// A specialized client for OpenRouter that handles their specific model discovery API
 /// and ensures the correct /api/v1 path prefix is used for OpenAI compatibility.
@@ -8,7 +8,7 @@ public actor OpenRouterClient: Sendable {
     private let apiKey: String
     private let modelName: String
     private let endpoint: URL
-    private let logger = Logger(subsystem: "com.monad.assistant", category: "openrouter-client")
+    private let logger = Logger(label: "com.monad.openrouter-client")
     private let session: URLSession
 
     public init(

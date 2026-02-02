@@ -1,5 +1,5 @@
 import Foundation
-import OSLog
+import Logging
 
 /// Error types for ToolExecutor
 public enum ToolExecutorError: LocalizedError, Equatable {

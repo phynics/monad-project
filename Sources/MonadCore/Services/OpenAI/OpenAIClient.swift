@@ -1,12 +1,12 @@
 import Foundation
 import OpenAI
-import OSLog
+import Logging
 
 /// A wrapper around the OpenAI SDK that provides a clean interface for the Monad Assistant
 public actor OpenAIClient {
     private let client: OpenAI
     private let modelName: String
-    private let logger = Logger(subsystem: "com.monad.assistant", category: "openai-client")
+    private let logger = Logger(label: "com.monad.openai-client")
 
     public init(
         apiKey: String,

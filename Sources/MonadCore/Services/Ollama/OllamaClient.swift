@@ -1,12 +1,12 @@
 import Foundation
-import OSLog
+import Logging
 import OpenAI
 
 public actor OllamaClient {
     private let endpoint: URL
     private let modelName: String
     private let session: URLSession
-    private let logger = Logger(subsystem: "com.monad.assistant", category: "ollama-client")
+    private let logger = Logger(label: "com.monad.ollama-client")
 
     public init(
         endpoint: String,

@@ -7,31 +7,111 @@ struct MonadCLI: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "monad",
         abstract: "Monad AI Assistant CLI",
+        discussion: """
+            An interactive AI assistant for your terminal.
+
+            MODES:
+              monad                         Start interactive chat (default)
+              monad query "question"        Quick one-shot query
+              monad command "task"          Generate shell commands
+
+            INTERACTIVE COMMANDS:
+              /help                         Show available commands
+              /config                       View/edit configuration
+              /sessions, /memories, /notes  Manage data
+              /quit                         Exit
+
+            ENVIRONMENT VARIABLES:
+              MONAD_API_KEY                 API key for authentication
+              MONAD_SERVER_URL              Server URL (default: http://127.0.0.1:8080)
+            """,
         version: "1.0.0",
         subcommands: [
-            ChatCommand.self,
-            SessionCommand.self,
-            MemoryCommand.self,
-            NoteCommand.self,
-            ToolCommand.self,
+            ChatSubcommand.self,
+            QueryCommand.self,
+            ShellCommand.self,
         ],
-        defaultSubcommand: ChatCommand.self
+        defaultSubcommand: ChatSubcommand.self,
+        helpNames: [.short, .long]
     )
 }
 
-// MARK: - Shared Options
+// MARK: - Chat Subcommand (Default)
 
-struct GlobalOptions: ParsableArguments {
+struct ChatSubcommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "chat",
+        abstract: "Start interactive chat session"
+    )
+
     @Option(name: .long, help: "Server URL")
     var server: String = "http://127.0.0.1:8080"
 
     @Option(name: .long, help: "API key for authentication")
     var apiKey: String?
 
+    @Flag(name: .long, help: "Enable verbose debug logging")
+    var verbose: Bool = false
+
+    @Option(name: .shortAndLong, help: "Session ID to resume")
+    var session: String?
+
     var configuration: ClientConfiguration {
         ClientConfiguration(
             baseURL: URL(string: server) ?? URL(string: "http://127.0.0.1:8080")!,
-            apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"]
+            apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"],
+            verbose: verbose
         )
+    }
+
+    func run() async throws {
+        let client = MonadClient(configuration: configuration)
+
+        // Check server health
+        guard try await client.healthCheck() else {
+            TerminalUI.printError("Cannot connect to server at \(server)")
+            throw ExitCode.failure
+        }
+
+        // Check configuration
+        do {
+            let config = try await client.getConfiguration()
+            if !config.isValid {
+                let screen = ConfigurationScreen(client: client)
+                try await screen.show()
+            }
+        } catch {
+            TerminalUI.printWarning("Configuration check failed: \(error.localizedDescription)")
+            TerminalUI.printInfo("You can configure the CLI using the '/config' command in chat.")
+        }
+
+        // Get or create session
+        var currentSession: Session
+        if let sessionId = session, let uuid = UUID(uuidString: sessionId) {
+            do {
+                _ = try await client.getHistory(sessionId: uuid)
+                currentSession = Session(id: uuid, title: nil)
+                TerminalUI.printInfo("Resuming session \(uuid.uuidString.prefix(8))...")
+            } catch {
+                TerminalUI.printError("Session not found: \(sessionId)")
+                throw ExitCode.failure
+            }
+        } else {
+            do {
+                currentSession = try await client.createSession()
+                TerminalUI.printInfo(
+                    "Created new session \(currentSession.id.uuidString.prefix(8))...")
+            } catch {
+                TerminalUI.printWarning("Failed to create session: \(error.localizedDescription)")
+                // Create a local dummy session so we can still enter the REPL to configure
+                currentSession = Session(id: UUID(), title: "Offline Session")
+            }
+        }
+
+        TerminalUI.printWelcome()
+
+        // Start REPL
+        let repl = ChatREPL(client: client, session: currentSession)
+        try await repl.run()
     }
 }

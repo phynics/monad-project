@@ -1,5 +1,5 @@
 import Foundation
-import OSLog
+import Logging
 
 /// Error types specific to ContextManager
 public enum ContextManagerError: LocalizedError {
@@ -23,7 +23,7 @@ public enum ContextManagerError: LocalizedError {
 public actor ContextManager {
     private let persistenceService: any PersistenceServiceProtocol
     private let embeddingService: any EmbeddingService
-    private let logger = Logger(subsystem: "com.monad.core", category: "ContextManager")
+    private let logger = Logger(label: "com.monad.ContextManager")
 
     public init(
         persistenceService: any PersistenceServiceProtocol, embeddingService: any EmbeddingService

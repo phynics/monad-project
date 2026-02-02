@@ -18,6 +18,7 @@ let package = Package(
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
         .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.0.0"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
     ],
     targets: [
         .target(
@@ -25,6 +26,7 @@ let package = Package(
             dependencies: [
                 .product(name: "OpenAI", package: "OpenAI"),
                 .product(name: "GRDB", package: "GRDB.swift"),
+                .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MonadCore"
         ),
@@ -33,6 +35,7 @@ let package = Package(
             dependencies: [
                 "MonadCore",
                 .product(name: "Hummingbird", package: "hummingbird"),
+                .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MonadServerCore"
         ),
@@ -42,12 +45,15 @@ let package = Package(
                 "MonadServerCore",
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MonadServer"
         ),
         .target(
             name: "MonadClient",
-            dependencies: [],
+            dependencies: [
+                .product(name: "Logging", package: "swift-log")
+            ],
             path: "Sources/MonadClient"
         ),
         .executableTarget(

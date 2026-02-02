@@ -1,5 +1,5 @@
 import Foundation
-import OSLog
+import Logging
 
 /// Strategy for context compression
 public enum CompressionScope: String, Sendable, CustomStringConvertible {
@@ -14,7 +14,7 @@ public enum CompressionScope: String, Sendable, CustomStringConvertible {
 /// Service to compress conversation context using summarization
 public actor ContextCompressor {
     private let llmService: any LLMServiceProtocol
-    private let logger = Logger(subsystem: "com.monad.core", category: "ContextCompressor")
+    private let logger = Logger(label: "com.monad.ContextCompressor")
     
     // Configuration
     private let topicGroupSize = 10 // Messages per topic chunk

@@ -1,6 +1,6 @@
 import Foundation
 import MonadCore
-import OSLog
+import Logging
 import OpenAI
 
 public actor ServerLLMService: LLMServiceProtocol {

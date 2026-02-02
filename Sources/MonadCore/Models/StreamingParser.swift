@@ -1,4 +1,5 @@
-import OSLog
+import Foundation
+import Logging
 
 /// Parser for streaming LLM responses with Chain of Thought support
 ///
@@ -9,10 +10,10 @@ public class StreamingParser {
     private var buffer = ""
     private var thinkingBuffer = ""
     private var contentBuffer = ""
-    
+
     private var insideThinkTag = false
     private var insideCodeBlock = false
-    
+
     private var rawBuffer = ""  // Debug history
 
     public init() {}
@@ -42,12 +43,12 @@ public class StreamingParser {
                     Logger.parser.warning("[Parser] ORPHANED </think> DETECTED! Reclassifying.")
                     let actualText = result.text.replacingOccurrences(
                         of: "RECLASSIFY_THINKING_MARKER", with: "")
-                    
+
                     // Move all previous content to thinking
                     thinkingBuffer = contentBuffer + actualText
                     contentBuffer = ""
                     isReclassified = true
-                    
+
                     newThinking = thinkingBuffer
                     newContent = ""
                 } else {
@@ -74,7 +75,7 @@ public class StreamingParser {
 
         let finalThinking = thinkingBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalContent = contentBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         return (finalThinking.isEmpty ? nil : finalThinking, finalContent)
     }
 
@@ -100,7 +101,7 @@ public class StreamingParser {
             let prefix = String(buffer[..<range.lowerBound])
             buffer.removeSubrange(..<range.upperBound)
             insideCodeBlock.toggle()
-            
+
             // Return text before delimiter with *previous* state
             if !prefix.isEmpty {
                 return (prefix, insideThinkTag)
@@ -108,14 +109,14 @@ public class StreamingParser {
             // Return the delimiter itself
             return ("```", insideThinkTag)
         }
-        
+
         // 2. Hold Partial Code Delimiters
         // If buffer ends with "`" or "``", wait for more data to ensure we don't miss a block toggle.
         // Unless the buffer is getting dangerously large.
         if buffer.count < 1000 && (buffer.hasSuffix("``") || buffer.hasSuffix("`")) {
             return nil
         }
-        
+
         // 3. Handle Tags (Only if NOT inside a code block)
         if !insideCodeBlock {
             if insideThinkTag {
@@ -126,7 +127,7 @@ public class StreamingParser {
                     insideThinkTag = false
                     return (content, true)
                 }
-                
+
                 // Check for partial closing tag at end
                 if let start = buffer.lastIndex(of: "<") {
                     let suffix = buffer[start...]
@@ -137,7 +138,7 @@ public class StreamingParser {
                             buffer = String(suffix)
                             return (content, true)
                         }
-                        return nil // Wait for full tag
+                        return nil  // Wait for full tag
                     }
                 }
             } else {
@@ -146,14 +147,14 @@ public class StreamingParser {
                     let content = String(buffer[..<range.lowerBound])
                     buffer.removeSubrange(..<range.upperBound)
                     insideThinkTag = true
-                    
+
                     if !content.isEmpty {
                         return (content, false)
                     }
                     // Recursively process immediately to handle content inside the tag
                     return extractNextSegment()
                 }
-                
+
                 // Check for partial opening tag at end
                 if let start = buffer.lastIndex(of: "<") {
                     let suffix = buffer[start...]
@@ -176,7 +177,7 @@ public class StreamingParser {
                         return nil
                     }
                 }
-                
+
                 // Check for full orphaned closing tag (Reclassify Workaround)
                 if let range = buffer.range(of: "</think>") {
                     let content = String(buffer[..<range.lowerBound])
@@ -185,7 +186,7 @@ public class StreamingParser {
                 }
             }
         }
-        
+
         // 4. Flush Remaining Buffer
         // If we reached here, no full tags/blocks were found.
         // And we already checked for partials at the end.
@@ -205,10 +206,12 @@ public class StreamingParser {
         // Pattern handles optional code fences around <tool_call>
         let pattern = "(?:```(?:xml)?\\s*)?<tool_call>(.*?)</tool_call>(?:\\s*```)?"
 
-        guard let regex = try? NSRegularExpression(
-            pattern: pattern, 
-            options: [.dotMatchesLineSeparators, .caseInsensitive]
-        ) else { return (text, []) }
+        guard
+            let regex = try? NSRegularExpression(
+                pattern: pattern,
+                options: [.dotMatchesLineSeparators, .caseInsensitive]
+            )
+        else { return (text, []) }
 
         let nsString = text as NSString
         let matches = regex.matches(in: text, range: NSRange(location: 0, length: nsString.length))
@@ -217,12 +220,13 @@ public class StreamingParser {
         for match in matches.reversed() {
             let fullRange = match.range
             let contentRange = match.range(at: 1)
-            
+
             let jsonString = nsString.substring(with: contentRange)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
             if let jsonData = jsonString.data(using: .utf8),
-               let toolCall = try? JSONDecoder().decode(ToolCall.self, from: jsonData) {
+                let toolCall = try? JSONDecoder().decode(ToolCall.self, from: jsonData)
+            {
                 toolCalls.append(toolCall)
             } else {
                 Logger.parser.error("Failed to parse tool call JSON: \(jsonString)")

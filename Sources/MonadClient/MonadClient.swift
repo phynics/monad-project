@@ -65,21 +65,50 @@ public actor MonadClient {
     public func chatStream(sessionId: UUID, message: String) async throws -> AsyncThrowingStream<
         ChatDelta, Error
     > {
+        configuration.logger.debug("chatStream called for session \(sessionId)")
         var request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/chat/stream", method: "POST")
         request.httpBody = try encoder.encode(ChatRequest(message: message))
 
+        configuration.logger.debug(
+            "Sending request to \(request.url?.absoluteString ?? "unknown")")
         let (bytes, response) = try await session.bytes(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            configuration.logger.error("Invalid response type")
             throw MonadClientError.unknown("Invalid response")
         }
 
-        guard httpResponse.statusCode == 200 else {
-            throw MonadClientError.httpError(statusCode: httpResponse.statusCode, message: nil)
+        configuration.logger.debug("Response status: \(httpResponse.statusCode)")
+        if httpResponse.statusCode != 200 {
+            // Read error body if possible
+            var message: String?
+            do {
+                var body = ""
+                for try await byte in bytes {
+                    body.append(Character(UnicodeScalar(byte)))
+                }
+                message = body
+            } catch {
+                configuration.logger.error("Failed to read error body: \(error)")
+            }
+
+            switch httpResponse.statusCode {
+            case 401:
+                configuration.logger.error("HTTP 401 Unauthorized: \(message ?? "")")
+                throw MonadClientError.unauthorized
+            case 404:
+                configuration.logger.error("HTTP 404 Not Found")
+                throw MonadClientError.notFound
+            default:
+                configuration.logger.error("HTTP \(httpResponse.statusCode): \(message ?? "")")
+                throw MonadClientError.httpError(
+                    statusCode: httpResponse.statusCode, message: message)
+            }
         }
 
-        return sseReader.events(from: bytes)
+        configuration.logger.debug("Starting SSE reader")
+        return sseReader.events(from: bytes, logger: configuration.logger)
     }
 
     // MARK: - Memory API
@@ -173,6 +202,21 @@ public actor MonadClient {
         return httpResponse.statusCode == 200
     }
 
+    // MARK: - Configuration API
+
+    /// Get current server configuration
+    public func getConfiguration() async throws -> LLMConfiguration {
+        let request = try buildRequest(path: "/api/config", method: "GET")
+        return try await perform(request)
+    }
+
+    /// Update server configuration
+    public func updateConfiguration(_ config: LLMConfiguration) async throws {
+        var request = try buildRequest(path: "/api/config", method: "PUT")
+        request.httpBody = try encoder.encode(config)
+        _ = try await performRaw(request)
+    }
+
     // MARK: - Private Helpers
 
     private func buildRequest(path: String, method: String, requiresAuth: Bool = true) throws
@@ -210,22 +254,30 @@ public actor MonadClient {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
+            configuration.logger.error("Network error: \(error.localizedDescription)")
             throw MonadClientError.networkError(error)
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw MonadClientError.unknown("Invalid response")
+            throw MonadClientError.unknown("Invalid response type")
         }
+
+        let url = request.url?.path ?? "unknown"
 
         switch httpResponse.statusCode {
         case 200...299:
             return (data, response)
         case 401:
+            let body = String(data: data, encoding: .utf8) ?? "No response body"
+            configuration.logger.error("HTTP 401 Unauthorized for \(url): \(body)")
             throw MonadClientError.unauthorized
         case 404:
+            configuration.logger.warning("HTTP 404 Not Found for \(url)")
             throw MonadClientError.notFound
         default:
             let message = String(data: data, encoding: .utf8)
+            configuration.logger.error(
+                "HTTP \(httpResponse.statusCode) for \(url): \(message ?? "no body")")
             throw MonadClientError.httpError(statusCode: httpResponse.statusCode, message: message)
         }
     }

@@ -1,5 +1,5 @@
 import Foundation
-import OSLog
+import Logging
 
 /// Policy for vacuuming memories during archival
 public enum MemoryVacuumPolicy: Sendable {
@@ -14,7 +14,7 @@ public actor ConversationArchiver {
     private let persistence: PersistenceService
     private let llmService: LLMService
     private let contextManager: ContextManager
-    private let logger = Logger(subsystem: "com.monad.core", category: "ConversationArchiver")
+    private let logger = Logger(label: "com.monad.ConversationArchiver")
     
     public init(persistence: PersistenceService, llmService: LLMService, contextManager: ContextManager) {
         self.persistence = persistence

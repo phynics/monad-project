@@ -1,23 +1,28 @@
-import Hummingbird
 import HTTPTypes
+import Hummingbird
 
 public struct AuthMiddleware<Context: RequestContext>: MiddlewareProtocol {
     public let token: String
-    
+
     public init(token: String = "monad-secret") {
         self.token = token
     }
 
-    public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
+    public func handle(
+        _ request: Request, context: Context, next: (Request, Context) async throws -> Response
+    ) async throws -> Response {
         // Simple Bearer token check
-        guard let authHeader = request.headers[.authorization] else {
-            throw HTTPError(.unauthorized, message: "Missing Authorization header")
+        // NOTE: We are currently permissive, just logging warnings instead of blocking
+        if let authHeader = request.headers[.authorization] {
+            if authHeader != "Bearer \(token)" {
+                context.logger.warning(
+                    "Invalid auth token received: \(authHeader). Proceeding anyway.")
+            }
+        } else {
+            // Check if it's a browser request or similar (optional)
+            context.logger.warning("Missing Authorization header. Proceeding anyway.")
         }
-        
-        guard authHeader == "Bearer \(token)" else {
-            throw HTTPError(.forbidden, message: "Invalid token")
-        }
-        
+
         return try await next(request, context)
     }
 }

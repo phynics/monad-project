@@ -1,5 +1,5 @@
 import Foundation
-import OSLog
+import Logging
 import OpenAI
 
 /// A tool that the LLM can call

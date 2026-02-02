@@ -1,6 +1,6 @@
 import Foundation
 import GRDB
-import OSLog
+import Logging
 
 /// Thread-safe persistence service using GRDB
 public actor PersistenceService: PersistenceServiceProtocol {

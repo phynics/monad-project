@@ -1,5 +1,5 @@
 import Foundation
-import OSLog
+import Logging
 
 /// Session-specific tool settings
 public actor SessionToolManager {
