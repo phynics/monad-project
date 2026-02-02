@@ -26,7 +26,7 @@ import MonadCore
             try await client.execute(uri: "/sessions", method: .post) { response in
                 #expect(response.status == .created)
                 
-                let session = try JSONDecoder().decode(Session.self, from: response.body)
+                let session = try JSONDecoder().decode(ConversationSession.self, from: response.body)
                 #expect(session.id.uuidString.isEmpty == false)
             }
         }

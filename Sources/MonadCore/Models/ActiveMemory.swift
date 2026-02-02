@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 
 public struct ActiveMemory: Identifiable, Sendable, Equatable {
     public let id: UUID

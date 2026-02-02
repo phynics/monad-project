@@ -2,7 +2,7 @@ import Foundation
 import MonadCore
 
 public actor SessionManager {
-    private var sessions: [UUID: Session] = [:]
+    private var sessions: [UUID: ConversationSession] = [:]
     private var contextManagers: [UUID: ContextManager] = [:]
     private let persistenceService: any PersistenceServiceProtocol
     private let embeddingService: any EmbeddingService
@@ -12,21 +12,20 @@ public actor SessionManager {
         self.embeddingService = embeddingService
     }
     
-    public func createSession(title: String = "New Conversation") async throws -> Session {
-        let session = Session()
+    public func createSession(title: String = "New Conversation") async throws -> ConversationSession {
+        let session = ConversationSession(id: UUID(), title: title)
         sessions[session.id] = session
         
         let contextManager = ContextManager(persistenceService: persistenceService, embeddingService: embeddingService)
         contextManagers[session.id] = contextManager
         
         // Ensure session exists in database for foreign key constraints
-        let conversationSession = ConversationSession(id: session.id, title: title)
-        try await persistenceService.saveSession(conversationSession)
+        try await persistenceService.saveSession(session)
         
         return session
     }
     
-    public func getSession(id: UUID) -> Session? {
+    public func getSession(id: UUID) -> ConversationSession? {
         guard var session = sessions[id] else { return nil }
         session.updatedAt = Date()
         sessions[id] = session
