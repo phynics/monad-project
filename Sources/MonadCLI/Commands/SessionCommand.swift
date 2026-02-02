@@ -168,26 +168,11 @@ struct SessionCommand: AsyncParsableCommand {
 // MARK: - Session Completion
 
 enum SessionCompletion {
+    @Sendable
     static func complete() -> [String] {
-        // Attempt to fetch sessions synchronously for tab completion
-        // This is a best-effort approach since ArgumentParser completions are synchronous
-        let config = ClientConfiguration.fromEnvironment()
-
-        // Create a semaphore for synchronous completion
-        let semaphore = DispatchSemaphore(value: 0)
-        var sessionIds: [String] = []
-
-        Task {
-            let client = MonadClient(configuration: config)
-            if let sessions = try? await client.listSessions() {
-                sessionIds = sessions.map { $0.id.uuidString }
-            }
-            semaphore.signal()
-        }
-
-        // Wait with a short timeout
-        _ = semaphore.wait(timeout: .now() + 1.0)
-
-        return sessionIds
+        // Tab completion with async API is challenging in Swift 6 strict concurrency.
+        // For now, return empty and let the user type the full ID.
+        // A future enhancement could cache session IDs to a file.
+        return []
     }
 }

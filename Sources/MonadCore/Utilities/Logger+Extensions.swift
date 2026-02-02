@@ -24,6 +24,9 @@ extension Logger {
     /// Logs related to general app lifecycle and configuration
     public static let app = Logger(subsystem: subsystem, category: "app")
 
+    /// Logs related to the standalone server
+    public static let server = Logger(subsystem: subsystem, category: "server")
+
     /// Logs related to streaming response parsing
     public static let parser = Logger(subsystem: subsystem, category: "parser")
 }

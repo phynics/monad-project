@@ -26,17 +26,17 @@ Goal: Provide reliable and consistent error responses for all REST endpoints.
     - [x] Ensure all endpoints return appropriate status codes for success and common failure modes (400, 401, 404, 500, 503).
 - [x] Task: Conductor - User Manual Verification 'Server API Stability and Standardized Error Handling' (Protocol in workflow.md)
 
-## Phase 3: Logic De-duplication and Shared Utilities
+## Phase 3: Logic De-duplication and Shared Utilities [checkpoint: 8273af1]
 Goal: Reduce code debt by centralizing common logic and utilities in `MonadCore`.
 
-- [~] Task: Centralize shared utility functions.
-    - [ ] Identify replicated date formatters, string helpers, and logging configurations.
-    - [ ] Refactor into `Sources/MonadCore/Utilities/`.
-- [ ] Task: Consolidate prompt construction and tool handling.
-    - [ ] Review `ChatViewModel` (UI) and `ChatController` (Server) for duplicated prompt assembly logic.
-    - [ ] Move shared logic into `PromptBuilder` or a new `PromptCoordinator` in `MonadCore`.
-    - [ ] Ensure tool registration and mapping logic is shared between UI and Server.
-- [ ] Task: Conductor - User Manual Verification 'Logic De-duplication and Shared Utilities' (Protocol in workflow.md)
+- [x] Task: Centralize shared utility functions. [8273af1]
+    - [x] Identify replicated date formatters, string helpers, and logging configurations.
+    - [x] Refactor into `Sources/MonadCore/Utilities/`.
+- [x] Task: Consolidate prompt construction and tool handling. [8273af1]
+    - [x] Review `ChatViewModel` (UI) and `ChatController` (Server) for duplicated prompt assembly logic.
+    - [x] Move shared logic into `PromptBuilder` or a new `PromptCoordinator` in `MonadCore`.
+    - [x] Ensure tool registration and mapping logic is shared between UI and Server.
+- [x] Task: Conductor - User Manual Verification 'Logic De-duplication and Shared Utilities' (Protocol in workflow.md)
 
 ## Phase 4: Feature Parity - Tools and Configuration
 Goal: Enable full UI capabilities within the MonadServer REST API.

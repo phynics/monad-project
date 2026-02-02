@@ -11,7 +11,7 @@ public actor ServerLLMService {
     
     private let storage: ConfigurationStorage
     public let promptBuilder: PromptBuilder
-    private let logger = Logger(subsystem: "com.monad.server", category: "LLMService")
+    private let logger = Logger.server
     
     public init(storage: ConfigurationStorage = ConfigurationStorage(), promptBuilder: PromptBuilder = PromptBuilder()) {
         self.storage = storage
