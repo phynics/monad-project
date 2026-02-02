@@ -1,0 +1,8 @@
+{
+  "track_id": "stability_parity_20260126",
+  "type": "other",
+  "status": "new",
+  "created_at": "2026-01-26T21:30:00Z",
+  "updated_at": "2026-01-26T21:30:00Z",
+  "description": "General stability pass over the whole codebase. Create tests for critical APIs, make low-scale refactors of redundant code, make sure MonadServer and MonadUI have the same functions."
+}

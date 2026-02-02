@@ -11,3 +11,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ## [x] Track: Persistent and Autonomous Job Queue
 *Link: [./conductor/tracks/persistent_job_queue_20260112/](./conductor/tracks/persistent_job_queue_20260112/)*
+
+---
+
+- [ ] **Track: General Stability Pass and Feature Parity**
+*Link: [./tracks/stability_parity_20260126/](./tracks/stability_parity_20260126/)*
