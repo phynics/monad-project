@@ -8,6 +8,9 @@
 
 ## Logic and Architecture
 - **MonadCore:** A dedicated pure logic framework (Linux-compatible) responsible for context management, persistence, and tool execution.
+- **MonadServerCore:** A server-side framework providing RESTful API controllers and session management.
+- **Hummingbird:** A modern, high-performance HTTP server framework for Swift, used to power the MonadServer.
+- **ArgumentParser:** Used for the MonadServer CLI interface.
 - **Modular Design:** Separation of concerns into Core, UI, and specialized modules (like MonadMCP).
 - **Architectural Integrity:**
     - **Protocol-Oriented Programming:** Services are defined by protocols to enable mocking and isolation.

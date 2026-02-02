@@ -17,6 +17,7 @@ Monad Assistant aims to redefine personal AI interactions by bridging the gap be
 
 ## Key Features
 - **Adaptive Context Management:** Automatically retrieves relevant memories and globally injects notes, leveraging direct SQL-driven persistence.
+- **Standalone REST API:** Exposes all assistant capabilities (chat, memory, notes, tools) via a high-performance HTTP server for external integration.
 - **RAW SQL Execution:** Provides the agent with wide latitude to manage custom tables and state while ensuring core data remains immutable.
 - **Stateful Document Workspace:** Load, unload, and pin documents to keep the context window focused while maintaining access to critical data.
 - **Multi-Model Support:** Integration with providers like OpenAI and local models via Ollama or OpenRouter.
