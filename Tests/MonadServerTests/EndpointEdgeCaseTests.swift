@@ -1,0 +1,127 @@
+import Testing
+import Hummingbird
+import HummingbirdTesting
+import Foundation
+@testable import MonadServerCore
+import MonadCore
+import NIOCore
+import HTTPTypes
+
+@Suite struct EndpointEdgeCaseTests {
+    
+    @Test("Chat with non-existent session (404)")
+    func testChatNoSession() async throws {
+        let persistence = MockPersistenceService()
+        let embedding = MockEmbeddingService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        
+        let router = Router()
+        router.add(middleware: ErrorMiddleware())
+        let protected = router.group("/api").add(middleware: AuthMiddleware())
+        ChatController<BasicRequestContext>(sessionManager: sessionManager, llmService: ServerLLMService()).addRoutes(to: protected.group("/sessions"))
+        
+        let app = Application(router: router)
+        
+        let req = ChatRequest(message: "Hi")
+        let buffer = ByteBuffer(bytes: try JSONEncoder().encode(req))
+        
+        try await app.test(.router) { client in
+            var headers = HTTPFields()
+            headers[.authorization] = "Bearer monad-secret"
+            try await client.execute(uri: "/api/sessions/\(UUID())/chat", method: .post, 
+                                   headers: headers, body: buffer) { response in
+                #expect(response.status == .notFound)
+            }
+        }
+    }
+    
+    @Test("Chat with invalid UUID (400)")
+    func testChatInvalidUUID() async throws {
+        let persistence = MockPersistenceService()
+        let embedding = MockEmbeddingService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        
+        let router = Router()
+        router.add(middleware: ErrorMiddleware())
+        let protected = router.group("/api").add(middleware: AuthMiddleware())
+        ChatController<BasicRequestContext>(sessionManager: sessionManager, llmService: ServerLLMService()).addRoutes(to: protected.group("/sessions"))
+        
+        let app = Application(router: router)
+        
+        let req = ChatRequest(message: "Hi")
+        let buffer = ByteBuffer(bytes: try JSONEncoder().encode(req))
+        
+        try await app.test(.router) { client in
+            var headers = HTTPFields()
+            headers[.authorization] = "Bearer monad-secret"
+            try await client.execute(uri: "/api/sessions/invalid-uuid/chat", method: .post, 
+                                   headers: headers, body: buffer) { response in
+                #expect(response.status == .badRequest)
+            }
+        }
+    }
+    
+    @Test("Auth Failure: Missing Header (401)")
+    func testAuthMissingHeader() async throws {
+        let persistence = MockPersistenceService()
+        let embedding = MockEmbeddingService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        
+        let router = Router()
+        router.add(middleware: ErrorMiddleware())
+        let protected = router.group("/api").add(middleware: AuthMiddleware())
+        MemoryController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(to: protected.group("/memories"))
+        
+        let app = Application(router: router)
+        
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/api/memories", method: .get) { response in
+                #expect(response.status == .unauthorized)
+            }
+        }
+    }
+    
+    @Test("Auth Failure: Invalid Token (403)")
+    func testAuthInvalidToken() async throws {
+        let persistence = MockPersistenceService()
+        let embedding = MockEmbeddingService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        
+        let router = Router()
+        router.add(middleware: ErrorMiddleware())
+        let protected = router.group("/api").add(middleware: AuthMiddleware())
+        MemoryController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(to: protected.group("/memories"))
+        
+        let app = Application(router: router)
+        
+        try await app.test(.router) { client in
+            var headers = HTTPFields()
+            headers[.authorization] = "Bearer wrong"
+            try await client.execute(uri: "/api/memories", method: .get, headers: headers) { response in
+                #expect(response.status == .forbidden)
+            }
+        }
+    }
+    
+    @Test("Delete non-existent memory (Should be 204)")
+    func testDeleteNoMemory() async throws {
+        let persistence = MockPersistenceService()
+        let embedding = MockEmbeddingService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        
+        let router = Router()
+        router.add(middleware: ErrorMiddleware())
+        let protected = router.group("/api").add(middleware: AuthMiddleware())
+        MemoryController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(to: protected.group("/memories"))
+        
+        let app = Application(router: router)
+        
+        try await app.test(.router) { client in
+            var headers = HTTPFields()
+            headers[.authorization] = "Bearer monad-secret"
+            try await client.execute(uri: "/api/memories/\(UUID())", method: .delete, headers: headers) { response in
+                #expect(response.status == .noContent)
+            }
+        }
+    }
+}
