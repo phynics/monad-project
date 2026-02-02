@@ -21,7 +21,7 @@ public struct ChatResponse: Codable, Sendable, ResponseGenerator {
     }
     
     public func response(from request: Request, context: some RequestContext) throws -> Response {
-        let data = try JSONEncoder().encode(self)
+        let data = try SerializationUtils.jsonEncoder.encode(self)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
         return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
@@ -93,10 +93,9 @@ public struct ChatController<Context: RequestContext>: Sendable {
             }
         }
         
-        // 5. Save Assistant Message
-        let recalledMemoriesData = try JSONEncoder().encode(contextData.memories.map { $0.memory })
-        let recalledMemoriesString = String(decoding: recalledMemoriesData, as: UTF8.self)
-        
+                    // 5. Save Assistant Message
+                    let recalledMemoriesData = try SerializationUtils.jsonEncoder.encode(contextData.memories.map { $0.memory })
+                    let recalledMemoriesString = String(decoding: recalledMemoriesData, as: UTF8.self)        
         let assistantMsg = ConversationMessage(
             sessionId: id, 
             role: .assistant, 
@@ -161,16 +160,14 @@ public struct ChatController<Context: RequestContext>: Sendable {
                         if let delta = result.choices.first?.delta.content {
                             fullResponse += delta
                         }
-                        if let data = try? JSONEncoder().encode(result) {
-                            let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
-                            continuation.yield(ByteBuffer(string: sseString))
-                        }
-                    }
+                                                    if let data = try? SerializationUtils.jsonEncoder.encode(result) {
+                                                        let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                                                        continuation.yield(ByteBuffer(string: sseString))
+                                                    }                    }
                     
-                    // 5. Save Assistant Message
-                    let recalledMemoriesData = try? JSONEncoder().encode(memories)
-                    let recalledMemoriesString = recalledMemoriesData.flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
-                    
+                                            // 5. Save Assistant Message
+                                            let recalledMemoriesData = try? SerializationUtils.jsonEncoder.encode(memories)
+                                            let recalledMemoriesString = recalledMemoriesData.flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"                    
                     let assistantMsg = ConversationMessage(
                         sessionId: id, 
                         role: .assistant, 

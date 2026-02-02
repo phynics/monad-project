@@ -19,12 +19,6 @@ public struct CreateMemoryRequest: Codable, Sendable {
 public struct MemoryController<Context: RequestContext>: Sendable {
     public let sessionManager: SessionManager
     
-    private let encoder: JSONEncoder = {
-        let e = JSONEncoder()
-        e.dateEncodingStrategy = .iso8601
-        return e
-    }()
-    
     public init(sessionManager: SessionManager) {
         self.sessionManager = sessionManager
     }
@@ -38,7 +32,7 @@ public struct MemoryController<Context: RequestContext>: Sendable {
     @Sendable func list(_ request: Request, context: Context) async throws -> Response {
         let persistence = await sessionManager.getPersistenceService()
         let memories = try await persistence.fetchAllMemories()
-        let data = try encoder.encode(memories)
+        let data = try SerializationUtils.jsonEncoder.encode(memories)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
         return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
@@ -61,7 +55,7 @@ public struct MemoryController<Context: RequestContext>: Sendable {
             throw HTTPError(.internalServerError)
         }
         
-        let data = try encoder.encode(savedMemory)
+        let data = try SerializationUtils.jsonEncoder.encode(savedMemory)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
         return Response(status: .created, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))

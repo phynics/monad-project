@@ -256,6 +256,39 @@ targets:
         PRODUCT_NAME: MonadServer
         PRODUCT_BUNDLE_IDENTIFIER: com.monad.server
 
+  # HTTP Client Library
+  MonadClient:
+    type: framework
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadClient
+    settings:
+      base:
+        PRODUCT_NAME: MonadClient
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.client
+        SKIP_INSTALL: YES
+        INSTALL_PATH: "@rpath"
+        DEFINES_MODULE: YES
+
+  # CLI Application
+  MonadCLI:
+    type: tool
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Sources/MonadCLI
+    dependencies:
+      - package: ArgumentParser
+        product: ArgumentParser
+      - target: MonadClient
+    settings:
+      base:
+        PRODUCT_NAME: monad
+        PRODUCT_BUNDLE_IDENTIFIER: com.monad.cli
+
   # Core Logic Tests
   MonadCoreTests:
     type: bundle.unit-test

@@ -29,7 +29,7 @@ Goal: Provide reliable and consistent error responses for all REST endpoints.
 ## Phase 3: Logic De-duplication and Shared Utilities
 Goal: Reduce code debt by centralizing common logic and utilities in `MonadCore`.
 
-- [ ] Task: Centralize shared utility functions.
+- [~] Task: Centralize shared utility functions.
     - [ ] Identify replicated date formatters, string helpers, and logging configurations.
     - [ ] Refactor into `Sources/MonadCore/Utilities/`.
 - [ ] Task: Consolidate prompt construction and tool handling.

@@ -21,12 +21,6 @@ public struct CreateNoteRequest: Codable, Sendable {
 public struct NoteController<Context: RequestContext>: Sendable {
     public let sessionManager: SessionManager
     
-    private let encoder: JSONEncoder = {
-        let e = JSONEncoder()
-        e.dateEncodingStrategy = .iso8601
-        return e
-    }()
-    
     public init(sessionManager: SessionManager) {
         self.sessionManager = sessionManager
     }
@@ -40,7 +34,7 @@ public struct NoteController<Context: RequestContext>: Sendable {
     @Sendable func list(_ request: Request, context: Context) async throws -> Response {
         let persistence = await sessionManager.getPersistenceService()
         let notes = try await persistence.fetchAllNotes()
-        let data = try encoder.encode(notes)
+        let data = try SerializationUtils.jsonEncoder.encode(notes)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
         return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
@@ -64,7 +58,7 @@ public struct NoteController<Context: RequestContext>: Sendable {
             throw HTTPError(.internalServerError)
         }
         
-        let data = try encoder.encode(savedNote)
+        let data = try SerializationUtils.jsonEncoder.encode(savedNote)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
         return Response(status: .created, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
