@@ -195,7 +195,7 @@ public actor MonadClient {
     }
 
     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
-        let (data, response) = try await performRaw(request)
+        let (data, _) = try await performRaw(request)
 
         do {
             return try decoder.decode(T.self, from: data)

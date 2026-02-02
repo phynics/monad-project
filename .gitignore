@@ -80,7 +80,9 @@ iOSInjectionProject/
 *.sqlite-wal
 
 # Gemini
+.agent/
 .gemini/
 GEMINI.md
 *.log
 tmp/
+conductor/

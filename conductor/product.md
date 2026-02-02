@@ -1,10 +1,10 @@
 # Initial Concept
-A native AI assistant for macOS and iOS focused on speed, deep context, and local-first privacy through semantic retrieval and document workspace management.
+A headless AI assistant focused on speed, deep context, and local-first privacy through semantic retrieval and document workspace management.
 
 # Product Guide
 
 ## Vision
-Monad Assistant aims to redefine personal AI interactions by bridging the gap between large language models and local, personal data. It provides a high-performance, private, and deeply contextual environment where users can seamlessly interact with their own information.
+Monad aims to redefine personal AI interactions by bridging the gap between large language models and local, personal data. It provides a high-performance, private, and deeply contextual environment through a server/CLI architecture.
 
 ## Target Users
 - **Power Users and Developers:** Individuals who require fast, reliable LLM access and need to integrate it with their local development workflows and technical knowledge base.
@@ -13,7 +13,7 @@ Monad Assistant aims to redefine personal AI interactions by bridging the gap be
 ## Core Goals
 - **Deep Semantic Retrieval:** Move beyond simple keyword matching with a sophisticated vector-based context engine and direct SQL-driven data interaction.
 - **Local-First Privacy:** Build a robust architecture that prioritizes local processing and persistent storage (via GRDB/SQLite), ensuring user data remains private.
-- **Native Performance:** Deliver a top-tier macOS and iOS experience using Swift and SwiftUI, optimized for speed and responsiveness.
+- **Server Architecture:** REST API server with streaming chat support, accessible via CLI or HTTP clients.
 
 ## Key Features
 - **Adaptive Context Management:** Automatically retrieves relevant memories and globally injects notes, leveraging direct SQL-driven persistence.

@@ -22,8 +22,8 @@ struct NoteRefactorTests {
 
     @Test("Verify Note model does not have alwaysAppend")
     func noteModelCheck() {
-        let note = Note(name: "Test", content: "Content")
-        // This test is mostly for compilation. If alwaysAppend existed, 
+        _ = Note(name: "Test", content: "Content")
+        // This test is mostly for compilation. If alwaysAppend existed,
         // we might try to access it here to ensure it doesn't exist anymore.
         // Since we are @testable, we can see internal properties if any.
     }
@@ -33,10 +33,15 @@ struct NoteRefactorTests {
         try await dbQueue.read { db in
             let columns = try db.columns(in: "note")
             let columnNames = columns.map { $0.name }
-            
-            #expect(!columnNames.contains("alwaysAppend"), "alwaysAppend column should not exist in note table")
-            #expect(!columnNames.contains("isEnabled"), "isEnabled column should not exist in note table")
-            #expect(!columnNames.contains("priority"), "priority column should not exist in note table")
+
+            #expect(
+                !columnNames.contains("alwaysAppend"),
+                "alwaysAppend column should not exist in note table")
+            #expect(
+                !columnNames.contains("isEnabled"),
+                "isEnabled column should not exist in note table")
+            #expect(
+                !columnNames.contains("priority"), "priority column should not exist in note table")
         }
     }
 
@@ -44,10 +49,10 @@ struct NoteRefactorTests {
     func allNotesInContext() async throws {
         let n1 = Note(name: "Note 1", content: "Content 1")
         let n2 = Note(name: "Note 2", content: "Content 2")
-        
+
         try await persistence.saveNote(n1)
         try await persistence.saveNote(n2)
-        
+
         let context = try await persistence.getContextNotes()
         #expect(context.contains("Note 1"))
         #expect(context.contains("Content 1"))

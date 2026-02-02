@@ -2,17 +2,16 @@
 import PackageDescription
 
 let package = Package(
-    name: "MonadAssistant",
+    name: "MonadProject",
     platforms: [
-        .macOS(.v14),
-        .iOS(.v17)
+        .macOS(.v14)
     ],
     products: [
         .library(name: "MonadCore", targets: ["MonadCore"]),
-        .library(name: "MonadMCP", targets: ["MonadMCP"]),
-        .library(name: "MonadUI", targets: ["MonadUI"]),
         .library(name: "MonadServerCore", targets: ["MonadServerCore"]),
-        .executable(name: "MonadServer", targets: ["MonadServer"])
+        .library(name: "MonadClient", targets: ["MonadClient"]),
+        .executable(name: "MonadServer", targets: ["MonadServer"]),
+        .executable(name: "MonadCLI", targets: ["MonadCLI"]),
     ],
     dependencies: [
         .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main"),
@@ -25,30 +24,15 @@ let package = Package(
             name: "MonadCore",
             dependencies: [
                 .product(name: "OpenAI", package: "OpenAI"),
-                .product(name: "GRDB", package: "GRDB.swift")
+                .product(name: "GRDB", package: "GRDB.swift"),
             ],
             path: "Sources/MonadCore"
-        ),
-        .target(
-            name: "MonadMCP",
-            dependencies: ["MonadCore"],
-            path: "Sources/MonadMCP"
-        ),
-        .target(
-            name: "MonadUI",
-            dependencies: [
-                "MonadCore",
-                "MonadMCP",
-                .product(name: "OpenAI", package: "OpenAI"),
-                .product(name: "GRDB", package: "GRDB.swift")
-            ],
-            path: "Sources/MonadUI"
         ),
         .target(
             name: "MonadServerCore",
             dependencies: [
                 "MonadCore",
-                .product(name: "Hummingbird", package: "hummingbird")
+                .product(name: "Hummingbird", package: "hummingbird"),
             ],
             path: "Sources/MonadServerCore"
         ),
@@ -57,28 +41,36 @@ let package = Package(
             dependencies: [
                 "MonadServerCore",
                 .product(name: "Hummingbird", package: "hummingbird"),
-                .product(name: "ArgumentParser", package: "swift-argument-parser")
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             path: "Sources/MonadServer"
         ),
-        .testTarget(
-            name: "MonadCoreTests",
-            dependencies: ["MonadCore", "MonadUI"],
-            path: "Tests/MonadCoreTests"
+        .target(
+            name: "MonadClient",
+            dependencies: [],
+            path: "Sources/MonadClient"
+        ),
+        .executableTarget(
+            name: "MonadCLI",
+            dependencies: [
+                "MonadClient",
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ],
+            path: "Sources/MonadCLI"
         ),
         .testTarget(
-            name: "MonadMCPTests",
-            dependencies: ["MonadMCP", "MonadCore"],
-            path: "Tests/MonadMCPTests"
+            name: "MonadCoreTests",
+            dependencies: ["MonadCore"],
+            path: "Tests/MonadCoreTests"
         ),
         .testTarget(
             name: "MonadServerTests",
             dependencies: [
                 "MonadServerCore",
                 "MonadCore",
-                .product(name: "HummingbirdTesting", package: "hummingbird")
+                .product(name: "HummingbirdTesting", package: "hummingbird"),
             ],
             path: "Tests/MonadServerTests"
-        )
+        ),
     ]
 )

@@ -81,7 +81,7 @@ struct SessionCommand: AsyncParsableCommand {
 
         @Argument(
             help: "Session ID (supports tab completion)",
-            completion: .custom { _ in SessionCompletion.complete() })
+            completion: .custom { _, _, _ in SessionCompletion.complete() })
         var sessionId: String
 
         func run() async throws {
@@ -131,7 +131,7 @@ struct SessionCommand: AsyncParsableCommand {
 
         @Argument(
             help: "Session ID (supports tab completion)",
-            completion: .custom { _ in SessionCompletion.complete() })
+            completion: .custom { _, _, _ in SessionCompletion.complete() })
         var sessionId: String
 
         @Flag(name: .shortAndLong, help: "Skip confirmation prompt")
