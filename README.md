@@ -1,5 +1,7 @@
 # Monad
 
+![Spark, a curious lynx](docs/assets/spark.png)
+
 A headless AI assistant built for deep context integration. Monad focuses on how your data and documents integrate with Large Language Models through a server/CLI architecture.
 
 Built with **Swift 6.0**, it features a modular architecture designed for high performance and a local-first approach.
