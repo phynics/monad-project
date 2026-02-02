@@ -1,4 +1,4 @@
-.PHONY: help generate build clean test open install-deps spm-build spm-test
+.PHONY: help generate build clean test open install-deps spm-build spm-test run server
 
 # Default target
 help:
@@ -94,3 +94,10 @@ spm-cli:
 
 # Quick rebuild
 rebuild: clean build
+
+# Convenience aliases (use SPM directly)
+run:
+	@swift run MonadCLI $(ARGS)
+
+server:
+	@swift run MonadServer
