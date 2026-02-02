@@ -21,7 +21,7 @@ import NIOCore
         await llmService.setClients(main: mockClient, utility: mockClient, fast: mockClient)
         
         // Create Session
-        let session = await sessionManager.createSession()
+        let session = try await sessionManager.createSession()
         
         // Setup App
         let router = Router()
@@ -60,7 +60,7 @@ import NIOCore
         let llmService = ServerLLMService() // Not configured
         
         // Create Session
-        let session = await sessionManager.createSession()
+        let session = try await sessionManager.createSession()
         
         // Setup App
         let router = Router()

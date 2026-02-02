@@ -12,12 +12,16 @@ public actor SessionManager {
         self.embeddingService = embeddingService
     }
     
-    public func createSession() -> Session {
+    public func createSession(title: String = "New Conversation") async throws -> Session {
         let session = Session()
         sessions[session.id] = session
         
         let contextManager = ContextManager(persistenceService: persistenceService, embeddingService: embeddingService)
         contextManagers[session.id] = contextManager
+        
+        // Ensure session exists in database for foreign key constraints
+        let conversationSession = ConversationSession(id: session.id, title: title)
+        try await persistenceService.saveSession(conversationSession)
         
         return session
     }

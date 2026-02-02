@@ -12,7 +12,7 @@ import MonadCore
         
         let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
         
-        let session = await sessionManager.createSession()
+        let session = try await sessionManager.createSession()
         
         #expect(session.id != UUID.init(), "Session should have an ID")
         
@@ -31,7 +31,7 @@ import MonadCore
         let embedding = MockEmbeddingService()
         let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
         
-        let session = await sessionManager.createSession()
+        let session = try await sessionManager.createSession()
         
         // Simulate time passing (need a way to set last active time in SessionManager, maybe via internal method or by updating Session struct)
         // For now, check if cleanup method exists

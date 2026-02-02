@@ -15,7 +15,7 @@ public struct SessionController<Context: RequestContext>: Sendable {
     }
     
     @Sendable func create(_ request: Request, context: Context) async throws -> Response {
-        let session = await sessionManager.createSession()
+        let session = try await sessionManager.createSession()
         let data = try JSONEncoder().encode(session)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
