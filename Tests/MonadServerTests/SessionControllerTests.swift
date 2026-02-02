@@ -12,7 +12,8 @@ import MonadCore
         // Setup deps
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let llm = MockLLMService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
         
         // Setup App
         let router = Router()

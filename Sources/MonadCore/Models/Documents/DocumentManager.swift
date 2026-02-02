@@ -1,11 +1,8 @@
 import Foundation
-import Observation
 
 /// Manages loaded documents for the session
-@MainActor
-@Observable
-public final class DocumentManager: Sendable {
-    public var documents: [DocumentContext] = []
+public actor DocumentManager: Sendable {
+    public private(set) var documents: [DocumentContext] = []
     
     public init() {}
     
@@ -61,5 +58,9 @@ public final class DocumentManager: Sendable {
         // Combine and dedup (though filtering ensures disjoint sets)
         // Order: Pinned first, then recent
         return pinned + Array(unpinned)
+    }
+    
+    public func getAllDocuments() -> [DocumentContext] {
+        return documents
     }
 }

@@ -56,10 +56,10 @@ import Testing
         let executor = await ToolExecutor(toolManager: manager)
         
         let toolCall = ToolCall(name: "unknown_tool", arguments: [:])
-        let resultMessage = try await executor.execute(toolCall)
         
-        #expect(resultMessage.role == .tool)
-        #expect(resultMessage.content.contains("Error: Tool 'unknown_tool' not found"))
+        await #expect(throws: ToolExecutorError.toolNotFound("unknown_tool")) {
+            try await executor.execute(toolCall)
+        }
     }
     
     @Test("Test executing multiple tools")

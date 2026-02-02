@@ -7,7 +7,7 @@ import OSLog
 ///
 /// When activated via the gateway tool, this context exposes tools
 /// for adding, removing, prioritizing, and managing jobs in a queue.
-public final class JobQueueContext: ToolContext, @unchecked Sendable {
+public actor JobQueueContext: ToolContext {
     public static let contextId = "job_queue"
     public static let displayName = "Job Queue Manager"
     public static let contextDescription = "Manage a queue of jobs with priorities and statuses"
@@ -15,15 +15,16 @@ public final class JobQueueContext: ToolContext, @unchecked Sendable {
     private let logger = Logger.tools
     private let persistenceService: any PersistenceServiceProtocol
 
-    /// Context tools (lazy to allow self-reference)
-    public private(set) lazy var contextTools: [any Tool] = [
-        AddJobTool(context: self),
-        RemoveJobTool(context: self),
-        ChangePriorityTool(context: self),
-        ListJobsTool(context: self),
-        UpdateJobStatusTool(context: self),
-        ClearQueueTool(context: self),
-    ]
+    public var contextTools: [any Tool] {
+        [
+            AddJobTool(context: self),
+            RemoveJobTool(context: self),
+            ChangePriorityTool(context: self),
+            ListJobsTool(context: self),
+            UpdateJobStatusTool(context: self),
+            ClearQueueTool(context: self),
+        ]
+    }
 
     public init(persistenceService: any PersistenceServiceProtocol) {
         self.persistenceService = persistenceService
@@ -161,12 +162,16 @@ public final class JobQueueContext: ToolContext, @unchecked Sendable {
         let jobs = try await persistenceService.fetchAllJobs()
         return jobs.contains { $0.status == .pending }
     }
+    
+    public func formatPinnedState() async -> String? {
+        nil
+    }
 }
 
 // MARK: - Context Tools
 
 /// Add a new job to the queue
-public struct AddJobTool: ContextTool, @unchecked Sendable {
+public struct AddJobTool: ContextTool, Sendable {
     public static let parentContextId = JobQueueContext.contextId
 
     public let id = "jq_add"
@@ -211,7 +216,7 @@ public struct AddJobTool: ContextTool, @unchecked Sendable {
 }
 
 /// Remove a job from the queue
-public struct RemoveJobTool: ContextTool, @unchecked Sendable {
+public struct RemoveJobTool: ContextTool, Sendable {
     public static let parentContextId = JobQueueContext.contextId
 
     public let id = "jq_remove"
@@ -257,7 +262,7 @@ public struct RemoveJobTool: ContextTool, @unchecked Sendable {
 }
 
 /// Change job priority
-public struct ChangePriorityTool: ContextTool, @unchecked Sendable {
+public struct ChangePriorityTool: ContextTool, Sendable {
     public static let parentContextId = JobQueueContext.contextId
 
     public let id = "jq_priority"
@@ -308,7 +313,7 @@ public struct ChangePriorityTool: ContextTool, @unchecked Sendable {
 }
 
 /// List all jobs
-public struct ListJobsTool: ContextTool, @unchecked Sendable {
+public struct ListJobsTool: ContextTool, Sendable {
     public static let parentContextId = JobQueueContext.contextId
 
     public let id = "jq_list"
@@ -340,7 +345,7 @@ public struct ListJobsTool: ContextTool, @unchecked Sendable {
 }
 
 /// Update job status
-public struct UpdateJobStatusTool: ContextTool, @unchecked Sendable {
+public struct UpdateJobStatusTool: ContextTool, Sendable {
     public static let parentContextId = JobQueueContext.contextId
 
     public let id = "jq_status"
@@ -396,7 +401,7 @@ public struct UpdateJobStatusTool: ContextTool, @unchecked Sendable {
 }
 
 /// Clear all jobs
-public struct ClearQueueTool: ContextTool, @unchecked Sendable {
+public struct ClearQueueTool: ContextTool, Sendable {
     public static let parentContextId = JobQueueContext.contextId
 
     public let id = "jq_clear"

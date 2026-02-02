@@ -41,7 +41,7 @@ extension ChatViewModel {
 
                 updateActiveMemories(with: contextData.memories.map { $0.memory })
 
-                let enabledTools = toolManager.getEnabledTools()
+                let enabledTools = await toolManager.getEnabledTools()
                 let contextDocuments = injectedDocuments
                 let contextMemories = injectedMemories
 

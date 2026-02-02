@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 // MARK: - Configuration Model
 
@@ -393,7 +394,7 @@ public actor ConfigurationStorage {
             }
             
             if let oldConfig = try? JSONDecoder().decode(LegacyLLMConfigurationV1.self, from: oldData) {
-                print("Migrating configuration from V1 to V2...")
+                Logger.llm.info("Migrating configuration from V1 to V2...")
                 
                 // Initialize defaults
                 var newProviders: [LLMProvider: ProviderConfiguration] = [:]

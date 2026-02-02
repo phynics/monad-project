@@ -12,9 +12,9 @@ final class ContextCompressorTests: XCTestCase {
         llmService = LLMService(embeddingService: embeddingService)
         
         // Manually set valid configuration
-        let config = LLMConfiguration.openAI
-        llmService.configuration = config
-        llmService.isConfigured = true
+        var config = LLMConfiguration.openAI
+        config.providers[.openAI]?.apiKey = "test-key"
+        try await llmService.updateConfiguration(config)
         
         compressor = ContextCompressor(llmService: llmService)
     }

@@ -34,7 +34,7 @@ public protocol ToolContext: AnyObject, Sendable {
     var isPinned: Bool { get }
 
     /// Tools available only within this context
-    var contextTools: [any Tool] { get }
+    var contextTools: [any Tool] { get async }
 
     /// Called when context is activated
     func activate() async
@@ -76,7 +76,8 @@ extension ToolContext {
     }
 
     public func welcomeMessage() async -> String {
-        let toolList = contextTools.map { "- `\($0.id)`: \($0.description)" }.joined(
+        let tools = await contextTools
+        let toolList = tools.map { "- `\($0.id)`: \($0.description)" }.joined(
             separator: "\n")
 
         let exitNote =
@@ -119,8 +120,7 @@ public protocol ContextGatewayTool: Tool {
 ///
 /// Only one context can be active at a time. When a new context is activated,
 /// any existing non-persistent context is first deactivated.
-@Observable
-public final class ToolContextSession: @unchecked Sendable {
+public actor ToolContextSession {
     private let logger = Logger.tools
 
     /// Currently active context (only one at a time)
@@ -143,7 +143,8 @@ public final class ToolContextSession: @unchecked Sendable {
         }
 
         activeContext = context
-        contextToolIds = Set(context.contextTools.map { $0.id })
+        let tools = await context.contextTools
+        contextToolIds = Set(tools.map { $0.id })
 
         // If context is pinned, add to pinned contexts
         if context.isPinned {
@@ -205,8 +206,8 @@ public final class ToolContextSession: @unchecked Sendable {
     }
 
     /// Get context tools if a context is active
-    public func getContextTools() -> [any Tool] {
-        activeContext?.contextTools ?? []
+    public func getContextTools() async -> [any Tool] {
+        await activeContext?.contextTools ?? []
     }
 
     /// Check if any context is active

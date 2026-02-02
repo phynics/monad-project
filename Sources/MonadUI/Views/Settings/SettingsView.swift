@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 #endif
 
 public struct SettingsView<PlatformContent: View>: View {
-    public var llmService: LLMService
+    public var llmManager: LLMManager
     public let persistenceManager: PersistenceManager
     @Environment(\.dismiss) var dismiss
 
@@ -26,11 +26,11 @@ public struct SettingsView<PlatformContent: View>: View {
     @State internal var isFetchingModels = false
 
     public init(
-        llmService: LLMService,
+        llmManager: LLMManager,
         persistenceManager: PersistenceManager,
         @ViewBuilder platformContent: () -> PlatformContent
     ) {
-        self.llmService = llmService
+        self.llmManager = llmManager
         self.persistenceManager = persistenceManager
         self.platformContent = platformContent()
     }
@@ -136,11 +136,11 @@ public struct SettingsView<PlatformContent: View>: View {
         Section {
             HStack {
                 Image(
-                    systemName: llmService.isConfigured
+                    systemName: llmManager.isConfigured
                         ? "checkmark.circle.fill" : "xmark.circle.fill"
                 )
-                .foregroundColor(llmService.isConfigured ? .green : .red)
-                Text(llmService.isConfigured ? "Connected" : "Not Configured")
+                .foregroundColor(llmManager.isConfigured ? .green : .red)
+                Text(llmManager.isConfigured ? "Connected" : "Not Configured")
             }
         } header: {
             Text("Status")
@@ -250,14 +250,5 @@ public struct SettingsView<PlatformContent: View>: View {
             return !config.endpoint.isEmpty && !config.modelName.isEmpty
         }
         return !config.endpoint.isEmpty && !config.modelName.isEmpty && !config.apiKey.isEmpty
-    }
-}
-
-#Preview {
-    SettingsView(
-        llmService: LLMService(),
-        persistenceManager: PersistenceManager(persistence: try! PersistenceService.create())
-    ) {
-        EmptyView()
     }
 }

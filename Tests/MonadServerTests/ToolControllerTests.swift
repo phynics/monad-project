@@ -12,7 +12,8 @@ import NIOCore
     func testToolsAPI() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let llm = MockLLMService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
         
         let router = Router()
         let controller = ToolController<BasicRequestContext>(sessionManager: sessionManager)
@@ -21,33 +22,24 @@ import NIOCore
         let app = Application(router: router)
         
         try await app.test(.router) { client in
+            // Create Session
+            let session = try await sessionManager.createSession()
+            
             // 1. List
-            try await client.execute(uri: "/tools", method: .get) { response in
+            try await client.execute(uri: "/tools/\(session.id)", method: .get) { response in
                 #expect(response.status == .ok)
-                // We expect some default tools if implemented, or empty list
                 let tools = try JSONDecoder().decode([ToolInfo].self, from: response.body)
                 #expect(tools.count >= 0)
             }
             
             // 2. Execute (Mock execution)
-            let execReq = ExecuteToolRequest(name: "test_tool", arguments: [:])
+            let execReq = ExecuteToolRequest(sessionId: session.id, name: "test_tool", arguments: [:])
             let execBuffer = ByteBuffer(bytes: try JSONEncoder().encode(execReq))
             
             try await client.execute(uri: "/tools/execute", method: .post, body: execBuffer) { response in
-                // Should probably error out if tool not found, or return mock result
-                #expect(response.status == .notFound || response.status == .ok)
+                // Should return not found because 'test_tool' is not in session
+                #expect(response.status == .notFound)
             }
         }
     }
-}
-
-public struct ToolInfo: Codable {
-    public let id: String
-    public let name: String
-    public let description: String
-}
-
-public struct ExecuteToolRequest: Codable {
-    public let name: String
-    public let arguments: [String: AnyCodable]
 }

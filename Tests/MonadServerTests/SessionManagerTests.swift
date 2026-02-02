@@ -9,8 +9,9 @@ import MonadCore
     func testSessionCreation() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
+        let llm = MockLLMService()
         
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
         
         let session = try await sessionManager.createSession()
         
@@ -29,7 +30,8 @@ import MonadCore
     func testCleanup() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let llm = MockLLMService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
         
         let session = try await sessionManager.createSession()
         

@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Supports Chain of Thought (CoT) reasoning models that use `<think>` tags
 /// to show their reasoning process separately from the final answer.
-public struct Message: Identifiable, Equatable, Sendable {
+public struct Message: Identifiable, Equatable, Sendable, Codable {
     public let id: UUID
 
     /// The main response content (with <think> tags removed)
@@ -92,7 +92,7 @@ public struct Message: Identifiable, Equatable, Sendable {
         self.summaryType = summaryType
     }
 
-    public enum MessageRole: String, Sendable {
+    public enum MessageRole: String, Sendable, Codable {
         case user
         case assistant
         case system
@@ -100,7 +100,7 @@ public struct Message: Identifiable, Equatable, Sendable {
         case summary
     }
 
-    public enum ContextGatheringProgress: String, Sendable, CaseIterable {
+    public enum ContextGatheringProgress: String, Sendable, Codable, CaseIterable {
         case augmenting = "Augmenting Query"
         case tagging = "Generating Tags"
         case embedding = "Generating Embedding"
@@ -126,7 +126,7 @@ public struct Message: Identifiable, Equatable, Sendable {
             in: content,
             range: NSRange(location: 0, length: nsString.length),
             withTemplate: ""
-        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        ).trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
 }
 
@@ -183,7 +183,7 @@ public struct ToolCall: Identifiable, Equatable, Codable, Sendable, Hashable {
 // MARK: - Debug Info
 
 /// Debug information for messages (not persisted)
-public struct MessageDebugInfo: Equatable, Sendable {
+public struct MessageDebugInfo: Equatable, Sendable, Codable {
     /// For user messages: the full raw prompt sent to LLM (with context, notes, etc.)
     public var rawPrompt: String?
 
@@ -316,7 +316,7 @@ public struct MessageDebugInfo: Equatable, Sendable {
 }
 
 /// OpenAI API response metadata
-public struct APIResponseMetadata: Equatable, Sendable {
+public struct APIResponseMetadata: Equatable, Sendable, Codable {
     public var model: String?
     public var promptTokens: Int?
     public var completionTokens: Int?
@@ -339,6 +339,26 @@ public struct APIResponseMetadata: Equatable, Sendable {
         self.systemFingerprint = systemFingerprint
         self.duration = duration
         self.tokensPerSecond = tokensPerSecond
+    }
+}
+
+// MARK: - SemanticSearchResult Codable
+
+extension SemanticSearchResult: Codable {
+    enum CodingKeys: String, CodingKey {
+        case memory, similarity
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.memory = try container.decode(Memory.self, forKey: .memory)
+        self.similarity = try container.decodeIfPresent(Double.self, forKey: .similarity)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(memory, forKey: .memory)
+        try container.encodeIfPresent(similarity, forKey: .similarity)
     }
 }
 

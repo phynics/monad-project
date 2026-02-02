@@ -9,6 +9,8 @@ extension LLMService {
     internal func updateClient(with config: LLMConfiguration) {
         Logger.llm.debug("Updating clients for provider: \(config.provider.rawValue)")
 
+        let components = parseEndpoint(config.endpoint)
+        
         switch config.provider {
         case .ollama:
             self.setClients(
@@ -18,7 +20,6 @@ extension LLMService {
             )
 
         case .openRouter:
-            let components = parseEndpoint(config.endpoint)
             self.setClients(
                 main: OpenRouterClient(
                     apiKey: config.apiKey,
@@ -44,7 +45,6 @@ extension LLMService {
             )
 
         case .openAI, .openAICompatible:
-            let components = parseEndpoint(config.endpoint)
             self.setClients(
                 main: OpenAIClient(
                     apiKey: config.apiKey,

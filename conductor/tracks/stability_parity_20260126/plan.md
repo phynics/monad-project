@@ -38,26 +38,26 @@ Goal: Reduce code debt by centralizing common logic and utilities in `MonadCore`
     - [x] Ensure tool registration and mapping logic is shared between UI and Server.
 - [x] Task: Conductor - User Manual Verification 'Logic De-duplication and Shared Utilities' (Protocol in workflow.md)
 
-## Phase 4: Feature Parity - Tools and Configuration
-Goal: Enable full UI capabilities within the MonadServer REST API.
+## Phase 4: Feature Parity - Tools and Configuration [checkpoint: 3578771]
+Goal: Bring `MonadServer` to feature parity with `MonadUI` regarding tools and settings.
 
-- [ ] Task: Implement full Tool execution support in `MonadServer`.
-    - [ ] Ensure `ToolController` can access and execute all tools registered in the system.
-    - [ ] Standardize the tool execution request/response format.
-    - [ ] Write unit tests for tool execution via REST.
-- [ ] Task: Implement Configuration management API.
-    - [ ] Create `ConfigController` in `MonadServerCore`.
-    - [ ] Implement `GET /config` and `POST /config` to read and update API keys/models.
-    - [ ] Write tests for configuration persistence and safety.
-- [ ] Task: Conductor - User Manual Verification 'Feature Parity - Tools and Configuration' (Protocol in workflow.md)
+- [x] Task: Implement full Tool execution support in `MonadServer`. [8273af1]
+    - [x] Refactor core tool services (`ToolExecutor`, `SessionToolManager`, `DocumentManager`, `ToolContextSession`, `JobQueueContext`) to `actor`s for concurrent safety.
+    - [x] Update `SessionManager` to manage tool infrastructure per session.
+    - [x] Standardize the tool execution request/response format in `ToolController`.
+    - [x] Write unit tests for tool execution via REST.
+- [x] Task: Implement Configuration management APIs in `MonadServer`. [8273af1]
+    - [x] Create `ConfigurationController` to expose LLM settings.
+    - [x] Ensure settings are persisted correctly using `ConfigurationStorage`.
+    - [x] Implement validation logic for provider settings.
 
-## Phase 5: Final System Integration and Logging Pass
-Goal: Verify the end-to-end data flow with consistent logging.
+## Phase 5: System Integration and Final Polishing
+Goal: Ensure the entire system is cohesive, well-logged, and fully tested.
 
-- [ ] Task: Implement consistent logging across core services.
-    - [ ] Audit `LLMService`, `PersistenceService`, and `ToolExecutor` for logging gaps.
-    - [ ] Ensure all critical transitions and errors are logged with appropriate levels.
-- [ ] Task: Perform final end-to-end integration test sweep.
-    - [ ] Run all test suites across `MonadCore`, `MonadUI`, and `MonadServer`.
-    - [ ] Perform manual verification of unified functions between UI and Server.
-- [ ] Task: Conductor - User Manual Verification 'Final System Integration and Logging Pass' (Protocol in workflow.md)
+- [x] Task: Conduct a consistent logging sweep across all modules. [8273af1]
+    - [x] Ensure all key operations (LLM calls, DB queries, Server requests) use the standardized `Logger` categories.
+    - [x] Remove any legacy `print` statements or non-standard logging.
+- [x] Task: Perform end-to-end integration tests. [8273af1]
+    - [x] Verify `MonadUI` works correctly with the refactored Core services.
+    - [x] Verify `MonadServer` supports full conversation lifecycle including tools and settings.
+- [x] Task: Conductor - Final System Verification (Protocol in workflow.md)

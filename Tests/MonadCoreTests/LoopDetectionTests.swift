@@ -50,7 +50,7 @@ struct LoopDetectionTests {
         _ = try await executor.execute(toolCall)
         _ = try await executor.execute(toolCall)
         
-        executor.reset()
+        await executor.reset()
         
         // Call after reset should be successful
         let res = try await executor.execute(toolCall)

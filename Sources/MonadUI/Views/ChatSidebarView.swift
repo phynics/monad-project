@@ -40,11 +40,13 @@ public struct ChatSidebarView: View {
                 .font(.headline)
             Spacer()
 
-            if !viewModel.activeMemories.isEmpty || !viewModel.documentManager.documents.isEmpty {
+            if !viewModel.activeMemories.isEmpty || !viewModel.documentUIManager.documents.isEmpty {
                 Button("Clear All") {
                     viewModel.activeMemories.removeAll()
-                    for doc in viewModel.documentManager.documents {
-                        viewModel.documentManager.unloadDocument(path: doc.path)
+                    for doc in viewModel.documentUIManager.documents {
+                        Task {
+                            await viewModel.documentUIManager.unloadDocument(path: doc.path)
+                        }
                     }
                 }
                 .buttonStyle(.link)
@@ -97,8 +99,8 @@ public struct ChatSidebarView: View {
 
     @ViewBuilder
     private var documentsSection: some View {
-        let pinnedDocs = viewModel.documentManager.documents.filter { $0.isPinned }
-        let unpinnedDocs = viewModel.documentManager.documents.filter { !$0.isPinned }
+        let pinnedDocs = viewModel.documentUIManager.documents.filter { $0.isPinned }
+        let unpinnedDocs = viewModel.documentUIManager.documents.filter { !$0.isPinned }
 
         VStack(alignment: .leading, spacing: 12) {
             if !pinnedDocs.isEmpty {
@@ -108,8 +110,16 @@ public struct ChatSidebarView: View {
                         SidebarDocumentItem(
                             doc: doc,
                             onSelect: { selectedDocument = doc },
-                            onTogglePin: { viewModel.documentManager.togglePin(path: doc.path) },
-                            onUnload: { viewModel.documentManager.unloadDocument(path: doc.path) }
+                            onTogglePin: { 
+                                Task {
+                                    await viewModel.documentUIManager.togglePin(path: doc.path) 
+                                }
+                            },
+                            onUnload: { 
+                                Task {
+                                    await viewModel.documentUIManager.unloadDocument(path: doc.path) 
+                                }
+                            }
                         )
                     }
                 }
@@ -122,8 +132,16 @@ public struct ChatSidebarView: View {
                         SidebarDocumentItem(
                             doc: doc,
                             onSelect: { selectedDocument = doc },
-                            onTogglePin: { viewModel.documentManager.togglePin(path: doc.path) },
-                            onUnload: { viewModel.documentManager.unloadDocument(path: doc.path) }
+                            onTogglePin: { 
+                                Task {
+                                    await viewModel.documentUIManager.togglePin(path: doc.path) 
+                                }
+                            },
+                            onUnload: { 
+                                Task {
+                                    await viewModel.documentUIManager.unloadDocument(path: doc.path) 
+                                }
+                            }
                         )
                     }
                 }

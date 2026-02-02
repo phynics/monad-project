@@ -2,7 +2,7 @@ import MonadCore
 import SwiftUI
 
 public struct ChatHeaderView: View {
-    public var llmService: LLMService
+    public var llmManager: LLMManager
     @Binding public var showSidebar: Bool
     public var performanceMetrics: PerformanceMetrics
     public let messagesEmpty: Bool
@@ -17,7 +17,7 @@ public struct ChatHeaderView: View {
     public let onVacuum: () -> Void
 
     public init(
-        llmService: LLMService,
+        llmManager: LLMManager,
         showSidebar: Binding<Bool>,
         performanceMetrics: PerformanceMetrics,
         messagesEmpty: Bool,
@@ -31,7 +31,7 @@ public struct ChatHeaderView: View {
         onCompress: @escaping (CompressionScope) -> Void,
         onVacuum: @escaping () -> Void
     ) {
-        self.llmService = llmService
+        self.llmManager = llmManager
         self._showSidebar = showSidebar
         self.performanceMetrics = performanceMetrics
         self.messagesEmpty = messagesEmpty
@@ -81,7 +81,7 @@ public struct ChatHeaderView: View {
             Spacer()
 
             // Status Indicator
-            if llmService.isConfigured {
+            if llmManager.isConfigured {
                 HStack(spacing: 4) {
                     Circle()
                         .fill(Color.green)
@@ -95,12 +95,12 @@ public struct ChatHeaderView: View {
                         Divider()
                         
                         ForEach(LLMProvider.allCases) { provider in
-                            if let config = llmService.configuration.providers[provider] {
+                            if let config = llmManager.configuration.providers[provider] {
                                 Button {
                                     updateProvider(provider)
                                 } label: {
                                     HStack {
-                                        if provider == llmService.configuration.provider {
+                                        if provider == llmManager.configuration.provider {
                                             Label("\(provider.rawValue) (\(config.modelName))", systemImage: "checkmark")
                                         } else {
                                             Text("\(provider.rawValue) (\(config.modelName))")
@@ -116,7 +116,7 @@ public struct ChatHeaderView: View {
                         }
                     } label: {
                         HStack(spacing: 2) {
-                            Text("\(llmService.configuration.provider.rawValue): \(llmService.configuration.modelName)")
+                            Text("\(llmManager.configuration.provider.rawValue): \(llmManager.configuration.modelName)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Image(systemName: "chevron.down")
@@ -140,8 +140,6 @@ public struct ChatHeaderView: View {
                     .foregroundColor(.red)
                 }
             }
-
-            // Archive button
 
             // Archive button
             Button(action: onArchive) {
@@ -221,9 +219,9 @@ public struct ChatHeaderView: View {
 
     private func updateProvider(_ provider: LLMProvider) {
         Task {
-            var config = llmService.configuration
+            var config = llmManager.configuration
             config.activeProvider = provider
-            try? await llmService.updateConfiguration(config)
+            try? await llmManager.updateConfiguration(config)
         }
     }
 }

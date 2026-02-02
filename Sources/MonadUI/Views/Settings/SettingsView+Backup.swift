@@ -72,7 +72,7 @@ extension SettingsView {
     internal func exportConfiguration() {
         Task {
             do {
-                let data = try await llmService.exportConfiguration()
+                let data = try await llmManager.exportConfiguration()
 
                 #if os(macOS)
                     let panel = NSSavePanel()
@@ -105,7 +105,7 @@ extension SettingsView {
                 Task {
                     do {
                         let data = try Data(contentsOf: url)
-                        try await llmService.importConfiguration(from: data)
+                        try await llmManager.importConfiguration(from: data)
                         loadSettings()
                         showingSaveSuccess = true
 

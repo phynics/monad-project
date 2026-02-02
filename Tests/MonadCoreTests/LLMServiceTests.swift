@@ -22,8 +22,8 @@ struct LLMServiceTests {
 
         try await llmService.updateConfiguration(config)
 
-        #expect(llmService.isConfigured)
-        #expect(llmService.configuration.modelName == "test-model")
+        #expect(await llmService.isConfigured)
+        #expect(await llmService.configuration.modelName == "test-model")
     }
 
     @Test("Test prompt building logic and structure")

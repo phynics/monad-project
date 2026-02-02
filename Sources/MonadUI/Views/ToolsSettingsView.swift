@@ -4,7 +4,8 @@ import SwiftUI
 /// Simple UI to enable/disable tools for current session
 struct ToolsSettingsView: View {
     var toolManager: SessionToolManager
-    let availableTools: [Tool]
+    @State private var availableTools: [any MonadCore.Tool] = []
+    @State private var enabledTools: Set<String> = []
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -13,9 +14,12 @@ struct ToolsSettingsView: View {
                 ForEach(availableTools, id: \.id) { tool in
                     ToolRow(
                         tool: tool,
-                        isEnabled: toolManager.enabledTools.contains(tool.id),
+                        isEnabled: enabledTools.contains(tool.id),
                         onToggle: {
-                            toolManager.toggleTool(tool.id)
+                            Task {
+                                await toolManager.toggleTool(tool.id)
+                                await refreshState()
+                            }
                         }
                     )
                 }
@@ -28,13 +32,25 @@ struct ToolsSettingsView: View {
                     }
                 }
             }
+            .task {
+                await refreshState()
+            }
         }
         .frame(minWidth: 400, minHeight: 300)
+    }
+    
+    private func refreshState() async {
+        let tools = await toolManager.getAvailableTools()
+        let enabled = await toolManager.enabledTools
+        await MainActor.run {
+            self.availableTools = tools
+            self.enabledTools = enabled
+        }
     }
 }
 
 struct ToolRow: View {
-    let tool: Tool
+    let tool: any MonadCore.Tool
     let isEnabled: Bool
     let onToggle: () -> Void
 

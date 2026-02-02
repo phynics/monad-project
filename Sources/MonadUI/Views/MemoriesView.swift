@@ -1,5 +1,6 @@
 import MonadCore
 import SwiftUI
+import OSLog
 
 public struct MemoriesView: View {
     let persistenceManager: PersistenceManager
@@ -124,7 +125,7 @@ public struct MemoriesView: View {
             do {
                 memories = try await persistenceManager.fetchAllMemories()
             } catch {
-                print("Failed to fetch memories: \(error)")
+                Logger.database.error("Failed to fetch memories: \(error)")
             }
         }
     }
@@ -146,7 +147,7 @@ public struct MemoriesView: View {
                     }
                 }
             } catch {
-                print("Failed to delete memory: \(error)")
+                Logger.database.error("Failed to delete memory: \(error)")
             }
         }
     }

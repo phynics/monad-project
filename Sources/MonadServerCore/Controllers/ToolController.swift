@@ -17,10 +17,12 @@ public struct ToolInfo: Codable, Sendable {
 }
 
 public struct ExecuteToolRequest: Codable, Sendable {
+    public let sessionId: UUID
     public let name: String
     public let arguments: [String: AnyCodable]
     
-    public init(name: String, arguments: [String: AnyCodable]) {
+    public init(sessionId: UUID, name: String, arguments: [String: AnyCodable]) {
+        self.sessionId = sessionId
         self.name = name
         self.arguments = arguments
     }
@@ -34,23 +36,51 @@ public struct ToolController<Context: RequestContext>: Sendable {
     }
     
     public func addRoutes(to group: RouterGroup<Context>) {
-        group.get("/", use: list)
+        group.get("/{id}", use: list)
         group.post("/execute", use: execute)
     }
     
     @Sendable func list(_ request: Request, context: Context) async throws -> [ToolInfo] {
-        // For now, return an empty list or some default tools
-        // In a real scenario, we might want to get tools from a global registry or per session
-        return []
+        let idString = try context.parameters.require("id")
+        guard let id = UUID(uuidString: idString) else {
+            throw HTTPError(.badRequest)
+        }
+        
+        guard let toolManager = await sessionManager.getToolManager(for: id) else {
+            throw HTTPError(.notFound)
+        }
+        
+        let tools = await toolManager.getEnabledTools()
+        return tools.map { ToolInfo(id: $0.id, name: $0.name, description: $0.description) }
     }
     
     @Sendable func execute(_ request: Request, context: Context) async throws -> Response {
         let execReq = try await request.decode(as: ExecuteToolRequest.self, context: context)
         
-        // Tool execution usually requires a ToolExecutor which is @MainActor
-        // For the REST API MVP, we might need a non-actor ToolExecutor or a way to bridge.
+        guard let toolExecutor = await sessionManager.getToolExecutor(for: execReq.sessionId) else {
+            throw HTTPError(.notFound)
+        }
         
-        // For now, let's return a 404 since we don't have tools registered in the server yet.
-        throw HTTPError(.notFound, message: "Tool '\(execReq.name)' not found or execution not supported via REST yet")
+        let toolCall = ToolCall(name: execReq.name, arguments: execReq.arguments)
+        do {
+            let result = try await toolExecutor.execute(toolCall)
+            return try result.response(from: request, context: context)
+        } catch let error as ToolExecutorError {
+            switch error {
+            case .toolNotFound:
+                throw HTTPError(.notFound)
+            }
+        } catch {
+            throw error
+        }
+    }
+}
+
+extension Message: ResponseGenerator {
+    public func response(from request: Request, context: some RequestContext) throws -> Response {
+        let data = try SerializationUtils.jsonEncoder.encode(self)
+        var headers = HTTPFields()
+        headers[.contentType] = "application/json"
+        return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
     }
 }

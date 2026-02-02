@@ -1,6 +1,7 @@
 import ArgumentParser
 import Hummingbird
 import Foundation
+import OSLog
 import MonadCore
 import MonadServerCore
 
@@ -16,11 +17,12 @@ struct MonadServer: AsyncParsableCommand {
     func run() async throws {
         // Initialize Persistence
         let persistenceService: PersistenceService
+        let logger = Logger.server
         do {
             persistenceService = try PersistenceService.create()
-            print("Persistence initialized.")
+            logger.info("Persistence initialized.")
         } catch {
-            print("Failed to initialize persistence: \(error)")
+            logger.error("Failed to initialize persistence: \(error)")
             throw error
         }
 
@@ -31,9 +33,9 @@ struct MonadServer: AsyncParsableCommand {
         router.add(middleware: ErrorMiddleware())
         
         let embeddingService = LocalEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistenceService, embeddingService: embeddingService)
         let llmService = ServerLLMService()
         await llmService.loadConfiguration()
+        let sessionManager = SessionManager(persistenceService: persistenceService, embeddingService: embeddingService, llmService: llmService)
         
         // Public routes
         router.get("/health") { _, _ -> String in
@@ -66,13 +68,16 @@ struct MonadServer: AsyncParsableCommand {
         
         let toolController = ToolController<BasicRequestContext>(sessionManager: sessionManager)
         toolController.addRoutes(to: protected.group("/tools"))
+        
+        let configController = ConfigurationController<BasicRequestContext>(llmService: llmService)
+        configController.addRoutes(to: protected.group("/config"))
 
         let app = Application(
             router: router,
             configuration: .init(address: .hostname(hostname, port: port))
         )
 
-        print("Server starting on \(hostname):\(port)")
+        logger.info("Server starting on \(hostname):\(port)")
         try await app.runService()
     }
 }

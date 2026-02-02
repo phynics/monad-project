@@ -32,8 +32,8 @@ extension ChatViewModel {
             }
 
             let contextNotes = try await persistenceManager.fetchAllNotes()
-            let enabledTools = toolManager.getEnabledTools()
-            let contextDocuments = injectedDocuments
+            let enabledTools = await toolManager.getEnabledTools()
+            let contextDocuments = await documentManager.getEffectiveDocuments(limit: await llmService.configuration.documentContextLimit)
 
             // 2. Call LLM with empty userQuery, relying on chatHistory
             let (stream, rawPrompt, structuredContext) = await llmService.chatStreamWithContext(
@@ -174,25 +174,5 @@ extension ChatViewModel {
 
         currentTask = nil
         isLoading = false
-    }
-
-    internal func handleCancellation() {
-        Logger.chat.notice("Generation cancelled by user")
-        if !streamingCoordinator.streamingContent.isEmpty {
-            let assistantMessage = Message(
-                content: streamingCoordinator.streamingContent + "\n\n[Generation cancelled]",
-                role: .assistant,
-                think: streamingCoordinator.streamingThinking.isEmpty ? nil : streamingCoordinator.streamingThinking
-            )
-            messages.append(assistantMessage)
-        }
-        streamingCoordinator.stopStreaming()
-        currentTask = nil
-        isLoading = false
-    }
-
-    public func cancelGeneration() {
-        currentTask?.cancel()
-        currentTask = nil
     }
 }

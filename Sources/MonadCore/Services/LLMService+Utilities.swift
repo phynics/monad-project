@@ -5,7 +5,7 @@ import OpenAI
 extension LLMService {
     /// Generate tags/keywords for a given text using the LLM
     public func generateTags(for text: String) async throws -> [String] {
-        guard let client = getUtilityClient() ?? getClient() else {
+        guard let client = await getUtilityClient() ?? getClient() else {
             return []
         }
         
@@ -49,7 +49,7 @@ extension LLMService {
 
     /// Generate a concise title for a conversation
     public func generateTitle(for messages: [Message]) async throws -> String {
-        guard let client = getUtilityClient() ?? getClient(), !messages.isEmpty else {
+        guard let client = await getUtilityClient() ?? getClient(), !messages.isEmpty else {
             return "New Conversation"
         }
 
@@ -84,7 +84,7 @@ extension LLMService {
         transcript: String,
         recalledMemories: [Memory]
     ) async throws -> [String: Double] {
-        guard let client = getUtilityClient() ?? getClient(), !recalledMemories.isEmpty else {
+        guard let client = await getUtilityClient() ?? getClient(), !recalledMemories.isEmpty else {
             return [:]
         }
 
@@ -129,7 +129,7 @@ extension LLMService {
             
             return scores
         } catch {
-            Logger.llm.error("Failed to evaluate recall: \(error.localizedDescription)")
+            logger.error("Failed to evaluate recall: \(error.localizedDescription)")
             return [:]
         }
     }

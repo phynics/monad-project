@@ -16,10 +16,10 @@ public struct LaunchSubagentTool: Tool, @unchecked Sendable {
         """
     }
     
-    private let llmService: LLMService
+    private let llmService: any LLMServiceProtocol
     private let documentManager: DocumentManager
     
-    public init(llmService: LLMService, documentManager: DocumentManager) {
+    public init(llmService: any LLMServiceProtocol, documentManager: DocumentManager) {
         self.llmService = llmService
         self.documentManager = documentManager
     }
@@ -90,6 +90,7 @@ public struct LaunchSubagentTool: Tool, @unchecked Sendable {
             chatHistory: [],
             tools: [], // Subagent doesn't use tools for now (to avoid recursion depth issues)
             systemInstructions: "You are a focused subagent. You have been provided with specific documents to analyze. Answer the user's prompt based ONLY on these documents and your general knowledge. IMPORTANT: Be extremely brief and to the point. Provide only the facts and requested analysis without conversational filler.",
+            responseFormat: nil,
             useFastModel: true
         )
         

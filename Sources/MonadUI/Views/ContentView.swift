@@ -36,7 +36,7 @@ public struct ContentView: View {
 
             VStack(spacing: 0) {
                 ChatHeaderView(
-                    llmService: llmService,
+                    llmManager: viewModel.llmManager,
                     showSidebar: $showSidebar,
                     performanceMetrics: viewModel.performanceMetrics,
                     messagesEmpty: viewModel.messages.isEmpty,
@@ -57,7 +57,7 @@ public struct ContentView: View {
 
                 MessageListView(
                     viewModel: viewModel,
-                    llmServiceConfigured: llmService.isConfigured,
+                    llmServiceConfigured: viewModel.llmManager.isConfigured,
                     onConfigureSettings: { openWindow(id: "settings") }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -84,8 +84,7 @@ public struct ContentView: View {
         }
         .sheet(isPresented: $showingTools) {
             ToolsSettingsView(
-                toolManager: viewModel.toolManager,
-                availableTools: viewModel.toolManager.getEnabledTools()
+                toolManager: viewModel.toolManager
             )
         }
         .confirmationDialog(

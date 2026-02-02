@@ -13,12 +13,10 @@ import NIOCore
         // Setup Deps
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
-        let llmService = ServerLLMService()
+        let llmService = MockLLMService()
+        llmService.mockClient.nextResponse = "Hello from AI"
         
-        let mockClient = MockLLMClient()
-        mockClient.nextResponse = "Hello from AI"
-        await llmService.setClients(main: mockClient, utility: mockClient, fast: mockClient)
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llmService)
         
         // Create Session
         let session = try await sessionManager.createSession()
@@ -49,8 +47,10 @@ import NIOCore
         // Setup Deps
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
-        let llmService = ServerLLMService() // Not configured by default
+        let llmService = MockLLMService()
+        llmService.isConfigured = false
+        
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llmService)
         
         // Create Session
         let session = try await sessionManager.createSession()

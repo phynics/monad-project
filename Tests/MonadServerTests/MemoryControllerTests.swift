@@ -12,7 +12,8 @@ import NIOCore
     func testMemoriesCRUD() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let llm = MockLLMService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
         
         let router = Router()
         let controller = MemoryController<BasicRequestContext>(sessionManager: sessionManager)

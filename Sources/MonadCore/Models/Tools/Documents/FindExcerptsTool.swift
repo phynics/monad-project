@@ -16,10 +16,10 @@ public struct FindExcerptsTool: Tool, Sendable {
         """
     }
 
-    private let llmService: LLMService
+    private let llmService: any LLMServiceProtocol
     private let documentManager: DocumentManager
 
-    public init(llmService: LLMService, documentManager: DocumentManager) {
+    public init(llmService: any LLMServiceProtocol, documentManager: DocumentManager) {
         self.llmService = llmService
         self.documentManager = documentManager
     }
@@ -84,6 +84,7 @@ public struct FindExcerptsTool: Tool, Sendable {
             tools: [],
             systemInstructions:
                 "You are a document scanner subagent. Your goal is to find specific information in a document and report its exact character offset and length. Be precise.",
+            responseFormat: nil,
             useFastModel: true
         )
 

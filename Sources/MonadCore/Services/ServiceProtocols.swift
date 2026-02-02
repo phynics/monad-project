@@ -3,10 +3,9 @@ import OpenAI
 import GRDB
 
 /// Protocol for LLM Service to enable mocking and isolation
-@MainActor
 public protocol LLMServiceProtocol: Sendable {
-    var isConfigured: Bool { get }
-    var configuration: LLMConfiguration { get }
+    var isConfigured: Bool { get async }
+    var configuration: LLMConfiguration { get async }
     
     // Configuration Management
     func loadConfiguration() async

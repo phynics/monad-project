@@ -19,7 +19,7 @@ import MonadCore
         #expect(client == nil, "Client should be nil initially (no API Key)")
         
         // Test updating configuration
-        var config = await service.getConfiguration()
+        var config = await service.configuration
         config.activeProvider = .ollama
         config.providers[.ollama]?.modelName = "test-model"
         // Ollama doesn't need API Key, just endpoint
@@ -27,7 +27,7 @@ import MonadCore
         
         try await service.updateConfiguration(config)
         
-        let newConfig = await service.getConfiguration()
+        let newConfig = await service.configuration
         #expect(newConfig.activeProvider == .ollama)
         
         let newClient = await service.getClient()

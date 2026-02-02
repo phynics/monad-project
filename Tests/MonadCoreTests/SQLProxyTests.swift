@@ -40,7 +40,7 @@ struct SQLProxyTests {
         
         // Re-inject tool with delegate into manager
         let sqlTool = ExecuteSQLTool(persistenceService: persistence, confirmationDelegate: mockDelegate)
-        viewModel.toolManager.updateAvailableTools([sqlTool])
+        await viewModel.toolManager.updateAvailableTools([sqlTool])
         
         _ = try await viewModel.toolOrchestrator.handleToolCalls([toolCall], assistantMsgId: UUID())
         
@@ -55,7 +55,7 @@ struct SQLProxyTests {
         let mockDelegate = MockSQLConfirmationDelegate()
         
         let sqlTool = ExecuteSQLTool(persistenceService: persistence, confirmationDelegate: mockDelegate)
-        viewModel.toolManager.updateAvailableTools([sqlTool])
+        await viewModel.toolManager.updateAvailableTools([sqlTool])
         
         _ = try await viewModel.toolOrchestrator.handleToolCalls([toolCall], assistantMsgId: UUID())
         
@@ -70,7 +70,7 @@ struct SQLProxyTests {
         mockDelegate.response = false // Simulate cancel
         
         let sqlTool = ExecuteSQLTool(persistenceService: persistence, confirmationDelegate: mockDelegate)
-        viewModel.toolManager.updateAvailableTools([sqlTool])
+        await viewModel.toolManager.updateAvailableTools([sqlTool])
         
         let results = try await viewModel.toolExecutor.execute(toolCall)
         

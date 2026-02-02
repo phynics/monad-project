@@ -9,16 +9,16 @@ extension ChatViewModel {
             persistenceManager.currentSession?.workingDirectory
             ?? FileManager.default.currentDirectoryPath
 
-        let availableTools: [MonadCore.Tool] = [
+        let availableTools: [any MonadCore.Tool] = [
             ExecuteSQLTool(persistenceService: persistenceManager.persistence, confirmationDelegate: self),
             // Filesystem Tools
             ChangeDirectoryTool(
                 currentPath: currentWD,
                 onChange: { [weak self] newPath in
                     guard let self = self else { return }
-                    try? await self.persistenceManager.updateWorkingDirectory(newPath)
-                    await MainActor.run {
-                        self.invalidateToolInfrastructure()
+                    Task {
+                        try? await self.persistenceManager.updateWorkingDirectory(newPath)
+                        await self.invalidateToolInfrastructure()
                     }
                 }),
             ListDirectoryTool(root: currentWD),

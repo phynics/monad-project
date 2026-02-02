@@ -30,9 +30,9 @@ public struct ChatResponse: Codable, Sendable, ResponseGenerator {
 
 public struct ChatController<Context: RequestContext>: Sendable {
     public let sessionManager: SessionManager
-    public let llmService: ServerLLMService
+    public let llmService: any LLMServiceProtocol
     
-    public init(sessionManager: SessionManager, llmService: ServerLLMService) {
+    public init(sessionManager: SessionManager, llmService: any LLMServiceProtocol) {
         self.sessionManager = sessionManager
         self.llmService = llmService
     }
@@ -77,13 +77,20 @@ public struct ChatController<Context: RequestContext>: Sendable {
         }
         
         // 4. Send Message with Context
+        guard await llmService.isConfigured else {
+            throw HTTPError(.serviceUnavailable)
+        }
+        
         let (stream, _, _) = try await llmService.chatStreamWithContext(
             userQuery: chatRequest.message,
             contextNotes: contextData.notes,
             documents: [],
             memories: contextData.memories.map { $0.memory },
             chatHistory: history,
-            tools: []
+            tools: [],
+            systemInstructions: nil,
+            responseFormat: nil,
+            useFastModel: false
         )
         
         var fullResponse = ""
@@ -141,13 +148,20 @@ public struct ChatController<Context: RequestContext>: Sendable {
             )
         }
         
+        guard await llmService.isConfigured else {
+            throw HTTPError(.serviceUnavailable)
+        }
+        
         let streamData = try await llmService.chatStreamWithContext(
             userQuery: chatRequest.message,
             contextNotes: contextData.notes,
             documents: [],
             memories: contextData.memories.map { $0.memory },
             chatHistory: history,
-            tools: []
+            tools: [],
+            systemInstructions: nil,
+            responseFormat: nil,
+            useFastModel: false
         )
         
         let memories = contextData.memories.map { $0.memory }

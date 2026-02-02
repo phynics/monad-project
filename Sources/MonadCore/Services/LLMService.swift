@@ -30,17 +30,15 @@ extension OpenAIClient: LLMClientProtocol {}
 extension OllamaClient: LLMClientProtocol {}
 
 /// Service for managing LLM interactions with configuration support
-@MainActor
-@Observable
-public final class LLMService: LLMServiceProtocol {
-    public var configuration: LLMConfiguration
-    public var isConfigured: Bool
+public actor LLMService: LLMServiceProtocol {
+    public private(set) var configuration: LLMConfiguration = .openAI
+    public private(set) var isConfigured: Bool = false
 
     /// External tool providers (e.g. MCP) injected from the platform targets
-    public var toolProviders: [ToolProvider] = []
+    private var toolProviders: [any ToolProvider] = []
     
     /// Service for generating text embeddings
-    public let embeddingService: any EmbeddingService
+    public nonisolated let embeddingService: any EmbeddingService
 
     private var client: (any LLMClientProtocol)?
     private var utilityClient: (any LLMClientProtocol)?
@@ -48,7 +46,7 @@ public final class LLMService: LLMServiceProtocol {
     
     private let storage: ConfigurationStorage
     public let promptBuilder: PromptBuilder
-    private let logger = Logger.llm
+    internal let logger = Logger.llm
 
     // MARK: - Client Accessors
 
@@ -86,22 +84,21 @@ public final class LLMService: LLMServiceProtocol {
         self.client = client
         self.utilityClient = utilityClient
         self.fastClient = fastClient
-        
-        // Load synchronously on main actor during init
-        self.configuration = .openAI
         self.isConfigured = client != nil
-
-        Task {
+        
+        let needsLoad = client == nil
+        
+        Task { [needsLoad] in
             await storage.migrateIfNeeded()
-            if self.client == nil {
-                await loadConfiguration()
+            if needsLoad {
+                await self.loadConfiguration()
             }
         }
     }
 
     // MARK: - Public API
 
-    public func registerToolProvider(_ provider: ToolProvider) {
+    public func registerToolProvider(_ provider: any ToolProvider) {
         toolProviders.append(provider)
     }
 
@@ -192,7 +189,7 @@ public final class LLMService: LLMServiceProtocol {
         documents: [DocumentContext] = [],
         memories: [Memory] = [],
         chatHistory: [Message],
-        tools: [Tool] = [],
+        tools: [any Tool] = [],
         systemInstructions: String? = nil
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],

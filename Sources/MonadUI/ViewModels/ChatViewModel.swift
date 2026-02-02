@@ -26,20 +26,27 @@ public final class ChatViewModel {
 
     // MARK: - Service Dependencies
     public let llmService: LLMService
+    public let llmManager: LLMManager // UI Wrapper
+    
     public let persistenceManager: PersistenceManager
     public let contextManager: ContextManager
+    
     public let documentManager: DocumentManager
+    public let documentUIManager: DocumentUIManager // UI Wrapper
+    
     public let streamingCoordinator: StreamingCoordinator
     public let conversationArchiver: ConversationArchiver
     public let contextCompressor: ContextCompressor
+    public let toolContextSession: ToolContextSession
+    public let jobQueueContext: JobQueueContext
     
     public var toolOrchestrator: ToolOrchestrator!
     public var sessionOrchestrator: SessionOrchestrator!
     public var maintenanceOrchestrator: MaintenanceOrchestrator!
 
-    // MARK: - Tool Infrastructure (owned by ChatViewModel)
-    public let jobQueueContext: JobQueueContext
-    public let toolContextSession: ToolContextSession
+    // MARK: - Cached State for UI
+    public private(set) var injectedDocuments: [DocumentContext] = []
+    public private(set) var enabledTools: [any MonadCore.Tool] = []
 
     /// Tool manager - lazily initialized via computed property
     private var _toolManager: SessionToolManager?
@@ -50,6 +57,16 @@ public final class ChatViewModel {
         let manager = createToolManager()
         _toolManager = manager
         _toolsNeedRecreation = false
+        return manager
+    }
+    
+    private var _toolUIManager: ToolUIManager?
+    public var toolUIManager: ToolUIManager {
+        if let existing = _toolUIManager, !_toolsNeedRecreation {
+            return existing
+        }
+        let manager = ToolUIManager(manager: toolManager)
+        _toolUIManager = manager
         return manager
     }
 
@@ -81,11 +98,6 @@ public final class ChatViewModel {
         return (pinned + Array(unpinned)).map { $0.memory }
     }
 
-    public var injectedDocuments: [DocumentContext] {
-        documentManager.getEffectiveDocuments(
-            limit: llmService.configuration.documentContextLimit)
-    }
-
     // Expose streaming state
     public var streamingThinking: String {
         streamingCoordinator.streamingThinking
@@ -102,12 +114,16 @@ public final class ChatViewModel {
     // MARK: - Initialization
     public init(llmService: LLMService, persistenceManager: PersistenceManager) {
         self.llmService = llmService
+        self.llmManager = LLMManager(service: llmService)
+        
         self.persistenceManager = persistenceManager
         self.contextManager = ContextManager(
             persistenceService: persistenceManager.persistence,
             embeddingService: llmService.embeddingService
         )
         self.documentManager = DocumentManager()
+        self.documentUIManager = DocumentUIManager(manager: documentManager)
+        
         self.streamingCoordinator = StreamingCoordinator()
         self.conversationArchiver = ConversationArchiver(
             persistence: persistenceManager.persistence,
@@ -128,6 +144,8 @@ public final class ChatViewModel {
             contextCompressor: contextCompressor,
             persistenceManager: persistenceManager
         )
+        
+        // Setup ToolOrchestrator (needs toolExecutor which is created lazily)
         self.toolOrchestrator = ToolOrchestrator(
             toolExecutor: self.toolExecutor,
             persistenceManager: persistenceManager,
@@ -137,6 +155,7 @@ public final class ChatViewModel {
 
         Task {
             await checkStartupState()
+            await refreshUIState()
         }
     }
 
@@ -146,7 +165,11 @@ public final class ChatViewModel {
     public func invalidateToolInfrastructure() {
         _toolsNeedRecreation = true
         _toolManager = nil
+        _toolUIManager = nil
         _toolExecutor = nil
+        Task {
+            await refreshUIState()
+        }
     }
 
     public func refreshJobs() async {
@@ -155,6 +178,36 @@ public final class ChatViewModel {
         } catch {
             logger.error("Failed to refresh jobs: \(error.localizedDescription)")
         }
+    }
+    
+    public func refreshUIState() async {
+        let docs = await documentManager.getEffectiveDocuments(limit: await llmService.configuration.memoryContextLimit) // Fixed limit param
+        let tools = await toolManager.getEnabledTools()
+        
+        await MainActor.run {
+            self.injectedDocuments = docs
+            self.enabledTools = tools
+        }
+    }
+
+    internal func handleCancellation() {
+        logger.notice("Generation cancelled by user")
+        if !streamingCoordinator.streamingContent.isEmpty {
+            let assistantMessage = Message(
+                content: streamingCoordinator.streamingContent + "\n\n[Generation cancelled]",
+                role: .assistant,
+                think: streamingCoordinator.streamingThinking.isEmpty ? nil : streamingCoordinator.streamingThinking
+            )
+            messages.append(assistantMessage)
+        }
+        streamingCoordinator.stopStreaming()
+        currentTask = nil
+        isLoading = false
+    }
+
+    public func cancelGeneration() {
+        currentTask?.cancel()
+        currentTask = nil
     }
 }
 

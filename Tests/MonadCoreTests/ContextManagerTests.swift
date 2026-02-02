@@ -29,7 +29,7 @@ final class ContextManagerTests: XCTestCase {
         // Verify
         XCTAssertEqual(context.memories.count, 1)
         XCTAssertEqual(context.memories.first?.memory.id, expectedMemory.id)
-        XCTAssertEqual(context.memories.first?.similarity, 0.9)
+        XCTAssertEqual(context.memories.first?.similarity ?? 0, 0.9, accuracy: 0.001)
         XCTAssertEqual(mockEmbedding.lastInput, "How to use SwiftUI?")
     }
     

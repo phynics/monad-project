@@ -8,17 +8,6 @@ extension ChatViewModel {
         let cleanedInput = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedInput.isEmpty else { return }
 
-        guard llmService.isConfigured else {
-            errorMessage = "LLM Service is not configured."
-            return
-        }
-
-        // Basic sanity check for extremely long input
-        if cleanedInput.count > 100_000 {
-            errorMessage = "Input is too long (\(cleanedInput.count) characters). Please shorten your message."
-            return
-        }
-
         let prompt = cleanedInput
         inputText = ""
         isLoading = true
@@ -30,21 +19,35 @@ extension ChatViewModel {
         messages.append(userMessage)
         let userMsgId = userMessage.id
 
-        // Reset loop detection for the new interaction
-        toolExecutor.reset()
-
         currentTask = Task {
             do {
+                guard await llmService.isConfigured else {
+                    errorMessage = "LLM Service is not configured."
+                    isLoading = false
+                    return
+                }
+
+                // Basic sanity check for extremely long input
+                if prompt.count > 100_000 {
+                    errorMessage = "Input is too long (\(prompt.count) characters). Please shorten your message."
+                    isLoading = false
+                    return
+                }
+
+                // Reset loop detection for the new interaction
+                await toolExecutor.reset()
+
                 // 1. Gather Context via ContextManager
                 let service = llmService
                 let tagGenerator: @Sendable (String) async throws -> [String] = { text in
                     try await service.generateTags(for: text)
                 }
 
+                let memoryLimit = await llmService.configuration.memoryContextLimit
                 let contextData = try await contextManager.gatherContext(
                     for: prompt,
                     history: messages,
-                    limit: llmService.configuration.memoryContextLimit,
+                    limit: memoryLimit,
                     tagGenerator: tagGenerator,
                     onProgress: { [weak self] progress in
                         guard let self = self else { return }
@@ -60,13 +63,14 @@ extension ChatViewModel {
                 updateActiveMemories(with: contextData.memories.map { $0.memory })
 
                 // 2. Build the prompt for debug info without starting a stream
+                let enabledTools = await toolManager.getEnabledTools()
                 let (_, _, _) = await llmService.buildPrompt(
                     userQuery: prompt,
                     contextNotes: contextData.notes,
                     documents: injectedDocuments,
                     memories: injectedMemories,
                     chatHistory: messages,
-                    tools: toolManager.getEnabledTools()
+                    tools: enabledTools
                 )
 
                 // Persist the user message now that we have context data (memories)

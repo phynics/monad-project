@@ -28,7 +28,7 @@ struct ChatInputView: View {
                     }
                     .disabled(
                         viewModel.isLoading || viewModel.isStreaming
-                            || !viewModel.llmService.isConfigured)
+                            || !viewModel.llmManager.isConfigured)
 
                 if viewModel.isStreaming {
                     Button(action: viewModel.cancelGeneration) {
@@ -46,7 +46,7 @@ struct ChatInputView: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(
                         viewModel.inputText.isEmpty || viewModel.isLoading || viewModel.isStreaming
-                            || !viewModel.llmService.isConfigured)
+                            || !viewModel.llmManager.isConfigured)
                 }
             }
             .padding()

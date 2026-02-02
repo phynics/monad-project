@@ -13,7 +13,8 @@ import HTTPTypes
     func testChatNoSession() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let llm = MockLLMService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
         
         let router = Router()
         router.add(middleware: ErrorMiddleware())
@@ -39,7 +40,8 @@ import HTTPTypes
     func testChatInvalidUUID() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let llm = MockLLMService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
         
         let router = Router()
         router.add(middleware: ErrorMiddleware())
@@ -65,7 +67,8 @@ import HTTPTypes
     func testAuthMissingHeader() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let llm = MockLLMService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
         
         let router = Router()
         router.add(middleware: ErrorMiddleware())
@@ -85,7 +88,8 @@ import HTTPTypes
     func testAuthInvalidToken() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let llm = MockLLMService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
         
         let router = Router()
         router.add(middleware: ErrorMiddleware())
@@ -107,7 +111,8 @@ import HTTPTypes
     func testDeleteNoMemory() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
+        let llm = MockLLMService()
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
         
         let router = Router()
         router.add(middleware: ErrorMiddleware())

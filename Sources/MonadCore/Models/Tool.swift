@@ -1,6 +1,5 @@
 import Foundation
 import OSLog
-import Observation
 import OpenAI
 
 /// A tool that the LLM can call
@@ -91,7 +90,7 @@ public func formatToolsForPrompt(_ tools: [any Tool]) async -> String {
         \(toolSpecs.joined(separator: "\n"))
 
         Usage: Wrap JSON tool calls in <tool_call> tags:
-        <tool_call>{"name": "tool_id", "arguments": {...}}</tool_call>
+        <tool_call>{\"name\": \"tool_id\", \"arguments\": {...}}</tool_call>
 
         Rules:
         - Use tools only for missing context.
@@ -129,73 +128,5 @@ public struct ToolConfiguration: Codable, Identifiable, Sendable {
     public init(toolId: String, isEnabled: Bool = true) {
         self.id = toolId
         self.isEnabled = isEnabled
-    }
-}
-
-/// Session-specific tool settings
-@Observable
-@MainActor
-public final class SessionToolManager {
-    public var enabledTools: Set<String> = []
-
-    /// available tools in the system
-    public var availableTools: [Tool]
-
-    /// Context session for dynamic tool injection
-    public var contextSession: ToolContextSession?
-
-    public init(availableTools: [Tool], contextSession: ToolContextSession? = nil) {
-        self.availableTools = availableTools
-        self.contextSession = contextSession
-        // Enable all tools by default
-        self.enabledTools = Set(availableTools.map { $0.id })
-    }
-
-    /// Update available tools
-    public func updateAvailableTools(_ tools: [Tool]) {
-        self.availableTools = tools
-        // Keep enabledTools set in sync with available tools (don't remove enabled status if tool still exists)
-        let newIds = Set(tools.map { $0.id })
-        self.enabledTools = self.enabledTools.intersection(newIds)
-        // Auto-enable new tools? Let's say yes for now to avoid breaking changes.
-        for id in newIds where !self.enabledTools.contains(id) {
-            self.enabledTools.insert(id)
-        }
-    }
-
-    /// Get tools that are currently enabled, including context tools if a context is active
-    public func getEnabledTools() -> [Tool] {
-        var tools = availableTools.filter { enabledTools.contains($0.id) }
-
-        // Include context tools if a context is active
-        if let session = contextSession, session.hasActiveContext {
-            tools.append(contentsOf: session.getContextTools())
-        }
-
-        return tools
-    }
-
-    /// Toggle tool enabled state
-    public func toggleTool(_ toolId: String) {
-        if enabledTools.contains(toolId) {
-            enabledTools.remove(toolId)
-        } else {
-            enabledTools.insert(toolId)
-        }
-    }
-
-    /// Get tool by ID (checks both regular tools and context tools)
-    public func getTool(id: String) -> Tool? {
-        // First check regular tools
-        if let tool = availableTools.first(where: { $0.id == id }) {
-            return tool
-        }
-
-        // Then check context tools if a context is active
-        if let session = contextSession, session.hasActiveContext {
-            return session.getContextTools().first { $0.id == id }
-        }
-
-        return nil
     }
 }

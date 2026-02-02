@@ -1,9 +1,20 @@
 import Foundation
 import OSLog
 
+/// Error types for ToolExecutor
+public enum ToolExecutorError: LocalizedError, Equatable {
+    case toolNotFound(String)
+    
+    public var errorDescription: String? {
+        switch self {
+        case .toolNotFound(let name):
+            return "Tool '\(name)' not found"
+        }
+    }
+}
+
 /// Executes tool calls and manages tool results
-@MainActor
-public final class ToolExecutor {
+public actor ToolExecutor {
     private let toolManager: SessionToolManager
     private let logger = Logger.tools
 
@@ -33,8 +44,8 @@ public final class ToolExecutor {
     }
 
     /// Get a tool by ID
-    public func getTool(id: String) -> Tool? {
-        return toolManager.getTool(id: id)
+    public func getTool(id: String) async -> Tool? {
+        return await toolManager.getTool(id: id)
     }
 
     /// Execute a single tool call
@@ -55,21 +66,17 @@ public final class ToolExecutor {
 
         // Check for context auto-exit: if a context is active and this is NOT a context tool,
         // deactivate the context before proceeding
-        let isContextTool = contextSession.isContextTool(toolCall.name)
-        let isGatewayForActiveContext = contextSession.isActiveContextGateway(toolCall.name)
+        let isContextTool = await contextSession.isContextTool(toolCall.name)
+        let isGatewayForActiveContext = await contextSession.isActiveContextGateway(toolCall.name)
 
-        if contextSession.hasActiveContext && !isContextTool && !isGatewayForActiveContext {
+        if await contextSession.hasActiveContext && !isContextTool && !isGatewayForActiveContext {
             logger.info("Non-context tool called, deactivating active context")
             await contextSession.deactivate()
         }
 
-        guard let tool = toolManager.getTool(id: toolCall.name) else {
+        guard let tool = await toolManager.getTool(id: toolCall.name) else {
             logger.error("Tool not found: \(toolCall.name)")
-            return Message(
-                content: "Error: Tool '\(toolCall.name)' not found",
-                role: .tool,
-                think: nil
-            )
+            throw ToolExecutorError.toolNotFound(toolCall.name)
         }
 
         logger.info("Executing tool: \(tool.name)")
@@ -82,14 +89,18 @@ public final class ToolExecutor {
 
         do {
             let result = try await tool.execute(parameters: anyArgs)
-            var responseContent =
-                result.success
-                ? result.output
-                : "Error: \(result.error ?? "Unknown error")"
+            
+            var responseContent: String
+            if result.success {
+                responseContent = result.output
+            } else {
+                let errorMsg = result.error ?? "Unknown error"
+                responseContent = "Error: \(errorMsg)"
+            }
 
             // Append context state if a context is active and this is a context tool
-            if contextSession.hasActiveContext && isContextTool,
-                let context = contextSession.activeContext
+            if await contextSession.hasActiveContext && isContextTool,
+                let context = await contextSession.activeContext
             {
                 let contextState = await context.formatState()
                 if !contextState.isEmpty {
@@ -100,7 +111,8 @@ public final class ToolExecutor {
             if result.success {
                 logger.info("Tool \(tool.name) executed successfully")
             } else {
-                logger.error("Tool \(tool.name) failed: \(result.error ?? "Unknown error")")
+                let errorDesc = result.error ?? "Unknown error"
+                logger.error("Tool \(tool.name) failed: \(errorDesc)")
             }
 
             return Message(
@@ -127,9 +139,6 @@ public final class ToolExecutor {
             for (index, toolCall) in toolCalls.enumerated() {
                 group.addTask {
                     do {
-                        // Capture the actor-isolated execute method call properly
-                        // Since we are inside the actor, we can call it directly, but `addTask` closure
-                        // is non-isolated. We need to await the call on `self`.
                         let result = try await self.execute(toolCall)
                         return (index, result)
                     } catch {

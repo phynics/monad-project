@@ -5,6 +5,7 @@ import Foundation
 @testable import MonadServerCore
 import MonadCore
 import NIOCore
+import OpenAI
 
 @Suite struct ChatControllerStreamingTests {
     
@@ -13,12 +14,10 @@ import NIOCore
         // Setup Deps
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
-        let llmService = ServerLLMService()
+        let llmService = MockLLMService()
+        llmService.mockClient.nextResponses = ["Hello", " ", "World"]
         
-        let mockClient = MockLLMClient()
-        mockClient.nextResponses = ["Hello", " ", "World"]
-        await llmService.setClients(main: mockClient, utility: mockClient, fast: mockClient)
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llmService)
         
         // Create Session
         let session = try await sessionManager.createSession()
@@ -41,12 +40,10 @@ import NIOCore
                 #expect(response.headers[.contentType] == "text/event-stream")
                 
                 // Collect body
-                let body = try await String(buffer: response.body)
-                // SSE format check? 
-                // Since MockLLMClient returns ChatStreamResult, we need to see how ChatController handles it.
-                // Assuming it sends "data: <content>\n\n"
-                #expect(body.contains("Hello"))
-                #expect(body.contains("World"))
+                let body = try await String(buffer: await response.body)
+                // SSE format check
+                #expect(body.contains("data:"))
+                #expect(body.contains("[DONE]"))
             }
         }
     }
@@ -56,8 +53,10 @@ import NIOCore
         // Setup Deps
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding)
-        let llmService = ServerLLMService() // Not configured
+        let llmService = MockLLMService()
+        llmService.isConfigured = false
+        
+        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llmService)
         
         // Create Session
         let session = try await sessionManager.createSession()
