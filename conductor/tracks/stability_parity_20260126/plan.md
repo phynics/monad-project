@@ -1,18 +1,18 @@
 # Implementation Plan - General Stability Pass and Feature Parity
 
-## Phase 1: Model Consolidation and Serialization Testing
+## Phase 1: Model Consolidation and Serialization Testing [checkpoint: 2b1dd3c]
 Goal: Ensure a single source of truth for data models and robust persistence logic.
 
 - [x] Task: Audit and consolidate shared data models. [467b541]
-    - [ ] List all model definitions in `MonadCore`, `MonadServerCore`, and `MonadUI`.
-    - [ ] Move any redundant definitions to `MonadCore`.
-    - [ ] Update imports across the workspace to use `MonadCore` models.
+    - [x] List all model definitions in `MonadCore`, `MonadServerCore`, and `MonadUI`.
+    - [x] Move any redundant definitions to `MonadCore`.
+    - [x] Update imports across the workspace to use `MonadCore` models.
 - [x] Task: Implement serialization tests for core data models. [bb2a019]
-    - [ ] Create `Tests/MonadCoreTests/ModelSerializationTests.swift`.
-    - [ ] Write failing tests for JSON and SQLite serialization/deserialization for `Message`, `Session`, `Memory`, `Note`, and `Tool`.
-    - [ ] Ensure edge cases (empty strings, large blobs, special characters) are handled.
-    - [ ] Implement fixes in models to pass tests.
-- [ ] Task: Conductor - User Manual Verification 'Model Consolidation and Serialization Testing' (Protocol in workflow.md)
+    - [x] Create `Tests/MonadCoreTests/ModelSerializationTests.swift`.
+    - [x] Write failing tests for JSON and SQLite serialization/deserialization for `Message`, `Session`, `Memory`, `Note`, and `Tool`.
+    - [x] Ensure edge cases (empty strings, large blobs, special characters) are handled.
+    - [x] Implement fixes in models to pass tests.
+- [x] Task: Conductor - User Manual Verification 'Model Consolidation and Serialization Testing' (Protocol in workflow.md)
 
 ## Phase 2: Server API Stability and Standardized Error Handling
 Goal: Provide reliable and consistent error responses for all REST endpoints.
