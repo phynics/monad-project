@@ -26,7 +26,7 @@ Goal: Provide reliable and consistent error responses for all REST endpoints.
     - [x] Ensure all endpoints return appropriate status codes for success and common failure modes (400, 401, 404, 500, 503).
 - [x] Task: Conductor - User Manual Verification 'Server API Stability and Standardized Error Handling' (Protocol in workflow.md)
 
-## Phase 3: Logic De-duplication and Shared Utilities [checkpoint: 8273af1]
+## Phase 3: Logic De-duplication and Shared Utilities [checkpoint: b6129f6]
 Goal: Reduce code debt by centralizing common logic and utilities in `MonadCore`.
 
 - [x] Task: Centralize shared utility functions. [8273af1]
