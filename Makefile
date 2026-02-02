@@ -32,7 +32,7 @@ run-server:
 # Run the CLI
 run-cli:
 	@echo "Running MonadCLI..."
-	@swift run MonadCLI $(ARGS)
+	@MONAD_API_KEY=monad-secret swift run MonadCLI $(ARGS)
 
 # Run tests
 test:

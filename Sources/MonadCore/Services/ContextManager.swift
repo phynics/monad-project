@@ -197,9 +197,9 @@ public actor ContextManager {
         tagBased: [Memory],
         queryEmbedding: [Double]
     ) -> [SemanticSearchResult] {
-        // Tag matches are explicit and highly relevant, give them a definitive boost
-        // A boost of 2.0 ensures they always beat pure semantic matches (max 1.0)
-        let tagBoost: Double = 2.0
+        // Tag matches are explicit and highly relevant, give them a significant boost
+        // A boost of 0.5 ensures they rank highly but don't strictly override strong semantic matches
+        let tagBoost: Double = 0.5
 
         // Time decay configuration
         // Half-life of 42 days: memories lose half their freshness boost every 42 days
