@@ -14,5 +14,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: General Stability Pass and Feature Parity**
+- [~] **Track: General Stability Pass and Feature Parity**
 *Link: [./tracks/stability_parity_20260126/](./tracks/stability_parity_20260126/)*
