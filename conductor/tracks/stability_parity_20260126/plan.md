@@ -14,7 +14,7 @@ Goal: Ensure a single source of truth for data models and robust persistence log
     - [x] Implement fixes in models to pass tests.
 - [x] Task: Conductor - User Manual Verification 'Model Consolidation and Serialization Testing' (Protocol in workflow.md)
 
-## Phase 2: Server API Stability and Standardized Error Handling [checkpoint: 871a6b4]
+## Phase 2: Server API Stability and Standardized Error Handling [checkpoint: 8273af1]
 Goal: Provide reliable and consistent error responses for all REST endpoints.
 
 - [x] Task: Standardize error handling in `MonadServer`. [15a7b08]
