@@ -7,7 +7,7 @@ Goal: Ensure a single source of truth for data models and robust persistence log
     - [ ] List all model definitions in `MonadCore`, `MonadServerCore`, and `MonadUI`.
     - [ ] Move any redundant definitions to `MonadCore`.
     - [ ] Update imports across the workspace to use `MonadCore` models.
-- [ ] Task: Implement serialization tests for core data models.
+- [x] Task: Implement serialization tests for core data models. [bb2a019]
     - [ ] Create `Tests/MonadCoreTests/ModelSerializationTests.swift`.
     - [ ] Write failing tests for JSON and SQLite serialization/deserialization for `Message`, `Session`, `Memory`, `Note`, and `Tool`.
     - [ ] Ensure edge cases (empty strings, large blobs, special characters) are handled.
