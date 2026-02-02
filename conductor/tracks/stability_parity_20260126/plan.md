@@ -17,13 +17,13 @@ Goal: Ensure a single source of truth for data models and robust persistence log
 ## Phase 2: Server API Stability and Standardized Error Handling
 Goal: Provide reliable and consistent error responses for all REST endpoints.
 
-- [ ] Task: Standardize error handling in `MonadServer`.
-    - [ ] Update `ErrorMiddleware` to return simple HTTP status codes without detailed bodies (per specification).
-    - [ ] Refactor `ChatController`, `MemoryController`, `NoteController`, and `SessionController` to use standard error throwing.
-- [ ] Task: Implement comprehensive tests for MonadServer endpoints.
-    - [ ] Expand `Tests/MonadServerTests/ChatControllerTests.swift` with edge cases.
-    - [ ] Expand `Tests/MonadServerTests/MemoryControllerTests.swift` and `NoteControllerTests.swift`.
-    - [ ] Ensure all endpoints return appropriate status codes for success and common failure modes (400, 401, 404, 500, 503).
+- [x] Task: Standardize error handling in `MonadServer`. [15a7b08]
+    - [x] Update `ErrorMiddleware` to return simple HTTP status codes without detailed bodies (per specification).
+    - [x] Refactor `ChatController`, `MemoryController`, `NoteController`, and `SessionController` to use standard error throwing.
+- [x] Task: Implement comprehensive tests for MonadServer endpoints. [82eede7]
+    - [x] Expand `Tests/MonadServerTests/ChatControllerTests.swift` with edge cases.
+    - [x] Expand `Tests/MonadServerTests/MemoryControllerTests.swift` and `NoteControllerTests.swift`.
+    - [x] Ensure all endpoints return appropriate status codes for success and common failure modes (400, 401, 404, 500, 503).
 - [ ] Task: Conductor - User Manual Verification 'Server API Stability and Standardized Error Handling' (Protocol in workflow.md)
 
 ## Phase 3: Logic De-duplication and Shared Utilities
