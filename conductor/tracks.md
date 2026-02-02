@@ -14,5 +14,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: General Stability Pass and Feature Parity**
+## [x] Track: General Stability Pass and Feature Parity (Final Checkpoint: 4079e25)
 *Link: [./tracks/stability_parity_20260126/](./tracks/stability_parity_20260126/)*
