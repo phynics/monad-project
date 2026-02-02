@@ -44,8 +44,8 @@ struct ChatSubcommand: AsyncParsableCommand {
         abstract: "Start interactive chat session"
     )
 
-    @Option(name: .long, help: "Server URL")
-    var server: String = "http://127.0.0.1:8080"
+    @Option(name: .long, help: "Server URL (defaults to auto-discovery or localhost)")
+    var server: String?
 
     @Option(name: .long, help: "API key for authentication")
     var apiKey: String?
@@ -56,20 +56,17 @@ struct ChatSubcommand: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "Session ID to resume")
     var session: String?
 
-    var configuration: ClientConfiguration {
-        ClientConfiguration(
-            baseURL: URL(string: server) ?? URL(string: "http://127.0.0.1:8080")!,
+    func run() async throws {
+        let config = await ClientConfiguration.autoDetect(
+            explicitURL: server.flatMap { URL(string: $0) },
             apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"],
             verbose: verbose
         )
-    }
-
-    func run() async throws {
-        let client = MonadClient(configuration: configuration)
+        let client = MonadClient(configuration: config)
 
         // Check server health
         guard try await client.healthCheck() else {
-            TerminalUI.printError("Cannot connect to server at \(server)")
+            TerminalUI.printError("Cannot connect to server at \(config.baseURL.absoluteString)")
             throw ExitCode.failure
         }
 

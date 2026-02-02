@@ -114,6 +114,11 @@ struct MonadServer: AsyncParsableCommand {
         )
 
         logger.info("Server starting on \(hostname):\(port)")
+
+        let advertiser = BonjourAdvertiser(port: port)
+        advertiser.start()
+
         try await app.runService()
+        advertiser.stop()
     }
 }
