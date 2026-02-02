@@ -9,27 +9,9 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
         do {
             return try await next(request, context)
         } catch let error as HTTPError {
-            return errorResponse(status: error.status, message: error.body ?? "Unknown Error")
+            return Response(status: error.status)
         } catch {
-            return errorResponse(status: .internalServerError, message: error.localizedDescription)
+            return Response(status: .internalServerError)
         }
     }
-    
-    private func errorResponse(status: HTTPResponse.Status, message: String) -> Response {
-        let errorBody = ErrorResponse(error: .init(message: message))
-        guard let data = try? JSONEncoder().encode(errorBody) else {
-            return Response(status: status, body: .init(byteBuffer: ByteBuffer(string: "{\"error\":{\"message\":\"\(message)\"}}")))
-        }
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(status: status, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
-    }
 }
-
-struct ErrorResponse: Codable {
-    struct ErrorDetail: Codable {
-        let message: String
-    }
-    let error: ErrorDetail
-}
-

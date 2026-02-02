@@ -43,175 +43,155 @@ public struct ChatController<Context: RequestContext>: Sendable {
     }
     
     @Sendable func chat(_ request: Request, context: Context) async throws -> ChatResponse {
-        do {
-            let idString = try context.parameters.require("id")
-            guard let id = UUID(uuidString: idString) else {
-                throw HTTPError(.badRequest, message: "Invalid Session ID")
-            }
-            
-            let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
-            
-            guard let _ = await sessionManager.getSession(id: id) else {
-                throw HTTPError(.notFound, message: "Session not found")
-            }
-            
-            let persistence = await sessionManager.getPersistenceService()
-            let contextManager = await sessionManager.getContextManager(for: id)
-            
-            // 1. Save User Message
-            let userMsg = ConversationMessage(sessionId: id, role: .user, content: chatRequest.message)
-            try await persistence.saveMessage(userMsg)
-            
-            // 2. Fetch History
-            let history = try await sessionManager.getHistory(for: id)
-            
-            // 3. Gather Context
-            var contextData = ContextData()
-            if let contextManager = contextManager {
-                contextData = try await contextManager.gatherContext(
-                    for: chatRequest.message,
-                    history: history,
-                    tagGenerator: { [llmService] query in
-                        try await llmService.generateTags(for: query)
-                    }
-                )
-            }
-            
-            // 4. Send Message with Context
-            let (stream, _, _) = try await llmService.chatStreamWithContext(
-                userQuery: chatRequest.message,
-                contextNotes: contextData.notes,
-                documents: [],
-                memories: contextData.memories.map { $0.memory },
-                chatHistory: history,
-                tools: []
-            )
-            
-            var fullResponse = ""
-            for try await result in stream {
-                if let delta = result.choices.first?.delta.content {
-                    fullResponse += delta
-                }
-            }
-            
-            // 5. Save Assistant Message
-            let recalledMemoriesData = try JSONEncoder().encode(contextData.memories.map { $0.memory })
-            let recalledMemoriesString = String(decoding: recalledMemoriesData, as: UTF8.self)
-            
-            let assistantMsg = ConversationMessage(
-                sessionId: id, 
-                role: .assistant, 
-                content: fullResponse,
-                recalledMemories: recalledMemoriesString
-            )
-            try await persistence.saveMessage(assistantMsg)
-            
-            return ChatResponse(response: fullResponse)
-        } catch let error as HTTPError {
-            throw error
-        } catch let error as LLMServiceError {
-            throw HTTPError(.serviceUnavailable, message: error.localizedDescription)
-        } catch {
-            print("ERROR in chat: \(error)")
-            throw HTTPError(.internalServerError, message: error.localizedDescription)
+        let idString = try context.parameters.require("id")
+        guard let id = UUID(uuidString: idString) else {
+            throw HTTPError(.badRequest)
         }
+        
+        let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
+        
+        guard let _ = await sessionManager.getSession(id: id) else {
+            throw HTTPError(.notFound)
+        }
+        
+        let persistence = await sessionManager.getPersistenceService()
+        let contextManager = await sessionManager.getContextManager(for: id)
+        
+        // 1. Save User Message
+        let userMsg = ConversationMessage(sessionId: id, role: .user, content: chatRequest.message)
+        try await persistence.saveMessage(userMsg)
+        
+        // 2. Fetch History
+        let history = try await sessionManager.getHistory(for: id)
+        
+        // 3. Gather Context
+        var contextData = ContextData()
+        if let contextManager = contextManager {
+            contextData = try await contextManager.gatherContext(
+                for: chatRequest.message,
+                history: history,
+                tagGenerator: { [llmService] query in
+                    try await llmService.generateTags(for: query)
+                }
+            )
+        }
+        
+        // 4. Send Message with Context
+        let (stream, _, _) = try await llmService.chatStreamWithContext(
+            userQuery: chatRequest.message,
+            contextNotes: contextData.notes,
+            documents: [],
+            memories: contextData.memories.map { $0.memory },
+            chatHistory: history,
+            tools: []
+        )
+        
+        var fullResponse = ""
+        for try await result in stream {
+            if let delta = result.choices.first?.delta.content {
+                fullResponse += delta
+            }
+        }
+        
+        // 5. Save Assistant Message
+        let recalledMemoriesData = try JSONEncoder().encode(contextData.memories.map { $0.memory })
+        let recalledMemoriesString = String(decoding: recalledMemoriesData, as: UTF8.self)
+        
+        let assistantMsg = ConversationMessage(
+            sessionId: id, 
+            role: .assistant, 
+            content: fullResponse,
+            recalledMemories: recalledMemoriesString
+        )
+        try await persistence.saveMessage(assistantMsg)
+        
+        return ChatResponse(response: fullResponse)
     }
     
     @Sendable func chatStream(_ request: Request, context: Context) async throws -> Response {
-        do {
-            let idString = try context.parameters.require("id")
-            guard let id = UUID(uuidString: idString) else {
-                throw HTTPError(.badRequest, message: "Invalid Session ID")
-            }
-            
-            let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
-            
-            guard let _ = await sessionManager.getSession(id: id) else {
-                throw HTTPError(.notFound, message: "Session not found")
-            }
-            
-            let persistence = await sessionManager.getPersistenceService()
-            let contextManager = await sessionManager.getContextManager(for: id)
-            
-            // 1. Save User Message
-            let userMsg = ConversationMessage(sessionId: id, role: .user, content: chatRequest.message)
-            try await persistence.saveMessage(userMsg)
-            
-            // 2. Fetch History
-            let history = try await sessionManager.getHistory(for: id)
-            
-            // 3. Gather Context
-            var contextData = ContextData()
-            if let contextManager = contextManager {
-                contextData = try await contextManager.gatherContext(
-                    for: chatRequest.message,
-                    history: history,
-                    tagGenerator: { [llmService] query in
-                        try await llmService.generateTags(for: query)
-                    }
-                )
-            }
-            
-            let streamData: (stream: AsyncThrowingStream<ChatStreamResult, Error>, rawPrompt: String, structuredContext: [String: String])
-            streamData = try await llmService.chatStreamWithContext(
-                userQuery: chatRequest.message,
-                contextNotes: contextData.notes,
-                documents: [],
-                memories: contextData.memories.map { $0.memory },
-                chatHistory: history,
-                tools: []
+        let idString = try context.parameters.require("id")
+        guard let id = UUID(uuidString: idString) else {
+            throw HTTPError(.badRequest)
+        }
+        
+        let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
+        
+        guard let _ = await sessionManager.getSession(id: id) else {
+            throw HTTPError(.notFound)
+        }
+        
+        let persistence = await sessionManager.getPersistenceService()
+        let contextManager = await sessionManager.getContextManager(for: id)
+        
+        // 1. Save User Message
+        let userMsg = ConversationMessage(sessionId: id, role: .user, content: chatRequest.message)
+        try await persistence.saveMessage(userMsg)
+        
+        // 2. Fetch History
+        let history = try await sessionManager.getHistory(for: id)
+        
+        // 3. Gather Context
+        var contextData = ContextData()
+        if let contextManager = contextManager {
+            contextData = try await contextManager.gatherContext(
+                for: chatRequest.message,
+                history: history,
+                tagGenerator: { [llmService] query in
+                    try await llmService.generateTags(for: query)
+                }
             )
-            
-            let memories = contextData.memories.map { $0.memory }
-            
-            let sseStream = AsyncStream<ByteBuffer> { continuation in
-                Task { [id, persistence, memories] in
-                    do {
-                        var fullResponse = ""
-                        for try await result in streamData.stream {
-                            if let delta = result.choices.first?.delta.content {
-                                fullResponse += delta
-                            }
-                            if let data = try? JSONEncoder().encode(result) {
-                                let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
-                                continuation.yield(ByteBuffer(string: sseString))
-                            }
+        }
+        
+        let streamData = try await llmService.chatStreamWithContext(
+            userQuery: chatRequest.message,
+            contextNotes: contextData.notes,
+            documents: [],
+            memories: contextData.memories.map { $0.memory },
+            chatHistory: history,
+            tools: []
+        )
+        
+        let memories = contextData.memories.map { $0.memory }
+        
+        let sseStream = AsyncStream<ByteBuffer> { continuation in
+            Task { [id, persistence, memories] in
+                do {
+                    var fullResponse = ""
+                    for try await result in streamData.stream {
+                        if let delta = result.choices.first?.delta.content {
+                            fullResponse += delta
                         }
-                        
-                        // 5. Save Assistant Message
-                        let recalledMemoriesData = try? JSONEncoder().encode(memories)
-                        let recalledMemoriesString = recalledMemoriesData.flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
-                        
-                        let assistantMsg = ConversationMessage(
-                            sessionId: id, 
-                            role: .assistant, 
-                            content: fullResponse,
-                            recalledMemories: recalledMemoriesString
-                        )
-                        try? await persistence.saveMessage(assistantMsg)
-                        
-                        continuation.yield(ByteBuffer(string: "data: [DONE]\n\n"))
-                        continuation.finish()
-                    } catch {
-                        print("ERROR in streaming Task: \(error)")
-                        continuation.finish()
+                        if let data = try? JSONEncoder().encode(result) {
+                            let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                            continuation.yield(ByteBuffer(string: sseString))
+                        }
                     }
+                    
+                    // 5. Save Assistant Message
+                    let recalledMemoriesData = try? JSONEncoder().encode(memories)
+                    let recalledMemoriesString = recalledMemoriesData.flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
+                    
+                    let assistantMsg = ConversationMessage(
+                        sessionId: id, 
+                        role: .assistant, 
+                        content: fullResponse,
+                        recalledMemories: recalledMemoriesString
+                    )
+                    try? await persistence.saveMessage(assistantMsg)
+                    
+                    continuation.yield(ByteBuffer(string: "data: [DONE]\n\n"))
+                    continuation.finish()
+                } catch {
+                    continuation.finish()
                 }
             }
-            
-            var headers = HTTPFields()
-            headers[.contentType] = "text/event-stream"
-            headers[.cacheControl] = "no-cache"
-            headers[.connection] = "keep-alive"
-            
-            return Response(status: .ok, headers: headers, body: .init(asyncSequence: sseStream))
-        } catch let error as HTTPError {
-            throw error
-        } catch let error as LLMServiceError {
-            throw HTTPError(.serviceUnavailable, message: error.localizedDescription)
-        } catch {
-            print("ERROR in chatStream: \(error)")
-            throw HTTPError(.internalServerError, message: error.localizedDescription)
         }
+        
+        var headers = HTTPFields()
+        headers[.contentType] = "text/event-stream"
+        headers[.cacheControl] = "no-cache"
+        headers[.connection] = "keep-alive"
+        
+        return Response(status: .ok, headers: headers, body: .init(asyncSequence: sseStream))
     }
 }

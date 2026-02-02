@@ -58,7 +58,7 @@ public struct MemoryController<Context: RequestContext>: Sendable {
         let savedMemory = try await persistence.fetchMemory(id: id)
         
         guard let savedMemory = savedMemory else {
-            throw HTTPError(.internalServerError, message: "Failed to fetch saved memory")
+            throw HTTPError(.internalServerError)
         }
         
         let data = try encoder.encode(savedMemory)
@@ -70,7 +70,7 @@ public struct MemoryController<Context: RequestContext>: Sendable {
     @Sendable func delete(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else {
-            throw HTTPError(.badRequest, message: "Invalid Memory ID")
+            throw HTTPError(.badRequest)
         }
         
         let persistence = await sessionManager.getPersistenceService()

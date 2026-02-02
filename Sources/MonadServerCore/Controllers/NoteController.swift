@@ -61,7 +61,7 @@ public struct NoteController<Context: RequestContext>: Sendable {
         let savedNote = try await persistence.fetchAllNotes().first { $0.id == note.id }
         
         guard let savedNote = savedNote else {
-            throw HTTPError(.internalServerError, message: "Failed to fetch saved note")
+            throw HTTPError(.internalServerError)
         }
         
         let data = try encoder.encode(savedNote)
@@ -73,7 +73,7 @@ public struct NoteController<Context: RequestContext>: Sendable {
     @Sendable func delete(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else {
-            throw HTTPError(.badRequest, message: "Invalid Note ID")
+            throw HTTPError(.badRequest)
         }
         
         let persistence = await sessionManager.getPersistenceService()
