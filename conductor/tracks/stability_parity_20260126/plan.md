@@ -3,7 +3,7 @@
 ## Phase 1: Model Consolidation and Serialization Testing
 Goal: Ensure a single source of truth for data models and robust persistence logic.
 
-- [ ] Task: Audit and consolidate shared data models.
+- [x] Task: Audit and consolidate shared data models. [467b541]
     - [ ] List all model definitions in `MonadCore`, `MonadServerCore`, and `MonadUI`.
     - [ ] Move any redundant definitions to `MonadCore`.
     - [ ] Update imports across the workspace to use `MonadCore` models.
