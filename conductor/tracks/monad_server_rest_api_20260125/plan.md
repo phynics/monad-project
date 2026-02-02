@@ -63,17 +63,17 @@ Goal: Expose CRUD operations for persistent data and tools.
 - [x] Task: Implement Tools API. [456f91c]
     - [ ] `GET /tools` (list available tools).
     - [ ] `POST /tools/execute` (direct execution).
-- [ ] Task: Conductor - User Manual Verification 'Data Management' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Data Management' (Protocol in workflow.md)
 
-## Phase 5: Final Polish & Verification
+## Phase 5: Final Polish & Verification [checkpoint: efd6e55]
 Goal: Ensure robust error handling, logging, and comprehensive testing.
 
-- [ ] Task: Enhance Error Handling.
-    - [ ] Map `MonadCore` errors to appropriate HTTP Status Codes (404, 400, 500).
-    - [ ] Implement structured JSON error responses.
-- [ ] Task: Add Logging.
-    - [ ] Request/Response logging.
-    - [ ] Structured logging for session lifecycle events and errors.
-- [ ] Task: End-to-End Testing.
-    - [ ] Write an integration test suite simulating a full user flow (Session -> Chat -> Note -> Search).
-- [x] Task: Final Polish & Verification. [f3f56e7]
+- [x] Task: Enhance Error Handling. [f3f56e7]
+    - [x] Map `MonadCore` errors to appropriate HTTP Status Codes (404, 400, 500).
+    - [x] Implement structured JSON error responses.
+- [x] Task: Add Logging. [f3f56e7]
+    - [x] Request/Response logging.
+    - [x] Structured logging for session lifecycle events and errors.
+- [x] Task: End-to-End Testing. [f3f56e7]
+    - [x] Write an integration test suite simulating a full user flow (Session -> Chat -> Note -> Search).
+- [x] Task: Conductor - User Manual Verification 'Final Polish & Verification' (Protocol in workflow.md)
