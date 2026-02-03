@@ -13,7 +13,7 @@ public enum DatabaseSchema {
             try createNoteTable(in: db)
             try createDefaultNotes(in: db)
         }
-        
+
         // v2: Add embedding to Memory
         migrator.registerMigration("v2") { db in
             if try !db.columns(in: "memory").contains(where: { $0.name == "embedding" }) {
@@ -22,7 +22,7 @@ public enum DatabaseSchema {
                 }
             }
         }
-        
+
         // v3: Retry adding embedding column if missing (for dev state consistency)
         migrator.registerMigration("v3") { db in
             if try !db.columns(in: "memory").contains(where: { $0.name == "embedding" }) {
@@ -34,7 +34,9 @@ public enum DatabaseSchema {
 
         // v4: Add recalledMemories to conversationMessage
         migrator.registerMigration("v4") { db in
-            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "recalledMemories" }) {
+            if try !db.columns(in: "conversationMessage").contains(where: {
+                $0.name == "recalledMemories"
+            }) {
                 try db.alter(table: "conversationMessage") { t in
                     t.add(column: "recalledMemories", .text).notNull().defaults(to: "[]")
                 }
@@ -43,7 +45,8 @@ public enum DatabaseSchema {
 
         // v5: Add memoryId to conversationMessage
         migrator.registerMigration("v5") { db in
-            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "memoryId" }) {
+            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "memoryId" })
+            {
                 try db.alter(table: "conversationMessage") { t in
                     t.add(column: "memoryId", .blob).references("memory", onDelete: .setNull)
                 }
@@ -63,14 +66,15 @@ public enum DatabaseSchema {
         migrator.registerMigration("v7") { db in
             let sessions = try ConversationSession.fetchAll(db)
             for var session in sessions {
-                // Try to detect if it's base64 encoded. 
+                // Try to detect if it's base64 encoded.
                 // A simple JSON array string like '["a"]' is not valid base64 usually,
                 // but a base64 string won't start with '['.
                 if !session.tags.isEmpty && !session.tags.hasPrefix("[") {
                     if let data = Data(base64Encoded: session.tags),
-                       let tagsArray = try? JSONDecoder().decode([String].self, from: data),
-                       let newData = try? JSONEncoder().encode(tagsArray),
-                       let newString = String(data: newData, encoding: .utf8) {
+                        let tagsArray = try? JSONDecoder().decode([String].self, from: data),
+                        let newData = try? JSONEncoder().encode(tagsArray),
+                        let newString = String(data: newData, encoding: .utf8)
+                    {
                         session.tags = newString
                         try session.update(db)
                     }
@@ -80,9 +84,11 @@ public enum DatabaseSchema {
 
         // v8: Add parentId to conversationMessage for tree structure
         migrator.registerMigration("v8") { db in
-            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "parentId" }) {
+            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "parentId" })
+            {
                 try db.alter(table: "conversationMessage") { t in
-                    t.add(column: "parentId", .blob).references("conversationMessage", onDelete: .setNull)
+                    t.add(column: "parentId", .blob).references(
+                        "conversationMessage", onDelete: .setNull)
                 }
             }
         }
@@ -94,81 +100,89 @@ public enum DatabaseSchema {
                     t.add(column: "think", .text)
                 }
             }
-            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "toolCalls" }) {
+            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "toolCalls" }
+            ) {
                 try db.alter(table: "conversationMessage") { t in
                     t.add(column: "toolCalls", .text).notNull().defaults(to: "[]")
                 }
             }
         }
-        
+
         // v10: Add workingDirectory to conversationSession
         migrator.registerMigration("v10") { db in
-            if try !db.columns(in: "conversationSession").contains(where: { $0.name == "workingDirectory" }) {
+            if try !db.columns(in: "conversationSession").contains(where: {
+                $0.name == "workingDirectory"
+            }) {
                 try db.alter(table: "conversationSession") { t in
                     t.add(column: "workingDirectory", .text)
                 }
             }
         }
-        
+
         // v11: Add triggers for immutability
         migrator.registerMigration("v11") { db in
             // Protect Notes from deletion
-            try db.execute(sql: """
-                CREATE TRIGGER IF NOT EXISTS prevent_note_deletion
-                BEFORE DELETE ON note
-                BEGIN
-                    SELECT RAISE(ABORT, 'Notes cannot be deleted');
-                END;
-            """)
-            
+            try db.execute(
+                sql: """
+                        CREATE TRIGGER IF NOT EXISTS prevent_note_deletion
+                        BEFORE DELETE ON note
+                        BEGIN
+                            SELECT RAISE(ABORT, 'Notes cannot be deleted');
+                        END;
+                    """)
+
             // Protect Archives (Sessions and Messages) from deletion and modification
-            try db.execute(sql: """
-                CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
-                BEFORE DELETE ON conversationSession
-                FOR EACH ROW
-                WHEN OLD.isArchived = 1
-                BEGIN
-                    SELECT RAISE(ABORT, 'Archived sessions cannot be deleted');
-                END;
-            """)
-            
-            try db.execute(sql: """
-                CREATE TRIGGER IF NOT EXISTS prevent_session_modification
-                BEFORE UPDATE ON conversationSession
-                FOR EACH ROW
-                WHEN OLD.isArchived = 1
-                BEGIN
-                    SELECT RAISE(ABORT, 'Archived sessions cannot be modified');
-                END;
-            """)
-            
-            try db.execute(sql: """
-                CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
-                BEFORE DELETE ON conversationMessage
-                FOR EACH ROW
-                WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
-                BEGIN
-                    SELECT RAISE(ABORT, 'Archived messages cannot be deleted');
-                END;
-            """)
-            
-            try db.execute(sql: """
-                CREATE TRIGGER IF NOT EXISTS prevent_message_modification
-                BEFORE UPDATE ON conversationMessage
-                FOR EACH ROW
-                WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
-                BEGIN
-                    SELECT RAISE(ABORT, 'Archived messages cannot be modified');
-                END;
-            """)
+            try db.execute(
+                sql: """
+                        CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
+                        BEFORE DELETE ON conversationSession
+                        FOR EACH ROW
+                        WHEN OLD.isArchived = 1
+                        BEGIN
+                            SELECT RAISE(ABORT, 'Archived sessions cannot be deleted');
+                        END;
+                    """)
+
+            try db.execute(
+                sql: """
+                        CREATE TRIGGER IF NOT EXISTS prevent_session_modification
+                        BEFORE UPDATE ON conversationSession
+                        FOR EACH ROW
+                        WHEN OLD.isArchived = 1
+                        BEGIN
+                            SELECT RAISE(ABORT, 'Archived sessions cannot be modified');
+                        END;
+                    """)
+
+            try db.execute(
+                sql: """
+                        CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
+                        BEFORE DELETE ON conversationMessage
+                        FOR EACH ROW
+                        WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
+                        BEGIN
+                            SELECT RAISE(ABORT, 'Archived messages cannot be deleted');
+                        END;
+                    """)
+
+            try db.execute(
+                sql: """
+                        CREATE TRIGGER IF NOT EXISTS prevent_message_modification
+                        BEFORE UPDATE ON conversationMessage
+                        FOR EACH ROW
+                        WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
+                        BEGIN
+                            SELECT RAISE(ABORT, 'Archived messages cannot be modified');
+                        END;
+                    """)
         }
 
         // v12: Remove alwaysAppend, isEnabled, and priority from Note
         migrator.registerMigration("v12") { db in
             try db.execute(sql: "DROP INDEX IF EXISTS idx_note_alwaysAppend")
-            
+
             let columns = try db.columns(in: "note").map { $0.name }
-            
+
             try db.alter(table: "note") { t in
                 if columns.contains("alwaysAppend") {
                     t.drop(column: "alwaysAppend")
@@ -202,9 +216,29 @@ public enum DatabaseSchema {
                 t.column("createdAt", .datetime).notNull()
                 t.column("updatedAt", .datetime).notNull()
             }
-            
+
             try db.create(index: "idx_job_status", on: "job", columns: ["status"])
             try db.create(index: "idx_job_priority", on: "job", columns: ["priority"])
+        }
+
+        // v15: Add compactificationNode table for context compression
+        migrator.registerMigration("v15") { db in
+            try db.create(table: "compactificationNode") { t in
+                t.column("id", .blob).primaryKey()
+                t.column("sessionId", .blob).notNull()
+                    .references("conversationSession", onDelete: .cascade)
+                t.column("type", .text).notNull()
+                t.column("summary", .text).notNull()
+                t.column("displayHint", .text).notNull()
+                t.column("childIds", .text).notNull()
+                t.column("metadata", .text).notNull().defaults(to: "{}")
+                t.column("createdAt", .datetime).notNull()
+            }
+
+            try db.create(
+                index: "idx_compactificationNode_session",
+                on: "compactificationNode",
+                columns: ["sessionId"])
         }
     }
 

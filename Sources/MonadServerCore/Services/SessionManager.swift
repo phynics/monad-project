@@ -90,7 +90,6 @@ public actor SessionManager {
             EditDocumentSummaryTool(documentManager: documentManager),
             MoveDocumentExcerptTool(documentManager: documentManager),
             LaunchSubagentTool(llmService: llmService, documentManager: documentManager),
-            DetectTopicChangeTool(),
             // Job Queue Gateway
             JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession),
         ]

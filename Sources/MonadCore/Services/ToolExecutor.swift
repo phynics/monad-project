@@ -4,12 +4,26 @@ import Logging
 /// Error types for ToolExecutor
 public enum ToolExecutorError: LocalizedError, Equatable {
     case toolNotFound(String)
-    
+
     public var errorDescription: String? {
         switch self {
         case .toolNotFound(let name):
             return "Tool '\(name)' not found"
         }
+    }
+}
+
+/// Result of tool execution including message and compactification node
+public struct ToolExecutionResult: Sendable {
+    /// The response message from the tool
+    public let message: Message
+
+    /// Compactification node for context compression (optional)
+    public let compactificationNode: CompactificationNode?
+
+    public init(message: Message, compactificationNode: CompactificationNode? = nil) {
+        self.message = message
+        self.compactificationNode = compactificationNode
     }
 }
 
@@ -89,7 +103,7 @@ public actor ToolExecutor {
 
         do {
             let result = try await tool.execute(parameters: anyArgs)
-            
+
             var responseContent: String
             if result.success {
                 responseContent = result.output
@@ -129,6 +143,46 @@ public actor ToolExecutor {
                 think: nil
             )
         }
+    }
+
+    /// Execute a tool call and generate a compactification summary
+    /// - Parameters:
+    ///   - toolCall: The tool call to execute
+    ///   - assistantMessageId: ID of the assistant message that triggered this call
+    /// - Returns: ToolExecutionResult containing message and optional compactification node
+    public func executeWithSummary(_ toolCall: ToolCall, assistantMessageId: UUID) async throws
+        -> ToolExecutionResult
+    {
+        let message = try await execute(toolCall)
+
+        // Generate compactification node
+        guard let tool = await toolManager.getTool(id: toolCall.name) else {
+            return ToolExecutionResult(message: message)
+        }
+
+        // Convert arguments to [String: Any]
+        var anyArgs: [String: Any] = [:]
+        for (key, value) in toolCall.arguments {
+            anyArgs[key] = value.value
+        }
+
+        // Create tool result for summarization
+        let toolResult = ToolResult.success(message.content)
+        let summary = tool.summarize(parameters: anyArgs, result: toolResult)
+
+        let compactNode = CompactificationNode.toolExecution(
+            toolName: toolCall.name,
+            arguments: anyArgs,
+            resultSummary: String(message.content.prefix(100)),
+            callMessageId: assistantMessageId,
+            responseMessageId: message.id
+        )
+
+        // Override summary with tool-specific one
+        var node = compactNode
+        node.summary = summary
+
+        return ToolExecutionResult(message: message, compactificationNode: node)
     }
 
     /// Execute multiple tool calls concurrently

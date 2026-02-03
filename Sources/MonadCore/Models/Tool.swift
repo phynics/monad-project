@@ -28,6 +28,13 @@ public protocol Tool: Sendable, PromptFormattable {
     /// Execute the tool with given parameters
     func execute(parameters: [String: Any]) async throws -> ToolResult
 
+    /// Generate a compact summary of the tool execution for context compression
+    /// - Parameters:
+    ///   - parameters: The parameters used for execution
+    ///   - result: The result of execution
+    /// - Returns: A compact summary string, e.g. "[read_file(path)] → 45 lines"
+    func summarize(parameters: [String: Any], result: ToolResult) -> String
+
     /// Convert to OpenAI tool parameter
     func toToolParam() -> ChatQuery.ChatCompletionToolParam
 }
@@ -37,6 +44,31 @@ public protocol Tool: Sendable, PromptFormattable {
 extension Tool {
     /// Default: no usage example
     public var usageExample: String? { nil }
+
+    /// Default summarize implementation - generates compact description
+    public func summarize(parameters: [String: Any], result: ToolResult) -> String {
+        // Extract key parameter values (max 3, truncated)
+        let paramSummary = parameters.keys.sorted().prefix(3).compactMap { key -> String? in
+            guard let value = parameters[key] else { return nil }
+            let valueStr = String(describing: value).prefix(20)
+            return "\(key)=\(valueStr)"
+        }.joined(separator: ", ")
+
+        // Truncate result
+        let resultSummary: String
+        if result.success {
+            let lines = result.output.components(separatedBy: .newlines).count
+            if lines > 1 {
+                resultSummary = "\(lines) lines"
+            } else {
+                resultSummary = String(result.output.prefix(50))
+            }
+        } else {
+            resultSummary = "error: \(result.error?.prefix(30) ?? "unknown")"
+        }
+
+        return "[\(id)(\(paramSummary))] → \(resultSummary)"
+    }
 
     /// Convert to OpenAI tool parameter
     public func toToolParam() -> ChatQuery.ChatCompletionToolParam {
