@@ -26,7 +26,7 @@ graph TD
     end
 
     subgraph "Client (Local)"
-        Attached1[Attached Workspace\nmacbook:~/dev/project]
+        Attached1["Attached Workspace\nmacbook:~/dev/project"]
     end
 
     Session -.->|Attaches| Attached1
@@ -79,11 +79,11 @@ flowchart TD
     
     CheckID -- No --> CheckPrimary{Tool in Primary?}
     
-    CheckPrimary -- Yes --> Primary[Primary Workspace (Server)]
+    CheckPrimary -- Yes --> Primary["Primary Workspace (Server)"]
     
     CheckPrimary -- No --> CheckAttached{Tool in Attached?}
     
-    CheckAttached -- Yes --> FirstAttached[Attached Workspace (Client/Other)]
+    CheckAttached -- Yes --> FirstAttached["Attached Workspace (Client/Other)"]
     
     CheckAttached -- No --> Error[Error: Tool Not Found]
     
