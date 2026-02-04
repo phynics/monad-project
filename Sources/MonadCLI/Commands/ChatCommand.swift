@@ -708,7 +708,7 @@ actor ChatREPL {
 
     private func listTools() async {
         do {
-            let tools = try await client.listTools()
+            let tools = try await client.listTools(sessionId: session.id)
 
             if tools.isEmpty {
                 TerminalUI.printInfo("No tools available.")
@@ -732,7 +732,7 @@ actor ChatREPL {
 
     private func enableTool(_ name: String) async {
         do {
-            try await client.enableTool(name)
+            try await client.enableTool(name, sessionId: session.id)
             TerminalUI.printSuccess("Enabled tool: \(name)")
         } catch {
             TerminalUI.printError("Failed to enable tool: \(error.localizedDescription)")
@@ -741,7 +741,7 @@ actor ChatREPL {
 
     private func disableTool(_ name: String) async {
         do {
-            try await client.disableTool(name)
+            try await client.disableTool(name, sessionId: session.id)
             TerminalUI.printSuccess("Disabled tool: \(name)")
         } catch {
             TerminalUI.printError("Failed to disable tool: \(error.localizedDescription)")

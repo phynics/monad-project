@@ -26,6 +26,34 @@ public struct ToolController<Context: RequestContext>: Sendable {
     public func addRoutes(to group: RouterGroup<Context>) {
         group.get("/{id}", use: list)
         group.post("/execute", use: execute)
+        group.post("/{id}/{name}/enable", use: enable)
+        group.post("/{id}/{name}/disable", use: disable)
+    }
+    
+    @Sendable func enable(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
+        let idString = try context.parameters.require("id")
+        let name = try context.parameters.require("name")
+        guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
+        
+        guard let toolManager = await sessionManager.getToolManager(for: id) else {
+            throw HTTPError(.notFound)
+        }
+        
+        await toolManager.enableTool(id: name) // Name implies ID in tool manager?
+        return .ok
+    }
+
+    @Sendable func disable(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
+        let idString = try context.parameters.require("id")
+        let name = try context.parameters.require("name")
+        guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
+        
+        guard let toolManager = await sessionManager.getToolManager(for: id) else {
+            throw HTTPError(.notFound)
+        }
+        
+        await toolManager.disableTool(id: name)
+        return .ok
     }
     
     @Sendable func list(_ request: Request, context: Context) async throws -> [ToolInfo] {

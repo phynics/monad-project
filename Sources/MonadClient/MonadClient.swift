@@ -171,21 +171,21 @@ public actor MonadClient {
 
     // MARK: - Tool API
 
-    /// List all tools
-    public func listTools() async throws -> [Tool] {
-        let request = try buildRequest(path: "/api/tools", method: "GET")
+    /// List all tools available in a session
+    public func listTools(sessionId: UUID) async throws -> [Tool] {
+        let request = try buildRequest(path: "/api/tools/\(sessionId.uuidString)", method: "GET")
         return try await perform(request)
     }
 
     /// Enable a tool
-    public func enableTool(_ name: String) async throws {
-        let request = try buildRequest(path: "/api/tools/\(name)/enable", method: "POST")
+    public func enableTool(_ name: String, sessionId: UUID) async throws {
+        let request = try buildRequest(path: "/api/tools/\(sessionId.uuidString)/\(name)/enable", method: "POST")
         _ = try await performRaw(request)
     }
 
     /// Disable a tool
-    public func disableTool(_ name: String) async throws {
-        let request = try buildRequest(path: "/api/tools/\(name)/disable", method: "POST")
+    public func disableTool(_ name: String, sessionId: UUID) async throws {
+        let request = try buildRequest(path: "/api/tools/\(sessionId.uuidString)/\(name)/disable", method: "POST")
         _ = try await performRaw(request)
     }
 

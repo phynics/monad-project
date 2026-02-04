@@ -54,6 +54,19 @@ public actor SessionToolManager {
             enabledTools.insert(toolId)
         }
     }
+    
+    /// Enable a tool explicitly
+    public func enableTool(id: String) {
+        // Only enable if it is available
+        if availableTools.contains(where: { $0.id == id }) {
+            enabledTools.insert(id)
+        }
+    }
+    
+    /// Disable a tool explicitly
+    public func disableTool(id: String) {
+        enabledTools.remove(id)
+    }
 
     /// Get tool by ID (checks both regular tools and context tools)
     public func getTool(id: String) async -> (any Tool)? {
