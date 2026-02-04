@@ -153,4 +153,36 @@ final class ContextManagerTests: XCTestCase {
         XCTAssertGreaterThan(updatedVector[1], initialVector[1])
         XCTAssertLessThan(updatedVector[0], initialVector[0])
     }
+    
+    func testFilesystemNotesRetrieval() async throws {
+        // 1. Setup workspace with a note file
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let notesDir = tempURL.appendingPathComponent("Notes", isDirectory: true)
+        try FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+        
+        let noteContent = """
+        _Description: FS Note Description_
+        
+        Content from filesystem.
+        """
+        try noteContent.write(to: notesDir.appendingPathComponent("FSNote.md"), atomically: true, encoding: .utf8)
+        
+        // 2. Initialize ContextManager with workspaceRoot
+        let manager = ContextManager(
+            persistenceService: mockPersistence,
+            embeddingService: mockEmbedding,
+            workspaceRoot: tempURL
+        )
+        
+        // 3. Execute
+        let context = try await manager.gatherContext(for: "some query")
+        
+        // 4. Verify
+        XCTAssertEqual(context.notes.count, 1)
+        let note = context.notes.first
+        XCTAssertEqual(note?.name, "FSNote")
+        XCTAssertEqual(note?.description, "FS Note Description")
+        XCTAssertEqual(note?.content, "Content from filesystem.")
+    }
 }

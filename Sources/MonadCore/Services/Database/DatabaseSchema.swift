@@ -307,6 +307,11 @@ public enum DatabaseSchema {
                 }
             }
         }
+
+        // v18: Remove legacy Note table
+        migrator.registerMigration("v18") { db in
+            try db.drop(table: "note")
+        }
     }
 
     // MARK: - Conversation Tables

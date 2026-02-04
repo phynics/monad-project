@@ -130,35 +130,6 @@ struct PersistenceTests {
         }
     }
 
-    @Test("Test note persistence: Notes cannot be deleted")
-    func notePersistence() async throws {
-        let note = Note(name: "Test Note", content: "Test Content")
-        try await persistence.saveNote(note)
-
-        let fetched = try await persistence.fetchNote(id: note.id)
-        #expect(fetched != nil)
-        #expect(fetched?.name == "Test Note")
-
-        // Deleting note should throw
-        await #expect(throws: Error.self) {
-            try await persistence.deleteNote(id: note.id)
-        }
-    }
-
-    @Test("Test readonly note protection: ALL notes are now protected")
-    func readonlyNoteProtection() async throws {
-        let notes = try await persistence.fetchAllNotes()
-        let anyNote = notes.first
-
-        #expect(anyNote != nil)
-
-        if let id = anyNote?.id {
-            await #expect(throws: Error.self) {
-                try await persistence.deleteNote(id: id)
-            }
-        }
-    }
-
     @Test("Test database reset: Wipes only non-immutable data")
     func databaseReset() async throws {
         // Add some custom data
@@ -173,19 +144,6 @@ struct PersistenceTests {
 
         let allMemories = try await persistence.fetchAllMemories()
         #expect(allMemories.isEmpty, "Memories should be wiped")
-    }
-
-    @Test("Test advanced search with partial matches")
-    func advancedSearch() async throws {
-        try await persistence.saveNote(Note(name: "Swift Programming", content: "Great language"))
-        try await persistence.saveNote(Note(name: "Python Scripting", content: "Easy to use"))
-
-        let swiftSearch = try await persistence.searchNotes(query: "Swift")
-        #expect(swiftSearch.count == 1)
-        #expect(swiftSearch.first?.name == "Swift Programming")
-
-        let partialSearch = try await persistence.searchNotes(query: "ing")
-        #expect(partialSearch.count >= 2)
     }
 
     @Test("Test memory persistence and retrieval")

@@ -61,7 +61,10 @@ public actor SessionManager {
         sessions[session.id] = session
 
         let contextManager = ContextManager(
-            persistenceService: persistenceService, embeddingService: embeddingService)
+            persistenceService: persistenceService, 
+            embeddingService: embeddingService,
+            workspaceRoot: sessionWorkspaceURL
+        )
         contextManagers[session.id] = contextManager
 
         let documentManager = DocumentManager()

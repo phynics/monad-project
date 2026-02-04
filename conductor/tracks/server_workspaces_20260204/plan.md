@@ -28,11 +28,11 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
 
 ## Phase 4: Legacy Cleanup & Final Integration
-- [ ] Task: Remove Legacy Database Note Logic.
-    - [ ] Remove `Note` table from the database schema (new migration).
-    - [ ] Remove `NoteController` and associated routes.
-    - [ ] Delete legacy note tool implementations (`save_note`, `fetch_note`, etc.).
-- [ ] Task: Final System Verification.
-    - [ ] Verify that all existing unit tests pass after logic removal.
-    - [ ] Ensure LLM can successfully interact with notes via standard FS tools.
+- [x] Task: Remove Legacy Database Note Logic.
+    - [x] Remove `Note` table from the database schema (new migration).
+    - [x] Remove `NoteController` and associated routes.
+    - [x] Delete legacy note tool implementations (`save_note`, `fetch_note`, etc.).
+- [x] Task: Final System Verification.
+    - [x] Verify that all existing unit tests pass after logic removal.
+    - [x] Ensure LLM can successfully interact with notes via standard FS tools.
 - [ ] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)

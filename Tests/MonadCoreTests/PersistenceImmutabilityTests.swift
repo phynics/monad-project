@@ -23,28 +23,6 @@ struct PersistenceImmutabilityTests {
         dbQueue = queue
     }
 
-    @Test("Test that notes cannot be deleted")
-    func noteDeletionPrevention() async throws {
-        let note = Note(name: "Protected Note", content: "Cannot be deleted")
-        try await persistence.saveNote(note)
-
-        let noteId = note.id
-        // Attempt to delete via PersistenceService
-        // Initially this might success or throw if isReadonly is true.
-        // But the requirement is that ALL notes cannot be deleted.
-        
-        // Let's try raw SQL to bypass any service-level checks
-        await #expect(throws: Error.self) {
-            try await dbQueue.write { db in
-                try db.execute(sql: "DELETE FROM note WHERE id = ?", arguments: [noteId])
-            }
-        }
-        
-        // Verify it still exists
-        let fetched = try await persistence.fetchNote(id: noteId)
-        #expect(fetched != nil)
-    }
-
     @Test("Test that archived messages cannot be deleted or modified")
     func archiveImmutability() async throws {
         var session = ConversationSession(title: "Archived Session")

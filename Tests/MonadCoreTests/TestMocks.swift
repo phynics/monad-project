@@ -203,39 +203,7 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
     var searchResults: [(memory: Memory, similarity: Double)] = []
     var messages: [ConversationMessage] = []
     var sessions: [ConversationSession] = []
-    var notes: [Note] = []
     var jobs: [Job] = []
-    
-    // Notes
-    func saveNote(_ note: Note) async throws {
-        if let index = notes.firstIndex(where: { $0.id == note.id }) {
-            notes[index] = note
-        } else {
-            notes.append(note)
-        }
-    }
-    
-    func fetchNote(id: UUID) async throws -> Note? {
-        return notes.first(where: { $0.id == id })
-    }
-    
-    func fetchAllNotes() async throws -> [Note] {
-        return notes
-    }
-    
-    func searchNotes(query: String) async throws -> [Note] {
-        return notes.filter { $0.name.contains(query) || $0.content.contains(query) }
-    }
-    
-    func searchNotes(matchingAnyTag tags: [String]) async throws -> [Note] {
-        return notes.filter { note in
-            !Set(note.tagArray).intersection(tags).isEmpty
-        }
-    }
-    
-    func deleteNote(id: UUID) async throws {
-        notes.removeAll(where: { $0.id == id })
-    }
     
     // Memories
     func saveMemory(_ memory: Memory, policy: MemorySavePolicy) async throws -> UUID {
@@ -359,7 +327,6 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
     
     // Database Management
     func resetDatabase() async throws {
-        notes.removeAll()
         memories.removeAll()
         messages.removeAll()
         sessions.removeAll()

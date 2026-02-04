@@ -4,7 +4,7 @@ import Logging
 
 /// Thread-safe persistence service using GRDB
 public actor PersistenceService: PersistenceServiceProtocol {
-    internal let dbQueue: DatabaseQueue
+    public nonisolated let dbQueue: DatabaseQueue
     internal let logger = Logger.database
 
     // MARK: - Initialization

@@ -23,13 +23,17 @@ public enum ContextManagerError: LocalizedError {
 public actor ContextManager {
     private let persistenceService: any PersistenceServiceProtocol
     private let embeddingService: any EmbeddingService
+    private let workspaceRoot: URL?
     private let logger = Logger(label: "com.monad.ContextManager")
 
     public init(
-        persistenceService: any PersistenceServiceProtocol, embeddingService: any EmbeddingService
+        persistenceService: any PersistenceServiceProtocol, 
+        embeddingService: any EmbeddingService,
+        workspaceRoot: URL? = nil
     ) {
         self.persistenceService = persistenceService
         self.embeddingService = embeddingService
+        self.workspaceRoot = workspaceRoot
     }
 
     /// Gather all relevant context for a given user query
@@ -54,7 +58,7 @@ public actor ContextManager {
         let tagGenerationContext = buildAugmentedContext(query: query, history: history)
 
         // Parallel execution of tasks
-        async let notesTask = persistenceService.fetchAllNotes()
+        async let notesTask = fetchAllNotes()
         async let memoriesDataTask = fetchRelevantMemories(
             for: query,
             tagContext: tagGenerationContext,
@@ -84,6 +88,95 @@ public actor ContextManager {
             logger.error("Context gathering failed: \(error.localizedDescription)")
             throw error
         }
+    }
+
+    private func fetchAllNotes() async throws -> [Note] {
+        var allNotes: [Note] = []
+        
+        // 1. Fetch from Database (Legacy support during transition)
+        // We use raw SQL because the protocol methods have been removed.
+        do {
+            let dbRows = try await persistenceService.executeRaw(sql: "SELECT * FROM note", arguments: [])
+            for row in dbRows {
+                // Manually reconstruct Note from AnyCodable row
+                if let idStr = row["id"]?.value as? String,
+                   let id = UUID(uuidString: idStr),
+                   let name = row["name"]?.value as? String,
+                   let content = row["content"]?.value as? String {
+                    
+                    let description = row["description"]?.value as? String ?? ""
+                    let isReadonly = (row["isReadonly"]?.value as? Int ?? 0) != 0
+                    
+                    let note = Note(
+                        id: id,
+                        name: name,
+                        description: description,
+                        content: content,
+                        isReadonly: isReadonly
+                    )
+                    allNotes.append(note)
+                }
+            }
+        } catch {
+            // Table might not exist yet or already be dropped, ignore
+            logger.debug("Legacy note table not accessible: \(error.localizedDescription)")
+        }
+        
+        // 2. Fetch from Filesystem
+        if let workspaceRoot = workspaceRoot {
+            let notesDir = workspaceRoot.appendingPathComponent("Notes", isDirectory: true)
+            let fileManager = FileManager.default
+            
+            if fileManager.fileExists(atPath: notesDir.path) {
+                do {
+                    let files = try fileManager.contentsOfDirectory(at: notesDir, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles])
+                    
+                    for fileURL in files where fileURL.pathExtension == "md" {
+                        guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else { continue }
+                        
+                        let name = fileURL.deletingPathExtension().lastPathComponent
+                        
+                        // Parse description from first line if present: _Description: [text]_
+                        let lines = content.components(separatedBy: .newlines)
+                        var description = ""
+                        var actualContent = content
+                        
+                        if let firstLine = lines.first, firstLine.hasPrefix("_Description:"), firstLine.hasSuffix("_") {
+                            description = firstLine
+                                .replacingOccurrences(of: "_Description: ", with: "")
+                                .replacingOccurrences(of: "_", with: "")
+                            actualContent = lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+                        }
+                        
+                        let attr = try fileManager.attributesOfItem(atPath: fileURL.path)
+                        let createdAt = attr[.creationDate] as? Date ?? Date()
+                        let updatedAt = attr[.modificationDate] as? Date ?? Date()
+                        
+                        let note = Note(
+                            id: UUID(), // FS notes use transient IDs for now if they don't match DB
+                            name: name,
+                            description: description,
+                            content: actualContent,
+                            isReadonly: false,
+                            tags: [],
+                            createdAt: createdAt,
+                            updatedAt: updatedAt
+                        )
+                        allNotes.append(note)
+                    }
+                } catch {
+                    logger.warning("Failed to fetch notes from filesystem: \(error.localizedDescription)")
+                }
+            }
+        }
+        
+        // Deduplicate by name (FS notes override DB notes with same name)
+        var uniqueNotes: [String: Note] = [:]
+        for note in allNotes {
+            uniqueNotes[note.name] = note
+        }
+        
+        return Array(uniqueNotes.values).sorted(by: { $0.name < $1.name })
     }
 
     private func buildAugmentedContext(query: String, history: [Message]) -> String {

@@ -70,14 +70,6 @@ public protocol LLMServiceProtocol: Sendable {
 public protocol PersistenceServiceProtocol: Sendable {
     var databaseWriter: DatabaseWriter { get }
 
-    // Notes
-    func saveNote(_ note: Note) async throws
-    func fetchNote(id: UUID) async throws -> Note?
-    func fetchAllNotes() async throws -> [Note]
-    func searchNotes(query: String) async throws -> [Note]
-    func searchNotes(matchingAnyTag tags: [String]) async throws -> [Note]
-    func deleteNote(id: UUID) async throws
-
     // Memories
     func saveMemory(_ memory: Memory, policy: MemorySavePolicy) async throws -> UUID
     func fetchMemory(id: UUID) async throws -> Memory?

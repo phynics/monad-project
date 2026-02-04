@@ -116,9 +116,6 @@ struct MonadServer: AsyncParsableCommand {
         let memoryController = MemoryController<BasicRequestContext>(sessionManager: sessionManager)
         memoryController.addRoutes(to: protected.group("/memories"))
 
-        let noteController = NoteController<BasicRequestContext>(sessionManager: sessionManager)
-        noteController.addRoutes(to: protected.group("/notes"))
-
         let toolController = ToolController<BasicRequestContext>(sessionManager: sessionManager)
         toolController.addRoutes(to: protected.group("/tools"))
 
