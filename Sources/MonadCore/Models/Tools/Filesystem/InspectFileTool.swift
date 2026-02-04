@@ -15,10 +15,15 @@ public struct InspectFileTool: Tool, Sendable {
         """
     }
 
-    private let root: String
+    private let currentDirectory: String
+    private let jailRoot: String
 
-    public init(root: String = FileManager.default.currentDirectoryPath) {
-        self.root = root
+    public init(
+        currentDirectory: String = FileManager.default.currentDirectoryPath,
+        jailRoot: String? = nil
+    ) {
+        self.currentDirectory = currentDirectory
+        self.jailRoot = jailRoot ?? currentDirectory
     }
 
     public func canExecute() async -> Bool {
@@ -48,12 +53,10 @@ public struct InspectFileTool: Tool, Sendable {
         }
 
         let url: URL
-        if pathString.hasPrefix("/") {
-            url = URL(fileURLWithPath: pathString).standardized
-        } else if pathString.hasPrefix("~") {
-            url = URL(fileURLWithPath: (pathString as NSString).expandingTildeInPath).standardized
-        } else {
-            url = URL(fileURLWithPath: root).appendingPathComponent(pathString).standardized
+        do {
+            url = try PathSanitizer.safelyResolve(path: pathString, within: currentDirectory, jailRoot: jailRoot)
+        } catch {
+            return .failure(error.localizedDescription)
         }
 
         let fileManager = FileManager.default

@@ -8,13 +8,13 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: Filesystem Tooling & Jailing
-- [ ] Task: Refactor and secure Filesystem Tools for session workspaces.
-    - [ ] Create failing tests for path traversal attempts (e.g., `../../etc/passwd`).
-    - [ ] Implement strict root jailing in `FilesystemTools`.
-    - [ ] Update `ToolRouter` to ensure `hostType: .server` tools for sessions are executed within the jailed `primaryWorkspace` directory.
-- [ ] Task: Implement Content Search Tool.
-    - [ ] Create failing test for searching content across the workspace.
-    - [ ] Implement `search_files` tool using `ripgrep` or a similar Swift-based search utility.
+- [x] Task: Refactor and secure Filesystem Tools for session workspaces.
+    - [x] Create failing tests for path traversal attempts (e.g., `../../etc/passwd`).
+    - [x] Implement strict root jailing in `FilesystemTools`.
+    - [x] Update `ToolRouter` to ensure `hostType: .server` tools for sessions are executed within the jailed `primaryWorkspace` directory.
+- [x] Task: Implement Content Search Tool.
+    - [x] Create failing test for searching content across the workspace.
+    - [x] Implement `search_files` tool using `ripgrep` or a similar Swift-based search utility.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
 
 ## Phase 3: Notes Migration to Filesystem

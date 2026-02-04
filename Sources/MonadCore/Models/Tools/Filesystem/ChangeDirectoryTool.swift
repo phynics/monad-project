@@ -17,9 +17,11 @@ public struct ChangeDirectoryTool: Tool, @unchecked Sendable {
     
     private let onChange: (String) async -> Void
     private let currentPath: String
+    private let root: String
     
-    public init(currentPath: String, onChange: @escaping (String) async -> Void) {
+    public init(currentPath: String, root: String? = nil, onChange: @escaping (String) async -> Void) {
         self.currentPath = currentPath
+        self.root = root ?? currentPath
         self.onChange = onChange
     }
     
@@ -45,20 +47,15 @@ public struct ChangeDirectoryTool: Tool, @unchecked Sendable {
             return .failure("Missing 'path' parameter")
         }
         
-        // Resolve path
-        let fileManager = FileManager.default
-        var newPath = path
-        
-        if path.hasPrefix("/") {
-            // Absolute path
-            newPath = path
-        } else if path.hasPrefix("~") {
-            // Expand tilde
-            newPath = (path as NSString).expandingTildeInPath
-        } else {
-            // Relative path
-            newPath = URL(fileURLWithPath: currentPath).appendingPathComponent(path).standardized.path
+        let newURL: URL
+        do {
+            newURL = try PathSanitizer.safelyResolve(path: path, within: root)
+        } catch {
+            return .failure(error.localizedDescription)
         }
+        
+        let newPath = newURL.path
+        let fileManager = FileManager.default
         
         // Validate existence and is directory
         var isDir: ObjCBool = false

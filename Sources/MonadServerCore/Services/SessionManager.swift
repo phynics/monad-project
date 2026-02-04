@@ -74,7 +74,7 @@ public actor SessionManager {
 
         // Setup Tools for session
         let toolManager = await createToolManager(
-            for: session, documentManager: documentManager, toolContextSession: toolContextSession,
+            for: session, jailRoot: sessionWorkspaceURL.path, documentManager: documentManager, toolContextSession: toolContextSession,
             jobQueueContext: jobQueueContext)
         toolManagers[session.id] = toolManager
 
@@ -93,26 +93,29 @@ public actor SessionManager {
 
     private func createToolManager(
         for session: ConversationSession,
+        jailRoot: String,
         documentManager: DocumentManager,
         toolContextSession: ToolContextSession,
         jobQueueContext: JobQueueContext
     ) async -> SessionToolManager {
-        let currentWD = session.workingDirectory ?? FileManager.default.currentDirectoryPath
+        let currentWD = session.workingDirectory ?? jailRoot
 
         let availableTools: [any MonadCore.Tool] = [
             ExecuteSQLTool(persistenceService: persistenceService),
             // Filesystem Tools
             ChangeDirectoryTool(
                 currentPath: currentWD,
+                root: jailRoot,
                 onChange: { newPath in
                     // Update working directory logic would need a way to communicate back to SessionManager
                     // For now, in Server we might want to handle this differently or just let it be.
                 }),
-            ListDirectoryTool(root: currentWD),
-            FindFileTool(root: currentWD),
-            SearchFileContentTool(root: currentWD),
-            ReadFileTool(root: currentWD),
-            InspectFileTool(root: currentWD),
+            ListDirectoryTool(currentDirectory: currentWD, jailRoot: jailRoot),
+            FindFileTool(currentDirectory: currentWD, jailRoot: jailRoot),
+            SearchFileContentTool(currentDirectory: currentWD, jailRoot: jailRoot),
+            SearchFilesTool(currentDirectory: currentWD, jailRoot: jailRoot),
+            ReadFileTool(currentDirectory: currentWD, jailRoot: jailRoot),
+            InspectFileTool(currentDirectory: currentWD, jailRoot: jailRoot),
             // Document Tools
             LoadDocumentTool(documentManager: documentManager),
             UnloadDocumentTool(documentManager: documentManager),
