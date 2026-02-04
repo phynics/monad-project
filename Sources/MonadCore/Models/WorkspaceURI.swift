@@ -1,14 +1,26 @@
 import Foundation
+import GRDB
 
 // MARK: - Workspace URI
 
 /// SCP-like URI for identifying workspaces
 /// Format: `host:path` (e.g., `macbook:~/dev/project`, `monad-server:/sessions/abc123`)
-public struct WorkspaceURI: Codable, Sendable, Hashable, CustomStringConvertible {
+public struct WorkspaceURI: Codable, Sendable, Hashable, CustomStringConvertible, DatabaseValueConvertible {
     public let host: String
     public let path: String
 
     public var description: String { "\(host):\(path)" }
+    
+    // MARK: - DatabaseValueConvertible
+    
+    public var databaseValue: DatabaseValue {
+        description.databaseValue
+    }
+    
+    public static func fromDatabaseValue(_ dbValue: DatabaseValue) -> WorkspaceURI? {
+        guard let string = String.fromDatabaseValue(dbValue) else { return nil }
+        return WorkspaceURI(parsing: string)
+    }
 
     /// Whether this workspace is hosted on the server
     public var isServer: Bool { host.hasPrefix("monad-") }

@@ -67,9 +67,15 @@ struct MonadServer: AsyncParsableCommand {
         let embeddingService = LocalEmbeddingService()
         let llmService = ServerLLMService()
         await llmService.loadConfiguration()
+        
+        let workspaceRoot = try Self.defaultWorkspacePath()
+        
         let sessionManager = SessionManager(
-            persistenceService: persistenceService, embeddingService: embeddingService,
-            llmService: llmService)
+            persistenceService: persistenceService, 
+            embeddingService: embeddingService,
+            llmService: llmService,
+            workspaceRoot: workspaceRoot
+        )
 
         // Public routes
         router.get("/health") { _, _ -> String in
@@ -133,5 +139,26 @@ struct MonadServer: AsyncParsableCommand {
 
         try await app.runService()
         advertiser.stop()
+    }
+
+    /// Default workspace path in Application Support
+    private static func defaultWorkspacePath() throws -> URL {
+        let fileManager = FileManager.default
+        guard
+            let appSupport = fileManager.urls(
+                for: .applicationSupportDirectory, in: .userDomainMask
+            ).first
+        else {
+            // Fallback to home/.monad/workspaces if app support not found
+            let home = fileManager.homeDirectoryForCurrentUser
+            let workspacesDir = home.appendingPathComponent(".monad/workspaces", isDirectory: true)
+            try fileManager.createDirectory(at: workspacesDir, withIntermediateDirectories: true)
+            return workspacesDir
+        }
+
+        let appDir = appSupport.appendingPathComponent("MonadAssistant", isDirectory: true)
+        let workspacesDir = appDir.appendingPathComponent("Workspaces", isDirectory: true)
+        try fileManager.createDirectory(at: workspacesDir, withIntermediateDirectories: true)
+        return workspacesDir
     }
 }

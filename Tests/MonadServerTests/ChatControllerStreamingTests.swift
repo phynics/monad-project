@@ -17,7 +17,13 @@ import OpenAI
         let llmService = MockLLMService()
         llmService.mockClient.nextResponses = ["Hello", " ", "World"]
         
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llmService)
+        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        let sessionManager = SessionManager(
+            persistenceService: persistence, 
+            embeddingService: embedding, 
+            llmService: llmService,
+            workspaceRoot: workspaceRoot
+        )
         
         // Create Session
         let session = try await sessionManager.createSession()
@@ -56,7 +62,13 @@ import OpenAI
         let llmService = MockLLMService()
         llmService.isConfigured = false
         
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llmService)
+        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        let sessionManager = SessionManager(
+            persistenceService: persistence, 
+            embeddingService: embedding, 
+            llmService: llmService,
+            workspaceRoot: workspaceRoot
+        )
         
         // Create Session
         let session = try await sessionManager.createSession()

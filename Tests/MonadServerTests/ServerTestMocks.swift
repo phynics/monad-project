@@ -202,13 +202,25 @@ final class MockEmbeddingService: EmbeddingService, @unchecked Sendable {
 }
 
 final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Sendable {
-    var databaseWriter: DatabaseWriter = try! DatabaseQueue()
+    var databaseWriter: DatabaseWriter
     var memories: [Memory] = []
     var searchResults: [(memory: Memory, similarity: Double)] = []
     var messages: [ConversationMessage] = []
     var sessions: [ConversationSession] = []
     var notes: [Note] = []
     var jobs: [Job] = []
+    
+    init(databaseWriter: DatabaseWriter? = nil) {
+        if let writer = databaseWriter {
+            self.databaseWriter = writer
+        } else {
+            let queue = try! DatabaseQueue()
+            var migrator = DatabaseMigrator()
+            DatabaseSchema.registerMigrations(in: &migrator)
+            try! migrator.migrate(queue)
+            self.databaseWriter = queue
+        }
+    }
     
     // Notes
     func saveNote(_ note: Note) async throws {
@@ -365,4 +377,14 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
         sessions.removeAll()
         jobs.removeAll()
     }
+}
+
+// MARK: - Test Helpers
+
+func getTestWorkspaceRoot() -> URL {
+    let fileManager = FileManager.default
+    let currentDir = URL(fileURLWithPath: fileManager.currentDirectoryPath)
+    let testWorkspacesDir = currentDir.appendingPathComponent(".test_workspaces", isDirectory: true)
+    try? fileManager.createDirectory(at: testWorkspacesDir, withIntermediateDirectories: true)
+    return testWorkspacesDir
 }

@@ -50,15 +50,34 @@ public struct Workspace: Codable, FetchableRecord, PersistableRecord, Sendable, 
         )
     }
     
+    // MARK: - Codable
+    
+    enum CodingKeys: String, CodingKey {
+        case id, uri, hostType, ownerId, tools, rootPath, trustLevel, lastModifiedBy, createdAt
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.uri = try container.decode(WorkspaceURI.self, forKey: .uri)
+        self.hostType = try container.decode(WorkspaceHostType.self, forKey: .hostType)
+        self.ownerId = try container.decodeIfPresent(UUID.self, forKey: .ownerId)
+        self.tools = (try? container.decode([ToolReference].self, forKey: .tools)) ?? []
+        self.rootPath = try container.decodeIfPresent(String.self, forKey: .rootPath)
+        self.trustLevel = try container.decode(WorkspaceTrustLevel.self, forKey: .trustLevel)
+        self.lastModifiedBy = try container.decodeIfPresent(UUID.self, forKey: .lastModifiedBy)
+        self.createdAt = try container.decode(Date.self, forKey: .createdAt)
+    }
+    
     // MARK: - EncodableRecord
     
     public func encode(to container: inout PersistenceContainer) throws {
         container["id"] = id
-        container["uri"] = uri.description
-        container["hostType"] = hostType.rawValue
+        container["uri"] = uri
+        container["hostType"] = hostType
         container["ownerId"] = ownerId
         container["rootPath"] = rootPath
-        container["trustLevel"] = trustLevel.rawValue
+        container["trustLevel"] = trustLevel
         container["lastModifiedBy"] = lastModifiedBy
         container["createdAt"] = createdAt
     }

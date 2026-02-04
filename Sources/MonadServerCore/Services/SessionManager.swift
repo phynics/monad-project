@@ -14,20 +14,50 @@ public actor SessionManager {
     private let persistenceService: any PersistenceServiceProtocol
     private let embeddingService: any EmbeddingService
     private let llmService: any LLMServiceProtocol
+    private let workspaceRoot: URL
 
     public init(
-        persistenceService: any PersistenceServiceProtocol, embeddingService: any EmbeddingService,
-        llmService: any LLMServiceProtocol
+        persistenceService: any PersistenceServiceProtocol,
+        embeddingService: any EmbeddingService,
+        llmService: any LLMServiceProtocol,
+        workspaceRoot: URL
     ) {
         self.persistenceService = persistenceService
         self.embeddingService = embeddingService
         self.llmService = llmService
+        self.workspaceRoot = workspaceRoot
     }
 
     public func createSession(title: String = "New Conversation") async throws
         -> ConversationSession
     {
-        let session = ConversationSession(id: UUID(), title: title)
+        let sessionId = UUID()
+        
+        // 1. Create Workspace
+        let sessionWorkspaceURL = workspaceRoot.appendingPathComponent("sessions", isDirectory: true)
+            .appendingPathComponent(sessionId.uuidString, isDirectory: true)
+        
+        try FileManager.default.createDirectory(at: sessionWorkspaceURL, withIntermediateDirectories: true)
+        
+        let workspace = Workspace(
+            uri: .serverSession(sessionId),
+            hostType: .server,
+            rootPath: sessionWorkspaceURL.path,
+            trustLevel: .full
+        )
+        
+        try await persistenceService.databaseWriter.write { db in
+            try workspace.insert(db)
+        }
+
+        // 2. Create Session
+        var session = ConversationSession(
+            id: sessionId, 
+            title: title,
+            primaryWorkspaceId: workspace.id
+        )
+        session.workingDirectory = sessionWorkspaceURL.path
+        
         sessions[session.id] = session
 
         let contextManager = ContextManager(

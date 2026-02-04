@@ -16,3 +16,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ## [x] Track: General Stability Pass and Feature Parity (Final Checkpoint: 4079e25)
 *Link: [./tracks/stability_parity_20260126/](./tracks/stability_parity_20260126/)*
+
+---
+
+- [~] **Track: Integration of Server-Side Workspaces and Notes Migration to Filesystem**
+*Link: [./tracks/server_workspaces_20260204/](./tracks/server_workspaces_20260204/)*
