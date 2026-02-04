@@ -555,6 +555,8 @@ actor ChatREPL {
     private func listMemories() async {
         do {
             let memories = try await client.listMemories()
+            let config = try await client.getConfiguration()
+            let activeLimit = config.memoryContextLimit
 
             if memories.isEmpty {
                 TerminalUI.printInfo("No memories found.")
@@ -563,14 +565,17 @@ actor ChatREPL {
 
             print("")
             print(TerminalUI.bold("Memories:"))
+            print(TerminalUI.dim("(\(min(memories.count, activeLimit)) active / \(memories.count) total)"))
             print("")
 
-            for memory in memories.prefix(20) {
+            for (index, memory) in memories.prefix(20).enumerated() {
+                let isActive = index < activeLimit
+                let status = isActive ? TerminalUI.green("●") : TerminalUI.dim("○")
                 let dateStr = TerminalUI.formatDate(memory.createdAt)
                 let preview = String(memory.content.prefix(50)).replacingOccurrences(
                     of: "\n", with: " ")
                 print(
-                    "  \(TerminalUI.dim(memory.id.uuidString.prefix(8).description))  \(preview)\(memory.content.count > 50 ? "..." : "")  \(TerminalUI.dim(dateStr))"
+                    "  \(status) \(TerminalUI.dim(memory.id.uuidString.prefix(8).description))  \(preview)\(memory.content.count > 50 ? "..." : "")  \(TerminalUI.dim(dateStr))"
                 )
             }
 
