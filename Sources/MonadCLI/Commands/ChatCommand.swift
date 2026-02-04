@@ -1,5 +1,6 @@
 import Foundation
 import MonadClient
+import MonadCore
 
 // MARK: - Chat REPL
 
@@ -762,8 +763,40 @@ actor ChatREPL {
             } else {
                 TerminalUI.printError("Usage: /workspace attach <workspace-id>")
             }
+        case "pwd":
+            await attachCurrentDirectory()
         default:
             await listWorkspaces()
+        }
+    }
+
+    private func attachCurrentDirectory() async {
+        let path = FileManager.default.currentDirectoryPath
+        let host = ProcessInfo.processInfo.hostName
+        let uri = WorkspaceURI(host: host, path: path)
+        
+        do {
+            // Check if workspace already exists for this URI
+            let workspaces = try await client.listWorkspaces()
+            if let existing = workspaces.first(where: { $0.uri.description == uri.description }) {
+                await attachWorkspaceById(existing.id)
+                return
+            }
+            
+            // Create new workspace
+            let ws = try await client.createWorkspace(
+                uri: uri,
+                hostType: .client,
+                ownerId: nil, // Will be inferred or updated later
+                rootPath: path,
+                trustLevel: .restricted // Limited by default as requested
+            )
+            
+            TerminalUI.printSuccess("Created workspace for \(path)")
+            await attachWorkspaceById(ws.id)
+            
+        } catch {
+            TerminalUI.printError("Failed to attach current directory: \(error.localizedDescription)")
         }
     }
 
