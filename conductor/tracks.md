@@ -19,5 +19,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Integration of Server-Side Workspaces and Notes Migration to Filesystem**
+- [x] [server_workspaces_20260204](tracks/server_workspaces_20260204/index.md) - Integrate server-side workspaces and migrate database Notes to session filesystem. (2026-02-04)
 *Link: [./tracks/server_workspaces_20260204/](./tracks/server_workspaces_20260204/)*
