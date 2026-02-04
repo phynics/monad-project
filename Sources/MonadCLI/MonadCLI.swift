@@ -58,18 +58,39 @@ struct ChatSubcommand: AsyncParsableCommand {
     var session: String?
 
     func run() async throws {
+        // Load local config
+        let localConfig = LocalConfigManager.shared.getConfig()
+        
+        // Determine explicit URL (Flag > Local Config)
+        // We do NOT use Env var here because ClientConfiguration.autoDetect handles it, 
+        // but autoDetect prefers explicitURL over Env. 
+        // So we should only pass localConfig if flag is missing.
+        
+        let explicitURL: URL?
+        if let serverFlag = server {
+            explicitURL = URL(string: serverFlag)
+        } else {
+            explicitURL = localConfig.serverURL.flatMap { URL(string: $0) }
+        }
+        
         let config = await ClientConfiguration.autoDetect(
-            explicitURL: server.flatMap { URL(string: $0) },
-            apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"],
+            explicitURL: explicitURL,
+            apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"] ?? localConfig.apiKey,
             verbose: verbose
         )
+        
         let client = MonadClient(configuration: config)
 
         // Check server health
         guard try await client.healthCheck() else {
+            // If we used a cached config and it failed, maybe we should try discovery?
+            // For now, just report error.
             TerminalUI.printError("Cannot connect to server at \(config.baseURL.absoluteString)")
             throw ExitCode.failure
         }
+        
+        // Save successful configuration
+        LocalConfigManager.shared.updateServerURL(config.baseURL.absoluteString)
 
         // Check configuration
         do {
