@@ -85,6 +85,9 @@ actor ChatREPL {
         case "/tools", "/tool":
             await handleTools(args)
 
+        case "/workspaces", "/workspace":
+            await handleWorkspaces(args)
+
         case "/quit", "/q", "/exit":
             running = false
             TerminalUI.printInfo("Goodbye!")
@@ -116,6 +119,7 @@ actor ChatREPL {
               /memory search <q>    Search memories
               /notes                List notes
               /note add <title>     Create a note
+              /workspaces           List/manage workspaces
               /tools                List available tools
 
             \(TerminalUI.bold("Tips:"))
@@ -741,6 +745,85 @@ actor ChatREPL {
             TerminalUI.printSuccess("Disabled tool: \(name)")
         } catch {
             TerminalUI.printError("Failed to disable tool: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Workspaces
+
+    private func handleWorkspaces(_ args: [String]) async {
+        let subcommand = args.first ?? "list"
+
+        switch subcommand {
+        case "list", "ls":
+            await listWorkspaces()
+        case "attach":
+            if args.count > 1 {
+                await attachWorkspace(args[1])
+            } else {
+                TerminalUI.printError("Usage: /workspace attach <workspace-id>")
+            }
+        default:
+            await listWorkspaces()
+        }
+    }
+
+    private func listWorkspaces() async {
+        do {
+            let workspaces = try await client.listWorkspaces()
+            let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
+
+            if workspaces.isEmpty {
+                TerminalUI.printInfo("No workspaces found.")
+                return
+            }
+
+            print("")
+            print(TerminalUI.bold("Workspaces:"))
+            print("")
+
+            for ws in workspaces {
+                let isPrimary = sessionWS.primary == ws.id
+                let isAttached = sessionWS.attached.contains(ws.id)
+                
+                let marker = isPrimary ? TerminalUI.green(" ★") : (isAttached ? TerminalUI.blue(" ●") : " ○")
+                let type = isPrimary ? " (Primary)" : (isAttached ? " (Attached)" : "")
+                
+                print("  \(marker) \(TerminalUI.bold(ws.uri.description))\(type)")
+                print("     ID: \(TerminalUI.dim(ws.id.uuidString))")
+                if let path = ws.rootPath {
+                    print("     Path: \(path)")
+                }
+                print("")
+            }
+        } catch {
+            TerminalUI.printError("Failed to list workspaces: \(error.localizedDescription)")
+        }
+    }
+
+    private func attachWorkspace(_ workspaceId: String) async {
+        guard let uuid = UUID(uuidString: workspaceId) else {
+            // Try partial match by URI
+            do {
+                let workspaces = try await client.listWorkspaces()
+                if let match = workspaces.first(where: { $0.uri.description.contains(workspaceId) }) {
+                    await attachWorkspaceById(match.id)
+                } else {
+                    TerminalUI.printError("Invalid workspace ID or URI: \(workspaceId)")
+                }
+            } catch {
+                TerminalUI.printError("Failed to find workspace: \(error.localizedDescription)")
+            }
+            return
+        }
+        await attachWorkspaceById(uuid)
+    }
+
+    private func attachWorkspaceById(_ uuid: UUID) async {
+        do {
+            try await client.attachWorkspace(uuid, to: session.id, isPrimary: false)
+            TerminalUI.printSuccess("Attached workspace to current session.")
+        } catch {
+            TerminalUI.printError("Failed to attach workspace: \(error.localizedDescription)")
         }
     }
 
