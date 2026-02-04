@@ -8,19 +8,22 @@ public struct CreateWorkspaceRequest: Codable, Sendable {
     public let ownerId: UUID?
     public let rootPath: String?
     public let trustLevel: WorkspaceTrustLevel?
+    public let tools: [ToolReference]
 
     public init(
         uri: String,
         hostType: WorkspaceHostType,
         ownerId: UUID?,
         rootPath: String?,
-        trustLevel: WorkspaceTrustLevel?
+        trustLevel: WorkspaceTrustLevel?,
+        tools: [ToolReference] = []
     ) {
         self.uri = uri
         self.hostType = hostType
         self.ownerId = ownerId
         self.rootPath = rootPath
         self.trustLevel = trustLevel
+        self.tools = tools
     }
 }
 

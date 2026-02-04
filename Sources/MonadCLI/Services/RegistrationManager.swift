@@ -41,11 +41,17 @@ struct RegistrationManager {
         let hostname = ProcessInfo.processInfo.hostName
         let displayName = NSUserName()
         let platform = "macos"  // Detect dynamically if needed
+        
+        // Define client tools
+        let tools: [ToolReference] = [
+            .custom(definition: WorkspaceToolDefinition(from: AskAttachPWDTool()))
+        ]
 
         let response = try await client.registerClient(
             hostname: hostname,
             displayName: displayName,
-            platform: platform
+            platform: platform,
+            tools: tools
         )
 
         let identity = StoredIdentity(

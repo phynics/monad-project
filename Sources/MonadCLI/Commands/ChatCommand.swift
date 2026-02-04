@@ -42,6 +42,10 @@ actor ChatREPL {
     }
 
     private func readInput() async -> String? {
+        // Fetch context summary
+        let contextSummary = await getContextSummary()
+        print(TerminalUI.dim(contextSummary))
+        
         TerminalUI.printPrompt()
 
         // Use readline for vi-style editing
@@ -51,6 +55,44 @@ actor ChatREPL {
         }
 
         return line
+    }
+    
+    private func getContextSummary() async -> String {
+        do {
+            // Workspaces
+            let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
+            var wsSummary = "No Workspace"
+            if let primaryId = sessionWS.primary {
+                let ws = try await client.getWorkspace(primaryId)
+                wsSummary = "📂 \(ws.uri.description)"
+            }
+            if !sessionWS.attached.isEmpty {
+                wsSummary += " (+\(sessionWS.attached.count) attached)"
+            }
+            
+            // Memories
+            let config = try await client.getConfiguration()
+            // We don't want to list all memories every time, just count active?
+            // listMemories gets ALL. That might be heavy.
+            // Let's assume we can get a count or just use a placeholder if active count isn't readily available without listing all.
+            // For now, let's skip memory count to avoid latency, or cache it?
+            // User asked for "memories 2".
+            // Let's do a quick list with limit=1 to see total? listMemories returns all.
+            // Maybe we just omit memory count for speed unless we add a lightweight endpoint.
+            // Or we check if we have a local cache of memories.
+            // Let's try listing active ones (up to limit) active is determined by limit.
+            // We can just show "Active Context" generally.
+            
+            // Better: "📂 macbook:~/project | 🧠 5 memories"
+            
+            // Let's try to get memory count active.
+            let memories = try await client.listMemories()
+            let activeCount = min(memories.count, config.memoryContextLimit)
+            
+            return "\(wsSummary) | 🧠 \(activeCount) memories"
+        } catch {
+            return ""
+        }
     }
 
     // MARK: - Slash Commands

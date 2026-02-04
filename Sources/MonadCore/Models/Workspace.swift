@@ -49,4 +49,17 @@ public struct Workspace: Codable, FetchableRecord, PersistableRecord, Sendable, 
             trustLevel: .full
         )
     }
+    
+    // MARK: - EncodableRecord
+    
+    public func encode(to container: inout PersistenceContainer) throws {
+        container["id"] = id
+        container["uri"] = uri.description
+        container["hostType"] = hostType.rawValue
+        container["ownerId"] = ownerId
+        container["rootPath"] = rootPath
+        container["trustLevel"] = trustLevel.rawValue
+        container["lastModifiedBy"] = lastModifiedBy
+        container["createdAt"] = createdAt
+    }
 }

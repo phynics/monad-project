@@ -285,15 +285,19 @@ public actor MonadClient {
 
     // MARK: - Client API
 
-    public func registerClient(hostname: String, displayName: String, platform: String) async throws
-        -> ClientRegistrationResponse
-    {
+    public func registerClient(
+        hostname: String,
+        displayName: String,
+        platform: String,
+        tools: [ToolReference] = []
+    ) async throws -> ClientRegistrationResponse {
         var request = try buildRequest(path: "/api/clients/register", method: "POST")
         request.httpBody = try encoder.encode(
             ClientRegistrationRequest(
                 hostname: hostname,
                 displayName: displayName,
-                platform: platform
+                platform: platform,
+                tools: tools
             )
         )
         return try await perform(request)
