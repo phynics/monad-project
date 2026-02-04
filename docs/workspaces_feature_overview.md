@@ -1,7 +1,7 @@
 # Workspaces & Tool Execution
 
 ## Motivation
-Current LLM tool implementations lack persistent state and context awareness, treating file operations and command execution as isolated, ephemeral events. The Workspaces feature addresses this by establishing secure, addressable execution boundaries. This allows Monad to maintain persistent file storage on the server, safely access a user's local development environment, and isolate sensitive operations in sandboxed containers, all while using a unified addressing scheme.
+Workspaces enable the flexibility of local execution (similar to Claude Code) combined with the persistent, multi-device accessibility of remote execution (similar to ChatGPT). By establishing secure, addressable execution boundaries, Monad can maintain persistent file storage on the server while safely accessing a user's local development environment through a unified addressing scheme.
 
 ## Key Concepts
 
