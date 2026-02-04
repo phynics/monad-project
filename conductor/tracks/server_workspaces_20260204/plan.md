@@ -27,7 +27,7 @@
     - [x] Execute full migration. (Integrated into server startup).
 - [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
 
-## Phase 4: Legacy Cleanup & Final Integration
+## Phase 4: Legacy Cleanup & Final Integration [checkpoint: b8e9d1e]
 - [x] Task: Remove Legacy Database Note Logic.
     - [x] Remove `Note` table from the database schema (new migration).
     - [x] Remove `NoteController` and associated routes.
@@ -35,4 +35,4 @@
 - [x] Task: Final System Verification.
     - [x] Verify that all existing unit tests pass after logic removal.
     - [x] Ensure LLM can successfully interact with notes via standard FS tools.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)
