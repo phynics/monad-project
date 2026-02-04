@@ -95,5 +95,7 @@ flowchart TD
 ## Security & Isolation
 
 *   **Boundaries**: Tools are strictly confined to their workspace `rootPath`. Path traversal attempts are blocked at the framework level.
-*   **Trust Levels**: Workspaces are assigned levels (`Full` or `Restricted`). Restricted workspaces (e.g., cloned git repos) operate in sandboxed environments with a limited toolset.
+*   **Trust Levels**: Workspaces are assigned levels (`Full` or `Restricted`). 
+    *   **Full**: Trusted environments where tools execute without per-call interruption.
+    *   **Restricted**: Local directories and untrusted environments (e.g., cloned git repos). These require explicit user approval for tool execution and operate with a limited toolset.
 *   **Locks**: Workspaces are locked during generation cycles to ensure state consistency between the user and the AI.
