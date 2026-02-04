@@ -49,6 +49,14 @@ public struct CreateSessionRequest: Codable, Sendable {
     }
 }
 
+public struct UpdatePersonaRequest: Codable, Sendable {
+    public let persona: String
+
+    public init(persona: String) {
+        self.persona = persona
+    }
+}
+
 public struct AttachWorkspaceRequest: Codable, Sendable {
     public let workspaceId: UUID
     public let isPrimary: Bool

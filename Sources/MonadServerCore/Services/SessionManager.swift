@@ -53,6 +53,11 @@ public actor SessionManager {
         try welcomeNote.write(
             to: notesDir.appendingPathComponent("Welcome.md"), atomically: true, encoding: .utf8)
 
+        let projectNote =
+            "# Project Notes\n\nThis note is automatically generated to track the goals and progress of the current session. The agent will fill this in based on your requests."
+        try projectNote.write(
+            to: notesDir.appendingPathComponent("Project.md"), atomically: true, encoding: .utf8)
+
         // 1.2 Create Personas directory and default personas
         let personasDir = sessionWorkspaceURL.appendingPathComponent("Personas", isDirectory: true)
         try FileManager.default.createDirectory(at: personasDir, withIntermediateDirectories: true)
@@ -178,6 +183,25 @@ public actor SessionManager {
         return session
     }
 
+    public func updateSessionPersona(id: UUID, persona: String) async throws {
+        var session: ConversationSession
+        if let memorySession = sessions[id] {
+            session = memorySession
+        } else if let dbSession = try await persistenceService.fetchSession(id: id) {
+            session = dbSession
+        } else {
+            throw SessionError.sessionNotFound
+        }
+
+        session.persona = persona
+        session.updatedAt = Date()
+
+        if sessions[id] != nil {
+            sessions[id] = session
+        }
+        try await persistenceService.saveSession(session)
+    }
+
     public func getContextManager(for sessionId: UUID) -> ContextManager? {
         return contextManagers[sessionId]
     }
@@ -214,6 +238,22 @@ public actor SessionManager {
 
     public func listSessions() async throws -> [ConversationSession] {
         return try await persistenceService.fetchAllSessions(includeArchived: false)
+    }
+
+    public func listPersonas() -> [Persona] {
+        return [
+            Persona(id: "Default.md", content: "You are Monad, an intelligent AI assistant."),
+            Persona(
+                id: "ProductManager.md",
+                content:
+                    "You are an expert AI Product Manager. You specialize in defining requirements, user stories, and product strategy."
+            ),
+            Persona(
+                id: "Architect.md",
+                content:
+                    "You are a Senior Software Architect. You focus on system design, scalability, and clean architecture."
+            ),
+        ]
     }
 
     public func cleanupStaleSessions(maxAge: TimeInterval) {

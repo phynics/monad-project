@@ -15,6 +15,8 @@ public struct SessionController<Context: RequestContext>: Sendable {
         group.post("/", use: create)
         group.get("/", use: list)
         group.get("/{id}/history", use: getHistory)
+        group.get("/personas", use: listPersonas)
+        group.patch("/{id}/persona", use: updatePersona)
 
         // Workspace routes
         group.post("/{id}/workspaces", use: attachWorkspace)
@@ -68,6 +70,27 @@ public struct SessionController<Context: RequestContext>: Sendable {
         headers[.contentType] = "application/json"
         return Response(
             status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+    }
+
+    @Sendable func listPersonas(_ request: Request, context: Context) async throws -> Response {
+        let personas = await sessionManager.listPersonas()
+        let data = try SerializationUtils.jsonEncoder.encode(personas)
+        var headers = HTTPFields()
+        headers[.contentType] = "application/json"
+        return Response(
+            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+    }
+
+    @Sendable func updatePersona(_ request: Request, context: Context) async throws -> Response {
+        let idString = try context.parameters.require("id")
+        guard let id = UUID(uuidString: idString) else {
+            throw HTTPError(.badRequest)
+        }
+
+        let input = try await request.decode(as: UpdatePersonaRequest.self, context: context)
+        try await sessionManager.updateSessionPersona(id: id, persona: input.persona)
+
+        return Response(status: .ok)
     }
 
     @Sendable func getHistory(_ request: Request, context: Context) async throws -> Response {

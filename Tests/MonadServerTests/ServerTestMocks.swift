@@ -108,7 +108,7 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
     
     func chatStreamWithContext(
         userQuery: String,
-        contextNotes: [Note],
+        contextNotes: [ContextFile],
         documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
@@ -135,7 +135,7 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
 
     func buildPrompt(
         userQuery: String,
-        contextNotes: [Note],
+        contextNotes: [ContextFile],
         documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
@@ -310,6 +310,20 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
             session.isArchived && !Set(session.tagArray).intersection(tags).isEmpty
         }
     }
+
+    func pruneSessions(olderThan timeInterval: TimeInterval) async throws -> Int {
+        let cutoffDate = Date().addingTimeInterval(-timeInterval)
+        let countBefore = sessions.count
+        sessions.removeAll { !$0.isArchived && $0.updatedAt < cutoffDate }
+        return countBefore - sessions.count
+    }
+
+    func pruneMessages(olderThan timeInterval: TimeInterval) async throws -> Int {
+        let cutoffDate = Date().addingTimeInterval(-timeInterval)
+        let countBefore = messages.count
+        messages.removeAll { $0.timestamp < cutoffDate }
+        return countBefore - messages.count
+    }
     
     // Jobs
     func saveJob(_ job: Job) async throws {
@@ -330,6 +344,13 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
     
     func deleteJob(id: UUID) async throws {
         jobs.removeAll(where: { $0.id == id })
+    }
+
+    // MARK: - Prune
+    func pruneMemories(matching query: String) async throws -> Int {
+        let countBefore = memories.count
+        memories.removeAll { $0.title.contains(query) || $0.content.contains(query) }
+        return countBefore - memories.count
     }
     
     // RAW SQL Support

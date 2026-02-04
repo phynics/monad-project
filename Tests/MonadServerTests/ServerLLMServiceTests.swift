@@ -130,7 +130,13 @@ import Testing
         let (stream, prompt, _) = await service.chatStreamWithContext(
             userQuery: "Hi",
             contextNotes: [],
-            chatHistory: []
+            documents: [],
+            memories: [],
+            chatHistory: [],
+            tools: [],
+            systemInstructions: nil,
+            responseFormat: nil,
+            useFastModel: false
         )
 
         #expect(!prompt.isEmpty)

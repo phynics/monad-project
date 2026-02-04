@@ -110,99 +110,16 @@ struct ChatSubcommand: AsyncParsableCommand {
         }
 
         // Resulting session to use
-        var sessionToUse: Session?
+        let cliSessionManager = CLISessionManager(client: client)
+        let finalSession = try await cliSessionManager.resolveSession(
+            explicitId: session,
+            persona: persona,
+            localConfig: localConfig
+        )
 
-        // 1. Try to resume from flag or config
-        var targetSessionId = session.flatMap { UUID(uuidString: $0) }
-
-        // If no flag, check config
-        if targetSessionId == nil, let lastId = localConfig.lastSessionId,
-            let uuid = UUID(uuidString: lastId)
-        {
-            targetSessionId = uuid
-        }
-
-        if let uuid = targetSessionId {
-            do {
-                _ = try await client.getHistory(sessionId: uuid)
-                sessionToUse = Session(id: uuid, title: nil)
-                TerminalUI.printInfo("Resumed session \(uuid.uuidString.prefix(8))")
-            } catch {
-                TerminalUI.printWarning(
-                    "Could not resume session \(uuid.uuidString.prefix(8)): \(error.localizedDescription)"
-                )
-                // If this was from config, it might be stale.
-                if uuid.uuidString == localConfig.lastSessionId {
-                    // Update config to remove stale? For now just ignore.
-                }
-            }
-        }
-
-        // 2. Fallback to interactive menu if no session resolved
-        if sessionToUse == nil {
-            print("")
-            print(TerminalUI.bold("No active session found."))
-            print("  [1] Create New Session")
-            print("  [2] List Existing Sessions")
-            print("")
-            print("Select an option [1]: ", terminator: "")
-
-            let choice = readLine()?.trimmingCharacters(in: .whitespaces) ?? "1"
-
-            if choice == "2" {
-                // List sessions
-                do {
-                    let sessions = try await client.listSessions()
-                    if sessions.isEmpty {
-                        print("No sessions found. Creating new one.")
-                        sessionToUse = try await client.createSession(persona: persona)
-                    } else {
-                        print("")
-                        for (i, s) in sessions.enumerated() {
-                            let title = s.title ?? "Untitled"
-                            let date = TerminalUI.formatDate(s.updatedAt)
-                            print("  [\(i+1)] \(title) (\(s.id.uuidString.prefix(8))) - \(date)")
-                        }
-                        print("")
-                        print("Select a session [1]: ", terminator: "")
-                        let indexStr = readLine()?.trimmingCharacters(in: .whitespaces) ?? "1"
-                        let index = (Int(indexStr) ?? 1) - 1
-
-                        if index >= 0 && index < sessions.count {
-                            // Convert SessionResponse to Session
-                            let s = sessions[index]
-                            sessionToUse = Session(id: s.id, title: s.title)
-                        } else {
-                            TerminalUI.printError("Invalid selection.")
-                            throw ExitCode.failure
-                        }
-                    }
-                } catch {
-                    TerminalUI.printError("Failed to list sessions: \(error.localizedDescription)")
-                    throw ExitCode.failure
-                }
-            } else {
-                // Default to new session
-                do {
-                    sessionToUse = try await client.createSession(persona: persona)
-                    TerminalUI.printInfo(
-                        "Created new session \(sessionToUse!.id.uuidString.prefix(8))")
-                } catch {
-                    TerminalUI.printError("Failed to create session: \(error.localizedDescription)")
-                    // Fallback for offline/error state just to enter loop?
-                    // If server is down, we probably failed healthCheck already.
-                    // But if create fails... provide dummy?
-                    sessionToUse = Session(id: UUID(), title: "Offline Session")
-                }
-            }
-        }
-
-        guard let finalSession = sessionToUse else {
-            throw ExitCode.failure
-        }
-
-        // 3. Persist successful session ID
+        // 3. Persist successful session ID and handle re-attachment
         LocalConfigManager.shared.updateLastSessionId(finalSession.id.uuidString)
+        await cliSessionManager.handleWorkspaceReattachment(session: finalSession, localConfig: localConfig)
 
         TerminalUI.printWelcome()
 

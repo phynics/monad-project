@@ -14,6 +14,7 @@ public struct PruneController<Context: RequestContext>: Sendable {
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("/memories", use: pruneMemories)
         group.post("/sessions", use: pruneSessions)
+        group.post("/messages", use: pruneMessages)
     }
 
     // MARK: - Handlers
@@ -35,6 +36,19 @@ public struct PruneController<Context: RequestContext>: Sendable {
         // Convert days to seconds
         let timeInterval = Double(input.days) * 24 * 60 * 60
         let count = try await persistenceService.pruneSessions(olderThan: timeInterval)
+
+        let response = PruneResponse(count: count)
+        let data = try SerializationUtils.jsonEncoder.encode(response)
+        var headers = HTTPFields()
+        headers[.contentType] = "application/json"
+        return Response(
+            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+    }
+
+    @Sendable func pruneMessages(_ request: Request, context: Context) async throws -> Response {
+        let input = try await request.decode(as: PruneMessagesRequest.self, context: context)
+        let timeInterval = Double(input.days) * 24 * 60 * 60
+        let count = try await persistenceService.pruneMessages(olderThan: timeInterval)
 
         let response = PruneResponse(count: count)
         let data = try SerializationUtils.jsonEncoder.encode(response)

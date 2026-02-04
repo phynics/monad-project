@@ -90,16 +90,23 @@ extension PersistenceService {
         }
     }
 
-    public func pruneSessions(olderThan timeInterval: TimeInterval) throws -> Int {
-        try dbQueue.write { db in
+    public func pruneSessions(olderThan timeInterval: TimeInterval) async throws -> Int {
+        try await dbQueue.write { db in
             let cutoffDate = Date().addingTimeInterval(-timeInterval)
             let count =
                 try ConversationSession
-                .filter(Column("isArchived") == false)  // Only prune active sessions? Or archived too? Plan says "sessions". Let's assume all or spec configurable.
-                // Wait, triggers block deletion of archived sessions.
-                // "Archived sessions cannot be deleted" trigger exists.
-                // So we can only prune non-archived sessions.
+                .filter(Column("isArchived") == false)
                 .filter(Column("updatedAt") < cutoffDate)
+                .deleteAll(db)
+            return count
+        }
+    }
+
+    public func pruneMessages(olderThan timeInterval: TimeInterval) async throws -> Int {
+        try await dbQueue.write { db in
+            let cutoffDate = Date().addingTimeInterval(-timeInterval)
+            let count = try ConversationMessage
+                .filter(Column("createdAt") < cutoffDate)
                 .deleteAll(db)
             return count
         }

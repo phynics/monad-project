@@ -4,12 +4,21 @@ struct LocalConfig: Codable {
     var serverURL: String?
     var apiKey: String?
     var lastSessionId: String?
+    var clientWorkspaces: [String: String]? // URI -> WorkspaceID
 }
 
 struct LocalConfigManager {
     static let shared = LocalConfigManager()
 
+    private let customStorageURL: URL?
+
+    init(storageURL: URL? = nil) {
+        self.customStorageURL = storageURL
+    }
+
     private var storageURL: URL {
+        if let custom = customStorageURL { return custom }
+        
         let fileManager = FileManager.default
         let appName = "Monad"
         let filename = "config.json"
@@ -73,6 +82,20 @@ struct LocalConfigManager {
     func updateLastSessionId(_ id: String) {
         var config = getConfig()
         config.lastSessionId = id
+        saveConfig(config)
+    }
+
+    func updateClientWorkspaces(_ workspaces: [String: String]) {
+        var config = getConfig()
+        config.clientWorkspaces = workspaces
+        saveConfig(config)
+    }
+
+    func saveClientWorkspace(uri: String, id: String) {
+        var config = getConfig()
+        var workspaces = config.clientWorkspaces ?? [:]
+        workspaces[uri] = id
+        config.clientWorkspaces = workspaces
         saveConfig(config)
     }
 }

@@ -37,8 +37,8 @@ struct SearchToolsTests {
     func testSearchMemoriesSQL() async throws {
         let mem1 = Memory(title: "Project Alpha", content: "Key details about Alpha", tags: ["work"])
         let mem2 = Memory(title: "Vacation", content: "Hawaii trip details", tags: ["personal"])
-        _ = try await persistence.saveMemory(mem1)
-        _ = try await persistence.saveMemory(mem2)
+        _ = try await persistence.saveMemory(mem1, policy: .immediate)
+        _ = try await persistence.saveMemory(mem2, policy: .immediate)
         
         // Test content match
         let res1 = try await executeSQLTool.execute(parameters: ["sql": "SELECT title, content FROM memory WHERE content LIKE '%Alpha%'"])

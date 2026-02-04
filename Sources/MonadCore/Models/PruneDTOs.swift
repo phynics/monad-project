@@ -16,6 +16,14 @@ public struct PruneSessionRequest: Codable {
     }
 }
 
+public struct PruneMessagesRequest: Codable {
+    public let days: Int
+
+    public init(days: Int) {
+        self.days = days
+    }
+}
+
 public struct PruneResponse: Codable {
     public let count: Int
 

@@ -44,9 +44,21 @@ extension PersistenceService {
     public func searchMemories(embedding: [Double], limit: Int, minSimilarity: Double) async throws
         -> [(memory: Memory, similarity: Double)]
     {
-        // Simple mock implementation for now as we don't have vector search in SQLite directly without extension
-        // In real impl this would use sqlite-vec or similar
-        return []
+        let allMemories = try await fetchAllMemories()
+        var results: [(memory: Memory, similarity: Double)] = []
+
+        for memory in allMemories {
+            let memoryVector = memory.embeddingVector
+            guard !memoryVector.isEmpty else { continue }
+
+            let similarity = VectorMath.cosineSimilarity(embedding, memoryVector)
+            if similarity >= minSimilarity {
+                results.append((memory: memory, similarity: similarity))
+            }
+        }
+
+        results.sort { $0.similarity > $1.similarity }
+        return Array(results.prefix(limit))
     }
 
     public func searchMemories(matchingAnyTag tags: [String]) async throws -> [Memory] {

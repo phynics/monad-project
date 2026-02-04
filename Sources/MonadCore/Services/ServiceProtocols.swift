@@ -96,6 +96,7 @@ public protocol PersistenceServiceProtocol: Sendable {
     func searchArchivedSessions(query: String) async throws -> [ConversationSession]
     func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession]
     func pruneSessions(olderThan timeInterval: TimeInterval) async throws -> Int
+    func pruneMessages(olderThan timeInterval: TimeInterval) async throws -> Int
 
     // Jobs
     func saveJob(_ job: Job) async throws

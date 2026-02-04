@@ -182,7 +182,7 @@ final class ContextManagerTests: XCTestCase {
         XCTAssertEqual(context.notes.count, 1)
         let note = context.notes.first
         XCTAssertEqual(note?.name, "FSNote")
-        XCTAssertEqual(note?.description, "FS Note Description")
-        XCTAssertEqual(note?.content, "Content from filesystem.")
+        XCTAssertEqual(note?.source, "Notes/FSNote.md")
+        XCTAssertEqual(note?.content, noteContent)
     }
 }

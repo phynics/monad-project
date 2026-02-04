@@ -15,6 +15,9 @@ actor ChatREPL {
     }
 
     func run() async throws {
+        // Ensure client is registered and intrinsic tools are active
+        try? await RegistrationManager.shared.ensureRegistered(client: client)
+        
         // Show active context (memories, documents) at startup
         await showContext()
 
@@ -122,8 +125,20 @@ actor ChatREPL {
         case "/memories", "/memory":
             await handleMemories(args)
 
-        case "/notes", "/note":
-            await handleNotes(args)
+        case "/ls":
+            await handleLs(args)
+
+        case "/cat":
+            await handleCat(args)
+
+        case "/edit":
+            await handleEdit(args)
+
+        case "/rm":
+            await handleRm(args)
+
+        case "/write":
+            await handleWrite(args)
 
         case "/personas", "/persona":
             await handlePersonas(args)
@@ -163,14 +178,19 @@ actor ChatREPL {
               /session delete <id>  Delete a session
               /memories             List memories
               /memory search <q>    Search memories
-              /notes                List notes
-              /note add <name.md>   Create a note
-              /note edit <name.md>  Edit a note
+              /ls [path]            List files (defaults to Notes/)
+              /cat <path>           Show file content
+              /edit <path>          Edit file in $EDITOR
+              /rm <path>            Delete file
+              /write <path>         Write file content
               /personas             List available personas
-              /persona add <n.md>   Create a persona
-              /persona use <name>   Set active persona for session
+              /persona use <name>   Set active persona
               /workspaces           List/manage workspaces
               /tools                List available tools
+
+            \(TerminalUI.bold("Note:"))
+              Paths default to primary workspace 'Notes/'
+              Use @ws_id/path to target other workspaces.
 
             \(TerminalUI.bold("Tips:"))
               • Press Ctrl+C to cancel current generation
@@ -671,133 +691,104 @@ actor ChatREPL {
         }
     }
 
-    // MARK: - Notes & Files
+    // MARK: - Filesystem Commands
 
-    private func handleNotes(_ args: [String]) async {
-        let subcommand = args.first ?? "list"
-        switch subcommand {
-        case "list", "ls":
-            await listFiles(in: "Notes")
-        case "add", "create", "new":
-            if args.count > 1 {
-                await addFile(in: "Notes", name: args[1])
-            } else {
-                TerminalUI.printError("Usage: /note add <filename.md>")
-            }
-        case "edit":
-            if args.count > 1 {
-                await editFile(in: "Notes", name: args[1])
-            } else {
-                TerminalUI.printError("Usage: /note edit <filename.md>")
-            }
-        case "delete", "rm":
-            if args.count > 1 {
-                await deleteFile(in: "Notes", name: args[1])
-            } else {
-                TerminalUI.printError("Usage: /note delete <filename.md>")
-            }
-        default:
-            await listFiles(in: "Notes")
-        }
+    private struct ResolvedPath {
+        let workspaceId: UUID
+        let path: String
+        let workspaceName: String
     }
 
-    private func handlePersonas(_ args: [String]) async {
-        let subcommand = args.first ?? "list"
-        switch subcommand {
-        case "list", "ls":
-            await listFiles(in: "Personas")
-        case "add", "create", "new":
-            if args.count > 1 {
-                await addFile(in: "Personas", name: args[1])
-            } else {
-                TerminalUI.printError("Usage: /persona add <filename.md>")
-            }
-        case "edit":
-            if args.count > 1 {
-                await editFile(in: "Personas", name: args[1])
-            } else {
-                TerminalUI.printError("Usage: /persona edit <filename.md>")
-            }
-        case "delete", "rm":
-            if args.count > 1 {
-                await deleteFile(in: "Personas", name: args[1])
-            } else {
-                TerminalUI.printError("Usage: /persona delete <filename.md>")
-            }
-        case "use", "set":
-            if args.count > 1 {
-                await usePersona(name: args[1])
-            } else {
-                TerminalUI.printError("Usage: /persona use <filename.md>")
-            }
-        default:
-            await listFiles(in: "Personas")
-        }
-    }
-
-    private func getPrimaryWorkspaceId() async throws -> UUID {
+    private func resolvePath(_ input: String?) async throws -> ResolvedPath {
         let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
         guard let primaryId = sessionWS.primary else {
             throw MonadClientError.unknown("No primary workspace attached to session.")
         }
-        return primaryId
+
+        guard let input = input, !input.isEmpty else {
+            return ResolvedPath(workspaceId: primaryId, path: "Notes", workspaceName: "Primary")
+        }
+
+        // Check for workspace prefix: @ws_id/path or [uri]/path
+        if input.hasPrefix("@") {
+            let components = input.dropFirst().split(separator: "/", maxSplits: 1, omittingEmptySubsequences: false)
+            let wsRef = String(components[0])
+            let path = components.count > 1 ? String(components[1]) : ""
+
+            // Find workspace by ID (prefix match)
+            let allWorkspaces = try await client.listWorkspaces()
+            if let ws = allWorkspaces.first(where: { $0.id.uuidString.lowercased().hasPrefix(wsRef.lowercased()) }) {
+                return ResolvedPath(workspaceId: ws.id, path: path, workspaceName: ws.uri.description)
+            }
+            throw MonadClientError.unknown("Workspace '@\(wsRef)' not found.")
+        }
+
+        // Default to primary
+        // If it starts with Notes/ or Personas/, use as is. 
+        // If it's just a name, assume Notes/ (for backward compatibility / convenience)
+        if input.hasPrefix("Notes/") || input.hasPrefix("Personas/") {
+            return ResolvedPath(workspaceId: primaryId, path: input, workspaceName: "Primary")
+        } else {
+            return ResolvedPath(workspaceId: primaryId, path: "Notes/\(input)", workspaceName: "Primary")
+        }
     }
 
-    private func listFiles(in directory: String) async {
+    private func handleLs(_ args: [String]) async {
         do {
-            let wsId = try await getPrimaryWorkspaceId()
-            let allFiles = try await client.listFiles(workspaceId: wsId)
-            let filtered = allFiles.filter { $0.hasPrefix("\(directory)/") }
+            let resolved = try await resolvePath(args.first)
+            let files = try await client.listFiles(workspaceId: resolved.workspaceId)
+            
+            // Filter by prefix if path is a directory
+            let prefix = resolved.path.hasSuffix("/") || resolved.path.isEmpty ? resolved.path : "\(resolved.path)/"
+            let filtered = files.filter { $0.hasPrefix(prefix) }
 
             if filtered.isEmpty {
-                TerminalUI.printInfo("No files found in \(directory)/")
+                TerminalUI.printInfo("No files found in \(resolved.workspaceName):\(resolved.path)")
                 return
             }
 
             print("")
-            print(TerminalUI.bold("\(directory):"))
+            print(TerminalUI.bold("\(resolved.workspaceName):\(resolved.path)"))
             print("")
             for file in filtered {
-                let name = file.replacingOccurrences(of: "\(directory)/", with: "")
-                print("  📄 \(name)")
+                let name = file.replacingOccurrences(of: prefix, with: "")
+                if !name.isEmpty {
+                    print("  📄 \(name)")
+                }
             }
             print("")
         } catch {
-            TerminalUI.printError("Failed to list \(directory): \(error.localizedDescription)")
+            TerminalUI.printError("ls failed: \(error.localizedDescription)")
         }
     }
 
-    private func addFile(in directory: String, name: String) async {
-        let filename = name.hasSuffix(".md") ? name : "\(name).md"
-        let path = "\(directory)/\(filename)"
-
-        print("Enter content (end with empty line):")
-        var content = ""
-        while let line = readLine() {
-            if line.isEmpty { break }
-            content += line + "\n"
+    private func handleCat(_ args: [String]) async {
+        guard let pathInput = args.first else {
+            TerminalUI.printError("Usage: /cat <path>")
+            return
         }
-
         do {
-            let wsId = try await getPrimaryWorkspaceId()
-            try await client.writeFileContent(workspaceId: wsId, path: path, content: content)
-            TerminalUI.printSuccess("Created \(path)")
+            let resolved = try await resolvePath(pathInput)
+            let content = try await client.getFileContent(workspaceId: resolved.workspaceId, path: resolved.path)
+            print("")
+            print(content)
+            print("")
         } catch {
-            TerminalUI.printError("Failed to create file: \(error.localizedDescription)")
+            TerminalUI.printError("cat failed: \(error.localizedDescription)")
         }
     }
 
-    private func editFile(in directory: String, name: String) async {
-        let filename = name.hasSuffix(".md") ? name : "\(name).md"
-        let path = "\(directory)/\(filename)"
-
+    private func handleEdit(_ args: [String]) async {
+        guard let pathInput = args.first else {
+            TerminalUI.printError("Usage: /edit <path>")
+            return
+        }
         do {
-            let wsId = try await getPrimaryWorkspaceId()
-            let content = try await client.getFileContent(workspaceId: wsId, path: path)
+            let resolved = try await resolvePath(pathInput)
+            let content = try await client.getFileContent(workspaceId: resolved.workspaceId, path: resolved.path)
 
-            // Use temporary file and $EDITOR
-            let tempDir = FileManager.default.temporaryDirectory
-            let tempFile = tempDir.appendingPathComponent(filename)
+            let filename = URL(fileURLWithPath: resolved.path).lastPathComponent
+            let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
             try content.write(to: tempFile, atomically: true, encoding: .utf8)
 
             let editor = ProcessInfo.processInfo.environment["EDITOR"] ?? "vi"
@@ -810,43 +801,96 @@ actor ChatREPL {
 
             let updatedContent = try String(contentsOf: tempFile, encoding: .utf8)
             if updatedContent != content {
-                try await client.writeFileContent(
-                    workspaceId: wsId, path: path, content: updatedContent)
-                TerminalUI.printSuccess("Updated \(path)")
+                try await client.writeFileContent(workspaceId: resolved.workspaceId, path: resolved.path, content: updatedContent)
+                TerminalUI.printSuccess("Updated \(resolved.path)")
             } else {
                 TerminalUI.printInfo("No changes made.")
             }
-
             try? FileManager.default.removeItem(at: tempFile)
         } catch {
-            TerminalUI.printError("Failed to edit file: \(error.localizedDescription)")
+            TerminalUI.printError("edit failed: \(error.localizedDescription)")
         }
     }
 
-    private func deleteFile(in directory: String, name: String) async {
-        let filename = name.hasSuffix(".md") ? name : "\(name).md"
-        let path = "\(directory)/\(filename)"
-
-        do {
-            let wsId = try await getPrimaryWorkspaceId()
-            try await client.deleteFile(workspaceId: wsId, path: path)
-            TerminalUI.printSuccess("Deleted \(path)")
-        } catch {
-            TerminalUI.printError("Failed to delete file: \(error.localizedDescription)")
+    private func handleRm(_ args: [String]) async {
+        guard let pathInput = args.first else {
+            TerminalUI.printError("Usage: /rm <path>")
+            return
         }
+        do {
+            let resolved = try await resolvePath(pathInput)
+            print("Are you sure you want to delete \(resolved.workspaceName):\(resolved.path)? (y/n): ", terminator: "")
+            if readLine()?.lowercased() == "y" {
+                try await client.deleteFile(workspaceId: resolved.workspaceId, path: resolved.path)
+                TerminalUI.printSuccess("Deleted \(resolved.path)")
+            }
+        } catch {
+            TerminalUI.printError("rm failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func handleWrite(_ args: [String]) async {
+        guard let pathInput = args.first else {
+            TerminalUI.printError("Usage: /write <path>")
+            return
+        }
+        do {
+            let resolved = try await resolvePath(pathInput)
+            print("Enter content (end with empty line):")
+            var content = ""
+            while let line = readLine() {
+                if line.isEmpty { break }
+                content += line + "\n"
+            }
+            try await client.writeFileContent(workspaceId: resolved.workspaceId, path: resolved.path, content: content)
+            TerminalUI.printSuccess("Wrote \(resolved.path)")
+        } catch {
+            TerminalUI.printError("write failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func handlePersonas(_ args: [String]) async {
+        let subcommand = args.first ?? "list"
+        switch subcommand {
+        case "list", "ls":
+            do {
+                let personas = try await client.listPersonas()
+                print("")
+                print(TerminalUI.bold("Available Personas:"))
+                for p in personas {
+                    print("  👤 \(p.id)")
+                }
+                print("")
+            } catch {
+                TerminalUI.printError("Failed to list personas: \(error.localizedDescription)")
+            }
+        case "use", "set":
+            if args.count > 1 {
+                await usePersona(name: args[1])
+            } else {
+                TerminalUI.printError("Usage: /persona use <name.md>")
+            }
+        default:
+            await handleLs(["Personas"])
+        }
+    }
+
+    private func getPrimaryWorkspaceId() async throws -> UUID {
+        let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
+        guard let primaryId = sessionWS.primary else {
+            throw MonadClientError.unknown("No primary workspace attached to session.")
+        }
+        return primaryId
     }
 
     private func usePersona(name: String) async {
-        // We need a server endpoint to update session persona.
-        // Or we can just update the session property locally? No, server needs to know.
-        // I should have added an updateSession endpoint.
-
-        // Wait, does ChatController use the session's persona? Yes.
-        // Does the server have an endpoint to update it?
-        // Let's check SessionController on the server.
-        TerminalUI.printWarning(
-            "Persona update for existing session not yet implemented on server. Please start a new session with --persona \(name)"
-        )
+        let personaFile = name.hasSuffix(".md") ? name : "\(name).md"
+        do {
+            try await client.updatePersona(personaFile, sessionId: session.id)
+            TerminalUI.printSuccess("Persona updated to \(personaFile)")
+        } catch {
+            TerminalUI.printError("Failed to update persona: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Tools

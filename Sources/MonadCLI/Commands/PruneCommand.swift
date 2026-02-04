@@ -30,6 +30,7 @@ struct PruneCommand: AsyncParsableCommand {
         subcommands: [
             PruneMemories.self,
             PruneSessions.self,
+            PruneMessages.self,
         ]
     )
 }
@@ -89,5 +90,34 @@ struct PruneSessions: AsyncParsableCommand {
         let client = options.makeClient()
         let count = try await client.pruneSessions(olderThanDays: days)
         print("Deleted \(count) sessions.")
+    }
+}
+
+struct PruneMessages: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "messages",
+        abstract: "Delete messages older than a number of days"
+    )
+
+    @OptionGroup var options: PruneOptions
+
+    @Option(name: .long, help: "Delete messages older than N days")
+    var days: Int
+
+    @Flag(name: .shortAndLong, help: "Skip confirmation")
+    var force: Bool = false
+
+    func run() async throws {
+        if !force {
+            print("Are you sure you want to delete messages older than \(days) days? (y/n)")
+            guard let response = readLine(), response.lowercased() == "y" else {
+                print("Aborted.")
+                return
+            }
+        }
+
+        let client = options.makeClient()
+        let count = try await client.pruneMessages(olderThanDays: days)
+        print("Deleted \(count) messages.")
     }
 }

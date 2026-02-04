@@ -32,19 +32,9 @@ import GRDB
     @Test("ConversationSession Database Roundtrip")
     func testConversationSessionDB() throws {
         let dbQueue = try DatabaseQueue()
-        try dbQueue.write { db in
-            try db.create(table: "conversationSession") { t in
-                t.column("id", .text).primaryKey()
-                t.column("title", .text).notNull()
-                t.column("createdAt", .datetime).notNull()
-                t.column("updatedAt", .datetime).notNull()
-                t.column("isArchived", .boolean).notNull()
-                t.column("tags", .text).notNull()
-                t.column("workingDirectory", .text)
-                t.column("primaryWorkspaceId", .text)
-                t.column("attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
-            }
-        }
+        var migrator = DatabaseMigrator()
+        DatabaseSchema.registerMigrations(in: &migrator)
+        try migrator.migrate(dbQueue)
         
         let session = ConversationSession(
             id: UUID(),
@@ -91,18 +81,9 @@ import GRDB
     @Test("Memory Database Decoding with Non-Hyphenated UUID")
     func testMemoryUUIDDecoding() throws {
         let dbQueue = try DatabaseQueue()
-        try dbQueue.write { db in
-            try db.create(table: "memory") { t in
-                t.column("id", .text).primaryKey()
-                t.column("title", .text).notNull()
-                t.column("content", .text).notNull()
-                t.column("createdAt", .datetime).notNull()
-                t.column("updatedAt", .datetime).notNull()
-                t.column("tags", .text).notNull()
-                t.column("metadata", .text).notNull()
-                t.column("embedding", .text).notNull()
-            }
-        }
+        var migrator = DatabaseMigrator()
+        DatabaseSchema.registerMigrations(in: &migrator)
+        try migrator.migrate(dbQueue)
         
         let uuid = UUID()
         let rawID = uuid.uuidString.replacingOccurrences(of: "-", with: "").lowercased()

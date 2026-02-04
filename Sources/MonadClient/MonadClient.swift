@@ -37,13 +37,25 @@ public actor MonadClient {
         return try await perform(request)
     }
 
-    /// List all sessions
-    public func listSessions() async throws -> [Session] {
+    public func listSessions() async throws -> [SessionResponse] {
         let request = try buildRequest(path: "/api/sessions", method: "GET")
         return try await perform(request)
     }
 
-    /// Delete a session
+    /// List available personas
+    public func listPersonas() async throws -> [Persona] {
+        let request = try buildRequest(path: "/api/sessions/personas", method: "GET")
+        return try await perform(request)
+    }
+
+    /// Update session persona
+    public func updatePersona(_ persona: String, sessionId: UUID) async throws {
+        var request = try buildRequest(path: "/api/sessions/\(sessionId.uuidString)/persona", method: "PATCH")
+        request.httpBody = try encoder.encode(UpdatePersonaRequest(persona: persona))
+        _ = try await performRaw(request)
+    }
+
+    /// Get history for a session
     public func deleteSession(_ id: UUID) async throws {
         let request = try buildRequest(path: "/api/sessions/\(id.uuidString)", method: "DELETE")
         _ = try await performRaw(request)
@@ -300,6 +312,13 @@ public actor MonadClient {
     public func pruneSessions(olderThanDays days: Int) async throws -> Int {
         var request = try buildRequest(path: "/api/prune/sessions", method: "POST")
         request.httpBody = try encoder.encode(PruneSessionRequest(days: days))
+        let response: PruneResponse = try await perform(request)
+        return response.count
+    }
+
+    public func pruneMessages(olderThanDays days: Int) async throws -> Int {
+        var request = try buildRequest(path: "/api/prune/messages", method: "POST")
+        request.httpBody = try encoder.encode(PruneMessagesRequest(days: days))
         let response: PruneResponse = try await perform(request)
         return response.count
     }

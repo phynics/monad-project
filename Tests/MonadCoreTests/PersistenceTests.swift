@@ -135,7 +135,7 @@ struct PersistenceTests {
         // Add some custom data
         try await persistence.saveSession(ConversationSession(title: "Archive to keep"))
         let memory = Memory(title: "Memory to wipe", content: "Should be gone")
-        _ = try await persistence.saveMemory(memory)
+        _ = try await persistence.saveMemory(memory, policy: .immediate)
 
         try await persistence.resetDatabase()
 
@@ -150,7 +150,7 @@ struct PersistenceTests {
     func memoryPersistence() async throws {
         let memory = Memory(
             title: "Test Memory", content: "This is a test memory", tags: ["test", "memory"])
-        _ = try await persistence.saveMemory(memory)
+        _ = try await persistence.saveMemory(memory, policy: .immediate)
 
         let fetched = try await persistence.fetchMemory(id: memory.id)
         #expect(fetched != nil)
@@ -166,7 +166,7 @@ struct PersistenceTests {
     @Test("Test memory update (upsert)")
     func memoryUpdate() async throws {
         var memory = Memory(title: "Original Title", content: "Original Content")
-        _ = try await persistence.saveMemory(memory)
+        _ = try await persistence.saveMemory(memory, policy: .immediate)
 
         let fetchedOriginal = try await persistence.fetchMemory(id: memory.id)
         #expect(fetchedOriginal?.title == "Original Title")
@@ -174,7 +174,7 @@ struct PersistenceTests {
         // Update
         memory.title = "Updated Title"
         memory.content = "Updated Content"
-        _ = try await persistence.saveMemory(memory)
+        _ = try await persistence.saveMemory(memory, policy: .immediate)
 
         let fetchedUpdated = try await persistence.fetchMemory(id: memory.id)
         #expect(fetchedUpdated?.title == "Updated Title")
@@ -191,11 +191,11 @@ struct PersistenceTests {
         let m1 = Memory(title: "Apple", content: "A fruit", embedding: [1.0, 0.0, 0.0])
         let m2 = Memory(title: "Banana", content: "Another fruit", embedding: [0.0, 1.0, 0.0])
         
-        _ = try await persistence.saveMemory(m1)
-        _ = try await persistence.saveMemory(m2)
+        _ = try await persistence.saveMemory(m1, policy: .immediate)
+        _ = try await persistence.saveMemory(m2, policy: .immediate)
         
         // Search for something close to m1
-        let results = try await persistence.searchMemories(embedding: [0.9, 0.1, 0.0], limit: 1)
+        let results = try await persistence.searchMemories(embedding: [0.9, 0.1, 0.0], limit: 1, minSimilarity: 0.1)
         
         #expect(results.count == 1)
         #expect(results.first?.memory.title == "Apple")
@@ -204,7 +204,7 @@ struct PersistenceTests {
 
     @Test("Test search memories with empty database")
     func searchMemoriesEmpty() async throws {
-        let results = try await persistence.searchMemories(embedding: [1.0, 0.0, 0.0], limit: 5)
+        let results = try await persistence.searchMemories(embedding: [1.0, 0.0, 0.0], limit: 5, minSimilarity: 0.1)
         #expect(results.isEmpty)
     }
 }

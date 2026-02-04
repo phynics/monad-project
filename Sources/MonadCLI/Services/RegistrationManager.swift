@@ -59,6 +59,7 @@ struct RegistrationManager {
         try data.write(to: storageURL)
     }
 
+    @discardableResult
     func ensureRegistered(client: MonadClient) async throws -> StoredIdentity {
         if let existing = getIdentity() {
             // Verify with server? For now assume valid if we have it.
