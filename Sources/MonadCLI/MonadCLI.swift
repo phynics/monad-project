@@ -10,40 +10,19 @@ struct MonadCLI: AsyncParsableCommand {
         discussion: """
             An interactive AI assistant for your terminal.
 
-            MODES:
-              monad                         Start interactive chat (default)
-              monad query "question"        Quick one-shot query
-              monad command "task"          Generate shell commands
+            All functionality is now accessible through the interactive REPL.
 
             INTERACTIVE COMMANDS:
               /help                         Show available commands
               /config                       View/edit configuration
-              /sessions, /memories, /notes  Manage data
+              /sessions, /memories          Manage data
               /quit                         Exit
-
+              
             ENVIRONMENT VARIABLES:
               MONAD_API_KEY                 API key for authentication
               MONAD_SERVER_URL              Server URL (default: http://127.0.0.1:8080)
             """,
-        version: "1.0.0",
-        subcommands: [
-            ChatSubcommand.self,
-            QueryCommand.self,
-            ShellCommand.self,
-            WorkspaceCommand.self,
-            PruneCommand.self,
-        ],
-        defaultSubcommand: ChatSubcommand.self,
-        helpNames: [.short, .long]
-    )
-}
-
-// MARK: - Chat Subcommand (Default)
-
-struct ChatSubcommand: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
-        commandName: "chat",
-        abstract: "Start interactive chat session"
+        version: "1.0.0"
     )
 
     @Option(name: .long, help: "Server URL (defaults to auto-discovery or localhost)")
@@ -66,10 +45,6 @@ struct ChatSubcommand: AsyncParsableCommand {
         let localConfig = LocalConfigManager.shared.getConfig()
 
         // Determine explicit URL (Flag > Local Config)
-        // We do NOT use Env var here because ClientConfiguration.autoDetect handles it,
-        // but autoDetect prefers explicitURL over Env.
-        // So we should only pass localConfig if flag is missing.
-
         let explicitURL: URL?
         if let serverFlag = server {
             explicitURL = URL(string: serverFlag)
@@ -87,17 +62,33 @@ struct ChatSubcommand: AsyncParsableCommand {
         let client = MonadClient(configuration: config)
 
         // Check server health
-        guard try await client.healthCheck() else {
-            // If we used a cached config and it failed, maybe we should try discovery?
-            // For now, just report error.
-            TerminalUI.printError("Cannot connect to server at \(config.baseURL.absoluteString)")
+        do {
+            guard try await client.healthCheck() else {
+                throw MonadClientError.serverNotReachable
+            }
+        } catch {
+            print("")
+            TerminalUI.printError(
+                "Could not connect to Monad Server at \(config.baseURL.absoluteString)")
+            print("")
+            print("  \(TerminalUI.bold("Troubleshooting:"))")
+            print("  1. Ensure the server is running:")
+            print("     \(TerminalUI.dim("make run-server"))")
+            print("  2. Check if the server is running on a different port")
+            print("  3. Verify your configuration with --server <url>")
+            print("")
+
+            if verbose {
+                print("  \(TerminalUI.dim("Error: \(error.localizedDescription)"))")
+                print("")
+            }
             throw ExitCode.failure
         }
 
         // Save successful configuration
         LocalConfigManager.shared.updateServerURL(config.baseURL.absoluteString)
 
-        // Check configuration
+        // Check configuration validity
         do {
             let config = try await client.getConfiguration()
             if !config.isValid {
@@ -117,9 +108,10 @@ struct ChatSubcommand: AsyncParsableCommand {
             localConfig: localConfig
         )
 
-        // 3. Persist successful session ID and handle re-attachment
+        // Persist successful session ID and handle re-attachment
         LocalConfigManager.shared.updateLastSessionId(finalSession.id.uuidString)
-        await cliSessionManager.handleWorkspaceReattachment(session: finalSession, localConfig: localConfig)
+        await cliSessionManager.handleWorkspaceReattachment(
+            session: finalSession, localConfig: localConfig)
 
         TerminalUI.printWelcome()
 

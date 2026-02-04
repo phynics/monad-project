@@ -35,7 +35,8 @@ public struct PruneController<Context: RequestContext>: Sendable {
         let input = try await request.decode(as: PruneSessionRequest.self, context: context)
         // Convert days to seconds
         let timeInterval = Double(input.days) * 24 * 60 * 60
-        let count = try await persistenceService.pruneSessions(olderThan: timeInterval)
+        let count = try await persistenceService.pruneSessions(
+            olderThan: timeInterval, excluding: input.excludedSessionIds ?? [])
 
         let response = PruneResponse(count: count)
         let data = try SerializationUtils.jsonEncoder.encode(response)

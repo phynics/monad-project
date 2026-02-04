@@ -95,7 +95,7 @@ public protocol PersistenceServiceProtocol: Sendable {
     func deleteSession(id: UUID) async throws
     func searchArchivedSessions(query: String) async throws -> [ConversationSession]
     func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession]
-    func pruneSessions(olderThan timeInterval: TimeInterval) async throws -> Int
+    func pruneSessions(olderThan timeInterval: TimeInterval, excluding: [UUID]) async throws -> Int
     func pruneMessages(olderThan timeInterval: TimeInterval) async throws -> Int
 
     // Jobs

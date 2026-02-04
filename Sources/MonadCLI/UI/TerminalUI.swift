@@ -93,14 +93,52 @@ public enum TerminalUI {
 
     // MARK: - Chat UI
 
-    public static func printWelcome() {
-        print(
+    // MARK: - Logo
+
+    public static func printLogo() {
+        let logo = """
+            \(magenta("  __  __                       _ "))
+            \(magenta(" |  \\/  | ___  _ __   __ _  __| |"))
+            \(magenta(" | |\\/| |/ _ \\| '_ \\ / _` |/ _` |"))
+            \(magenta(" | |  | | (_) | | | | (_| | (_| |"))
+            \(magenta(" |_|  |_|\\___/|_| |_|\\__,_|\\__,_|"))
             """
+        print("\n" + logo + "\n")
+        print(dim("  AI Assistant v1.0.0"))
+        print("")
+    }
 
-            \(bold("Monad AI Assistant"))
-            \(dim("Type /help for available commands, /quit to exit"))
+    // MARK: - Markdown Rendering
 
-            """)
+    public static func renderMarkdown(_ text: String) -> String {
+        // Very basic Markdown rendering for CLI
+        var output = text
+
+        // Bold (**text**)
+        // regex: \*\*(.*?)\*\*
+        // Note: Simple replacement, doesn't handle nested well but sufficient for CLI
+        if let regex = try? NSRegularExpression(pattern: "\\*\\*(.*?)\\*\\*", options: []) {
+            let range = NSRange(output.startIndex..., in: output)
+            output = regex.stringByReplacingMatches(
+                in: output, options: [], range: range, withTemplate: "\(boldCode)$1\(reset)")
+        }
+
+        // Code (`text`)
+        if let regex = try? NSRegularExpression(pattern: "`([^`]+)`", options: []) {
+            let range = NSRange(output.startIndex..., in: output)
+            output = regex.stringByReplacingMatches(
+                in: output, options: [], range: range, withTemplate: "\(cyanCode)$1\(reset)")
+        }
+
+        return output
+    }
+
+    // MARK: - Chat UI
+
+    public static func printWelcome() {
+        printLogo()
+        print(dim("Type /help for available commands, /quit to exit"))
+        print("")
     }
 
     public static func printPrompt(workspace: String? = nil) {
@@ -123,15 +161,13 @@ public enum TerminalUI {
         return formatter.string(from: date)
     }
 
-    // MARK: - Spinner (simplified for Swift 6 concurrency)
+    // MARK: - Legacy / Simple Status
 
-    /// Print a loading message
     public static func printLoading(_ message: String) {
-        print("⏳ \(message)")
+        print("\(yellow("⏳")) \(message)")
     }
 
-    /// Print completion
     public static func printDone(_ message: String) {
-        print("✅ \(message)")
+        print("\(green("✅")) \(message)")
     }
 }

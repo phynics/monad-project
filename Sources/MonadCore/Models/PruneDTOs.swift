@@ -10,9 +10,11 @@ public struct PruneQueryRequest: Codable {
 
 public struct PruneSessionRequest: Codable {
     public let days: Int
+    public let excludedSessionIds: [UUID]?
 
-    public init(days: Int) {
+    public init(days: Int, excludedSessionIds: [UUID]? = nil) {
         self.days = days
+        self.excludedSessionIds = excludedSessionIds
     }
 }
 

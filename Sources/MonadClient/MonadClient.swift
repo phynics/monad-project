@@ -318,9 +318,10 @@ public actor MonadClient {
         return response.count
     }
 
-    public func pruneSessions(olderThanDays days: Int) async throws -> Int {
+    public func pruneSessions(olderThanDays days: Int, excluding: [UUID] = []) async throws -> Int {
         var request = try buildRequest(path: "/api/prune/sessions", method: "POST")
-        request.httpBody = try encoder.encode(PruneSessionRequest(days: days))
+        request.httpBody = try encoder.encode(
+            PruneSessionRequest(days: days, excludedSessionIds: excluding))
         let response: PruneResponse = try await perform(request)
         return response.count
     }

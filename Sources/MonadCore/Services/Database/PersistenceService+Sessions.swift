@@ -90,22 +90,31 @@ extension PersistenceService {
         }
     }
 
-    public func pruneSessions(olderThan timeInterval: TimeInterval) async throws -> Int {
+    public func pruneSessions(olderThan timeInterval: TimeInterval, excluding: [UUID] = [])
+        async throws -> Int
+    {
         try await dbQueue.write { db in
             let cutoffDate = Date().addingTimeInterval(-timeInterval)
-            let count =
-                try ConversationSession
-                .filter(Column("isArchived") == false)
-                .filter(Column("updatedAt") < cutoffDate)
-                .deleteAll(db)
-            return count
+
+            // If timeInterval is 0 (or very small), we mean "all sessions".
+            // But we still respect the cutoff date logic: Date() - 0 = Date().
+            // So we delete everything older than "now", which is everything.
+
+            var query = ConversationSession.filter(Column("updatedAt") < cutoffDate)
+
+            if !excluding.isEmpty {
+                query = query.filter(!excluding.contains(Column("id")))
+            }
+
+            return try query.deleteAll(db)
         }
     }
 
     public func pruneMessages(olderThan timeInterval: TimeInterval) async throws -> Int {
         try await dbQueue.write { db in
             let cutoffDate = Date().addingTimeInterval(-timeInterval)
-            let count = try ConversationMessage
+            let count =
+                try ConversationMessage
                 .filter(Column("createdAt") < cutoffDate)
                 .deleteAll(db)
             return count
