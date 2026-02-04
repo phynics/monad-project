@@ -42,7 +42,3 @@ public struct WorkspaceTool: Codable, FetchableRecord, PersistableRecord, Sendab
         }
     }
 }
-
-public enum WorkspaceToolError: Error {
-    case missingDefinition
-}

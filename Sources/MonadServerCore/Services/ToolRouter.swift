@@ -107,11 +107,3 @@ public actor ToolRouter {
         throw ToolError.clientExecutionRequired
     }
 }
-
-public enum ToolError: Error {
-    case toolNotFound(String)
-    case workspaceNotFound(UUID)
-    case clientNotConnected
-    case executionFailed(String)
-    case clientExecutionRequired
-}
