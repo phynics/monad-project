@@ -4,18 +4,6 @@ import MonadCore
 import NIOCore
 import HTTPTypes
 
-public struct ToolInfo: Codable, Sendable {
-    public let id: String
-    public let name: String
-    public let description: String
-    
-    public init(id: String, name: String, description: String) {
-        self.id = id
-        self.name = name
-        self.description = description
-    }
-}
-
 public struct ExecuteToolRequest: Codable, Sendable {
     public let sessionId: UUID
     public let name: String
@@ -51,7 +39,7 @@ public struct ToolController<Context: RequestContext>: Sendable {
         }
         
         let tools = await toolManager.getEnabledTools()
-        return tools.map { ToolInfo(id: $0.id, name: $0.name, description: $0.description) }
+        return tools.map { ToolInfo(id: $0.id, name: $0.name, description: $0.description, isEnabled: true) }
     }
     
     @Sendable func execute(_ request: Request, context: Context) async throws -> Response {

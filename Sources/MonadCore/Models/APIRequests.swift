@@ -83,3 +83,103 @@ public struct ChatResponse: Codable, Sendable {
         self.response = response
     }
 }
+
+// MARK: - Session API
+
+public struct SessionResponse: Codable, Sendable, Identifiable {
+    public let id: UUID
+    public let title: String?
+    public let createdAt: Date
+    public let updatedAt: Date
+    public let isArchived: Bool
+    public let tags: [String]
+    public let workingDirectory: String?
+    public let primaryWorkspaceId: UUID?
+    public let attachedWorkspaceIds: [UUID]
+
+    public init(
+        id: UUID,
+        title: String?,
+        createdAt: Date,
+        updatedAt: Date,
+        isArchived: Bool,
+        tags: [String],
+        workingDirectory: String?,
+        primaryWorkspaceId: UUID?,
+        attachedWorkspaceIds: [UUID]
+    ) {
+        self.id = id
+        self.title = title
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.isArchived = isArchived
+        self.tags = tags
+        self.workingDirectory = workingDirectory
+        self.primaryWorkspaceId = primaryWorkspaceId
+        self.attachedWorkspaceIds = attachedWorkspaceIds
+    }
+    
+    public init(id: UUID, title: String?) {
+        self.id = id
+        self.title = title
+        self.createdAt = Date()
+        self.updatedAt = Date()
+        self.isArchived = false
+        self.tags = []
+        self.workingDirectory = nil
+        self.primaryWorkspaceId = nil
+        self.attachedWorkspaceIds = []
+    }
+}
+
+// MARK: - Tool API
+
+public struct ToolInfo: Codable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let description: String
+    public let isEnabled: Bool
+    
+    public init(id: String, name: String, description: String, isEnabled: Bool = true) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.isEnabled = isEnabled
+    }
+}
+
+// MARK: - Note API
+
+public struct CreateNoteRequest: Codable, Sendable {
+    public let title: String
+    public let content: String
+
+    public init(title: String, content: String) {
+        self.title = title
+        self.content = content
+    }
+}
+
+public struct UpdateNoteRequest: Codable, Sendable {
+    public let title: String?
+    public let content: String?
+
+    public init(title: String? = nil, content: String? = nil) {
+        self.title = title
+        self.content = content
+    }
+}
+
+// MARK: - Memory API
+
+public struct MemorySearchRequest: Codable, Sendable {
+    public let query: String
+    public let limit: Int?
+
+    public init(query: String, limit: Int? = nil) {
+        self.query = query
+        self.limit = limit
+    }
+}
+
+

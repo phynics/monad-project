@@ -1,71 +1,32 @@
 import Foundation
+import MonadCore
 
-// MARK: - Session Models
+// MARK: - Type Aliases from MonadCore
 
-/// A chat session
-public struct Session: Codable, Sendable, Identifiable {
-    public let id: UUID
-    public let title: String?
-    public let createdAt: Date
-    public let updatedAt: Date
-    public let isArchived: Bool
-    public let tags: [String]
-    public let workingDirectory: String?
-    public let primaryWorkspaceId: UUID?
-    public let attachedWorkspaceIds: [UUID]
+// Session Models
+public typealias Session = SessionResponse
 
-    public init(
-        id: UUID,
-        title: String? = nil,
-        createdAt: Date = Date(),
-        updatedAt: Date = Date(),
-        isArchived: Bool = false,
-        tags: [String] = [],
-        workingDirectory: String? = nil,
-        primaryWorkspaceId: UUID? = nil,
-        attachedWorkspaceIds: [UUID] = []
-    ) {
-        self.id = id
-        self.title = title
-        self.createdAt = createdAt
-        self.updatedAt = updatedAt
-        self.isArchived = isArchived
-        self.tags = tags
-        self.workingDirectory = workingDirectory
-        self.primaryWorkspaceId = primaryWorkspaceId
-        self.attachedWorkspaceIds = attachedWorkspaceIds
-    }
+// Chat Models
+public typealias ChatRequest = MonadCore.ChatRequest
+public typealias ChatResponse = MonadCore.ChatResponse
 
-    /// All workspace IDs (primary + attached)
-    public var allWorkspaces: [UUID] {
-        var all: [UUID] = []
-        if let primary = primaryWorkspaceId {
-            all.append(primary)
-        }
-        all.append(contentsOf: attachedWorkspaceIds)
-        return all
-    }
-}
+// Memory Models
+public typealias Memory = MonadCore.Memory
+public typealias MemorySearchRequest = MonadCore.MemorySearchRequest
 
-// MARK: - Chat Models
+// Note Models
+public typealias Note = MonadCore.Note
+public typealias CreateNoteRequest = MonadCore.CreateNoteRequest
+public typealias UpdateNoteRequest = MonadCore.UpdateNoteRequest
 
-/// Request to send a chat message
-public struct ChatRequest: Codable, Sendable {
-    public let message: String
+// Tool Models
+public typealias Tool = MonadCore.ToolInfo
 
-    public init(message: String) {
-        self.message = message
-    }
-}
+// Message Models
+public typealias Message = MonadCore.Message
+public typealias MessageRole = MonadCore.Message.MessageRole
 
-/// Response from a non-streaming chat request
-public struct ChatResponse: Codable, Sendable {
-    public let response: String
-
-    public init(response: String) {
-        self.response = response
-    }
-}
+// MARK: - Client-Specific Models
 
 /// A delta from a streaming chat response
 public struct ChatDelta: Sendable {
@@ -75,125 +36,6 @@ public struct ChatDelta: Sendable {
     public init(content: String? = nil, isDone: Bool = false) {
         self.content = content
         self.isDone = isDone
-    }
-}
-
-// MARK: - Message Models
-
-/// Role of a message sender
-public enum MessageRole: String, Codable, Sendable {
-    case user
-    case assistant
-    case system
-    case tool
-}
-
-/// A conversation message
-public struct Message: Codable, Sendable, Identifiable {
-    public let id: UUID
-    public let sessionId: UUID
-    public let role: MessageRole
-    public let content: String
-    public let createdAt: Date
-
-    public init(
-        id: UUID = UUID(), sessionId: UUID, role: MessageRole, content: String,
-        createdAt: Date = Date()
-    ) {
-        self.id = id
-        self.sessionId = sessionId
-        self.role = role
-        self.content = content
-        self.createdAt = createdAt
-    }
-}
-
-// MARK: - Memory Models
-
-/// A memory record
-public struct Memory: Codable, Sendable, Identifiable {
-    public let id: UUID
-    public let content: String
-    public let tags: [String]
-    public let createdAt: Date
-
-    public init(id: UUID = UUID(), content: String, tags: [String] = [], createdAt: Date = Date()) {
-        self.id = id
-        self.content = content
-        self.tags = tags
-        self.createdAt = createdAt
-    }
-}
-
-/// Request to search memories
-public struct MemorySearchRequest: Codable, Sendable {
-    public let query: String
-    public let limit: Int?
-
-    public init(query: String, limit: Int? = nil) {
-        self.query = query
-        self.limit = limit
-    }
-}
-
-// MARK: - Note Models
-
-/// A note
-public struct Note: Codable, Sendable, Identifiable {
-    public let id: UUID
-    public let title: String
-    public let content: String
-    public let createdAt: Date
-    public let updatedAt: Date
-
-    public init(
-        id: UUID = UUID(), title: String, content: String, createdAt: Date = Date(),
-        updatedAt: Date = Date()
-    ) {
-        self.id = id
-        self.title = title
-        self.content = content
-        self.createdAt = createdAt
-        self.updatedAt = updatedAt
-    }
-}
-
-/// Request to create a note
-public struct CreateNoteRequest: Codable, Sendable {
-    public let title: String
-    public let content: String
-
-    public init(title: String, content: String) {
-        self.title = title
-        self.content = content
-    }
-}
-
-/// Request to update a note
-public struct UpdateNoteRequest: Codable, Sendable {
-    public let title: String?
-    public let content: String?
-
-    public init(title: String? = nil, content: String? = nil) {
-        self.title = title
-        self.content = content
-    }
-}
-
-// MARK: - Tool Models
-
-/// A tool definition
-public struct Tool: Codable, Sendable, Identifiable {
-    public let id: String
-    public let name: String
-    public let description: String
-    public let isEnabled: Bool
-
-    public init(id: String, name: String, description: String, isEnabled: Bool = true) {
-        self.id = id
-        self.name = name
-        self.description = description
-        self.isEnabled = isEnabled
     }
 }
 

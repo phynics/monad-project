@@ -193,6 +193,9 @@ actor ChatREPL {
                 case .tool:
                     print("\(TerminalUI.toolColor("Tool:"))")
                     print(message.content)
+                case .summary:
+                    print("\(TerminalUI.dim("Summary:"))")
+                    print(message.content)
                 }
                 print("")
             }
@@ -597,8 +600,8 @@ actor ChatREPL {
                 print(
                     "  \(TerminalUI.bold(String(memory.content.prefix(60))))\(memory.content.count > 60 ? "..." : "")"
                 )
-                if !memory.tags.isEmpty {
-                    print("  \(TerminalUI.dim("Tags: \(memory.tags.joined(separator: ", "))"))")
+                if !memory.tagArray.isEmpty {
+                    print("  \(TerminalUI.dim("Tags: \(memory.tagArray.joined(separator: ", "))"))")
                 }
                 print("")
             }
@@ -643,7 +646,7 @@ actor ChatREPL {
             for note in notes {
                 let dateStr = TerminalUI.formatDate(note.updatedAt)
                 print(
-                    "  \(TerminalUI.dim(note.id.uuidString.prefix(8).description))  \(note.title)  \(TerminalUI.dim(dateStr))"
+                    "  \(TerminalUI.dim(note.id.uuidString.prefix(8).description))  \(note.name)  \(TerminalUI.dim(dateStr))"
                 )
             }
             print("")

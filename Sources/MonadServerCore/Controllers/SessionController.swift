@@ -24,7 +24,17 @@ public struct SessionController<Context: RequestContext>: Sendable {
 
     @Sendable func create(_ request: Request, context: Context) async throws -> Response {
         let session = try await sessionManager.createSession()
-        let response = SessionAPIResponse(from: session)
+        let response = SessionResponse(
+            id: session.id,
+            title: session.title,
+            createdAt: session.createdAt,
+            updatedAt: session.updatedAt,
+            isArchived: session.isArchived,
+            tags: session.tagArray,
+            workingDirectory: session.workingDirectory,
+            primaryWorkspaceId: session.primaryWorkspaceId,
+            attachedWorkspaceIds: session.attachedWorkspaces
+        )
         let data = try SerializationUtils.jsonEncoder.encode(response)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
@@ -34,7 +44,19 @@ public struct SessionController<Context: RequestContext>: Sendable {
 
     @Sendable func list(_ request: Request, context: Context) async throws -> Response {
         let sessions = try await sessionManager.listSessions()
-        let response = sessions.map { SessionAPIResponse(from: $0) }
+        let response = sessions.map { session in
+            SessionResponse(
+                id: session.id,
+                title: session.title,
+                createdAt: session.createdAt,
+                updatedAt: session.updatedAt,
+                isArchived: session.isArchived,
+                tags: session.tagArray,
+                workingDirectory: session.workingDirectory,
+                primaryWorkspaceId: session.primaryWorkspaceId,
+                attachedWorkspaceIds: session.attachedWorkspaces
+            )
+        }
         let data = try SerializationUtils.jsonEncoder.encode(response)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
@@ -56,31 +78,7 @@ public struct SessionController<Context: RequestContext>: Sendable {
             status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
     }
     
-    // MARK: - DTOs
-    
-    struct SessionAPIResponse: Codable {
-        let id: UUID
-        let title: String
-        let createdAt: Date
-        let updatedAt: Date
-        let isArchived: Bool
-        let tags: [String]
-        let workingDirectory: String?
-        let primaryWorkspaceId: UUID?
-        let attachedWorkspaceIds: [UUID]
-        
-        init(from session: ConversationSession) {
-            self.id = session.id
-            self.title = session.title
-            self.createdAt = session.createdAt
-            self.updatedAt = session.updatedAt
-            self.isArchived = session.isArchived
-            self.tags = session.tagArray
-            self.workingDirectory = session.workingDirectory
-            self.primaryWorkspaceId = session.primaryWorkspaceId
-            self.attachedWorkspaceIds = session.attachedWorkspaces
-        }
-    }
+
 
     // MARK: - Workspace Endpoints
 
