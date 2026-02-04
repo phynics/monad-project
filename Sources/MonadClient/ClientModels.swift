@@ -6,34 +6,43 @@ import Foundation
 public struct Session: Codable, Sendable, Identifiable {
     public let id: UUID
     public let title: String?
-    public var primaryWorkspace: UUID?  // Primary workspace for this session
-    public var attachedWorkspaces: [UUID]  // Additional attached workspaces
     public let createdAt: Date
     public let updatedAt: Date
+    public let isArchived: Bool
+    public let tags: [String]
+    public let workingDirectory: String?
+    public let primaryWorkspaceId: UUID?
+    public let attachedWorkspaceIds: [UUID]
 
     public init(
         id: UUID,
         title: String? = nil,
-        primaryWorkspace: UUID? = nil,
-        attachedWorkspaces: [UUID] = [],
         createdAt: Date = Date(),
-        updatedAt: Date = Date()
+        updatedAt: Date = Date(),
+        isArchived: Bool = false,
+        tags: [String] = [],
+        workingDirectory: String? = nil,
+        primaryWorkspaceId: UUID? = nil,
+        attachedWorkspaceIds: [UUID] = []
     ) {
         self.id = id
         self.title = title
-        self.primaryWorkspace = primaryWorkspace
-        self.attachedWorkspaces = attachedWorkspaces
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.isArchived = isArchived
+        self.tags = tags
+        self.workingDirectory = workingDirectory
+        self.primaryWorkspaceId = primaryWorkspaceId
+        self.attachedWorkspaceIds = attachedWorkspaceIds
     }
 
     /// All workspace IDs (primary + attached)
     public var allWorkspaces: [UUID] {
         var all: [UUID] = []
-        if let primary = primaryWorkspace {
+        if let primary = primaryWorkspaceId {
             all.append(primary)
         }
-        all.append(contentsOf: attachedWorkspaces)
+        all.append(contentsOf: attachedWorkspaceIds)
         return all
     }
 }
