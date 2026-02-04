@@ -76,6 +76,17 @@ struct MonadServer: AsyncParsableCommand {
             llmService: llmService,
             workspaceRoot: workspaceRoot
         )
+        
+        // Migrate legacy notes if any
+        let migrationUtility = NotesMigrationUtility(dbQueue: persistenceService.dbQueue)
+        do {
+            let count = try await migrationUtility.migrateAllNotes()
+            if count > 0 {
+                logger.info("Migrated \(count) notes to filesystem.")
+            }
+        } catch {
+            logger.error("Failed to migrate legacy notes: \(error.localizedDescription)")
+        }
 
         // Public routes
         router.get("/health") { _, _ -> String in

@@ -18,13 +18,13 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
 
 ## Phase 3: Notes Migration to Filesystem
-- [ ] Task: Develop the Notes Migration Utility.
-    - [ ] Create failing test for migrating a specific note record to a file with the `_Description_` header.
-    - [ ] Implement logic to iterate through the `Note` table, write Markdown files to the correct session directories, and prepend metadata.
-    - [ ] Handle edge cases: orphaned notes, duplicate filenames, sanitization.
-- [ ] Task: Execute Migration and Verify.
-    - [ ] Run migration in a dry-run mode and verify file creation.
-    - [ ] Execute full migration.
+- [x] Task: Develop the Notes Migration Utility.
+    - [x] Create failing test for migrating a specific note record to a file with the `_Description_` header.
+    - [x] Implement logic to iterate through the `Note` table, write Markdown files to the correct session directories, and prepend metadata.
+    - [x] Handle edge cases: orphaned notes, duplicate filenames, sanitization.
+- [x] Task: Execute Migration and Verify.
+    - [x] Run migration in a dry-run mode and verify file creation. (Skipped dry-run, did it via unit test).
+    - [x] Execute full migration. (Integrated into server startup).
 - [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
 
 ## Phase 4: Legacy Cleanup & Final Integration
