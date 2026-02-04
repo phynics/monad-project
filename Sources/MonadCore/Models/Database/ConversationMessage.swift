@@ -15,6 +15,7 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
     public var parentId: UUID?
     public var think: String?
     public var toolCalls: String
+    public var toolCallId: String?
 
     public init(
         id: UUID = UUID(),
@@ -26,7 +27,8 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
         memoryId: UUID? = nil,
         parentId: UUID? = nil,
         think: String? = nil,
-        toolCalls: String = "[]"
+        toolCalls: String = "[]",
+        toolCallId: String? = nil
     ) {
         self.id = id
         self.sessionId = sessionId
@@ -38,6 +40,7 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
         self.parentId = parentId
         self.think = think
         self.toolCalls = toolCalls
+        self.toolCallId = toolCallId
     }
 
     public enum MessageRole: String, Codable, Sendable {
@@ -85,6 +88,7 @@ public struct ConversationMessage: Codable, Identifiable, FetchableRecord, Persi
             role: uiRole,
             think: think,
             toolCalls: calls.isEmpty ? nil : calls,
+            toolCallId: toolCallId,
             parentId: parentId,
             recalledMemories: memories.isEmpty ? nil : memories
         )

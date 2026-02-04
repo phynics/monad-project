@@ -30,6 +30,7 @@ struct MonadCLI: AsyncParsableCommand {
             ChatSubcommand.self,
             QueryCommand.self,
             ShellCommand.self,
+            WorkspaceCommand.self,
         ],
         defaultSubcommand: ChatSubcommand.self,
         helpNames: [.short, .long]

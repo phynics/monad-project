@@ -41,6 +41,8 @@ import GRDB
                 t.column("isArchived", .boolean).notNull()
                 t.column("tags", .text).notNull()
                 t.column("workingDirectory", .text)
+                t.column("primaryWorkspaceId", .text)
+                t.column("attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
             }
         }
         

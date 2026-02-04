@@ -12,6 +12,8 @@ public struct ConversationSession: Codable, Identifiable, FetchableRecord, Persi
     public var isArchived: Bool
     public var tags: String  // JSON array stored as string
     public var workingDirectory: String?
+    public var primaryWorkspaceId: UUID?
+    public var attachedWorkspaceIds: String  // JSON array of UUIDs
 
     public init(
         id: UUID = UUID(),
@@ -20,7 +22,9 @@ public struct ConversationSession: Codable, Identifiable, FetchableRecord, Persi
         updatedAt: Date = Date(),
         isArchived: Bool = false,
         tags: [String] = [],
-        workingDirectory: String? = nil
+        workingDirectory: String? = nil,
+        primaryWorkspaceId: UUID? = nil,
+        attachedWorkspaceIds: [UUID] = []
     ) {
         self.id = id
         self.title = title
@@ -28,17 +32,36 @@ public struct ConversationSession: Codable, Identifiable, FetchableRecord, Persi
         self.updatedAt = updatedAt
         self.isArchived = isArchived
         self.workingDirectory = workingDirectory
-        
-        if let data = try? JSONEncoder().encode(tags), let str = String(data: data, encoding: .utf8) {
+        self.primaryWorkspaceId = primaryWorkspaceId
+
+        if let data = try? JSONEncoder().encode(tags), let str = String(data: data, encoding: .utf8)
+        {
             self.tags = str
         } else {
             self.tags = "[]"
+        }
+
+        if let data = try? JSONEncoder().encode(attachedWorkspaceIds),
+            let str = String(data: data, encoding: .utf8)
+        {
+            self.attachedWorkspaceIds = str
+        } else {
+            self.attachedWorkspaceIds = "[]"
         }
     }
 
     public var tagArray: [String] {
         guard let data = tags.data(using: .utf8),
             let array = try? JSONDecoder().decode([String].self, from: data)
+        else {
+            return []
+        }
+        return array
+    }
+
+    public var attachedWorkspaces: [UUID] {
+        guard let data = attachedWorkspaceIds.data(using: .utf8),
+            let array = try? JSONDecoder().decode([UUID].self, from: data)
         else {
             return []
         }

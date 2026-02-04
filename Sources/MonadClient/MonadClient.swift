@@ -1,4 +1,5 @@
 import Foundation
+import MonadCore
 
 /// HTTP client for communicating with MonadServer
 public actor MonadClient {
@@ -215,6 +216,87 @@ public actor MonadClient {
         var request = try buildRequest(path: "/api/config", method: "PUT")
         request.httpBody = try encoder.encode(config)
         _ = try await performRaw(request)
+    }
+
+    // MARK: - Workspace API
+
+    public func createWorkspace(
+        uri: WorkspaceURI,
+        hostType: WorkspaceHostType,
+        ownerId: UUID?,
+        rootPath: String?,
+        trustLevel: WorkspaceTrustLevel?
+    ) async throws -> Workspace {
+        var request = try buildRequest(path: "/api/workspaces", method: "POST")
+        request.httpBody = try encoder.encode(
+            CreateWorkspaceRequest(
+                uri: uri.description,
+                hostType: hostType,
+                ownerId: ownerId,
+                rootPath: rootPath,
+                trustLevel: trustLevel
+            )
+        )
+        return try await perform(request)
+    }
+
+    public func listWorkspaces() async throws -> [Workspace] {
+        let request = try buildRequest(path: "/api/workspaces", method: "GET")
+        return try await perform(request)
+    }
+
+    public func getWorkspace(_ id: UUID) async throws -> Workspace {
+        let request = try buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "GET")
+        return try await perform(request)
+    }
+
+    public func deleteWorkspace(_ id: UUID) async throws {
+        let request = try buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "DELETE")
+        _ = try await performRaw(request)
+    }
+
+    public func attachWorkspace(_ workspaceId: UUID, to sessionId: UUID, isPrimary: Bool)
+        async throws
+    {
+        var request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "POST")
+        request.httpBody = try encoder.encode(
+            AttachWorkspaceRequest(workspaceId: workspaceId, isPrimary: isPrimary)
+        )
+        _ = try await performRaw(request)
+    }
+
+    public func detachWorkspace(_ workspaceId: UUID, from sessionId: UUID) async throws {
+        let request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/workspaces/\(workspaceId.uuidString)",
+            method: "DELETE"
+        )
+        _ = try await performRaw(request)
+    }
+
+    public func listSessionWorkspaces(sessionId: UUID) async throws -> (
+        primary: UUID?, attached: [UUID]
+    ) {
+        let request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "GET")
+        let response: SessionWorkspacesResponse = try await perform(request)
+        return (response.primaryWorkspaceId, response.attachedWorkspaceIds)
+    }
+
+    // MARK: - Client API
+
+    public func registerClient(hostname: String, displayName: String, platform: String) async throws
+        -> ClientRegistrationResponse
+    {
+        var request = try buildRequest(path: "/api/clients/register", method: "POST")
+        request.httpBody = try encoder.encode(
+            ClientRegistrationRequest(
+                hostname: hostname,
+                displayName: displayName,
+                platform: platform
+            )
+        )
+        return try await perform(request)
     }
 
     // MARK: - Private Helpers

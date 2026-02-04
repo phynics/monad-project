@@ -1,4 +1,6 @@
 import Foundation
+import GRDB
+import Logging
 import MonadCore
 
 public actor SessionManager {
@@ -72,8 +74,7 @@ public actor SessionManager {
             // Filesystem Tools
             ChangeDirectoryTool(
                 currentPath: currentWD,
-                onChange: { [weak self] newPath in
-                    guard let self = self else { return }
+                onChange: { newPath in
                     // Update working directory logic would need a way to communicate back to SessionManager
                     // For now, in Server we might want to handle this differently or just let it be.
                 }),
@@ -153,4 +154,128 @@ public actor SessionManager {
             deleteSession(id: id)
         }
     }
+
+    // MARK: - Workspace Management
+
+    public func attachWorkspace(_ workspaceId: UUID, to sessionId: UUID, isPrimary: Bool = false)
+        async throws
+    {
+        guard var session = sessions[sessionId] else {
+            // Try enabling recovery from DB if not in memory?
+            // For now, assume session must be active/loaded. Or load it.
+            // If we fetch from DB, we should cache it.
+            // But existing getSession loads from memory.
+            // Let's rely on memory first, if checking implementation, createSession puts in memory.
+            throw SessionError.sessionNotFound  // Simple error for now
+        }
+
+        if isPrimary {
+            session.primaryWorkspaceId = workspaceId
+        } else {
+            // Add to attached if not already there and not primary
+            if session.primaryWorkspaceId != workspaceId {
+                var currentAttached = session.attachedWorkspaces
+                if !currentAttached.contains(workspaceId) {
+                    currentAttached.append(workspaceId)
+                    // Update the JSON string backing via init or setter?
+                    // ConversationSession properties are var, but attachedWorkspaces is computed.
+                    // I access attachedWorkspaceIds directly or use a helper?
+                    // In ConversationSession, I added `attachedWorkspaceIds: String`.
+                    // helper `attachedWorkspaces` is GET only.
+                    // I need to update `attachedWorkspaceIds` string manually.
+                    if let data = try? JSONEncoder().encode(currentAttached),
+                        let str = String(data: data, encoding: .utf8)
+                    {
+                        session.attachedWorkspaceIds = str
+                    }
+                }
+            }
+        }
+
+        session.updatedAt = Date()
+        sessions[sessionId] = session
+        try await persistenceService.saveSession(session)
+    }
+
+    public func detachWorkspace(_ workspaceId: UUID, from sessionId: UUID) async throws {
+        guard var session = sessions[sessionId] else {
+            throw SessionError.sessionNotFound
+        }
+
+        if session.primaryWorkspaceId == workspaceId {
+            session.primaryWorkspaceId = nil
+        } else {
+            var currentAttached = session.attachedWorkspaces
+            if let index = currentAttached.firstIndex(of: workspaceId) {
+                currentAttached.remove(at: index)
+
+                if let data = try? JSONEncoder().encode(currentAttached),
+                    let str = String(data: data, encoding: .utf8)
+                {
+                    session.attachedWorkspaceIds = str
+                }
+            }
+        }
+
+        session.updatedAt = Date()
+        sessions[sessionId] = session
+        try await persistenceService.saveSession(session)
+    }
+
+    public func getWorkspaces(for sessionId: UUID) -> (primary: UUID?, attached: [UUID])? {
+        guard let session = sessions[sessionId] else { return nil }
+        return (session.primaryWorkspaceId, session.attachedWorkspaces)
+    }
+
+    public func getWorkspace(_ id: UUID) async throws -> Workspace? {
+        return try await persistenceService.databaseWriter.read { db in
+            try Workspace.fetchOne(db, key: id)
+        }
+    }
+
+    public func findWorkspaceForTool(_ tool: ToolReference, in workspaceIds: [UUID]) async throws
+        -> UUID?
+    {
+        return try await persistenceService.databaseWriter.read { db in
+            // Identify tool ID
+            let toolId = tool.toolId
+
+            // Find which workspace in the list contains this tool
+            // We use SQL because constructing a complex filter with GRDB for "IN" clause and "toolId" is easier this way or using filter.
+
+            // SELECT workspaceId FROM workspaceTool WHERE toolId = ? AND workspaceId IN (?, ?, ...)
+            let exists =
+                try WorkspaceTool
+                .filter(Column("toolId") == toolId)
+                .filter(workspaceIds.contains(Column("workspaceId")))
+                .fetchOne(db)
+
+            return exists?.workspaceId
+        }
+    }
+
+    public func getAggregatedTools(for sessionId: UUID) async throws -> [ToolReference] {
+        guard let session = sessions[sessionId] else { return [] }
+
+        var ids: [UUID] = []
+        if let p = session.primaryWorkspaceId { ids.append(p) }
+        ids.append(contentsOf: session.attachedWorkspaces)
+
+        let workspaceIds = ids
+
+        guard !workspaceIds.isEmpty else { return [] }
+
+        return try await persistenceService.databaseWriter.read { db in
+            let tools =
+                try WorkspaceTool
+                .filter(workspaceIds.contains(Column("workspaceId")))
+                .fetchAll(db)
+
+            return try tools.map { try $0.toToolReference() }
+        }
+    }
+}
+
+public enum SessionError: Error {
+    case sessionNotFound
 }

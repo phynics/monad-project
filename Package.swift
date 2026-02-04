@@ -52,7 +52,8 @@ let package = Package(
         .target(
             name: "MonadClient",
             dependencies: [
-                .product(name: "Logging", package: "swift-log")
+                "MonadCore",
+                .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MonadClient"
         ),

@@ -153,6 +153,17 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
         return (stream, "mock prompt", [:])
     }
     
+    func chatStream(
+        messages: [ChatQuery.ChatCompletionMessageParam],
+        tools: [ChatQuery.ChatCompletionToolParam]?,
+        responseFormat: ChatQuery.ResponseFormat?
+    ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
+        let stream = AsyncThrowingStream<ChatStreamResult, Error> { continuation in
+            continuation.finish()
+        }
+        return stream
+    }
+
     func buildPrompt(
         userQuery: String,
         contextNotes: [Note],
@@ -187,6 +198,7 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
 }
 
 final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Sendable {
+    var databaseWriter: DatabaseWriter = try! DatabaseQueue()
     var memories: [Memory] = []
     var searchResults: [(memory: Memory, similarity: Double)] = []
     var messages: [ConversationMessage] = []

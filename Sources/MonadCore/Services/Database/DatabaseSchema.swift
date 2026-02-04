@@ -240,6 +240,73 @@ public enum DatabaseSchema {
                 on: "compactificationNode",
                 columns: ["sessionId"])
         }
+
+        // v16: Workspaces and Client Identity
+        migrator.registerMigration("v16") { db in
+            // Client entity table
+            try db.create(table: "clientIdentity") { t in
+                t.column("id", .blob).primaryKey()
+                t.column("hostname", .text).notNull()
+                t.column("displayName", .text).notNull()
+                t.column("platform", .text).notNull()
+                t.column("registeredAt", .datetime).notNull()
+                t.column("lastSeenAt", .datetime)
+            }
+
+            // Workspace table
+            try db.create(table: "workspace") { t in
+                t.column("id", .blob).primaryKey()
+                t.column("uri", .text).notNull().unique()
+                t.column("hostType", .text).notNull()
+                t.column("ownerId", .blob).references("clientIdentity", onDelete: .setNull)
+                t.column("rootPath", .text)
+                t.column("trustLevel", .text).notNull().defaults(to: "full")
+                t.column("lastModifiedBy", .blob).references(
+                    "conversationSession", onDelete: .setNull)
+                t.column("createdAt", .datetime).notNull()
+            }
+
+            // Workspace tools (tool definitions per workspace)
+            try db.create(table: "workspaceTool") { t in
+                t.column("id", .blob).primaryKey()
+                t.column("workspaceId", .blob).notNull()
+                    .references("workspace", onDelete: .cascade)
+                t.column("toolId", .text).notNull()
+                t.column("isKnown", .boolean).notNull()
+                t.column("definition", .text)
+            }
+            try db.create(
+                index: "idx_workspaceTool_workspace",
+                on: "workspaceTool",
+                columns: ["workspaceId"])
+
+            // Add workspace columns to session
+            try db.alter(table: "conversationSession") { t in
+                t.add(column: "primaryWorkspaceId", .blob)
+                    .references("workspace", onDelete: .setNull)
+                t.add(column: "attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
+            }
+
+            // Workspace locks
+            try db.create(table: "workspaceLock") { t in
+                t.column("workspaceId", .blob).primaryKey()
+                    .references("workspace", onDelete: .cascade)
+                t.column("heldBy", .blob).notNull()
+                    .references("conversationSession", onDelete: .cascade)
+                t.column("acquiredAt", .datetime).notNull()
+            }
+        }
+
+        // v17: Add toolCallId to conversationMessage (for 'tool' role messages)
+        migrator.registerMigration("v17") { db in
+            if try !db.columns(in: "conversationMessage").contains(where: {
+                $0.name == "toolCallId"
+            }) {
+                try db.alter(table: "conversationMessage") { t in
+                    t.add(column: "toolCallId", .text)
+                }
+            }
+        }
     }
 
     // MARK: - Conversation Tables
