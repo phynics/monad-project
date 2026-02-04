@@ -29,7 +29,7 @@ struct RecallEvaluationTests {
         // 1. Setup a memory with a specific vector
         let originalEmbedding = [1.0, 0.0, 0.0]
         let memory = Memory(title: "Test Memory", content: "Test Content", embedding: originalEmbedding)
-        _ = try await persistence.saveMemory(memory)
+        _ = try await persistence.saveMemory(memory, policy: .immediate)
         
         // 2. Define a query vector that is different
         let queryVector = [0.0, 1.0, 0.0]
@@ -59,7 +59,7 @@ struct RecallEvaluationTests {
         // 1. Setup a memory with a specific vector
         let originalEmbedding = [0.8, 0.6, 0.0] // Already somewhat close to [1,0,0]
         let memory = Memory(title: "Irrelevant Memory", content: "Test Content", embedding: originalEmbedding)
-        _ = try await persistence.saveMemory(memory)
+        _ = try await persistence.saveMemory(memory, policy: .immediate)
         
         // 2. Define a query vector
         let queryVector = [1.0, 0.0, 0.0]

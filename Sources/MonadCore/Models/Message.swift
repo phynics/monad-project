@@ -20,6 +20,9 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
     /// Tool calls extracted from <tool_call>...</tool_call> blocks
     public let toolCalls: [ToolCall]?
 
+    /// ID of the tool call this message is a response to (only for .tool role)
+    public let toolCallId: String?
+
     /// Debug info - not persisted
     public var debugInfo: MessageDebugInfo?
 
@@ -67,6 +70,7 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
         id: UUID = UUID(),
         timestamp: Date = Date(),
         content: String, role: MessageRole, think: String? = nil, toolCalls: [ToolCall]? = nil,
+        toolCallId: String? = nil,
         debugInfo: MessageDebugInfo? = nil,
         parentId: UUID? = nil,
         gatheringProgress: ContextGatheringProgress? = nil,
@@ -82,6 +86,7 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
         self.role = role
         self.think = think
         self.toolCalls = toolCalls
+        self.toolCallId = toolCallId
         self.debugInfo = debugInfo
         self.parentId = parentId
         self.gatheringProgress = gatheringProgress
@@ -348,13 +353,13 @@ extension SemanticSearchResult: Codable {
     enum CodingKeys: String, CodingKey {
         case memory, similarity
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.memory = try container.decode(Memory.self, forKey: .memory)
         self.similarity = try container.decodeIfPresent(Double.self, forKey: .similarity)
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(memory, forKey: .memory)

@@ -23,13 +23,17 @@ public enum ContextManagerError: LocalizedError {
 public actor ContextManager {
     private let persistenceService: any PersistenceServiceProtocol
     private let embeddingService: any EmbeddingService
+    private let workspaceRoot: URL?
     private let logger = Logger(label: "com.monad.ContextManager")
 
     public init(
-        persistenceService: any PersistenceServiceProtocol, embeddingService: any EmbeddingService
+        persistenceService: any PersistenceServiceProtocol,
+        embeddingService: any EmbeddingService,
+        workspaceRoot: URL? = nil
     ) {
         self.persistenceService = persistenceService
         self.embeddingService = embeddingService
+        self.workspaceRoot = workspaceRoot
     }
 
     /// Gather all relevant context for a given user query
@@ -54,7 +58,7 @@ public actor ContextManager {
         let tagGenerationContext = buildAugmentedContext(query: query, history: history)
 
         // Parallel execution of tasks
-        async let notesTask = persistenceService.fetchAllNotes()
+        async let notesTask = fetchAllNotes()
         async let memoriesDataTask = fetchRelevantMemories(
             for: query,
             tagContext: tagGenerationContext,
@@ -84,6 +88,42 @@ public actor ContextManager {
             logger.error("Context gathering failed: \(error.localizedDescription)")
             throw error
         }
+    }
+
+    private func fetchAllNotes() async throws -> [ContextFile] {
+        var allNotes: [ContextFile] = []
+
+        // 2. Fetch from Filesystem
+        if let workspaceRoot = workspaceRoot {
+            let notesDir = workspaceRoot.appendingPathComponent("Notes", isDirectory: true)
+            let fileManager = FileManager.default
+
+            if fileManager.fileExists(atPath: notesDir.path) {
+                do {
+                    let files = try fileManager.contentsOfDirectory(
+                        at: notesDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+
+                    for fileURL in files where fileURL.pathExtension == "md" {
+                        guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else {
+                            continue
+                        }
+                        let name = fileURL.deletingPathExtension().lastPathComponent
+
+                        let note = ContextFile(
+                            name: name,
+                            content: content,
+                            source: "Notes/\(fileURL.lastPathComponent)"
+                        )
+                        allNotes.append(note)
+                    }
+                } catch {
+                    logger.warning(
+                        "Failed to fetch notes from filesystem: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        return allNotes.sorted(by: { $0.name < $1.name })
     }
 
     private func buildAugmentedContext(query: String, history: [Message]) -> String {
@@ -302,7 +342,7 @@ public actor ContextManager {
 
 /// Structured context data
 public struct ContextData: Sendable {
-    public let notes: [Note]
+    public let notes: [ContextFile]
     public let memories: [SemanticSearchResult]
     public let generatedTags: [String]
     public let queryVector: [Double]
@@ -312,7 +352,7 @@ public struct ContextData: Sendable {
     public let executionTime: TimeInterval
 
     public init(
-        notes: [Note] = [],
+        notes: [ContextFile] = [],
         memories: [SemanticSearchResult] = [],
         generatedTags: [String] = [],
         queryVector: [Double] = [],

@@ -1,12 +1,12 @@
 import Foundation
-import OpenAI
 import GRDB
+import OpenAI
 
 /// Protocol for LLM Service to enable mocking and isolation
 public protocol LLMServiceProtocol: Sendable {
     var isConfigured: Bool { get async }
     var configuration: LLMConfiguration { get async }
-    
+
     // Configuration Management
     func loadConfiguration() async
     func updateConfiguration(_ config: LLMConfiguration) async throws
@@ -14,74 +14,80 @@ public protocol LLMServiceProtocol: Sendable {
     func restoreFromBackup() async throws
     func exportConfiguration() async throws -> Data
     func importConfiguration(from data: Data) async throws
-    
+
     // Core LLM Interaction
     func sendMessage(_ content: String) async throws -> String
-    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool) async throws -> String
-    
+    func sendMessage(
+        _ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool
+    ) async throws -> String
+
     func chatStreamWithContext(
         userQuery: String,
-        contextNotes: [Note],
+        contextNotes: [ContextFile],
         documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
-        tools: [Tool],
+        tools: [any Tool],
         systemInstructions: String?,
         responseFormat: ChatQuery.ResponseFormat?,
         useFastModel: Bool
     ) async -> (
-        stream: AsyncThrowingStream<ChatStreamResult, Error>, 
+        stream: AsyncThrowingStream<ChatStreamResult, Error>,
         rawPrompt: String,
         structuredContext: [String: String]
     )
-    
+
+    /// Stream chat response from a prepared list of messages (low-level)
+    func chatStream(
+        messages: [ChatQuery.ChatCompletionMessageParam],
+        tools: [ChatQuery.ChatCompletionToolParam]?,
+        responseFormat: ChatQuery.ResponseFormat?
+    ) async -> AsyncThrowingStream<ChatStreamResult, Error>
+
     func buildPrompt(
         userQuery: String,
-        contextNotes: [Note],
+        contextNotes: [ContextFile],
         documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
-        tools: [Tool],
+        tools: [any Tool],
         systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
         rawPrompt: String,
         structuredContext: [String: String]
     )
-    
+
     // Utilities
     func generateTags(for text: String) async throws -> [String]
     func generateTitle(for messages: [Message]) async throws -> String
-    func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws -> [String: Double]
+    func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws
+        -> [String: Double]
     func fetchAvailableModels() async throws -> [String]?
 }
 
 /// Protocol for Persistence Service to enable mocking and isolation
 public protocol PersistenceServiceProtocol: Sendable {
-    // Notes
-    func saveNote(_ note: Note) async throws
-    func fetchNote(id: UUID) async throws -> Note?
-    func fetchAllNotes() async throws -> [Note]
-    func searchNotes(query: String) async throws -> [Note]
-    func searchNotes(matchingAnyTag tags: [String]) async throws -> [Note]
-    func deleteNote(id: UUID) async throws
-    
+    var databaseWriter: DatabaseWriter { get }
+
     // Memories
     func saveMemory(_ memory: Memory, policy: MemorySavePolicy) async throws -> UUID
     func fetchMemory(id: UUID) async throws -> Memory?
     func fetchAllMemories() async throws -> [Memory]
     func searchMemories(query: String) async throws -> [Memory]
-    func searchMemories(embedding: [Double], limit: Int, minSimilarity: Double) async throws -> [(memory: Memory, similarity: Double)]
+    func searchMemories(embedding: [Double], limit: Int, minSimilarity: Double) async throws -> [(
+        memory: Memory, similarity: Double
+    )]
     func searchMemories(matchingAnyTag tags: [String]) async throws -> [Memory]
     func deleteMemory(id: UUID) async throws
     func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws
     func vacuumMemories(threshold: Double) async throws -> Int
-    
+
     // Messages
     func saveMessage(_ message: ConversationMessage) async throws
     func fetchMessages(for sessionId: UUID) async throws -> [ConversationMessage]
     func deleteMessages(for sessionId: UUID) async throws
-    
+
     // Sessions
     func saveSession(_ session: ConversationSession) async throws
     func fetchSession(id: UUID) async throws -> ConversationSession?
@@ -89,16 +95,21 @@ public protocol PersistenceServiceProtocol: Sendable {
     func deleteSession(id: UUID) async throws
     func searchArchivedSessions(query: String) async throws -> [ConversationSession]
     func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession]
-    
+    func pruneSessions(olderThan timeInterval: TimeInterval, excluding: [UUID]) async throws -> Int
+    func pruneMessages(olderThan timeInterval: TimeInterval) async throws -> Int
+
     // Jobs
     func saveJob(_ job: Job) async throws
     func fetchJob(id: UUID) async throws -> Job?
     func fetchAllJobs() async throws -> [Job]
     func deleteJob(id: UUID) async throws
-    
+
+    // MARK: - Prune
+    func pruneMemories(matching query: String) async throws -> Int
+
     // RAW SQL Support
     func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]]
-    
+
     // Database Management
     func resetDatabase() async throws
 }

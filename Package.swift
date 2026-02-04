@@ -52,7 +52,8 @@ let package = Package(
         .target(
             name: "MonadClient",
             dependencies: [
-                .product(name: "Logging", package: "swift-log")
+                "MonadCore",
+                .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MonadClient"
         ),
@@ -77,6 +78,11 @@ let package = Package(
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
             ],
             path: "Tests/MonadServerTests"
+        ),
+        .testTarget(
+            name: "MonadCLITests",
+            dependencies: ["MonadCLI", "MonadClient"],
+            path: "Tests/MonadCLITests"
         ),
     ]
 )

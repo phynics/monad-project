@@ -1,26 +1,12 @@
 import Foundation
 import HTTPTypes
 import Hummingbird
+import Logging
 import MonadCore
 import NIOCore
-import Logging
 import OpenAI
 
-public struct ChatRequest: Codable, Sendable {
-    public let message: String
-
-    public init(message: String) {
-        self.message = message
-    }
-}
-
-public struct ChatResponse: Codable, Sendable, ResponseGenerator {
-    public let response: String
-
-    public init(response: String) {
-        self.response = response
-    }
-
+extension ChatResponse: ResponseGenerator {
     public func response(from request: Request, context: some RequestContext) throws -> Response {
         let data = try SerializationUtils.jsonEncoder.encode(self)
         var headers = HTTPFields()
@@ -33,13 +19,18 @@ public struct ChatResponse: Codable, Sendable, ResponseGenerator {
 public struct ChatController<Context: RequestContext>: Sendable {
     public let sessionManager: SessionManager
     public let llmService: any LLMServiceProtocol
+    public let toolRouter: ToolRouter?
     public let verbose: Bool
 
     public init(
-        sessionManager: SessionManager, llmService: any LLMServiceProtocol, verbose: Bool = false
+        sessionManager: SessionManager,
+        llmService: any LLMServiceProtocol,
+        toolRouter: ToolRouter? = nil,
+        verbose: Bool = false
     ) {
         self.sessionManager = sessionManager
         self.llmService = llmService
+        self.toolRouter = toolRouter
         self.verbose = verbose
     }
 
@@ -56,65 +47,86 @@ public struct ChatController<Context: RequestContext>: Sendable {
 
         let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
 
-        guard await sessionManager.getSession(id: id) != nil else {
+        guard let session = await sessionManager.getSession(id: id) else {
             throw HTTPError(.notFound)
         }
 
         let persistence = await sessionManager.getPersistenceService()
         let contextManager = await sessionManager.getContextManager(for: id)
 
-        // 1. Save User Message
-        let userMsg = ConversationMessage(sessionId: id, role: .user, content: chatRequest.message)
-        try await persistence.saveMessage(userMsg)
+        // 1. Save Tool Outputs
+        if let toolOutputs = chatRequest.toolOutputs {
+            for output in toolOutputs {
+                let msg = ConversationMessage(
+                    sessionId: id,
+                    role: .tool,
+                    content: output.output,
+                    toolCallId: output.toolCallId
+                )
+                try await persistence.saveMessage(msg)
+            }
+        }
 
-        // 2. Fetch History
+        // 2. Save User Message
+        if !chatRequest.message.isEmpty {
+            let userMsg = ConversationMessage(
+                sessionId: id, role: .user, content: chatRequest.message)
+            try await persistence.saveMessage(userMsg)
+        } else if chatRequest.toolOutputs?.isEmpty ?? true {
+            throw HTTPError(.badRequest)
+        }
+
+        // 3. Fetch History & Context
         let history = try await sessionManager.getHistory(for: id)
 
-        // 3. Gather Context
         var contextData = ContextData()
         if let contextManager = contextManager {
             contextData = try await contextManager.gatherContext(
-                for: chatRequest.message,
+                for: chatRequest.message.isEmpty
+                    ? (history.last?.content ?? "") : chatRequest.message,
                 history: history,
-                tagGenerator: { [llmService] query in
-                    try await llmService.generateTags(for: query)
+                tagGenerator: { [llmService] query in try await llmService.generateTags(for: query)
                 }
             )
         }
 
-        // 4. Send Message with Context
-        guard await llmService.isConfigured else {
-            throw HTTPError(.serviceUnavailable)
+        guard await llmService.isConfigured else { throw HTTPError(.serviceUnavailable) }
+
+        // Load Persona
+        var systemInstructions: String? = nil
+        if let personaFilename = session.persona, let workingDirectory = session.workingDirectory {
+            let personaPath = URL(fileURLWithPath: workingDirectory).appendingPathComponent(
+                "Personas"
+            ).appendingPathComponent(personaFilename)
+            if let content = try? String(contentsOf: personaPath, encoding: .utf8) {
+                systemInstructions = content
+            }
         }
 
-        let (stream, _, _) = try await llmService.chatStreamWithContext(
+        // Simple chat uses chatStreamWithContext but collects result (No Tool Loop support for non-streaming yet)
+        let (stream, _, _) = await llmService.chatStreamWithContext(
             userQuery: chatRequest.message,
             contextNotes: contextData.notes,
             documents: [],
             memories: contextData.memories.map { $0.memory },
             chatHistory: history,
-            tools: [],
-            systemInstructions: nil,
+            tools: [],  // No tools for simple chat
+            systemInstructions: systemInstructions,
             responseFormat: nil,
             useFastModel: false
         )
 
         var fullResponse = ""
         for try await result in stream {
-            if let delta = result.choices.first?.delta.content {
-                fullResponse += delta
+            if let content = result.choices.first?.delta.content {
+                fullResponse += content
             }
         }
 
-        // 5. Save Assistant Message
-        let recalledMemoriesData = try SerializationUtils.jsonEncoder.encode(
-            contextData.memories.map { $0.memory })
-        let recalledMemoriesString = String(decoding: recalledMemoriesData, as: UTF8.self)
         let assistantMsg = ConversationMessage(
             sessionId: id,
             role: .assistant,
-            content: fullResponse,
-            recalledMemories: recalledMemoriesString
+            content: fullResponse
         )
         try await persistence.saveMessage(assistantMsg)
 
@@ -125,107 +137,319 @@ public struct ChatController<Context: RequestContext>: Sendable {
         if verbose { Logger.chat.debug("chatStream called") }
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else {
-            if verbose { Logger.chat.debug("Invalid UUID: \(idString)") }
             throw HTTPError(.badRequest)
         }
 
         let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
-        if verbose { Logger.chat.debug("Received message: \(chatRequest.message)") }
 
-        guard await sessionManager.getSession(id: id) != nil else {
-            if verbose { Logger.chat.debug("Session not found: \(id)") }
+        guard let session = await sessionManager.getSession(id: id) else {
             throw HTTPError(.notFound)
         }
 
         let persistence = await sessionManager.getPersistenceService()
         let contextManager = await sessionManager.getContextManager(for: id)
 
-        // 1. Save User Message
-        let userMsg = ConversationMessage(sessionId: id, role: .user, content: chatRequest.message)
-        try await persistence.saveMessage(userMsg)
+        // 1. Save Tool Outputs
+        if let toolOutputs = chatRequest.toolOutputs {
+            for output in toolOutputs {
+                let msg = ConversationMessage(
+                    sessionId: id,
+                    role: .tool,
+                    content: output.output,
+                    toolCallId: output.toolCallId
+                )
+                try await persistence.saveMessage(msg)
+            }
+        }
 
-        // 2. Fetch History
+        // 2. Save User Message
+        if !chatRequest.message.isEmpty {
+            let userMsg = ConversationMessage(
+                sessionId: id, role: .user, content: chatRequest.message)
+            try await persistence.saveMessage(userMsg)
+        } else if chatRequest.toolOutputs?.isEmpty ?? true {
+            throw HTTPError(.badRequest)
+        }
+
+        // 3. Fetch History & Context
         let history = try await sessionManager.getHistory(for: id)
-        if verbose { Logger.chat.debug("History fetched, count: \(history.count)") }
 
-        // 3. Gather Context
         var contextData = ContextData()
         if let contextManager = contextManager {
-            if verbose { Logger.chat.debug("Gathering context...") }
             contextData = try await contextManager.gatherContext(
-                for: chatRequest.message,
+                for: chatRequest.message.isEmpty
+                    ? (history.last?.content ?? "") : chatRequest.message,
                 history: history,
-                tagGenerator: { [llmService] query in
-                    try await llmService.generateTags(for: query)
+                tagGenerator: { [llmService] query in try await llmService.generateTags(for: query)
                 }
             )
-            if verbose {
-                Logger.chat.debug(
-                    "Context gathered. Memories: \(contextData.memories.count), Notes: \(contextData.notes.count)"
-                )
+        }
+
+        guard await llmService.isConfigured else { throw HTTPError(.serviceUnavailable) }
+
+        // 4. Resolve Tools
+        var availableTools: [any MonadCore.Tool] = []
+        if let toolRouter = toolRouter {
+            do {
+                let references = try await sessionManager.getAggregatedTools(for: id)
+                availableTools = references.compactMap {
+                    (ref: ToolReference) -> (any MonadCore.Tool)? in
+                    var def: WorkspaceToolDefinition?
+                    switch ref {
+                    case .known(let id): def = ServerToolRegistry.shared.getDefinition(for: id)
+                    case .custom(let definition): def = definition
+                    }
+                    guard let d = def else { return nil }
+                    return DelegatingTool(
+                        ref: ref, router: toolRouter, sessionId: id, resolvedDefinition: d)
+                        as any MonadCore.Tool
+                }
+            } catch {
+                Logger.chat.warning("Failed to fetch tools: \(error)")
             }
-        } else {
-            if verbose { Logger.chat.debug("No ContextManager found") }
         }
 
-        guard await llmService.isConfigured else {
-            if verbose { Logger.chat.debug("LLM Service not configured") }
-            throw HTTPError(.serviceUnavailable)
+        let toolParams = availableTools.map { $0.toToolParam() }
+
+        // Load Persona
+        var systemInstructions: String? = nil
+        if let personaFilename = session.persona, let workingDirectory = session.workingDirectory {
+            let personaPath = URL(fileURLWithPath: workingDirectory).appendingPathComponent(
+                "Personas"
+            ).appendingPathComponent(personaFilename)
+            if let content = try? String(contentsOf: personaPath, encoding: .utf8) {
+                systemInstructions = content
+            }
         }
 
-        if verbose { Logger.chat.debug("calling chatStreamWithContext") }
-        let streamData = try await llmService.chatStreamWithContext(
+        // 5. Build Initial Prompt
+        let (initialMessages, _, _) = await llmService.buildPrompt(
             userQuery: chatRequest.message,
             contextNotes: contextData.notes,
             documents: [],
             memories: contextData.memories.map { $0.memory },
             chatHistory: history,
-            tools: [],
-            systemInstructions: nil,
-            responseFormat: nil,
-            useFastModel: false
+            tools: availableTools,
+            systemInstructions: systemInstructions
         )
 
-        let memories = contextData.memories.map { $0.memory }
-
+        // 6. Streaming Loop (ReAct)
         let sseStream = AsyncStream<ByteBuffer> { continuation in
-            Task { [id, persistence, memories] in
-                do {
-                    if verbose { Logger.chat.debug("Starting stream processing task") }
-                    var fullResponse = ""
-                    for try await result in streamData.stream {
-                        if let delta = result.choices.first?.delta.content {
-                            fullResponse += delta
-                            if verbose { Logger.chat.debug("Sending delta: \(delta)") }
-                        }
-                        if let data = try? SerializationUtils.jsonEncoder.encode(result) {
-                            let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
-                            continuation.yield(ByteBuffer(string: sseString))
-                        }
-                    }
-                    if verbose {
-                        Logger.chat.debug(
-                            "Stream complete. Full response length: \(fullResponse.count)")
-                    }
+            Task { [availableTools, initialMessages, toolParams, contextData] in
+                var currentMessages = initialMessages
+                var turnCount = 0
+                let maxTurns = 5  // Safety limit
 
-                    // 5. Save Assistant Message
-                    let recalledMemoriesData = try? SerializationUtils.jsonEncoder.encode(memories)
-                    let recalledMemoriesString =
-                        recalledMemoriesData.flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
-                    let assistantMsg = ConversationMessage(
-                        sessionId: id,
-                        role: .assistant,
-                        content: fullResponse,
-                        recalledMemories: recalledMemoriesString
-                    )
-                    try? await persistence.saveMessage(assistantMsg)
-
-                    continuation.yield(ByteBuffer(string: "data: [DONE]\n\n"))
-                    continuation.finish()
-                } catch {
-                    if verbose { Logger.chat.debug("Error in stream: \(error)") }
-                    continuation.finish()
+                // A. Emit Metadata Event
+                let metadata = ChatMetadata(
+                    memories: contextData.memories.map { $0.memory.id },
+                    files: contextData.notes.map { $0.name }
+                )
+                let metaDelta = ChatDelta(metadata: metadata)
+                if let data = try? SerializationUtils.jsonEncoder.encode(metaDelta) {
+                    let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                    continuation.yield(ByteBuffer(string: sseString))
                 }
+
+                while turnCount < maxTurns {
+                    turnCount += 1
+
+                    do {
+                        let streamData = await llmService.chatStream(
+                            messages: currentMessages,
+                            tools: toolParams.isEmpty ? nil : toolParams,
+                            responseFormat: nil
+                        )
+
+                        var fullResponse = ""
+                        var toolCallAccumulators: [Int: (id: String, name: String, args: String)] =
+                            [:]
+
+                        for try await result in streamData {
+                            // Forward Content
+                            if let delta = result.choices.first?.delta.content {
+                                fullResponse += delta
+                                let chatDelta = ChatDelta(content: delta)
+                                if let data = try? SerializationUtils.jsonEncoder.encode(chatDelta)
+                                {
+                                    let sseString =
+                                        "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                                    continuation.yield(ByteBuffer(string: sseString))
+                                }
+                            }
+
+                            // Accumulate & Forward Tool Calls
+                            if let calls = result.choices.first?.delta.toolCalls {
+                                var toolDeltas: [ToolCallDelta] = []
+                                for call in calls {
+                                    guard let index = call.index else { continue }
+                                    var acc = toolCallAccumulators[index] ?? ("", "", "")
+                                    if let id = call.id { acc.id = id }
+                                    if let name = call.function?.name { acc.name += name }
+                                    if let args = call.function?.arguments { acc.args += args }
+                                    toolCallAccumulators[index] = acc
+
+                                    toolDeltas.append(
+                                        ToolCallDelta(
+                                            index: index,
+                                            id: call.id,
+                                            name: call.function?.name,
+                                            arguments: call.function?.arguments
+                                        ))
+                                }
+
+                                if !toolDeltas.isEmpty {
+                                    let chatDelta = ChatDelta(toolCalls: toolDeltas)
+                                    if let data = try? SerializationUtils.jsonEncoder.encode(
+                                        chatDelta)
+                                    {
+                                        let sseString =
+                                            "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                                        continuation.yield(ByteBuffer(string: sseString))
+                                    }
+                                }
+                            }
+                        }
+
+                        // Process Turn Result
+                        if !toolCallAccumulators.isEmpty {
+                            let sortedCalls = toolCallAccumulators.sorted(by: { $0.key < $1.key })
+                            let toolCallsParam:
+                                [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam
+                                    .ToolCallParam] = sortedCalls.map { _, value in
+                                        .init(
+                                            id: value.id,
+                                            function: .init(arguments: value.args, name: value.name)
+                                        )
+                                    }
+
+                            currentMessages.append(
+                                .assistant(
+                                    .init(
+                                        content: .textContent(.init(fullResponse)),
+                                        toolCalls: toolCallsParam)))
+
+                            var executionResults: [ChatQuery.ChatCompletionMessageParam] = []
+                            var requiresClientExecution = false
+
+                            for call in toolCallsParam {
+                                guard
+                                    let tool = availableTools.first(where: {
+                                        $0.name == call.function.name
+                                    })
+                                else {
+                                    executionResults.append(
+                                        .tool(
+                                            .init(
+                                                content: .textContent(
+                                                    .init("Error: Tool not found")),
+                                                toolCallId: call.id)))
+                                    continue
+                                }
+
+                                let argsData = call.function.arguments.data(using: .utf8) ?? Data()
+                                let argsDict =
+                                    (try? JSONSerialization.jsonObject(with: argsData)
+                                        as? [String: Any]) ?? [:]
+
+                                do {
+                                    let result = try await tool.execute(parameters: argsDict)
+                                    executionResults.append(
+                                        .tool(
+                                            .init(
+                                                content: .textContent(.init(result.output)),
+                                                toolCallId: call.id)))
+                                } catch let error as ToolError {
+                                    if case .clientExecutionRequired = error {
+                                        requiresClientExecution = true
+                                        break
+                                    }
+                                    executionResults.append(
+                                        .tool(
+                                            .init(
+                                                content: .textContent(
+                                                    .init("Error: \(error.localizedDescription)")),
+                                                toolCallId: call.id)))
+                                } catch {
+                                    executionResults.append(
+                                        .tool(
+                                            .init(
+                                                content: .textContent(
+                                                    .init("Error: \(error.localizedDescription)")),
+                                                toolCallId: call.id)))
+                                }
+                            }
+
+                            if requiresClientExecution {
+                                let callsForDB = toolCallsParam.compactMap { param -> ToolCall? in
+                                    let name = param.function.name
+                                    let argsData =
+                                        param.function.arguments.data(using: .utf8) ?? Data()
+                                    let args =
+                                        (try? JSONDecoder().decode(
+                                            [String: AnyCodable].self, from: argsData)) ?? [:]
+                                    return ToolCall(name: name, arguments: args)
+                                }
+                                let callsJSON =
+                                    (try? SerializationUtils.jsonEncoder.encode(callsForDB)).flatMap
+                                { String(decoding: $0, as: UTF8.self) } ?? "[]"
+
+                                let assistantMsg = ConversationMessage(
+                                    sessionId: id, role: .assistant, content: fullResponse,
+                                    toolCalls: callsJSON)
+                                try? await persistence.saveMessage(assistantMsg)
+
+                                let doneDelta = ChatDelta(isDone: true)
+                                if let data = try? SerializationUtils.jsonEncoder.encode(doneDelta)
+                                {
+                                    continuation.yield(
+                                        ByteBuffer(
+                                            string:
+                                                "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                                        ))
+                                }
+                                continuation.finish()
+                                return
+                            }
+
+                            currentMessages.append(contentsOf: executionResults)
+                            continue
+                        } else {
+                            // Final response
+                            let assistantMsg = ConversationMessage(
+                                sessionId: id,
+                                role: .assistant,
+                                content: fullResponse,
+                                recalledMemories: String(
+                                    decoding: (try? SerializationUtils.jsonEncoder.encode(
+                                        contextData.memories.map { $0.memory })) ?? Data(),
+                                    as: UTF8.self)
+                            )
+                            try? await persistence.saveMessage(assistantMsg)
+
+                            let doneDelta = ChatDelta(isDone: true)
+                            if let data = try? SerializationUtils.jsonEncoder.encode(doneDelta) {
+                                continuation.yield(
+                                    ByteBuffer(
+                                        string: "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                                    ))
+                            }
+                            continuation.finish()
+                            return
+                        }
+                    } catch {
+                        Logger.chat.error("Stream error: \(error)")
+                        let errorDelta = ChatDelta(error: error.localizedDescription)
+                        if let data = try? SerializationUtils.jsonEncoder.encode(errorDelta) {
+                            continuation.yield(
+                                ByteBuffer(
+                                    string: "data: \(String(decoding: data, as: UTF8.self))\n\n"))
+                        }
+                        continuation.finish()
+                        return
+                    }
+                }
+                continuation.finish()
             }
         }
 
@@ -233,8 +457,6 @@ public struct ChatController<Context: RequestContext>: Sendable {
         headers[.contentType] = "text/event-stream"
         headers[.cacheControl] = "no-cache"
         headers[.connection] = "keep-alive"
-        headers[.connection] = "keep-alive"
-
         return Response(status: .ok, headers: headers, body: .init(asyncSequence: sseStream))
     }
 }

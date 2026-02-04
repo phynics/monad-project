@@ -1,4 +1,5 @@
 import Foundation
+import MonadCore
 
 /// HTTP client for communicating with MonadServer
 public actor MonadClient {
@@ -27,18 +28,43 @@ public actor MonadClient {
     // MARK: - Session API
 
     /// Create a new chat session
-    public func createSession() async throws -> Session {
-        let request = try buildRequest(path: "/api/sessions", method: "POST")
+    public func createSession(
+        title: String? = nil, persona: String? = nil, workspaceId: UUID? = nil
+    ) async throws -> Session {
+        var request = try buildRequest(path: "/api/sessions", method: "POST")
+        request.httpBody = try encoder.encode(
+            CreateSessionRequest(title: title, primaryWorkspaceId: workspaceId, persona: persona))
         return try await perform(request)
     }
 
-    /// List all sessions
-    public func listSessions() async throws -> [Session] {
+    public func listSessions() async throws -> [SessionResponse] {
         let request = try buildRequest(path: "/api/sessions", method: "GET")
         return try await perform(request)
     }
 
-    /// Delete a session
+    /// List available personas
+    public func listPersonas() async throws -> [Persona] {
+        let request = try buildRequest(path: "/api/sessions/personas", method: "GET")
+        return try await perform(request)
+    }
+
+    /// Update session persona
+    public func updatePersona(_ persona: String, sessionId: UUID) async throws {
+        var request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/persona", method: "PATCH")
+        request.httpBody = try encoder.encode(UpdatePersonaRequest(persona: persona))
+        _ = try await performRaw(request)
+    }
+
+    /// Update session title
+    public func updateSessionTitle(_ title: String, sessionId: UUID) async throws {
+        var request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/title", method: "PATCH")
+        request.httpBody = try encoder.encode(UpdateSessionTitleRequest(title: title))
+        _ = try await performRaw(request)
+    }
+
+    /// Get history for a session
     public func deleteSession(_ id: UUID) async throws {
         let request = try buildRequest(path: "/api/sessions/\(id.uuidString)", method: "DELETE")
         _ = try await performRaw(request)
@@ -132,59 +158,60 @@ public actor MonadClient {
         _ = try await performRaw(request)
     }
 
-    // MARK: - Note API
+    // MARK: - File API
 
-    /// List all notes
-    public func listNotes() async throws -> [Note] {
-        let request = try buildRequest(path: "/api/notes", method: "GET")
+    /// List all files in a workspace
+    public func listFiles(workspaceId: UUID) async throws -> [String] {
+        let request = try buildRequest(
+            path: "/api/workspaces/\(workspaceId.uuidString)/files", method: "GET")
         return try await perform(request)
     }
 
-    /// Get a note by ID
-    public func getNote(_ id: UUID) async throws -> Note {
-        let request = try buildRequest(path: "/api/notes/\(id.uuidString)", method: "GET")
-        return try await perform(request)
+    /// Get file content
+    public func getFileContent(workspaceId: UUID, path: String) async throws -> String {
+        // Path might contain slashes, and buildRequest handles relativeTo, but we need to ensure the path is correctly appended.
+        // FilesController uses "*" so we just append the path.
+        let request = try buildRequest(
+            path: "/api/workspaces/\(workspaceId.uuidString)/files/\(path)", method: "GET")
+        let (data, _) = try await performRaw(request)
+        return String(decoding: data, as: UTF8.self)
     }
 
-    /// Create a new note
-    public func createNote(title: String, content: String) async throws -> Note {
-        var request = try buildRequest(path: "/api/notes", method: "POST")
-        request.httpBody = try encoder.encode(CreateNoteRequest(title: title, content: content))
-        return try await perform(request)
+    /// Write file content
+    public func writeFileContent(workspaceId: UUID, path: String, content: String) async throws {
+        var request = try buildRequest(
+            path: "/api/workspaces/\(workspaceId.uuidString)/files/\(path)", method: "PUT")
+        request.httpBody = content.data(using: .utf8)
+        request.setValue("text/plain", forHTTPHeaderField: "Content-Type")
+        _ = try await performRaw(request)
     }
 
-    /// Update a note
-    public func updateNote(_ id: UUID, title: String? = nil, content: String? = nil) async throws
-        -> Note
-    {
-        var request = try buildRequest(path: "/api/notes/\(id.uuidString)", method: "PATCH")
-        request.httpBody = try encoder.encode(UpdateNoteRequest(title: title, content: content))
-        return try await perform(request)
-    }
-
-    /// Delete a note
-    public func deleteNote(_ id: UUID) async throws {
-        let request = try buildRequest(path: "/api/notes/\(id.uuidString)", method: "DELETE")
+    /// Delete a file
+    public func deleteFile(workspaceId: UUID, path: String) async throws {
+        let request = try buildRequest(
+            path: "/api/workspaces/\(workspaceId.uuidString)/files/\(path)", method: "DELETE")
         _ = try await performRaw(request)
     }
 
     // MARK: - Tool API
 
-    /// List all tools
-    public func listTools() async throws -> [Tool] {
-        let request = try buildRequest(path: "/api/tools", method: "GET")
+    /// List all tools available in a session
+    public func listTools(sessionId: UUID) async throws -> [Tool] {
+        let request = try buildRequest(path: "/api/tools/\(sessionId.uuidString)", method: "GET")
         return try await perform(request)
     }
 
     /// Enable a tool
-    public func enableTool(_ name: String) async throws {
-        let request = try buildRequest(path: "/api/tools/\(name)/enable", method: "POST")
+    public func enableTool(_ name: String, sessionId: UUID) async throws {
+        let request = try buildRequest(
+            path: "/api/tools/\(sessionId.uuidString)/\(name)/enable", method: "POST")
         _ = try await performRaw(request)
     }
 
     /// Disable a tool
-    public func disableTool(_ name: String) async throws {
-        let request = try buildRequest(path: "/api/tools/\(name)/disable", method: "POST")
+    public func disableTool(_ name: String, sessionId: UUID) async throws {
+        let request = try buildRequest(
+            path: "/api/tools/\(sessionId.uuidString)/\(name)/disable", method: "POST")
         _ = try await performRaw(request)
     }
 
@@ -215,6 +242,115 @@ public actor MonadClient {
         var request = try buildRequest(path: "/api/config", method: "PUT")
         request.httpBody = try encoder.encode(config)
         _ = try await performRaw(request)
+    }
+
+    // MARK: - Workspace API
+
+    public func createWorkspace(
+        uri: WorkspaceURI,
+        hostType: WorkspaceHostType,
+        ownerId: UUID?,
+        rootPath: String?,
+        trustLevel: WorkspaceTrustLevel?
+    ) async throws -> Workspace {
+        var request = try buildRequest(path: "/api/workspaces", method: "POST")
+        request.httpBody = try encoder.encode(
+            CreateWorkspaceRequest(
+                uri: uri.description,
+                hostType: hostType,
+                ownerId: ownerId,
+                rootPath: rootPath,
+                trustLevel: trustLevel
+            )
+        )
+        return try await perform(request)
+    }
+
+    public func listWorkspaces() async throws -> [Workspace] {
+        let request = try buildRequest(path: "/api/workspaces", method: "GET")
+        return try await perform(request)
+    }
+
+    public func getWorkspace(_ id: UUID) async throws -> Workspace {
+        let request = try buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "GET")
+        return try await perform(request)
+    }
+
+    public func deleteWorkspace(_ id: UUID) async throws {
+        let request = try buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "DELETE")
+        _ = try await performRaw(request)
+    }
+
+    public func attachWorkspace(_ workspaceId: UUID, to sessionId: UUID, isPrimary: Bool)
+        async throws
+    {
+        var request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "POST")
+        request.httpBody = try encoder.encode(
+            AttachWorkspaceRequest(workspaceId: workspaceId, isPrimary: isPrimary)
+        )
+        _ = try await performRaw(request)
+    }
+
+    public func detachWorkspace(_ workspaceId: UUID, from sessionId: UUID) async throws {
+        let request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/workspaces/\(workspaceId.uuidString)",
+            method: "DELETE"
+        )
+        _ = try await performRaw(request)
+    }
+
+    public func listSessionWorkspaces(sessionId: UUID) async throws -> (
+        primary: UUID?, attached: [UUID]
+    ) {
+        let request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "GET")
+        let response: SessionWorkspacesResponse = try await perform(request)
+        return (response.primaryWorkspaceId, response.attachedWorkspaceIds)
+    }
+
+    // MARK: - Prune API
+
+    public func pruneMemories(query: String) async throws -> Int {
+        var request = try buildRequest(path: "/api/prune/memories", method: "POST")
+        request.httpBody = try encoder.encode(PruneQueryRequest(query: query))
+        let response: PruneResponse = try await perform(request)
+        return response.count
+    }
+
+    public func pruneSessions(olderThanDays days: Int, excluding: [UUID] = []) async throws -> Int {
+        var request = try buildRequest(path: "/api/prune/sessions", method: "POST")
+        request.httpBody = try encoder.encode(
+            PruneSessionRequest(days: days, excludedSessionIds: excluding))
+        let response: PruneResponse = try await perform(request)
+        return response.count
+    }
+
+    public func pruneMessages(olderThanDays days: Int) async throws -> Int {
+        var request = try buildRequest(path: "/api/prune/messages", method: "POST")
+        request.httpBody = try encoder.encode(PruneMessagesRequest(days: days))
+        let response: PruneResponse = try await perform(request)
+        return response.count
+    }
+
+    // MARK: - Client API
+
+    public func registerClient(
+        hostname: String,
+        displayName: String,
+        platform: String,
+        tools: [ToolReference] = []
+    ) async throws -> ClientRegistrationResponse {
+        var request = try buildRequest(path: "/api/clients/register", method: "POST")
+        request.httpBody = try encoder.encode(
+            ClientRegistrationRequest(
+                hostname: hostname,
+                displayName: displayName,
+                platform: platform,
+                tools: tools
+            )
+        )
+        return try await perform(request)
     }
 
     // MARK: - Private Helpers

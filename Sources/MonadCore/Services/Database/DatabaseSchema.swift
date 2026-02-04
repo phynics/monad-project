@@ -8,6 +8,7 @@ public enum DatabaseSchema {
     public static func registerMigrations(in migrator: inout DatabaseMigrator) {
         // v1: Baseline schema (consolidated v1 and v2)
         migrator.registerMigration("v1") { db in
+            try createWorkspaceTables(in: db)
             try createConversationTables(in: db)
             try createMemoryTable(in: db)
             try createNoteTable(in: db)
@@ -240,6 +241,169 @@ public enum DatabaseSchema {
                 on: "compactificationNode",
                 columns: ["sessionId"])
         }
+
+        // v16: Workspaces and Client Identity
+        migrator.registerMigration("v16") { db in
+            if try !db.tableExists("clientIdentity") {
+                // Client entity table
+                try db.create(table: "clientIdentity") { t in
+                    t.column("id", .blob).primaryKey()
+                    t.column("hostname", .text).notNull()
+                    t.column("displayName", .text).notNull()
+                    t.column("platform", .text).notNull()
+                    t.column("registeredAt", .datetime).notNull()
+                    t.column("lastSeenAt", .datetime)
+                }
+            }
+
+            if try !db.tableExists("workspace") {
+                // Workspace table
+                try db.create(table: "workspace") { t in
+                    t.column("id", .blob).primaryKey()
+                    t.column("uri", .text).notNull().unique()
+                    t.column("hostType", .text).notNull()
+                    t.column("ownerId", .blob).references("clientIdentity", onDelete: .setNull)
+                    t.column("rootPath", .text)
+                    t.column("trustLevel", .text).notNull().defaults(to: "full")
+                    t.column("lastModifiedBy", .blob).references(
+                        "conversationSession", onDelete: .setNull)
+                    t.column("createdAt", .datetime).notNull()
+                }
+            }
+
+            if try !db.tableExists("workspaceTool") {
+                // Workspace tools (tool definitions per workspace)
+                try db.create(table: "workspaceTool") { t in
+                    t.column("id", .blob).primaryKey()
+                    t.column("workspaceId", .blob).notNull()
+                        .references("workspace", onDelete: .cascade)
+                    t.column("toolId", .text).notNull()
+                    t.column("isKnown", .boolean).notNull()
+                    t.column("definition", .text)
+                }
+                try db.create(
+                    index: "idx_workspaceTool_workspace",
+                    on: "workspaceTool",
+                    columns: ["workspaceId"])
+            }
+
+            // Add workspace columns to session
+            if try db.tableExists("conversationSession") {
+                let columns = try db.columns(in: "conversationSession").map { $0.name }
+                try db.alter(table: "conversationSession") { t in
+                    if !columns.contains("primaryWorkspaceId") {
+                        t.add(column: "primaryWorkspaceId", .blob)
+                            .references("workspace", onDelete: .setNull)
+                    }
+                    if !columns.contains("attachedWorkspaceIds") {
+                        t.add(column: "attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
+                    }
+                }
+            }
+
+            if try !db.tableExists("workspaceLock") {
+                // Workspace locks
+                try db.create(table: "workspaceLock") { t in
+                    t.column("workspaceId", .blob).primaryKey()
+                        .references("workspace", onDelete: .cascade)
+                    t.column("heldBy", .blob).notNull()
+                        .references("conversationSession", onDelete: .cascade)
+                    t.column("acquiredAt", .datetime).notNull()
+                }
+            }
+        }
+
+        // v17: Add toolCallId to conversationMessage (for 'tool' role messages)
+        migrator.registerMigration("v17") { db in
+            if try !db.columns(in: "conversationMessage").contains(where: {
+                $0.name == "toolCallId"
+            }) {
+                try db.alter(table: "conversationMessage") { t in
+                    t.add(column: "toolCallId", .text)
+                }
+            }
+        }
+
+        // v18: Remove legacy Note table
+        migrator.registerMigration("v18") { db in
+            try db.drop(table: "note")
+        }
+
+        // v19: Restore Note table
+        migrator.registerMigration("v19") { db in
+            try db.create(table: "note") { t in
+                t.primaryKey("id", .blob).notNull()
+                t.column("name", .text).notNull()
+                t.column("description", .text).notNull().defaults(to: "")
+                t.column("content", .text).notNull()
+                t.column("isReadonly", .boolean).notNull().defaults(to: false)
+                t.column("tags", .text).notNull().defaults(to: "[]")
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+            }
+
+            try db.create(
+                index: "idx_note_readonly",
+                on: "note",
+                columns: ["isReadonly"])
+        }
+
+        // v20: Add persona column to conversationSession
+        migrator.registerMigration("v20") { db in
+            if try !db.columns(in: "conversationSession").contains(where: { $0.name == "persona" }) {
+                try db.alter(table: "conversationSession") { t in
+                    t.add(column: "persona", .text)
+                }
+            }
+        }
+    }
+
+    // MARK: - Workspace Tables
+
+    private static func createWorkspaceTables(in db: Database) throws {
+        // Client entity table
+        try db.create(table: "clientIdentity") { t in
+            t.column("id", .blob).primaryKey()
+            t.column("hostname", .text).notNull()
+            t.column("displayName", .text).notNull()
+            t.column("platform", .text).notNull()
+            t.column("registeredAt", .datetime).notNull()
+            t.column("lastSeenAt", .datetime)
+        }
+
+        // Workspace table
+        try db.create(table: "workspace") { t in
+            t.column("id", .blob).primaryKey()
+            t.column("uri", .text).notNull().unique()
+            t.column("hostType", .text).notNull()
+            t.column("ownerId", .blob).references("clientIdentity", onDelete: .setNull)
+            t.column("rootPath", .text)
+            t.column("trustLevel", .text).notNull().defaults(to: "full")
+            t.column("lastModifiedBy", .blob)
+            t.column("createdAt", .datetime).notNull()
+        }
+
+        // Workspace tools (tool definitions per workspace)
+        try db.create(table: "workspaceTool") { t in
+            t.column("id", .blob).primaryKey()
+            t.column("workspaceId", .blob).notNull()
+                .references("workspace", onDelete: .cascade)
+            t.column("toolId", .text).notNull()
+            t.column("isKnown", .boolean).notNull()
+            t.column("definition", .text)
+        }
+        try db.create(
+            index: "idx_workspaceTool_workspace",
+            on: "workspaceTool",
+            columns: ["workspaceId"])
+
+        // Workspace locks
+        try db.create(table: "workspaceLock") { t in
+            t.column("workspaceId", .blob).primaryKey()
+                .references("workspace", onDelete: .cascade)
+            t.column("heldBy", .blob).notNull()
+            t.column("acquiredAt", .datetime).notNull()
+        }
     }
 
     // MARK: - Conversation Tables
@@ -253,6 +417,10 @@ public enum DatabaseSchema {
             t.column("updatedAt", .datetime).notNull()
             t.column("isArchived", .boolean).notNull().defaults(to: false)
             t.column("tags", .text).notNull().defaults(to: "")
+            t.column("workingDirectory", .text)
+            t.column("persona", .text)
+            t.column("primaryWorkspaceId", .blob)
+            t.column("attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
         }
 
         // Conversation messages

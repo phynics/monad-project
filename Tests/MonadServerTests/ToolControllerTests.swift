@@ -13,7 +13,13 @@ import NIOCore
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
+        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        let sessionManager = SessionManager(
+            persistenceService: persistence, 
+            embeddingService: embedding, 
+            llmService: llm,
+            workspaceRoot: workspaceRoot
+        )
         
         let router = Router()
         let controller = ToolController<BasicRequestContext>(sessionManager: sessionManager)

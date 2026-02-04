@@ -1,7 +1,7 @@
 import Foundation
+import GRDB
 import MonadCore
 import OpenAI
-import GRDB
 
 // MARK: - Mocks for MonadServerTests
 
@@ -10,32 +10,32 @@ final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     var nextResponses: [String] = []
     var lastMessages: [ChatQuery.ChatCompletionMessageParam] = []
     var shouldThrowError: Bool = false
-    
+
     // Support for tool calls in stream - use dictionaries to avoid type issues
     var nextToolCalls: [[[String: Any]]] = []
-    
+
     func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]?,
         responseFormat: ChatQuery.ResponseFormat?
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
         lastMessages = messages
-        
+
         if shouldThrowError {
             return AsyncThrowingStream { continuation in
                 continuation.finish(throwing: NSError(domain: "MockError", code: 1, userInfo: nil))
             }
         }
-        
+
         return AsyncThrowingStream { continuation in
             let responses = nextResponses.isEmpty ? [nextResponse] : nextResponses
-            
+
             for response in responses {
                 var delta: [String: Any] = [
                     "role": "assistant",
-                    "content": response
+                    "content": response,
                 ]
-                
+
                 if let tc = nextToolCalls.isEmpty ? nil : nextToolCalls.removeFirst() {
                     delta["tool_calls"] = tc
                 }
@@ -53,7 +53,7 @@ final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
                         ]
                     ],
                 ]
-                
+
                 do {
                     let data = try JSONSerialization.data(withJSONObject: jsonDict)
                     let result = try JSONDecoder().decode(ChatStreamResult.self, from: data)
@@ -66,10 +66,14 @@ final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
             continuation.finish()
         }
     }
-    
-    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?) async throws -> String {
+
+    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?) async throws
+        -> String
+    {
         if shouldThrowError {
-            throw NSError(domain: "MockError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Simulated failure"])
+            throw NSError(
+                domain: "MockError", code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Simulated failure"])
         }
         lastMessages = [.user(.init(content: .string(content)))]
         return nextResponse
@@ -86,7 +90,7 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
     var nextResponse: String = ""
     var nextTags: [String] = []
     var mockClient = MockLLMClient()
-    
+
     func loadConfiguration() async {}
     func updateConfiguration(_ config: LLMConfiguration) async throws {
         self.configuration = config
@@ -101,14 +105,16 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
     func sendMessage(_ content: String) async throws -> String {
         return nextResponse
     }
-    
-    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool) async throws -> String {
+
+    func sendMessage(
+        _ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool
+    ) async throws -> String {
         return nextResponse
     }
-    
+
     func chatStreamWithContext(
         userQuery: String,
-        contextNotes: [Note],
+        contextNotes: [ContextFile],
         documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
@@ -117,17 +123,27 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
         responseFormat: ChatQuery.ResponseFormat?,
         useFastModel: Bool
     ) async -> (
-        stream: AsyncThrowingStream<ChatStreamResult, Error>, 
+        stream: AsyncThrowingStream<ChatStreamResult, Error>,
         rawPrompt: String,
         structuredContext: [String: String]
     ) {
-        let stream = await mockClient.chatStream(messages: [], tools: nil, responseFormat: responseFormat)
+        let stream = await mockClient.chatStream(
+            messages: [], tools: nil, responseFormat: responseFormat)
         return (stream, "mock prompt", [:])
     }
-    
+
+    func chatStream(
+        messages: [ChatQuery.ChatCompletionMessageParam],
+        tools: [ChatQuery.ChatCompletionToolParam]?,
+        responseFormat: ChatQuery.ResponseFormat?
+    ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
+        await mockClient.chatStream(
+            messages: messages, tools: tools, responseFormat: responseFormat)
+    }
+
     func buildPrompt(
         userQuery: String,
-        contextNotes: [Note],
+        contextNotes: [ContextFile],
         documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
@@ -140,19 +156,21 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
     ) {
         return ([], "mock prompt", [:])
     }
-    
+
     func generateTags(for text: String) async throws -> [String] {
         return nextTags
     }
-    
+
     func generateTitle(for messages: [Message]) async throws -> String {
         return "Mock Title"
     }
-    
-    func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws -> [String: Double] {
+
+    func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws
+        -> [String: Double]
+    {
         return [:]
     }
-    
+
     func fetchAvailableModels() async throws -> [String]? {
         return ["mock-model"]
     }
@@ -162,7 +180,7 @@ final class MockEmbeddingService: EmbeddingService, @unchecked Sendable {
     var mockEmbedding: [Double] = [0.1, 0.2, 0.3]
     var lastInput: String?
     var useDistinctEmbeddings: Bool = false
-    
+
     func generateEmbedding(for text: String) async throws -> [Double] {
         lastInput = text
         if useDistinctEmbeddings {
@@ -175,7 +193,7 @@ final class MockEmbeddingService: EmbeddingService, @unchecked Sendable {
         }
         return mockEmbedding
     }
-    
+
     func generateEmbeddings(for texts: [String]) async throws -> [[Double]] {
         if useDistinctEmbeddings {
             return try await withThrowingTaskGroup(of: [Double].self) { group in
@@ -194,76 +212,59 @@ final class MockEmbeddingService: EmbeddingService, @unchecked Sendable {
 }
 
 final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Sendable {
+    var databaseWriter: DatabaseWriter
     var memories: [Memory] = []
     var searchResults: [(memory: Memory, similarity: Double)] = []
     var messages: [ConversationMessage] = []
     var sessions: [ConversationSession] = []
-    var notes: [Note] = []
     var jobs: [Job] = []
-    
-    // Notes
-    func saveNote(_ note: Note) async throws {
-        if let index = notes.firstIndex(where: { $0.id == note.id }) {
-            notes[index] = note
+
+    init(databaseWriter: DatabaseWriter? = nil) {
+        if let writer = databaseWriter {
+            self.databaseWriter = writer
         } else {
-            notes.append(note)
+            let queue = try! DatabaseQueue()
+            var migrator = DatabaseMigrator()
+            DatabaseSchema.registerMigrations(in: &migrator)
+            try! migrator.migrate(queue)
+            self.databaseWriter = queue
         }
     }
-    
-    func fetchNote(id: UUID) async throws -> Note? {
-        return notes.first(where: { $0.id == id })
-    }
-    
-    func fetchAllNotes() async throws -> [Note] {
-        return notes
-    }
-    
-    func searchNotes(query: String) async throws -> [Note] {
-        return notes.filter { $0.name.contains(query) || $0.content.contains(query) }
-    }
-    
-    func searchNotes(matchingAnyTag tags: [String]) async throws -> [Note] {
-        return notes.filter { note in
-            !Set(note.tagArray).intersection(tags).isEmpty
-        }
-    }
-    
-    func deleteNote(id: UUID) async throws {
-        notes.removeAll(where: { $0.id == id })
-    }
-    
+
     // Memories
     func saveMemory(_ memory: Memory, policy: MemorySavePolicy) async throws -> UUID {
         memories.append(memory)
         return memory.id
     }
-    
+
     func fetchMemory(id: UUID) async throws -> Memory? {
         return memories.first(where: { $0.id == id })
     }
-    
+
     func fetchAllMemories() async throws -> [Memory] {
         return memories
     }
-    
+
     func searchMemories(query: String) async throws -> [Memory] {
         return memories.filter { $0.title.contains(query) || $0.content.contains(query) }
     }
-    
-    func searchMemories(embedding: [Double], limit: Int, minSimilarity: Double) async throws -> [(memory: Memory, similarity: Double)] {
+
+    func searchMemories(embedding: [Double], limit: Int, minSimilarity: Double) async throws -> [(
+        memory: Memory, similarity: Double
+    )] {
         return searchResults
     }
-    
+
     func searchMemories(matchingAnyTag tags: [String]) async throws -> [Memory] {
         return memories.filter { memory in
             !Set(memory.tagArray).intersection(tags).isEmpty
         }
     }
-    
+
     func deleteMemory(id: UUID) async throws {
         memories.removeAll(where: { $0.id == id })
     }
-    
+
     func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws {
         if let index = memories.firstIndex(where: { $0.id == id }) {
             var memory = memories[index]
@@ -273,33 +274,33 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
             }
         }
     }
-    
+
     func vacuumMemories(threshold: Double) async throws -> Int {
         return 0
     }
-    
+
     // Messages
     func saveMessage(_ message: ConversationMessage) async throws {
         messages.append(message)
     }
-    
+
     func fetchMessages(for sessionId: UUID) async throws -> [ConversationMessage] {
         return messages.filter { $0.sessionId == sessionId }
     }
-    
+
     func deleteMessages(for sessionId: UUID) async throws {
         messages.removeAll(where: { $0.sessionId == sessionId })
     }
-    
+
     // Sessions
     func saveSession(_ session: ConversationSession) async throws {
         sessions.append(session)
     }
-    
+
     func fetchSession(id: UUID) async throws -> ConversationSession? {
         return sessions.first(where: { $0.id == id })
     }
-    
+
     func fetchAllSessions(includeArchived: Bool) async throws -> [ConversationSession] {
         if includeArchived {
             return sessions
@@ -307,21 +308,40 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
             return sessions.filter { !$0.isArchived }
         }
     }
-    
+
     func deleteSession(id: UUID) async throws {
         sessions.removeAll(where: { $0.id == id })
     }
-    
+
     func searchArchivedSessions(query: String) async throws -> [ConversationSession] {
         return sessions.filter { $0.isArchived && $0.title.contains(query) }
     }
-    
-    func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession] {
+
+    func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession]
+    {
         return sessions.filter { session in
             session.isArchived && !Set(session.tagArray).intersection(tags).isEmpty
         }
     }
-    
+
+    func pruneSessions(olderThan timeInterval: TimeInterval, excluding: [UUID] = []) async throws
+        -> Int
+    {
+        let cutoffDate = Date().addingTimeInterval(-timeInterval)
+        let countBefore = sessions.count
+        sessions.removeAll { session in
+            !session.isArchived && session.updatedAt < cutoffDate && !excluding.contains(session.id)
+        }
+        return countBefore - sessions.count
+    }
+
+    func pruneMessages(olderThan timeInterval: TimeInterval) async throws -> Int {
+        let cutoffDate = Date().addingTimeInterval(-timeInterval)
+        let countBefore = messages.count
+        messages.removeAll { $0.timestamp < cutoffDate }
+        return countBefore - messages.count
+    }
+
     // Jobs
     func saveJob(_ job: Job) async throws {
         if let index = jobs.firstIndex(where: { $0.id == job.id }) {
@@ -330,30 +350,47 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
             jobs.append(job)
         }
     }
-    
+
     func fetchJob(id: UUID) async throws -> Job? {
         return jobs.first(where: { $0.id == id })
     }
-    
+
     func fetchAllJobs() async throws -> [Job] {
         return jobs
     }
-    
+
     func deleteJob(id: UUID) async throws {
         jobs.removeAll(where: { $0.id == id })
     }
-    
+
+    // MARK: - Prune
+    func pruneMemories(matching query: String) async throws -> Int {
+        let countBefore = memories.count
+        memories.removeAll { $0.title.contains(query) || $0.content.contains(query) }
+        return countBefore - memories.count
+    }
+
     // RAW SQL Support
-    func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]] {
+    func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]]
+    {
         return []
     }
-    
+
     // Database Management
     func resetDatabase() async throws {
-        notes.removeAll()
         memories.removeAll()
         messages.removeAll()
         sessions.removeAll()
         jobs.removeAll()
     }
+}
+
+// MARK: - Test Helpers
+
+func getTestWorkspaceRoot() -> URL {
+    let fileManager = FileManager.default
+    let currentDir = URL(fileURLWithPath: fileManager.currentDirectoryPath)
+    let testWorkspacesDir = currentDir.appendingPathComponent(".test_workspaces", isDirectory: true)
+    try? fileManager.createDirectory(at: testWorkspacesDir, withIntermediateDirectories: true)
+    return testWorkspacesDir
 }

@@ -37,9 +37,10 @@ struct LLMServiceTests {
             Message(content: "Previous assistant message", role: .assistant)
         ]
 
+        let contextFiles = notes.map { ContextFile(name: $0.name, content: $0.content, source: "note") }
         let (messages, rawPrompt, _) = await promptBuilder.buildPrompt(
             systemInstructions: "System rules",
-            contextNotes: notes,
+            contextNotes: contextFiles,
             tools: [],
             chatHistory: history,
             userQuery: "Current question"

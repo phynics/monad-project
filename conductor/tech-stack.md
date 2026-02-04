@@ -11,6 +11,7 @@
 - **MonadCore:** A dedicated pure logic framework responsible for context management, persistence, and tool execution.
 - **MonadServerCore:** A server-side framework providing RESTful API controllers and session management.
 - **MonadClient:** HTTP client library for communicating with the server.
+- **Workspace Jailing:** Secure filesystem-level isolation for session-specific storage and tool execution.
 - **MonadCLI:** Command-line interface for interacting with the server.
 - **Modular Design:** Separation of concerns into Core, Server, and Client modules.
 - **Architectural Integrity:**

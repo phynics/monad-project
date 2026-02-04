@@ -19,22 +19,19 @@ struct ExecuteSQLToolTests {
 
         persistence = PersistenceService(dbQueue: queue)
         dbQueue = queue
+        
+        try await persistence.syncTableDirectory()
     }
 
     @Test("Test ExecuteSQLTool: Basic SELECT")
     func selectQuery() async throws {
-        // Add a note to query
-        let note = Note(name: "Test Note", content: "Test Content")
-        try await persistence.saveNote(note)
-        
         let tool = ExecuteSQLTool(persistenceService: persistence)
         let result = try await tool.execute(parameters: [
-            "sql": "SELECT name, content FROM note WHERE name = 'Test Note'"
+            "sql": "SELECT name FROM table_directory LIMIT 1"
         ])
         
         #expect(result.success)
-        #expect(result.output.contains("Test Note"))
-        #expect(result.output.contains("Test Content"))
+        #expect(result.output.contains("name"))
     }
 
     @Test("Test ExecuteSQLTool: Create Table and Insert")
@@ -72,7 +69,6 @@ struct ExecuteSQLToolTests {
         try await persistence.syncTableDirectory()
         
         var tables = try await persistence.executeRaw(sql: "SELECT name FROM table_directory", arguments: [])
-        #expect(tables.contains { $0["name"]?.value as? String == "note" })
         #expect(tables.contains { $0["name"]?.value as? String == "memory" })
         
         // Create custom table

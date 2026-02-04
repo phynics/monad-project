@@ -10,7 +10,6 @@ public struct ExecuteSQLTool: Tool {
         Execute raw SQLite commands. You have wide latitude to manage your own tables and state.
         
         PROTECTED TABLES (IMMUTABLE):
-        - `note`: Global instructions/facts. Deletion is BLOCKED.
         - `conversationMessage`: History of chats. Deletion/Update is BLOCKED.
         - `conversationSession`: Chat sessions. Deletion/Update is BLOCKED if archived.
         
@@ -19,10 +18,10 @@ public struct ExecuteSQLTool: Tool {
         - Your own custom tables: Create them as needed to manage complex state.
         
         EXAMPLES (REPLACING DEPRECATED TOOLS):
-        1. List all notes: "SELECT id, name, description FROM note"
+        1. Browse schema: "SELECT * FROM table_directory"
         2. Search archived chats by title: "SELECT id, title FROM conversationSession WHERE isArchived = 1 AND title LIKE '%topic%'"
         3. Load recent messages for a session (truncated): "SELECT role, SUBSTR(content, 1, 1000) as content, timestamp FROM conversationMessage WHERE sessionId = 'SESSION_UUID' ORDER BY timestamp ASC"
-        4. Update a note: "UPDATE note SET content = 'New content' WHERE name = 'Persona'"
+        4. List all tables: "SELECT name, description FROM table_directory"
         5. Create a scratchpad table: "CREATE TABLE my_tasks (id INTEGER PRIMARY KEY, task TEXT, done BOOLEAN)"
         """
     

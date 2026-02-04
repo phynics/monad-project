@@ -10,38 +10,19 @@ struct MonadCLI: AsyncParsableCommand {
         discussion: """
             An interactive AI assistant for your terminal.
 
-            MODES:
-              monad                         Start interactive chat (default)
-              monad query "question"        Quick one-shot query
-              monad command "task"          Generate shell commands
+            All functionality is now accessible through the interactive REPL.
 
             INTERACTIVE COMMANDS:
               /help                         Show available commands
               /config                       View/edit configuration
-              /sessions, /memories, /notes  Manage data
+              /sessions, /memories          Manage data
               /quit                         Exit
-
+              
             ENVIRONMENT VARIABLES:
               MONAD_API_KEY                 API key for authentication
               MONAD_SERVER_URL              Server URL (default: http://127.0.0.1:8080)
             """,
-        version: "1.0.0",
-        subcommands: [
-            ChatSubcommand.self,
-            QueryCommand.self,
-            ShellCommand.self,
-        ],
-        defaultSubcommand: ChatSubcommand.self,
-        helpNames: [.short, .long]
-    )
-}
-
-// MARK: - Chat Subcommand (Default)
-
-struct ChatSubcommand: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
-        commandName: "chat",
-        abstract: "Start interactive chat session"
+        version: "1.0.0"
     )
 
     @Option(name: .long, help: "Server URL (defaults to auto-discovery or localhost)")
@@ -56,21 +37,58 @@ struct ChatSubcommand: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "Session ID to resume")
     var session: String?
 
+    @Option(name: .long, help: "Persona to use for new session")
+    var persona: String?
+
     func run() async throws {
+        // Load local config
+        let localConfig = LocalConfigManager.shared.getConfig()
+
+        // Determine explicit URL (Flag > Local Config)
+        let explicitURL: URL?
+        if let serverFlag = server {
+            explicitURL = URL(string: serverFlag)
+        } else {
+            explicitURL = localConfig.serverURL.flatMap { URL(string: $0) }
+        }
+
         let config = await ClientConfiguration.autoDetect(
-            explicitURL: server.flatMap { URL(string: $0) },
-            apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"],
+            explicitURL: explicitURL,
+            apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"]
+                ?? localConfig.apiKey,
             verbose: verbose
         )
+
         let client = MonadClient(configuration: config)
 
         // Check server health
-        guard try await client.healthCheck() else {
-            TerminalUI.printError("Cannot connect to server at \(config.baseURL.absoluteString)")
+        do {
+            guard try await client.healthCheck() else {
+                throw MonadClientError.serverNotReachable
+            }
+        } catch {
+            print("")
+            TerminalUI.printError(
+                "Could not connect to Monad Server at \(config.baseURL.absoluteString)")
+            print("")
+            print("  \(TerminalUI.bold("Troubleshooting:"))")
+            print("  1. Ensure the server is running:")
+            print("     \(TerminalUI.dim("make run-server"))")
+            print("  2. Check if the server is running on a different port")
+            print("  3. Verify your configuration with --server <url>")
+            print("")
+
+            if verbose {
+                print("  \(TerminalUI.dim("Error: \(error.localizedDescription)"))")
+                print("")
+            }
             throw ExitCode.failure
         }
 
-        // Check configuration
+        // Save successful configuration
+        LocalConfigManager.shared.updateServerURL(config.baseURL.absoluteString)
+
+        // Check configuration validity
         do {
             let config = try await client.getConfiguration()
             if !config.isValid {
@@ -82,33 +100,23 @@ struct ChatSubcommand: AsyncParsableCommand {
             TerminalUI.printInfo("You can configure the CLI using the '/config' command in chat.")
         }
 
-        // Get or create session
-        var currentSession: Session
-        if let sessionId = session, let uuid = UUID(uuidString: sessionId) {
-            do {
-                _ = try await client.getHistory(sessionId: uuid)
-                currentSession = Session(id: uuid, title: nil)
-                TerminalUI.printInfo("Resuming session \(uuid.uuidString.prefix(8))...")
-            } catch {
-                TerminalUI.printError("Session not found: \(sessionId)")
-                throw ExitCode.failure
-            }
-        } else {
-            do {
-                currentSession = try await client.createSession()
-                TerminalUI.printInfo(
-                    "Created new session \(currentSession.id.uuidString.prefix(8))...")
-            } catch {
-                TerminalUI.printWarning("Failed to create session: \(error.localizedDescription)")
-                // Create a local dummy session so we can still enter the REPL to configure
-                currentSession = Session(id: UUID(), title: "Offline Session")
-            }
-        }
+        // Resulting session to use
+        let cliSessionManager = CLISessionManager(client: client)
+        let finalSession = try await cliSessionManager.resolveSession(
+            explicitId: session,
+            persona: persona,
+            localConfig: localConfig
+        )
+
+        // Persist successful session ID and handle re-attachment
+        LocalConfigManager.shared.updateLastSessionId(finalSession.id.uuidString)
+        await cliSessionManager.handleWorkspaceReattachment(
+            session: finalSession, localConfig: localConfig)
 
         TerminalUI.printWelcome()
 
         // Start REPL
-        let repl = ChatREPL(client: client, session: currentSession)
+        let repl = ChatREPL(client: client, session: finalSession)
         try await repl.run()
     }
 }

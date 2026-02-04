@@ -11,7 +11,13 @@ import MonadCore
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
+        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        let sessionManager = SessionManager(
+            persistenceService: persistence, 
+            embeddingService: embedding, 
+            llmService: llm,
+            workspaceRoot: workspaceRoot
+        )
         
         let session = try await sessionManager.createSession()
         
@@ -31,7 +37,13 @@ import MonadCore
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
-        let sessionManager = SessionManager(persistenceService: persistence, embeddingService: embedding, llmService: llm)
+        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        let sessionManager = SessionManager(
+            persistenceService: persistence, 
+            embeddingService: embedding, 
+            llmService: llm,
+            workspaceRoot: workspaceRoot
+        )
         
         let session = try await sessionManager.createSession()
         

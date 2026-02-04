@@ -105,7 +105,6 @@ make open
 
 ## Key Files
 
-- `project.yml`: Project definition for `xcodegen`
 - `Package.swift`: Swift Package Manager manifest
 - `Sources/MonadCore/Services/LLMService.swift`: Core logic for LLM communication
 - `Sources/MonadCore/Services/Database/PersistenceService.swift`: Main interface for data persistence

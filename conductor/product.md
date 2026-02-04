@@ -13,12 +13,13 @@ Monad aims to redefine personal AI interactions by bridging the gap between larg
 ## Core Goals
 - **Deep Semantic Retrieval:** Move beyond simple keyword matching with a sophisticated vector-based context engine and direct SQL-driven data interaction.
 - **Local-First Privacy:** Build a robust architecture that prioritizes local processing and persistent storage (via GRDB/SQLite), ensuring user data remains private.
-- **Server Architecture:** REST API server with streaming chat support, accessible via CLI or HTTP clients.
+- **Hybrid Server Architecture:** REST API server with streaming chat support and secure filesystem-based workspaces, accessible via CLI or HTTP clients.
 
 ## Key Features
 - **Adaptive Context Management:** Automatically retrieves relevant memories and globally injects notes, leveraging direct SQL-driven persistence.
 - **Standalone REST API:** Exposes all assistant capabilities (chat, memory, notes, tools) via a high-performance HTTP server for external integration.
 - **RAW SQL Execution:** Provides the agent with wide latitude to manage custom tables and state while ensuring core data remains immutable.
-- **Stateful Document Workspace:** Load, unload, and pin documents to keep the context window focused while maintaining access to critical data.
+- **File-Based Workspaces:** Persistent, jailed session directories on the server for storing Notes and Personas, with support for attaching client-side local directories.
+- **Persona-Driven Identity:** Dynamic persona switching and initialization, allowing the agent to adapt its behavior and instructions per session.
 - **Multi-Model Support:** Integration with providers like OpenAI and local models via Ollama or OpenRouter.
 - **Persistent Memory:** Robust storage of conversation history, memories, and notes with semantic search capabilities.

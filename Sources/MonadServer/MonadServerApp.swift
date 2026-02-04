@@ -67,9 +67,15 @@ struct MonadServer: AsyncParsableCommand {
         let embeddingService = LocalEmbeddingService()
         let llmService = ServerLLMService()
         await llmService.loadConfiguration()
+
+        let workspaceRoot = try Self.defaultWorkspacePath()
+
         let sessionManager = SessionManager(
-            persistenceService: persistenceService, embeddingService: embeddingService,
-            llmService: llmService)
+            persistenceService: persistenceService,
+            embeddingService: embeddingService,
+            llmService: llmService,
+            workspaceRoot: workspaceRoot
+        )
 
         // Public routes
         router.get("/health") { _, _ -> String in
@@ -99,11 +105,27 @@ struct MonadServer: AsyncParsableCommand {
         let memoryController = MemoryController<BasicRequestContext>(sessionManager: sessionManager)
         memoryController.addRoutes(to: protected.group("/memories"))
 
-        let noteController = NoteController<BasicRequestContext>(sessionManager: sessionManager)
-        noteController.addRoutes(to: protected.group("/notes"))
+        let pruneController = PruneController<BasicRequestContext>(
+            persistenceService: persistenceService)
+        pruneController.addRoutes(to: protected.group("/prune"))
 
         let toolController = ToolController<BasicRequestContext>(sessionManager: sessionManager)
         toolController.addRoutes(to: protected.group("/tools"))
+
+        // Create database writer accessor (since it's an actor property, access it async or assume safe access pattern)
+        let dbWriter = persistenceService.databaseWriter
+
+        let workspaceController = WorkspaceController<BasicRequestContext>(
+            dbWriter: dbWriter, logger: logger)
+        workspaceController.addRoutes(to: protected.group("/workspaces"))
+
+        let filesController = FilesController<BasicRequestContext>(
+            workspaceController: workspaceController)
+        filesController.addRoutes(to: protected.group("/workspaces/:id/files"))
+
+        let clientController = ClientController<BasicRequestContext>(
+            dbWriter: dbWriter, logger: logger)
+        clientController.addRoutes(to: protected.group("/clients"))
 
         let configController = ConfigurationController<BasicRequestContext>(llmService: llmService)
         configController.addRoutes(to: protected.group("/config"))
@@ -120,5 +142,55 @@ struct MonadServer: AsyncParsableCommand {
 
         try await app.runService()
         advertiser.stop()
+    }
+
+    /// Default workspace path
+    private static func defaultWorkspacePath() throws -> URL {
+        let fileManager = FileManager.default
+        let appName = "Monad"
+
+        #if os(macOS)
+            guard
+                let appSupport = fileManager.urls(
+                    for: .applicationSupportDirectory, in: .userDomainMask
+                ).first
+            else {
+                // Fallback
+                let home = fileManager.homeDirectoryForCurrentUser
+                let workspacesDir = home.appendingPathComponent(
+                    ".monad/workspaces", isDirectory: true)
+                try? fileManager.createDirectory(
+                    at: workspacesDir, withIntermediateDirectories: true)
+                return workspacesDir
+            }
+
+            let appDir = appSupport.appendingPathComponent(appName, isDirectory: true)
+            let workspacesDir = appDir.appendingPathComponent("Workspaces", isDirectory: true)
+            try fileManager.createDirectory(at: workspacesDir, withIntermediateDirectories: true)
+            return workspacesDir
+
+        #elseif os(Linux)
+            let env = ProcessInfo.processInfo.environment
+            let dataHome: URL
+            if let xdgData = env["XDG_DATA_HOME"] {
+                dataHome = URL(fileURLWithPath: xdgData)
+            } else {
+                dataHome = fileManager.homeDirectoryForCurrentUser
+                    .appendingPathComponent(".local")
+                    .appendingPathComponent("share")
+            }
+
+            let appDir = dataHome.appendingPathComponent(appName.lowercased(), isDirectory: true)
+            let workspacesDir = appDir.appendingPathComponent("workspaces", isDirectory: true)
+            try fileManager.createDirectory(at: workspacesDir, withIntermediateDirectories: true)
+            return workspacesDir
+
+        #else
+            // Fallback
+            let home = fileManager.homeDirectoryForCurrentUser
+            let workspacesDir = home.appendingPathComponent(".monad/workspaces", isDirectory: true)
+            try fileManager.createDirectory(at: workspacesDir, withIntermediateDirectories: true)
+            return workspacesDir
+        #endif
     }
 }

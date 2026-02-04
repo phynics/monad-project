@@ -61,16 +61,36 @@ public struct SSEStreamReader: Sendable {
 
                 // Try to parse JSON
                 if let jsonData = data.data(using: .utf8) {
+                    // 1. Try to decode as ChatDelta directly (New Structured Format)
+                    if let delta = try? JSONDecoder().decode(ChatDelta.self, from: jsonData) {
+                        return delta
+                    }
+
+                    // 2. Fallback to OpenAI-style delta (Legacy / Interop)
                     do {
-                        // Parse OpenAI-style streaming response
                         if let json = try JSONSerialization.jsonObject(with: jsonData)
                             as? [String: Any],
                             let choices = json["choices"] as? [[String: Any]],
                             let firstChoice = choices.first,
-                            let delta = firstChoice["delta"] as? [String: Any],
-                            let content = delta["content"] as? String
+                            let delta = firstChoice["delta"] as? [String: Any]
                         {
-                            return ChatDelta(content: content)
+                            let content = delta["content"] as? String
+
+                            // Extract tool calls if present
+                            var toolCallDeltas: [ToolCallDelta]? = nil
+                            if let toolCalls = delta["tool_calls"] as? [[String: Any]] {
+                                toolCallDeltas = toolCalls.compactMap { dict in
+                                    guard let index = dict["index"] as? Int else { return nil }
+                                    let id = dict["id"] as? String
+                                    let function = dict["function"] as? [String: Any]
+                                    let name = function?["name"] as? String
+                                    let arguments = function?["arguments"] as? String
+                                    return ToolCallDelta(
+                                        index: index, id: id, name: name, arguments: arguments)
+                                }
+                            }
+
+                            return ChatDelta(content: content, toolCalls: toolCallDeltas)
                         }
                     } catch {
                         // If JSON parsing fails, treat as plain text
