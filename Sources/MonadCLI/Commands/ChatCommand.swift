@@ -8,6 +8,7 @@ actor ChatREPL {
     private let client: MonadClient
     private var session: Session
     private var running = true
+    private var selectedWorkspaceId: UUID?
 
     init(client: MonadClient, session: Session) {
         self.client = client
@@ -17,7 +18,7 @@ actor ChatREPL {
     func run() async throws {
         // Ensure client is registered and intrinsic tools are active
         try? await RegistrationManager.shared.ensureRegistered(client: client)
-        
+
         // Show active context (memories, documents) at startup
         await showContext()
 
@@ -49,7 +50,12 @@ actor ChatREPL {
         let contextSummary = await getContextSummary()
         print(TerminalUI.dim(contextSummary))
 
-        TerminalUI.printPrompt()
+        var wsName: String? = nil
+        if let selectedId = selectedWorkspaceId {
+            wsName = (try? await client.getWorkspace(selectedId))?.uri.description
+        }
+
+        TerminalUI.printPrompt(workspace: wsName)
 
         // Use readline for vi-style editing
         guard let line = readLine() else {
@@ -65,12 +71,17 @@ actor ChatREPL {
             // Workspaces
             let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
             var wsSummary = "No Workspace"
-            if let primaryId = sessionWS.primary {
-                let ws = try await client.getWorkspace(primaryId)
-                wsSummary = "📂 \(ws.uri.description)"
-            }
-            if !sessionWS.attached.isEmpty {
-                wsSummary += " (+\(sessionWS.attached.count) attached)"
+
+            let displayId = selectedWorkspaceId ?? sessionWS.primary
+
+            if let targetId = displayId {
+                let ws = try await client.getWorkspace(targetId)
+                let icon = selectedWorkspaceId == nil ? "📂" : "🎯"
+                wsSummary = "\(icon) \(ws.uri.description)"
+
+                if selectedWorkspaceId == nil && !sessionWS.attached.isEmpty {
+                    wsSummary += " (+\(sessionWS.attached.count) attached)"
+                }
             }
 
             // Memories
@@ -148,6 +159,13 @@ actor ChatREPL {
 
         case "/workspaces", "/workspace":
             await handleWorkspaces(args)
+
+        case "/select":  // Shorthand for /workspace select
+            if let first = args.first {
+                await selectWorkspace(first)
+            } else {
+                TerminalUI.printError("Usage: /select <workspace-id/prefix>")
+            }
 
         case "/quit", "/q", "/exit":
             running = false
@@ -290,8 +308,47 @@ actor ChatREPL {
             } else {
                 TerminalUI.printError("Usage: /session delete <session-id>")
             }
+        case "rename", "name":
+            if args.count > 1 {
+                let newTitle = args.dropFirst().joined(separator: " ")
+                await renameSession(newTitle)
+            } else {
+                TerminalUI.printError("Usage: /session rename <new-name>")
+            }
+        case "switch", "use":
+            if args.count > 1 {
+                await switchSession(args[1])
+            } else {
+                TerminalUI.printError("Usage: /session switch <session-id-prefix>")
+            }
         default:
             await listSessions()
+        }
+    }
+
+    private func renameSession(_ title: String) async {
+        do {
+            try await client.updateSessionTitle(title, sessionId: session.id)
+            TerminalUI.printSuccess("Renamed session to: \(title)")
+        } catch {
+            TerminalUI.printError("Failed to rename session: \(error.localizedDescription)")
+        }
+    }
+
+    private func switchSession(_ identifier: String) async {
+        do {
+            let sessions = try await client.listSessions()
+            if let match = sessions.first(where: { $0.id.uuidString.hasPrefix(identifier) }) {
+                session = match
+                TerminalUI.printSuccess(
+                    "Switched to session: \(match.title ?? String(match.id.uuidString.prefix(8)))")
+                await showContext()
+                await showHistory()
+            } else {
+                TerminalUI.printError("No session found matching prefix: \(identifier)")
+            }
+        } catch {
+            TerminalUI.printError("Failed to switch session: \(error.localizedDescription)")
         }
     }
 
@@ -701,45 +758,64 @@ actor ChatREPL {
 
     private func resolvePath(_ input: String?) async throws -> ResolvedPath {
         let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
-        guard let primaryId = sessionWS.primary else {
-            throw MonadClientError.unknown("No primary workspace attached to session.")
+
+        let targetWorkspaceId: UUID
+        let wsName: String
+
+        if let selected = selectedWorkspaceId {
+            targetWorkspaceId = selected
+            wsName = "Selected"
+        } else if let primaryId = sessionWS.primary {
+            targetWorkspaceId = primaryId
+            wsName = "Primary"
+        } else {
+            throw MonadClientError.unknown("No workspace selected or attached.")
         }
 
         guard let input = input, !input.isEmpty else {
-            return ResolvedPath(workspaceId: primaryId, path: "Notes", workspaceName: "Primary")
+            return ResolvedPath(workspaceId: targetWorkspaceId, path: "", workspaceName: wsName)
         }
 
-        // Check for workspace prefix: @ws_id/path or [uri]/path
+        // Check for workspace prefix: @ws_id/path
         if input.hasPrefix("@") {
-            let components = input.dropFirst().split(separator: "/", maxSplits: 1, omittingEmptySubsequences: false)
+            let components = input.dropFirst().split(
+                separator: "/", maxSplits: 1, omittingEmptySubsequences: false)
             let wsRef = String(components[0])
             let path = components.count > 1 ? String(components[1]) : ""
 
             // Find workspace by ID (prefix match)
             let allWorkspaces = try await client.listWorkspaces()
-            if let ws = allWorkspaces.first(where: { $0.id.uuidString.lowercased().hasPrefix(wsRef.lowercased()) }) {
-                return ResolvedPath(workspaceId: ws.id, path: path, workspaceName: ws.uri.description)
+            if let ws = allWorkspaces.first(where: {
+                $0.id.uuidString.lowercased().hasPrefix(wsRef.lowercased())
+            }) {
+                return ResolvedPath(
+                    workspaceId: ws.id, path: path, workspaceName: ws.uri.description)
             }
             throw MonadClientError.unknown("Workspace '@\(wsRef)' not found.")
         }
 
-        // Default to primary
-        // If it starts with Notes/ or Personas/, use as is. 
-        // If it's just a name, assume Notes/ (for backward compatibility / convenience)
-        if input.hasPrefix("Notes/") || input.hasPrefix("Personas/") {
-            return ResolvedPath(workspaceId: primaryId, path: input, workspaceName: "Primary")
-        } else {
-            return ResolvedPath(workspaceId: primaryId, path: "Notes/\(input)", workspaceName: "Primary")
+        // Default to targetWorkspaceId (either selected or primary)
+        // If it was primary, we used to prefix with "Notes/".
+        // Let's keep that logic ONLY if it's the primary and not a specialized path.
+        if targetWorkspaceId == sessionWS.primary && !input.contains("/")
+            && !input.hasPrefix("Notes/") && !input.hasPrefix("Personas/")
+        {
+            return ResolvedPath(
+                workspaceId: targetWorkspaceId, path: "Notes/\(input)", workspaceName: wsName)
         }
+
+        return ResolvedPath(workspaceId: targetWorkspaceId, path: input, workspaceName: wsName)
     }
 
     private func handleLs(_ args: [String]) async {
         do {
             let resolved = try await resolvePath(args.first)
             let files = try await client.listFiles(workspaceId: resolved.workspaceId)
-            
+
             // Filter by prefix if path is a directory
-            let prefix = resolved.path.hasSuffix("/") || resolved.path.isEmpty ? resolved.path : "\(resolved.path)/"
+            let prefix =
+                resolved.path.hasSuffix("/") || resolved.path.isEmpty
+                ? resolved.path : "\(resolved.path)/"
             let filtered = files.filter { $0.hasPrefix(prefix) }
 
             if filtered.isEmpty {
@@ -769,7 +845,8 @@ actor ChatREPL {
         }
         do {
             let resolved = try await resolvePath(pathInput)
-            let content = try await client.getFileContent(workspaceId: resolved.workspaceId, path: resolved.path)
+            let content = try await client.getFileContent(
+                workspaceId: resolved.workspaceId, path: resolved.path)
             print("")
             print(content)
             print("")
@@ -785,7 +862,8 @@ actor ChatREPL {
         }
         do {
             let resolved = try await resolvePath(pathInput)
-            let content = try await client.getFileContent(workspaceId: resolved.workspaceId, path: resolved.path)
+            let content = try await client.getFileContent(
+                workspaceId: resolved.workspaceId, path: resolved.path)
 
             let filename = URL(fileURLWithPath: resolved.path).lastPathComponent
             let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
@@ -801,7 +879,8 @@ actor ChatREPL {
 
             let updatedContent = try String(contentsOf: tempFile, encoding: .utf8)
             if updatedContent != content {
-                try await client.writeFileContent(workspaceId: resolved.workspaceId, path: resolved.path, content: updatedContent)
+                try await client.writeFileContent(
+                    workspaceId: resolved.workspaceId, path: resolved.path, content: updatedContent)
                 TerminalUI.printSuccess("Updated \(resolved.path)")
             } else {
                 TerminalUI.printInfo("No changes made.")
@@ -819,7 +898,9 @@ actor ChatREPL {
         }
         do {
             let resolved = try await resolvePath(pathInput)
-            print("Are you sure you want to delete \(resolved.workspaceName):\(resolved.path)? (y/n): ", terminator: "")
+            print(
+                "Are you sure you want to delete \(resolved.workspaceName):\(resolved.path)? (y/n): ",
+                terminator: "")
             if readLine()?.lowercased() == "y" {
                 try await client.deleteFile(workspaceId: resolved.workspaceId, path: resolved.path)
                 TerminalUI.printSuccess("Deleted \(resolved.path)")
@@ -842,7 +923,8 @@ actor ChatREPL {
                 if line.isEmpty { break }
                 content += line + "\n"
             }
-            try await client.writeFileContent(workspaceId: resolved.workspaceId, path: resolved.path, content: content)
+            try await client.writeFileContent(
+                workspaceId: resolved.workspaceId, path: resolved.path, content: content)
             TerminalUI.printSuccess("Wrote \(resolved.path)")
         } catch {
             TerminalUI.printError("write failed: \(error.localizedDescription)")
@@ -978,10 +1060,32 @@ actor ChatREPL {
             } else {
                 TerminalUI.printError("Usage: /workspace attach <workspace-id>")
             }
+        case "select", "use":
+            if args.count > 1 {
+                await selectWorkspace(args[1])
+            } else {
+                TerminalUI.printError("Usage: /workspace select <workspace-id>")
+            }
         case "pwd":
             await attachCurrentDirectory()
         default:
             await listWorkspaces()
+        }
+    }
+
+    private func selectWorkspace(_ identifier: String) async {
+        do {
+            let workspaces = try await client.listWorkspaces()
+            if let match = workspaces.first(where: {
+                $0.id.uuidString.hasPrefix(identifier) || $0.uri.description.contains(identifier)
+            }) {
+                selectedWorkspaceId = match.id
+                TerminalUI.printSuccess("Default workspace set to: \(match.uri.description)")
+            } else {
+                TerminalUI.printError("No workspace found matching: \(identifier)")
+            }
+        } catch {
+            TerminalUI.printError("Failed to select workspace: \(error.localizedDescription)")
         }
     }
 
@@ -1113,8 +1217,52 @@ actor ChatREPL {
 
             let stream = try await client.chatStream(sessionId: session.id, message: message)
 
+            var toolCallState: [Int: (name: String, args: String)] = [:]
+            var currentToolIndex: Int? = nil
+
             for try await delta in stream {
+                // 1. Metadata (Context Acknowledgement)
+                if let metadata = delta.metadata {
+                    if !metadata.memories.isEmpty || !metadata.files.isEmpty {
+                        let memories = metadata.memories.count
+                        let files = metadata.files.count
+                        print(TerminalUI.dim(" [Using \(memories) memories and \(files) files]"))
+                        TerminalUI.printAssistantStart()
+                    }
+                }
+
+                // 2. Error
+                if let error = delta.error {
+                    print("\n")
+                    TerminalUI.printError("Stream Error: \(error)")
+                    return
+                }
+
+                // 3. Tool Calls
+                if let toolCalls = delta.toolCalls {
+                    for call in toolCalls {
+                        let index = call.index
+                        var state = toolCallState[index] ?? ("", "")
+                        if let name = call.name { state.name += name }
+                        if let args = call.arguments { state.args += args }
+                        toolCallState[index] = state
+
+                        if currentToolIndex != index {
+                            if currentToolIndex != nil { print("") }
+                            TerminalUI.printToolCall(name: state.name, args: state.args)
+                            currentToolIndex = index
+                        }
+                    }
+                    fflush(stdout)
+                }
+
+                // 4. Content
                 if let content = delta.content {
+                    if currentToolIndex != nil {
+                        print("\n")
+                        TerminalUI.printAssistantStart()
+                        currentToolIndex = nil
+                    }
                     print(content, terminator: "")
                     fflush(stdout)
                 }

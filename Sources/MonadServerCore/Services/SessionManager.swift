@@ -202,6 +202,25 @@ public actor SessionManager {
         try await persistenceService.saveSession(session)
     }
 
+    public func updateSessionTitle(id: UUID, title: String) async throws {
+        var session: ConversationSession
+        if let memorySession = sessions[id] {
+            session = memorySession
+        } else if let dbSession = try await persistenceService.fetchSession(id: id) {
+            session = dbSession
+        } else {
+            throw SessionError.sessionNotFound
+        }
+
+        session.title = title
+        session.updatedAt = Date()
+
+        if sessions[id] != nil {
+            sessions[id] = session
+        }
+        try await persistenceService.saveSession(session)
+    }
+
     public func getContextManager(for sessionId: UUID) -> ContextManager? {
         return contextManagers[sessionId]
     }

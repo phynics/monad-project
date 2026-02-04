@@ -29,15 +29,13 @@ public typealias MessageRole = MonadCore.Message.MessageRole
 // MARK: - Client-Specific Models
 
 /// A delta from a streaming chat response
-public struct ChatDelta: Sendable {
-    public let content: String?
-    public let isDone: Bool
+public typealias ChatDelta = MonadCore.ChatDelta
 
-    public init(content: String? = nil, isDone: Bool = false) {
-        self.content = content
-        self.isDone = isDone
-    }
-}
+/// A delta for a tool call in a streaming response
+public typealias ToolCallDelta = MonadCore.ToolCallDelta
+
+/// Metadata about the context used for a chat response
+public typealias ChatMetadata = MonadCore.ChatMetadata
 
 // MARK: - Error Models
 

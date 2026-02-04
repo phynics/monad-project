@@ -104,8 +104,6 @@ import Testing
 
         let memory1 = Memory(
             id: UUID(), title: "Mem1", content: "Content1", tags: [], embedding: [])
-        let memory2 = Memory(
-            id: UUID(), title: "Mem2", content: "Content2", tags: [], embedding: [])
 
         // We'll just verify parsing, the map keys won't match UUIDs generated above unless we mock the response to match.
         // Actually, we can just check if *result* matches our mock.

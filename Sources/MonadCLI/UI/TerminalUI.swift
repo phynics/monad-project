@@ -67,6 +67,12 @@ public enum TerminalUI {
         blue(text)
     }
 
+    public static func printToolCall(name: String, args: String) {
+        let argsPreview = args.count > 40 ? "\(args.prefix(40))..." : args
+        print("\(toolColor("🛠️ Calling \(name)"))\(dim("(" + argsPreview + ")"))", terminator: "")
+        fflush(stdout)
+    }
+
     // MARK: - Messages
 
     public static func printError(_ message: String) {
@@ -97,8 +103,9 @@ public enum TerminalUI {
             """)
     }
 
-    public static func printPrompt() {
-        print("\(cyan("You:")) ", terminator: "")
+    public static func printPrompt(workspace: String? = nil) {
+        let wsPart = workspace != nil ? "[\(workspace!)] " : ""
+        print("\n\(green(wsPart))\(cyan("monad")) \(bold(">")) ", terminator: "")
         fflush(stdout)
     }
 

@@ -240,6 +240,17 @@ public struct ChatController<Context: RequestContext>: Sendable {
                 var turnCount = 0
                 let maxTurns = 5  // Safety limit
 
+                // A. Emit Metadata Event
+                let metadata = ChatMetadata(
+                    memories: contextData.memories.map { $0.memory.id },
+                    files: contextData.notes.map { $0.name }
+                )
+                let metaDelta = ChatDelta(metadata: metadata)
+                if let data = try? SerializationUtils.jsonEncoder.encode(metaDelta) {
+                    let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                    continuation.yield(ByteBuffer(string: sseString))
+                }
+
                 while turnCount < maxTurns {
                     turnCount += 1
 
@@ -251,7 +262,6 @@ public struct ChatController<Context: RequestContext>: Sendable {
                         )
 
                         var fullResponse = ""
-                        // Tuple to accumulate tool call parts
                         var toolCallAccumulators: [Int: (id: String, name: String, args: String)] =
                             [:]
 
@@ -259,15 +269,18 @@ public struct ChatController<Context: RequestContext>: Sendable {
                             // Forward Content
                             if let delta = result.choices.first?.delta.content {
                                 fullResponse += delta
-                                if let data = try? SerializationUtils.jsonEncoder.encode(result) {
+                                let chatDelta = ChatDelta(content: delta)
+                                if let data = try? SerializationUtils.jsonEncoder.encode(chatDelta)
+                                {
                                     let sseString =
                                         "data: \(String(decoding: data, as: UTF8.self))\n\n"
                                     continuation.yield(ByteBuffer(string: sseString))
                                 }
                             }
 
-                            // Accumulate Tool Calls
+                            // Accumulate & Forward Tool Calls
                             if let calls = result.choices.first?.delta.toolCalls {
+                                var toolDeltas: [ToolCallDelta] = []
                                 for call in calls {
                                     guard let index = call.index else { continue }
                                     var acc = toolCallAccumulators[index] ?? ("", "", "")
@@ -276,8 +289,19 @@ public struct ChatController<Context: RequestContext>: Sendable {
                                     if let args = call.function?.arguments { acc.args += args }
                                     toolCallAccumulators[index] = acc
 
-                                    // Forward tool call chunks to client
-                                    if let data = try? SerializationUtils.jsonEncoder.encode(result)
+                                    toolDeltas.append(
+                                        ToolCallDelta(
+                                            index: index,
+                                            id: call.id,
+                                            name: call.function?.name,
+                                            arguments: call.function?.arguments
+                                        ))
+                                }
+
+                                if !toolDeltas.isEmpty {
+                                    let chatDelta = ChatDelta(toolCalls: toolDeltas)
+                                    if let data = try? SerializationUtils.jsonEncoder.encode(
+                                        chatDelta)
                                     {
                                         let sseString =
                                             "data: \(String(decoding: data, as: UTF8.self))\n\n"
@@ -289,12 +313,10 @@ public struct ChatController<Context: RequestContext>: Sendable {
 
                         // Process Turn Result
                         if !toolCallAccumulators.isEmpty {
-                            // 1. Add Assistant Message with Tool Calls to history
+                            let sortedCalls = toolCallAccumulators.sorted(by: { $0.key < $1.key })
                             let toolCallsParam:
                                 [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam
-                                    .ToolCallParam] = toolCallAccumulators.sorted(by: {
-                                        $0.key < $1.key
-                                    }).map { _, value in
+                                    .ToolCallParam] = sortedCalls.map { _, value in
                                         .init(
                                             id: value.id,
                                             function: .init(arguments: value.args, name: value.name)
@@ -307,15 +329,13 @@ public struct ChatController<Context: RequestContext>: Sendable {
                                         content: .textContent(.init(fullResponse)),
                                         toolCalls: toolCallsParam)))
 
-                            // 2. Execute Tools
                             var executionResults: [ChatQuery.ChatCompletionMessageParam] = []
                             var requiresClientExecution = false
 
                             for call in toolCallsParam {
-                                let function = call.function
                                 guard
                                     let tool = availableTools.first(where: {
-                                        $0.name == function.name
+                                        $0.name == call.function.name
                                     })
                                 else {
                                     executionResults.append(
@@ -327,15 +347,13 @@ public struct ChatController<Context: RequestContext>: Sendable {
                                     continue
                                 }
 
-                                // Parse args
-                                let argsData = function.arguments.data(using: .utf8) ?? Data()
+                                let argsData = call.function.arguments.data(using: .utf8) ?? Data()
                                 let argsDict =
                                     (try? JSONSerialization.jsonObject(with: argsData)
                                         as? [String: Any]) ?? [:]
 
                                 do {
                                     let result = try await tool.execute(parameters: argsDict)
-                                    // Success (Local)
                                     executionResults.append(
                                         .tool(
                                             .init(
@@ -363,12 +381,10 @@ public struct ChatController<Context: RequestContext>: Sendable {
                             }
 
                             if requiresClientExecution {
-                                // Save Assistant Message
                                 let callsForDB = toolCallsParam.compactMap { param -> ToolCall? in
                                     let name = param.function.name
-                                    let argsStr = param.function.arguments
-                                    guard let argsData = argsStr.data(using: .utf8)
-                                    else { return nil }
+                                    let argsData =
+                                        param.function.arguments.data(using: .utf8) ?? Data()
                                     let args =
                                         (try? JSONDecoder().decode(
                                             [String: AnyCodable].self, from: argsData)) ?? [:]
@@ -379,25 +395,27 @@ public struct ChatController<Context: RequestContext>: Sendable {
                                 { String(decoding: $0, as: UTF8.self) } ?? "[]"
 
                                 let assistantMsg = ConversationMessage(
-                                    sessionId: id,
-                                    role: .assistant,
-                                    content: fullResponse,
-                                    toolCalls: callsJSON
-                                )
+                                    sessionId: id, role: .assistant, content: fullResponse,
+                                    toolCalls: callsJSON)
                                 try? await persistence.saveMessage(assistantMsg)
 
-                                // End stream. Client has the calls.
-                                continuation.yield(ByteBuffer(string: "data: [DONE]\n\n"))
+                                let doneDelta = ChatDelta(isDone: true)
+                                if let data = try? SerializationUtils.jsonEncoder.encode(doneDelta)
+                                {
+                                    continuation.yield(
+                                        ByteBuffer(
+                                            string:
+                                                "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                                        ))
+                                }
                                 continuation.finish()
                                 return
                             }
 
-                            // Local execution done. Append results and Continue Loop.
                             currentMessages.append(contentsOf: executionResults)
                             continue
-
                         } else {
-                            // No tool calls. Final response.
+                            // Final response
                             let assistantMsg = ConversationMessage(
                                 sessionId: id,
                                 role: .assistant,
@@ -409,18 +427,28 @@ public struct ChatController<Context: RequestContext>: Sendable {
                             )
                             try? await persistence.saveMessage(assistantMsg)
 
-                            continuation.yield(ByteBuffer(string: "data: [DONE]\n\n"))
+                            let doneDelta = ChatDelta(isDone: true)
+                            if let data = try? SerializationUtils.jsonEncoder.encode(doneDelta) {
+                                continuation.yield(
+                                    ByteBuffer(
+                                        string: "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                                    ))
+                            }
                             continuation.finish()
                             return
                         }
-
                     } catch {
                         Logger.chat.error("Stream error: \(error)")
+                        let errorDelta = ChatDelta(error: error.localizedDescription)
+                        if let data = try? SerializationUtils.jsonEncoder.encode(errorDelta) {
+                            continuation.yield(
+                                ByteBuffer(
+                                    string: "data: \(String(decoding: data, as: UTF8.self))\n\n"))
+                        }
                         continuation.finish()
                         return
                     }
                 }
-
                 continuation.finish()
             }
         }

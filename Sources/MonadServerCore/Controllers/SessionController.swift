@@ -17,6 +17,7 @@ public struct SessionController<Context: RequestContext>: Sendable {
         group.get("/{id}/history", use: getHistory)
         group.get("/personas", use: listPersonas)
         group.patch("/{id}/persona", use: updatePersona)
+        group.patch("/{id}/title", use: updateTitle)
 
         // Workspace routes
         group.post("/{id}/workspaces", use: attachWorkspace)
@@ -89,6 +90,18 @@ public struct SessionController<Context: RequestContext>: Sendable {
 
         let input = try await request.decode(as: UpdatePersonaRequest.self, context: context)
         try await sessionManager.updateSessionPersona(id: id, persona: input.persona)
+
+        return Response(status: .ok)
+    }
+
+    @Sendable func updateTitle(_ request: Request, context: Context) async throws -> Response {
+        let idString = try context.parameters.require("id")
+        guard let id = UUID(uuidString: idString) else {
+            throw HTTPError(.badRequest)
+        }
+
+        let input = try await request.decode(as: UpdateSessionTitleRequest.self, context: context)
+        try await sessionManager.updateSessionTitle(id: id, title: input.title)
 
         return Response(status: .ok)
     }

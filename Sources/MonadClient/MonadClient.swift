@@ -50,8 +50,17 @@ public actor MonadClient {
 
     /// Update session persona
     public func updatePersona(_ persona: String, sessionId: UUID) async throws {
-        var request = try buildRequest(path: "/api/sessions/\(sessionId.uuidString)/persona", method: "PATCH")
+        var request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/persona", method: "PATCH")
         request.httpBody = try encoder.encode(UpdatePersonaRequest(persona: persona))
+        _ = try await performRaw(request)
+    }
+
+    /// Update session title
+    public func updateSessionTitle(_ title: String, sessionId: UUID) async throws {
+        var request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/title", method: "PATCH")
+        request.httpBody = try encoder.encode(UpdateSessionTitleRequest(title: title))
         _ = try await performRaw(request)
     }
 
