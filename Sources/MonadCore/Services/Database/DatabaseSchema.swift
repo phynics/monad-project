@@ -312,6 +312,25 @@ public enum DatabaseSchema {
         migrator.registerMigration("v18") { db in
             try db.drop(table: "note")
         }
+
+        // v19: Restore Note table
+        migrator.registerMigration("v19") { db in
+            try db.create(table: "note") { t in
+                t.primaryKey("id", .blob).notNull()
+                t.column("name", .text).notNull()
+                t.column("description", .text).notNull().defaults(to: "")
+                t.column("content", .text).notNull()
+                t.column("isReadonly", .boolean).notNull().defaults(to: false)
+                t.column("tags", .text).notNull().defaults(to: "[]")
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+            }
+
+            try db.create(
+                index: "idx_note_readonly",
+                on: "note",
+                columns: ["isReadonly"])
+        }
     }
 
     // MARK: - Conversation Tables

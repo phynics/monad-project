@@ -47,7 +47,7 @@ public struct ChatController<Context: RequestContext>: Sendable {
 
         let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
 
-        guard await sessionManager.getSession(id: id) != nil else {
+        guard let session = await sessionManager.getSession(id: id) else {
             throw HTTPError(.notFound)
         }
 
@@ -92,6 +92,17 @@ public struct ChatController<Context: RequestContext>: Sendable {
 
         guard await llmService.isConfigured else { throw HTTPError(.serviceUnavailable) }
 
+        // Load Persona
+        var systemInstructions: String? = nil
+        if let personaFilename = session.persona, let workingDirectory = session.workingDirectory {
+            let personaPath = URL(fileURLWithPath: workingDirectory).appendingPathComponent(
+                "Personas"
+            ).appendingPathComponent(personaFilename)
+            if let content = try? String(contentsOf: personaPath, encoding: .utf8) {
+                systemInstructions = content
+            }
+        }
+
         // Simple chat uses chatStreamWithContext but collects result (No Tool Loop support for non-streaming yet)
         let (stream, _, _) = await llmService.chatStreamWithContext(
             userQuery: chatRequest.message,
@@ -100,7 +111,7 @@ public struct ChatController<Context: RequestContext>: Sendable {
             memories: contextData.memories.map { $0.memory },
             chatHistory: history,
             tools: [],  // No tools for simple chat
-            systemInstructions: nil,
+            systemInstructions: systemInstructions,
             responseFormat: nil,
             useFastModel: false
         )
@@ -131,7 +142,7 @@ public struct ChatController<Context: RequestContext>: Sendable {
 
         let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
 
-        guard await sessionManager.getSession(id: id) != nil else {
+        guard let session = await sessionManager.getSession(id: id) else {
             throw HTTPError(.notFound)
         }
 
@@ -200,6 +211,17 @@ public struct ChatController<Context: RequestContext>: Sendable {
 
         let toolParams = availableTools.map { $0.toToolParam() }
 
+        // Load Persona
+        var systemInstructions: String? = nil
+        if let personaFilename = session.persona, let workingDirectory = session.workingDirectory {
+            let personaPath = URL(fileURLWithPath: workingDirectory).appendingPathComponent(
+                "Personas"
+            ).appendingPathComponent(personaFilename)
+            if let content = try? String(contentsOf: personaPath, encoding: .utf8) {
+                systemInstructions = content
+            }
+        }
+
         // 5. Build Initial Prompt
         let (initialMessages, _, _) = await llmService.buildPrompt(
             userQuery: chatRequest.message,
@@ -208,7 +230,7 @@ public struct ChatController<Context: RequestContext>: Sendable {
             memories: contextData.memories.map { $0.memory },
             chatHistory: history,
             tools: availableTools,
-            systemInstructions: nil
+            systemInstructions: systemInstructions
         )
 
         // 6. Streaming Loop (ReAct)

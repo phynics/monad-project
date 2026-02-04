@@ -50,10 +50,11 @@ public struct ClientController<Context: RequestContext>: Sendable {
         try await dbWriter.write { db in
             try client.insert(db)
             try defaultWorkspace.insert(db)
-            
+
             // Save tools
             for toolRef in input.tools {
-                let tool = try WorkspaceTool(workspaceId: defaultWorkspace.id, toolReference: toolRef)
+                let tool = try WorkspaceTool(
+                    workspaceId: defaultWorkspace.id, toolReference: toolRef)
                 try tool.insert(db)
             }
         }
@@ -87,5 +88,4 @@ public struct ClientController<Context: RequestContext>: Sendable {
 }
 
 // MARK: - GRDB Conformance for ClientIdentity
-
-extension ClientIdentity: FetchableRecord, PersistableRecord {}
+// Extended in MonadCore

@@ -45,7 +45,7 @@ actor ChatREPL {
         // Fetch context summary
         let contextSummary = await getContextSummary()
         print(TerminalUI.dim(contextSummary))
-        
+
         TerminalUI.printPrompt()
 
         // Use readline for vi-style editing
@@ -56,7 +56,7 @@ actor ChatREPL {
 
         return line
     }
-    
+
     private func getContextSummary() async -> String {
         do {
             // Workspaces
@@ -69,7 +69,7 @@ actor ChatREPL {
             if !sessionWS.attached.isEmpty {
                 wsSummary += " (+\(sessionWS.attached.count) attached)"
             }
-            
+
             // Memories
             let config = try await client.getConfiguration()
             // We don't want to list all memories every time, just count active?
@@ -82,13 +82,13 @@ actor ChatREPL {
             // Or we check if we have a local cache of memories.
             // Let's try listing active ones (up to limit) active is determined by limit.
             // We can just show "Active Context" generally.
-            
+
             // Better: "📂 macbook:~/project | 🧠 5 memories"
-            
+
             // Let's try to get memory count active.
             let memories = try await client.listMemories()
             let activeCount = min(memories.count, config.memoryContextLimit)
-            
+
             return "\(wsSummary) | 🧠 \(activeCount) memories"
         } catch {
             return ""
@@ -124,6 +124,9 @@ actor ChatREPL {
 
         case "/notes", "/note":
             await handleNotes(args)
+
+        case "/personas", "/persona":
+            await handlePersonas(args)
 
         case "/tools", "/tool":
             await handleTools(args)
@@ -161,7 +164,11 @@ actor ChatREPL {
               /memories             List memories
               /memory search <q>    Search memories
               /notes                List notes
-              /note add <title>     Create a note
+              /note add <name.md>   Create a note
+              /note edit <name.md>  Edit a note
+              /personas             List available personas
+              /persona add <n.md>   Create a persona
+              /persona use <name>   Set active persona for session
               /workspaces           List/manage workspaces
               /tools                List available tools
 
@@ -612,7 +619,9 @@ actor ChatREPL {
 
             print("")
             print(TerminalUI.bold("Memories:"))
-            print(TerminalUI.dim("(\(min(memories.count, activeLimit)) active / \(memories.count) total)"))
+            print(
+                TerminalUI.dim(
+                    "(\(min(memories.count, activeLimit)) active / \(memories.count) total)"))
             print("")
 
             for (index, memory) in memories.prefix(20).enumerated() {
@@ -662,53 +671,107 @@ actor ChatREPL {
         }
     }
 
-    // MARK: - Notes
+    // MARK: - Notes & Files
 
     private func handleNotes(_ args: [String]) async {
         let subcommand = args.first ?? "list"
-
         switch subcommand {
         case "list", "ls":
-            await listNotes()
+            await listFiles(in: "Notes")
         case "add", "create", "new":
             if args.count > 1 {
-                let title = args.dropFirst().joined(separator: " ")
-                await createNote(title: title)
+                await addFile(in: "Notes", name: args[1])
             } else {
-                TerminalUI.printError("Usage: /note add <title>")
+                TerminalUI.printError("Usage: /note add <filename.md>")
+            }
+        case "edit":
+            if args.count > 1 {
+                await editFile(in: "Notes", name: args[1])
+            } else {
+                TerminalUI.printError("Usage: /note edit <filename.md>")
+            }
+        case "delete", "rm":
+            if args.count > 1 {
+                await deleteFile(in: "Notes", name: args[1])
+            } else {
+                TerminalUI.printError("Usage: /note delete <filename.md>")
             }
         default:
-            await listNotes()
+            await listFiles(in: "Notes")
         }
     }
 
-    private func listNotes() async {
-        do {
-            let notes = try await client.listNotes()
+    private func handlePersonas(_ args: [String]) async {
+        let subcommand = args.first ?? "list"
+        switch subcommand {
+        case "list", "ls":
+            await listFiles(in: "Personas")
+        case "add", "create", "new":
+            if args.count > 1 {
+                await addFile(in: "Personas", name: args[1])
+            } else {
+                TerminalUI.printError("Usage: /persona add <filename.md>")
+            }
+        case "edit":
+            if args.count > 1 {
+                await editFile(in: "Personas", name: args[1])
+            } else {
+                TerminalUI.printError("Usage: /persona edit <filename.md>")
+            }
+        case "delete", "rm":
+            if args.count > 1 {
+                await deleteFile(in: "Personas", name: args[1])
+            } else {
+                TerminalUI.printError("Usage: /persona delete <filename.md>")
+            }
+        case "use", "set":
+            if args.count > 1 {
+                await usePersona(name: args[1])
+            } else {
+                TerminalUI.printError("Usage: /persona use <filename.md>")
+            }
+        default:
+            await listFiles(in: "Personas")
+        }
+    }
 
-            if notes.isEmpty {
-                TerminalUI.printInfo("No notes found.")
+    private func getPrimaryWorkspaceId() async throws -> UUID {
+        let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
+        guard let primaryId = sessionWS.primary else {
+            throw MonadClientError.unknown("No primary workspace attached to session.")
+        }
+        return primaryId
+    }
+
+    private func listFiles(in directory: String) async {
+        do {
+            let wsId = try await getPrimaryWorkspaceId()
+            let allFiles = try await client.listFiles(workspaceId: wsId)
+            let filtered = allFiles.filter { $0.hasPrefix("\(directory)/") }
+
+            if filtered.isEmpty {
+                TerminalUI.printInfo("No files found in \(directory)/")
                 return
             }
 
             print("")
-            print(TerminalUI.bold("Notes:"))
+            print(TerminalUI.bold("\(directory):"))
             print("")
-
-            for note in notes {
-                let dateStr = TerminalUI.formatDate(note.updatedAt)
-                print(
-                    "  \(TerminalUI.dim(note.id.uuidString.prefix(8).description))  \(note.name)  \(TerminalUI.dim(dateStr))"
-                )
+            for file in filtered {
+                let name = file.replacingOccurrences(of: "\(directory)/", with: "")
+                print("  📄 \(name)")
             }
             print("")
         } catch {
-            TerminalUI.printError("Failed to list notes: \(error.localizedDescription)")
+            TerminalUI.printError("Failed to list \(directory): \(error.localizedDescription)")
         }
     }
 
-    private func createNote(title: String) async {
-        print("Enter note content (end with empty line):")
+    private func addFile(in directory: String, name: String) async {
+        let filename = name.hasSuffix(".md") ? name : "\(name).md"
+        let path = "\(directory)/\(filename)"
+
+        print("Enter content (end with empty line):")
         var content = ""
         while let line = readLine() {
             if line.isEmpty { break }
@@ -716,12 +779,74 @@ actor ChatREPL {
         }
 
         do {
-            let note = try await client.createNote(
-                title: title, content: content.trimmingCharacters(in: .whitespacesAndNewlines))
-            TerminalUI.printSuccess("Created note: \(note.id.uuidString.prefix(8))")
+            let wsId = try await getPrimaryWorkspaceId()
+            try await client.writeFileContent(workspaceId: wsId, path: path, content: content)
+            TerminalUI.printSuccess("Created \(path)")
         } catch {
-            TerminalUI.printError("Failed to create note: \(error.localizedDescription)")
+            TerminalUI.printError("Failed to create file: \(error.localizedDescription)")
         }
+    }
+
+    private func editFile(in directory: String, name: String) async {
+        let filename = name.hasSuffix(".md") ? name : "\(name).md"
+        let path = "\(directory)/\(filename)"
+
+        do {
+            let wsId = try await getPrimaryWorkspaceId()
+            let content = try await client.getFileContent(workspaceId: wsId, path: path)
+
+            // Use temporary file and $EDITOR
+            let tempDir = FileManager.default.temporaryDirectory
+            let tempFile = tempDir.appendingPathComponent(filename)
+            try content.write(to: tempFile, atomically: true, encoding: .utf8)
+
+            let editor = ProcessInfo.processInfo.environment["EDITOR"] ?? "vi"
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = [editor, tempFile.path]
+
+            try process.run()
+            process.waitUntilExit()
+
+            let updatedContent = try String(contentsOf: tempFile, encoding: .utf8)
+            if updatedContent != content {
+                try await client.writeFileContent(
+                    workspaceId: wsId, path: path, content: updatedContent)
+                TerminalUI.printSuccess("Updated \(path)")
+            } else {
+                TerminalUI.printInfo("No changes made.")
+            }
+
+            try? FileManager.default.removeItem(at: tempFile)
+        } catch {
+            TerminalUI.printError("Failed to edit file: \(error.localizedDescription)")
+        }
+    }
+
+    private func deleteFile(in directory: String, name: String) async {
+        let filename = name.hasSuffix(".md") ? name : "\(name).md"
+        let path = "\(directory)/\(filename)"
+
+        do {
+            let wsId = try await getPrimaryWorkspaceId()
+            try await client.deleteFile(workspaceId: wsId, path: path)
+            TerminalUI.printSuccess("Deleted \(path)")
+        } catch {
+            TerminalUI.printError("Failed to delete file: \(error.localizedDescription)")
+        }
+    }
+
+    private func usePersona(name: String) async {
+        // We need a server endpoint to update session persona.
+        // Or we can just update the session property locally? No, server needs to know.
+        // I should have added an updateSession endpoint.
+
+        // Wait, does ChatController use the session's persona? Yes.
+        // Does the server have an endpoint to update it?
+        // Let's check SessionController on the server.
+        TerminalUI.printWarning(
+            "Persona update for existing session not yet implemented on server. Please start a new session with --persona \(name)"
+        )
     }
 
     // MARK: - Tools
@@ -762,9 +887,11 @@ actor ChatREPL {
             print(TerminalUI.bold("Available Tools:"))
             print("")
 
+            // Group by source? Or just list with source
             for tool in tools {
                 let status = tool.isEnabled ? TerminalUI.green("●") : TerminalUI.dim("○")
-                print("  \(status) \(TerminalUI.bold(tool.name))")
+                let sourceStr = tool.source.map { " (\($0))" } ?? ""
+                print("  \(status) \(TerminalUI.bold(tool.name))\(TerminalUI.dim(sourceStr))")
                 print("    \(TerminalUI.dim(tool.description))")
             }
             print("")
@@ -772,6 +899,8 @@ actor ChatREPL {
             TerminalUI.printError("Failed to list tools: \(error.localizedDescription)")
         }
     }
+
+    // ... enable/disable ...
 
     private func enableTool(_ name: String) async {
         do {
@@ -816,7 +945,7 @@ actor ChatREPL {
         let path = FileManager.default.currentDirectoryPath
         let host = ProcessInfo.processInfo.hostName
         let uri = WorkspaceURI(host: host, path: path)
-        
+
         do {
             // Check if workspace already exists for this URI
             let workspaces = try await client.listWorkspaces()
@@ -824,21 +953,22 @@ actor ChatREPL {
                 await attachWorkspaceById(existing.id)
                 return
             }
-            
+
             // Create new workspace
             let ws = try await client.createWorkspace(
                 uri: uri,
                 hostType: .client,
-                ownerId: nil, // Will be inferred or updated later
+                ownerId: nil,  // Will be inferred or updated later
                 rootPath: path,
-                trustLevel: .restricted // Limited by default as requested
+                trustLevel: .restricted  // Limited by default as requested
             )
-            
+
             TerminalUI.printSuccess("Created workspace for \(path)")
             await attachWorkspaceById(ws.id)
-            
+
         } catch {
-            TerminalUI.printError("Failed to attach current directory: \(error.localizedDescription)")
+            TerminalUI.printError(
+                "Failed to attach current directory: \(error.localizedDescription)")
         }
     }
 
@@ -856,18 +986,45 @@ actor ChatREPL {
             print(TerminalUI.bold("Workspaces:"))
             print("")
 
-            for ws in workspaces {
+            // Fetch session tools to check enablement status
+            let tools = try? await client.listTools(sessionId: session.id)
+            let enabledToolIds = Set(tools?.filter { $0.isEnabled }.map { $0.id } ?? [])
+
+            // Sort: Primary first, then attached, then others
+            let sortedWorkspaces = workspaces.sorted { w1, w2 in
+                if w1.id == sessionWS.primary { return true }
+                if w2.id == sessionWS.primary { return false }
+
+                let attached1 = sessionWS.attached.contains(w1.id)
+                let attached2 = sessionWS.attached.contains(w2.id)
+
+                if attached1 && !attached2 { return true }
+                if !attached1 && attached2 { return false }
+
+                return w1.uri.description < w2.uri.description
+            }
+
+            for ws in sortedWorkspaces {
                 let isPrimary = sessionWS.primary == ws.id
                 let isAttached = sessionWS.attached.contains(ws.id)
-                
-                let marker = isPrimary ? TerminalUI.green(" ★") : (isAttached ? TerminalUI.blue(" ●") : " ○")
+
+                let marker =
+                    isPrimary ? TerminalUI.green(" ★") : (isAttached ? TerminalUI.blue(" ●") : " ○")
                 let type = isPrimary ? " (Primary)" : (isAttached ? " (Attached)" : "")
-                
+
                 print("  \(marker) \(TerminalUI.bold(ws.uri.description))\(type)")
                 print("     ID: \(TerminalUI.dim(ws.id.uuidString))")
-                if let path = ws.rootPath {
-                    print("     Path: \(path)")
+
+                // List tools for this workspace
+                if !ws.tools.isEmpty {
+                    print("     Tools:")
+                    for toolRef in ws.tools {
+                        let isEnabled = enabledToolIds.contains(toolRef.toolId)
+                        let status = isEnabled ? TerminalUI.green("●") : TerminalUI.dim("○")
+                        print("       \(status) \(toolRef.displayName)")
+                    }
                 }
+
                 print("")
             }
         } catch {
@@ -880,7 +1037,8 @@ actor ChatREPL {
             // Try partial match by URI
             do {
                 let workspaces = try await client.listWorkspaces()
-                if let match = workspaces.first(where: { $0.uri.description.contains(workspaceId) }) {
+                if let match = workspaces.first(where: { $0.uri.description.contains(workspaceId) })
+                {
                     await attachWorkspaceById(match.id)
                 } else {
                     TerminalUI.printError("Invalid workspace ID or URI: \(workspaceId)")

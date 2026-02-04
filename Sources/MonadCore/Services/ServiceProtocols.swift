@@ -23,11 +23,11 @@ public protocol LLMServiceProtocol: Sendable {
 
     func chatStreamWithContext(
         userQuery: String,
-        contextNotes: [Note],
+        contextNotes: [ContextFile],
         documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
-        tools: [Tool],
+        tools: [any Tool],
         systemInstructions: String?,
         responseFormat: ChatQuery.ResponseFormat?,
         useFastModel: Bool
@@ -46,11 +46,11 @@ public protocol LLMServiceProtocol: Sendable {
 
     func buildPrompt(
         userQuery: String,
-        contextNotes: [Note],
+        contextNotes: [ContextFile],
         documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
-        tools: [Tool],
+        tools: [any Tool],
         systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
@@ -95,12 +95,16 @@ public protocol PersistenceServiceProtocol: Sendable {
     func deleteSession(id: UUID) async throws
     func searchArchivedSessions(query: String) async throws -> [ConversationSession]
     func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession]
+    func pruneSessions(olderThan timeInterval: TimeInterval) async throws -> Int
 
     // Jobs
     func saveJob(_ job: Job) async throws
     func fetchJob(id: UUID) async throws -> Job?
     func fetchAllJobs() async throws -> [Job]
     func deleteJob(id: UUID) async throws
+
+    // MARK: - Prune
+    func pruneMemories(matching query: String) async throws -> Int
 
     // RAW SQL Support
     func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]]

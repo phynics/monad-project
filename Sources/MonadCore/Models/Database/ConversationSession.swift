@@ -14,6 +14,7 @@ public struct ConversationSession: Codable, Identifiable, FetchableRecord, Persi
     public var workingDirectory: String?
     public var primaryWorkspaceId: UUID?
     public var attachedWorkspaceIds: String  // JSON array of UUIDs
+    public var persona: String?  // Active persona filename
 
     public init(
         id: UUID = UUID(),
@@ -24,7 +25,8 @@ public struct ConversationSession: Codable, Identifiable, FetchableRecord, Persi
         tags: [String] = [],
         workingDirectory: String? = nil,
         primaryWorkspaceId: UUID? = nil,
-        attachedWorkspaceIds: [UUID] = []
+        attachedWorkspaceIds: [UUID] = [],
+        persona: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -33,6 +35,7 @@ public struct ConversationSession: Codable, Identifiable, FetchableRecord, Persi
         self.isArchived = isArchived
         self.workingDirectory = workingDirectory
         self.primaryWorkspaceId = primaryWorkspaceId
+        self.persona = persona
 
         if let data = try? JSONEncoder().encode(tags), let str = String(data: data, encoding: .utf8)
         {

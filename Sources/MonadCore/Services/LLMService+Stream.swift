@@ -6,11 +6,11 @@ extension LLMService {
     /// Returns tuple of (stream, rawPrompt for debug)
     public func chatStreamWithContext(
         userQuery: String,
-        contextNotes: [Note],
+        contextNotes: [ContextFile],
         documents: [DocumentContext] = [],
         memories: [Memory] = [],
         chatHistory: [Message],
-        tools: [any MonadCore.Tool],
+        tools: [any Tool],
         systemInstructions: String? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil,
         useFastModel: Bool = false
@@ -19,7 +19,7 @@ extension LLMService {
         rawPrompt: String,
         structuredContext: [String: String]
     ) {
-        let clientToUse = useFastModel ? (await getFastClient() ?? getClient()) : await getClient()
+        let clientToUse = useFastModel ? (getFastClient() ?? getClient()) : getClient()
 
         guard let client = clientToUse else {
             let stream = AsyncThrowingStream<ChatStreamResult, Error> { continuation in
@@ -54,7 +54,7 @@ extension LLMService {
         tools: [ChatQuery.ChatCompletionToolParam]? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
-        guard let client = await getClient() else {
+        guard let client = getClient() else {
             return AsyncThrowingStream { continuation in
                 continuation.finish(throwing: LLMServiceError.notConfigured)
             }

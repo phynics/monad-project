@@ -14,11 +14,39 @@ struct RegistrationManager {
     static let shared = RegistrationManager()
 
     private var storageURL: URL {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let dir = home.appendingPathComponent(".monad")
-        try? FileManager.default.createDirectory(
-            at: dir, withIntermediateDirectories: true, attributes: nil)
-        return dir.appendingPathComponent("identity.json")
+        let fileManager = FileManager.default
+        let appName = "Monad"
+        let filename = "identity.json"
+
+        #if os(macOS)
+            // ~/Library/Application Support/Monad/identity.json
+            if let appSupport = fileManager.urls(
+                for: .applicationSupportDirectory, in: .userDomainMask
+            ).first {
+                let dir = appSupport.appendingPathComponent(appName)
+                try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+                return dir.appendingPathComponent(filename)
+            }
+        #elseif os(Linux)
+            // XDG_CONFIG_HOME or ~/.config/monad/identity.json
+            let env = ProcessInfo.processInfo.environment
+            let configHome: URL
+            if let xdgConfig = env["XDG_CONFIG_HOME"] {
+                configHome = URL(fileURLWithPath: xdgConfig)
+            } else {
+                configHome = fileManager.homeDirectoryForCurrentUser.appendingPathComponent(
+                    ".config")
+            }
+
+            let dir = configHome.appendingPathComponent(appName.lowercased())
+            try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+            return dir.appendingPathComponent(filename)
+        #endif
+
+        // Fallback
+        let dir = fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".monad")
+        try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent(filename)
     }
 
     func getIdentity() -> StoredIdentity? {
@@ -41,7 +69,7 @@ struct RegistrationManager {
         let hostname = ProcessInfo.processInfo.hostName
         let displayName = NSUserName()
         let platform = "macos"  // Detect dynamically if needed
-        
+
         // Define client tools
         let tools: [ToolReference] = [
             .custom(definition: WorkspaceToolDefinition(from: AskAttachPWDTool()))

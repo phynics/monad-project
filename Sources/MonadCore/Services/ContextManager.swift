@@ -27,7 +27,7 @@ public actor ContextManager {
     private let logger = Logger(label: "com.monad.ContextManager")
 
     public init(
-        persistenceService: any PersistenceServiceProtocol, 
+        persistenceService: any PersistenceServiceProtocol,
         embeddingService: any EmbeddingService,
         workspaceRoot: URL? = nil
     ) {
@@ -90,93 +90,40 @@ public actor ContextManager {
         }
     }
 
-    private func fetchAllNotes() async throws -> [Note] {
-        var allNotes: [Note] = []
-        
-        // 1. Fetch from Database (Legacy support during transition)
-        // We use raw SQL because the protocol methods have been removed.
-        do {
-            let dbRows = try await persistenceService.executeRaw(sql: "SELECT * FROM note", arguments: [])
-            for row in dbRows {
-                // Manually reconstruct Note from AnyCodable row
-                if let idStr = row["id"]?.value as? String,
-                   let id = UUID(uuidString: idStr),
-                   let name = row["name"]?.value as? String,
-                   let content = row["content"]?.value as? String {
-                    
-                    let description = row["description"]?.value as? String ?? ""
-                    let isReadonly = (row["isReadonly"]?.value as? Int ?? 0) != 0
-                    
-                    let note = Note(
-                        id: id,
-                        name: name,
-                        description: description,
-                        content: content,
-                        isReadonly: isReadonly
-                    )
-                    allNotes.append(note)
-                }
-            }
-        } catch {
-            // Table might not exist yet or already be dropped, ignore
-            logger.debug("Legacy note table not accessible: \(error.localizedDescription)")
-        }
-        
+    private func fetchAllNotes() async throws -> [ContextFile] {
+        var allNotes: [ContextFile] = []
+
         // 2. Fetch from Filesystem
         if let workspaceRoot = workspaceRoot {
             let notesDir = workspaceRoot.appendingPathComponent("Notes", isDirectory: true)
             let fileManager = FileManager.default
-            
+
             if fileManager.fileExists(atPath: notesDir.path) {
                 do {
-                    let files = try fileManager.contentsOfDirectory(at: notesDir, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles])
-                    
+                    let files = try fileManager.contentsOfDirectory(
+                        at: notesDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+
                     for fileURL in files where fileURL.pathExtension == "md" {
-                        guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else { continue }
-                        
-                        let name = fileURL.deletingPathExtension().lastPathComponent
-                        
-                        // Parse description from first line if present: _Description: [text]_
-                        let lines = content.components(separatedBy: .newlines)
-                        var description = ""
-                        var actualContent = content
-                        
-                        if let firstLine = lines.first, firstLine.hasPrefix("_Description:"), firstLine.hasSuffix("_") {
-                            description = firstLine
-                                .replacingOccurrences(of: "_Description: ", with: "")
-                                .replacingOccurrences(of: "_", with: "")
-                            actualContent = lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else {
+                            continue
                         }
-                        
-                        let attr = try fileManager.attributesOfItem(atPath: fileURL.path)
-                        let createdAt = attr[.creationDate] as? Date ?? Date()
-                        let updatedAt = attr[.modificationDate] as? Date ?? Date()
-                        
-                        let note = Note(
-                            id: UUID(), // FS notes use transient IDs for now if they don't match DB
+                        let name = fileURL.deletingPathExtension().lastPathComponent
+
+                        let note = ContextFile(
                             name: name,
-                            description: description,
-                            content: actualContent,
-                            isReadonly: false,
-                            tags: [],
-                            createdAt: createdAt,
-                            updatedAt: updatedAt
+                            content: content,
+                            source: "Notes/\(fileURL.lastPathComponent)"
                         )
                         allNotes.append(note)
                     }
                 } catch {
-                    logger.warning("Failed to fetch notes from filesystem: \(error.localizedDescription)")
+                    logger.warning(
+                        "Failed to fetch notes from filesystem: \(error.localizedDescription)")
                 }
             }
         }
-        
-        // Deduplicate by name (FS notes override DB notes with same name)
-        var uniqueNotes: [String: Note] = [:]
-        for note in allNotes {
-            uniqueNotes[note.name] = note
-        }
-        
-        return Array(uniqueNotes.values).sorted(by: { $0.name < $1.name })
+
+        return allNotes.sorted(by: { $0.name < $1.name })
     }
 
     private func buildAugmentedContext(query: String, history: [Message]) -> String {
@@ -395,7 +342,7 @@ public actor ContextManager {
 
 /// Structured context data
 public struct ContextData: Sendable {
-    public let notes: [Note]
+    public let notes: [ContextFile]
     public let memories: [SemanticSearchResult]
     public let generatedTags: [String]
     public let queryVector: [Double]
@@ -405,7 +352,7 @@ public struct ContextData: Sendable {
     public let executionTime: TimeInterval
 
     public init(
-        notes: [Note] = [],
+        notes: [ContextFile] = [],
         memories: [SemanticSearchResult] = [],
         generatedTags: [String] = [],
         queryVector: [Double] = [],

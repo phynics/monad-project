@@ -37,20 +37,41 @@ public actor PersistenceService: PersistenceServiceProtocol {
         return service
     }
 
-    /// Default database path in Application Support
+    /// Default database path
     private static func defaultDatabasePath() throws -> String {
         let fileManager = FileManager.default
-        guard
-            let appSupport = fileManager.urls(
-                for: .applicationSupportDirectory, in: .userDomainMask
-            ).first
-        else {
-            throw PersistenceServiceError.applicationSupportNotFound
-        }
+        let appName = "Monad"
+        let filename = "monad.sqlite"
 
-        let appDir = appSupport.appendingPathComponent("MonadAssistant", isDirectory: true)
-        try fileManager.createDirectory(at: appDir, withIntermediateDirectories: true)
-        return appDir.appendingPathComponent("monad.sqlite").path
+        #if os(macOS)
+            // ~/Library/Application Support/Monad/monad.sqlite
+            guard
+                let appSupport = fileManager.urls(
+                    for: .applicationSupportDirectory, in: .userDomainMask
+                ).first
+            else {
+                throw PersistenceServiceError.applicationSupportNotFound
+            }
+            let dir = appSupport.appendingPathComponent(appName)
+            try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+            return dir.appendingPathComponent(filename).path
+
+        #elseif os(Linux)
+            // XDG_DATA_HOME or ~/.local/share/monad/monad.sqlite
+            let env = ProcessInfo.processInfo.environment
+            let dataHome: URL
+            if let xdgData = env["XDG_DATA_HOME"] {
+                dataHome = URL(fileURLWithPath: xdgData)
+            } else {
+                dataHome = fileManager.homeDirectoryForCurrentUser
+                    .appendingPathComponent(".local")
+                    .appendingPathComponent("share")
+            }
+
+            let dir = dataHome.appendingPathComponent(appName.lowercased())
+            try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+            return dir.appendingPathComponent(filename).path
+        #endif
     }
 
     // MARK: - Migrations

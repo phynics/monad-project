@@ -37,6 +37,18 @@ public struct RegisterToolRequest: Codable, Sendable {
 
 // MARK: - Session API
 
+public struct CreateSessionRequest: Codable, Sendable {
+    public let title: String?
+    public let primaryWorkspaceId: UUID?
+    public let persona: String?
+
+    public init(title: String? = nil, primaryWorkspaceId: UUID? = nil, persona: String? = nil) {
+        self.title = title
+        self.primaryWorkspaceId = primaryWorkspaceId
+        self.persona = persona
+    }
+}
+
 public struct AttachWorkspaceRequest: Codable, Sendable {
     public let workspaceId: UUID
     public let isPrimary: Bool
@@ -97,6 +109,7 @@ public struct SessionResponse: Codable, Sendable, Identifiable {
     public let isArchived: Bool
     public let tags: [String]
     public let workingDirectory: String?
+    public let persona: String?
     public let primaryWorkspaceId: UUID?
     public let attachedWorkspaceIds: [UUID]
 
@@ -108,6 +121,7 @@ public struct SessionResponse: Codable, Sendable, Identifiable {
         isArchived: Bool,
         tags: [String],
         workingDirectory: String?,
+        persona: String?,
         primaryWorkspaceId: UUID?,
         attachedWorkspaceIds: [UUID]
     ) {
@@ -118,10 +132,11 @@ public struct SessionResponse: Codable, Sendable, Identifiable {
         self.isArchived = isArchived
         self.tags = tags
         self.workingDirectory = workingDirectory
+        self.persona = persona
         self.primaryWorkspaceId = primaryWorkspaceId
         self.attachedWorkspaceIds = attachedWorkspaceIds
     }
-    
+
     public init(id: UUID, title: String?) {
         self.id = id
         self.title = title
@@ -130,6 +145,7 @@ public struct SessionResponse: Codable, Sendable, Identifiable {
         self.isArchived = false
         self.tags = []
         self.workingDirectory = nil
+        self.persona = nil
         self.primaryWorkspaceId = nil
         self.attachedWorkspaceIds = []
     }
@@ -142,12 +158,16 @@ public struct ToolInfo: Codable, Sendable, Identifiable {
     public let name: String
     public let description: String
     public let isEnabled: Bool
-    
-    public init(id: String, name: String, description: String, isEnabled: Bool = true) {
+    public let source: String?
+
+    public init(
+        id: String, name: String, description: String, isEnabled: Bool = true, source: String? = nil
+    ) {
         self.id = id
         self.name = name
         self.description = description
         self.isEnabled = isEnabled
+        self.source = source
     }
 }
 
@@ -184,5 +204,3 @@ public struct MemorySearchRequest: Codable, Sendable {
         self.limit = limit
     }
 }
-
-

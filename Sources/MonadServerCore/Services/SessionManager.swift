@@ -28,40 +28,75 @@ public actor SessionManager {
         self.workspaceRoot = workspaceRoot
     }
 
-    public func createSession(title: String = "New Conversation") async throws
+    public func createSession(title: String = "New Conversation", persona: String? = nil)
+        async throws
         -> ConversationSession
     {
         let sessionId = UUID()
-        
+        // Default persona logic
+        let selectedPersona = persona ?? "Default.md"
+
         // 1. Create Workspace
-        let sessionWorkspaceURL = workspaceRoot.appendingPathComponent("sessions", isDirectory: true)
-            .appendingPathComponent(sessionId.uuidString, isDirectory: true)
-        
-        try FileManager.default.createDirectory(at: sessionWorkspaceURL, withIntermediateDirectories: true)
-        
+        let sessionWorkspaceURL = workspaceRoot.appendingPathComponent(
+            "sessions", isDirectory: true
+        )
+        .appendingPathComponent(sessionId.uuidString, isDirectory: true)
+
+        try FileManager.default.createDirectory(
+            at: sessionWorkspaceURL, withIntermediateDirectories: true)
+
+        // 1.1 Create Notes directory and default note
+        let notesDir = sessionWorkspaceURL.appendingPathComponent("Notes", isDirectory: true)
+        try FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true)
+        let welcomeNote =
+            "# Welcome to Monad Notes\n\nThis is your personal notes space. You can create new notes and they will be part of the context."
+        try welcomeNote.write(
+            to: notesDir.appendingPathComponent("Welcome.md"), atomically: true, encoding: .utf8)
+
+        // 1.2 Create Personas directory and default personas
+        let personasDir = sessionWorkspaceURL.appendingPathComponent("Personas", isDirectory: true)
+        try FileManager.default.createDirectory(at: personasDir, withIntermediateDirectories: true)
+
+        let defaultPersonaContent = "You are Monad, an intelligent AI assistant."
+        try defaultPersonaContent.write(
+            to: personasDir.appendingPathComponent("Default.md"), atomically: true, encoding: .utf8)
+
+        let productPersonaContent =
+            "You are an expert AI Product Manager. You specialize in defining requirements, user stories, and product strategy."
+        try productPersonaContent.write(
+            to: personasDir.appendingPathComponent("ProductManager.md"), atomically: true,
+            encoding: .utf8)
+
+        let architectPersonaContent =
+            "You are a Senior Software Architect. You focus on system design, scalability, and clean architecture."
+        try architectPersonaContent.write(
+            to: personasDir.appendingPathComponent("Architect.md"), atomically: true,
+            encoding: .utf8)
+
         let workspace = Workspace(
             uri: .serverSession(sessionId),
             hostType: .server,
             rootPath: sessionWorkspaceURL.path,
             trustLevel: .full
         )
-        
+
         try await persistenceService.databaseWriter.write { db in
             try workspace.insert(db)
         }
 
         // 2. Create Session
         var session = ConversationSession(
-            id: sessionId, 
+            id: sessionId,
             title: title,
-            primaryWorkspaceId: workspace.id
+            primaryWorkspaceId: workspace.id,
+            persona: selectedPersona
         )
         session.workingDirectory = sessionWorkspaceURL.path
-        
+
         sessions[session.id] = session
 
         let contextManager = ContextManager(
-            persistenceService: persistenceService, 
+            persistenceService: persistenceService,
             embeddingService: embeddingService,
             workspaceRoot: sessionWorkspaceURL
         )
@@ -77,7 +112,8 @@ public actor SessionManager {
 
         // Setup Tools for session
         let toolManager = await createToolManager(
-            for: session, jailRoot: sessionWorkspaceURL.path, documentManager: documentManager, toolContextSession: toolContextSession,
+            for: session, jailRoot: sessionWorkspaceURL.path, documentManager: documentManager,
+            toolContextSession: toolContextSession,
             jobQueueContext: jobQueueContext)
         toolManagers[session.id] = toolManager
 
@@ -196,13 +232,14 @@ public actor SessionManager {
     public func attachWorkspace(_ workspaceId: UUID, to sessionId: UUID, isPrimary: Bool = false)
         async throws
     {
-        guard var session = sessions[sessionId] else {
-            // Try enabling recovery from DB if not in memory?
-            // For now, assume session must be active/loaded. Or load it.
-            // If we fetch from DB, we should cache it.
-            // But existing getSession loads from memory.
-            // Let's rely on memory first, if checking implementation, createSession puts in memory.
-            throw SessionError.sessionNotFound  // Simple error for now
+        var session: ConversationSession
+
+        if let memorySession = sessions[sessionId] {
+            session = memorySession
+        } else if let dbSession = try await persistenceService.fetchSession(id: sessionId) {
+            session = dbSession
+        } else {
+            throw SessionError.sessionNotFound
         }
 
         if isPrimary {
@@ -229,12 +266,23 @@ public actor SessionManager {
         }
 
         session.updatedAt = Date()
-        sessions[sessionId] = session
+
+        // Update in-memory if present
+        if sessions[sessionId] != nil {
+            sessions[sessionId] = session
+        }
+        // Always save to DB
         try await persistenceService.saveSession(session)
     }
 
     public func detachWorkspace(_ workspaceId: UUID, from sessionId: UUID) async throws {
-        guard var session = sessions[sessionId] else {
+        var session: ConversationSession
+
+        if let memorySession = sessions[sessionId] {
+            session = memorySession
+        } else if let dbSession = try await persistenceService.fetchSession(id: sessionId) {
+            session = dbSession
+        } else {
             throw SessionError.sessionNotFound
         }
 
@@ -254,13 +302,29 @@ public actor SessionManager {
         }
 
         session.updatedAt = Date()
-        sessions[sessionId] = session
+
+        // Update in-memory if present
+        if sessions[sessionId] != nil {
+            sessions[sessionId] = session
+        }
+
         try await persistenceService.saveSession(session)
     }
 
-    public func getWorkspaces(for sessionId: UUID) -> (primary: UUID?, attached: [UUID])? {
-        guard let session = sessions[sessionId] else { return nil }
-        return (session.primaryWorkspaceId, session.attachedWorkspaces)
+    public func getWorkspaces(for sessionId: UUID) async -> (primary: UUID?, attached: [UUID])? {
+        if let session = sessions[sessionId] {
+            return (session.primaryWorkspaceId, session.attachedWorkspaces)
+        }
+
+        // Fallback: Try to fetch from database
+        if let session = try? await persistenceService.fetchSession(id: sessionId) {
+            // We do NOT add to in-memory `sessions` here to avoid partial state
+            // (missing ContextManager, etc.) unless we want to fully support lazy loading.
+            // For now, just returning the data is enough to satisfy the API.
+            return (session.primaryWorkspaceId, session.attachedWorkspaces)
+        }
+
+        return nil
     }
 
     public func getWorkspace(_ id: UUID) async throws -> Workspace? {
@@ -308,6 +372,55 @@ public actor SessionManager {
                 .fetchAll(db)
 
             return try tools.map { try $0.toToolReference() }
+        }
+    }
+
+    public func getToolSource(toolId: String, for sessionId: UUID) async -> String? {
+        guard let session = sessions[sessionId] else { return nil }
+
+        // 1. Check System Tools
+        if let toolManager = toolManagers[sessionId] {
+            let systemTools = await toolManager.availableTools
+            if systemTools.contains(where: { $0.id == toolId }) {
+                return "System"
+            }
+        }
+
+        // 2. Check Workspaces
+        // 2. Check Workspaces
+        var ids: [UUID] = []
+        if let p = session.primaryWorkspaceId { ids.append(p) }
+        ids.append(contentsOf: session.attachedWorkspaces)
+
+        let workspaceIds = ids
+
+        if workspaceIds.isEmpty { return nil }
+
+        return try? await persistenceService.databaseWriter.read { db in
+            // Find which workspace has this tool
+            if let toolRecord =
+                try WorkspaceTool
+                .filter(Column("toolId") == toolId)
+                .filter(workspaceIds.contains(Column("workspaceId")))
+                .fetchOne(db),
+                let ws = try Workspace.fetchOne(db, key: toolRecord.workspaceId)
+            {
+
+                if ws.hostType == .client {
+                    // Try to find client info
+                    if let owner = ws.ownerId,
+                        let client = try? ClientIdentity.fetchOne(db, key: owner)
+                    {
+                        return "Client: \(client.hostname)"
+                    }
+                    return "Client Workspace"
+                } else if session.primaryWorkspaceId == ws.id {
+                    return "Primary Workspace"
+                } else {
+                    return "Workspace: \(ws.uri.description)"
+                }
+            }
+            return nil
         }
     }
 }

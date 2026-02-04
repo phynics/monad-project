@@ -11,8 +11,9 @@ public protocol LLMClientProtocol: Sendable {
         responseFormat: ChatQuery.ResponseFormat?
     ) async -> AsyncThrowingStream<ChatStreamResult, Error>
 
-    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?) async throws -> String
-    
+    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?) async throws
+        -> String
+
     /// Optional: Fetch available models from the service. Returns nil if not supported.
     func fetchAvailableModels() async throws -> [String]?
 }
@@ -36,14 +37,14 @@ public actor LLMService: LLMServiceProtocol {
 
     /// External tool providers (e.g. MCP) injected from the platform targets
     private var toolProviders: [any ToolProvider] = []
-    
+
     /// Service for generating text embeddings
     public nonisolated let embeddingService: any EmbeddingService
 
     private var client: (any LLMClientProtocol)?
     private var utilityClient: (any LLMClientProtocol)?
     private var fastClient: (any LLMClientProtocol)?
-    
+
     private let storage: ConfigurationStorage
     public let promptBuilder: PromptBuilder
     internal let logger = Logger.llm
@@ -53,16 +54,19 @@ public actor LLMService: LLMServiceProtocol {
     public func getClient() -> (any LLMClientProtocol)? {
         return client
     }
-    
+
     public func getUtilityClient() -> (any LLMClientProtocol)? {
         return utilityClient
     }
-    
+
     public func getFastClient() -> (any LLMClientProtocol)? {
         return fastClient
     }
 
-    internal func setClients(main: (any LLMClientProtocol)?, utility: (any LLMClientProtocol)?, fast: (any LLMClientProtocol)?) {
+    internal func setClients(
+        main: (any LLMClientProtocol)?, utility: (any LLMClientProtocol)?,
+        fast: (any LLMClientProtocol)?
+    ) {
         self.client = main
         self.utilityClient = utility
         self.fastClient = fast
@@ -85,9 +89,9 @@ public actor LLMService: LLMServiceProtocol {
         self.utilityClient = utilityClient
         self.fastClient = fastClient
         self.isConfigured = client != nil
-        
+
         let needsLoad = client == nil
-        
+
         Task { [needsLoad] in
             await storage.migrateIfNeeded()
             if needsLoad {
@@ -108,7 +112,9 @@ public actor LLMService: LLMServiceProtocol {
         self.isConfigured = config.isValid
 
         if config.isValid {
-            logger.info("Loaded configuration. Main: \(config.modelName), Utility: \(config.utilityModel), Fast: \(config.fastModel)")
+            logger.info(
+                "Loaded configuration. Main: \(config.modelName), Utility: \(config.utilityModel), Fast: \(config.fastModel)"
+            )
             updateClient(with: config)
         } else {
             logger.notice("LLM service not yet configured")
@@ -138,7 +144,9 @@ public actor LLMService: LLMServiceProtocol {
     }
 
     public func updateConfiguration(_ config: LLMConfiguration) async throws {
-        logger.info("Updating configuration to models: \(config.modelName) / \(config.utilityModel) / \(config.fastModel)")
+        logger.info(
+            "Updating configuration to models: \(config.modelName) / \(config.utilityModel) / \(config.fastModel)"
+        )
         try await storage.save(config)
         self.configuration = config
         self.isConfigured = config.isValid
@@ -169,23 +177,25 @@ public actor LLMService: LLMServiceProtocol {
         try await sendMessage(content, responseFormat: nil, useUtilityModel: false)
     }
 
-    public func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool) async throws -> String {
+    public func sendMessage(
+        _ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool
+    ) async throws -> String {
         let selectedClient: (any LLMClientProtocol)?
         if useUtilityModel {
             selectedClient = utilityClient ?? client
         } else {
             selectedClient = client
         }
-        
+
         guard let client = selectedClient else {
             throw LLMServiceError.notConfigured
         }
         return try await client.sendMessage(content, responseFormat: responseFormat)
     }
-    
+
     public func buildPrompt(
         userQuery: String,
-        contextNotes: [Note],
+        contextNotes: [ContextFile],
         documents: [DocumentContext] = [],
         memories: [Memory] = [],
         chatHistory: [Message],

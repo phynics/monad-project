@@ -67,26 +67,15 @@ struct MonadServer: AsyncParsableCommand {
         let embeddingService = LocalEmbeddingService()
         let llmService = ServerLLMService()
         await llmService.loadConfiguration()
-        
+
         let workspaceRoot = try Self.defaultWorkspacePath()
-        
+
         let sessionManager = SessionManager(
-            persistenceService: persistenceService, 
+            persistenceService: persistenceService,
             embeddingService: embeddingService,
             llmService: llmService,
             workspaceRoot: workspaceRoot
         )
-        
-        // Migrate legacy notes if any
-        let migrationUtility = NotesMigrationUtility(dbQueue: persistenceService.dbQueue)
-        do {
-            let count = try await migrationUtility.migrateAllNotes()
-            if count > 0 {
-                logger.info("Migrated \(count) notes to filesystem.")
-            }
-        } catch {
-            logger.error("Failed to migrate legacy notes: \(error.localizedDescription)")
-        }
 
         // Public routes
         router.get("/health") { _, _ -> String in
@@ -116,17 +105,23 @@ struct MonadServer: AsyncParsableCommand {
         let memoryController = MemoryController<BasicRequestContext>(sessionManager: sessionManager)
         memoryController.addRoutes(to: protected.group("/memories"))
 
+        let pruneController = PruneController<BasicRequestContext>(
+            persistenceService: persistenceService)
+        pruneController.addRoutes(to: protected.group("/prune"))
+
         let toolController = ToolController<BasicRequestContext>(sessionManager: sessionManager)
         toolController.addRoutes(to: protected.group("/tools"))
 
         // Create database writer accessor (since it's an actor property, access it async or assume safe access pattern)
-        // PersistenceService is an actor. accessing property needs await.
-        // run() is async.
         let dbWriter = persistenceService.databaseWriter
 
         let workspaceController = WorkspaceController<BasicRequestContext>(
             dbWriter: dbWriter, logger: logger)
         workspaceController.addRoutes(to: protected.group("/workspaces"))
+
+        let filesController = FilesController<BasicRequestContext>(
+            workspaceController: workspaceController)
+        filesController.addRoutes(to: protected.group("/workspaces/:id/files"))
 
         let clientController = ClientController<BasicRequestContext>(
             dbWriter: dbWriter, logger: logger)
@@ -149,24 +144,53 @@ struct MonadServer: AsyncParsableCommand {
         advertiser.stop()
     }
 
-    /// Default workspace path in Application Support
+    /// Default workspace path
     private static func defaultWorkspacePath() throws -> URL {
         let fileManager = FileManager.default
-        guard
-            let appSupport = fileManager.urls(
-                for: .applicationSupportDirectory, in: .userDomainMask
-            ).first
-        else {
-            // Fallback to home/.monad/workspaces if app support not found
+        let appName = "Monad"
+
+        #if os(macOS)
+            guard
+                let appSupport = fileManager.urls(
+                    for: .applicationSupportDirectory, in: .userDomainMask
+                ).first
+            else {
+                // Fallback
+                let home = fileManager.homeDirectoryForCurrentUser
+                let workspacesDir = home.appendingPathComponent(
+                    ".monad/workspaces", isDirectory: true)
+                try? fileManager.createDirectory(
+                    at: workspacesDir, withIntermediateDirectories: true)
+                return workspacesDir
+            }
+
+            let appDir = appSupport.appendingPathComponent(appName, isDirectory: true)
+            let workspacesDir = appDir.appendingPathComponent("Workspaces", isDirectory: true)
+            try fileManager.createDirectory(at: workspacesDir, withIntermediateDirectories: true)
+            return workspacesDir
+
+        #elseif os(Linux)
+            let env = ProcessInfo.processInfo.environment
+            let dataHome: URL
+            if let xdgData = env["XDG_DATA_HOME"] {
+                dataHome = URL(fileURLWithPath: xdgData)
+            } else {
+                dataHome = fileManager.homeDirectoryForCurrentUser
+                    .appendingPathComponent(".local")
+                    .appendingPathComponent("share")
+            }
+
+            let appDir = dataHome.appendingPathComponent(appName.lowercased(), isDirectory: true)
+            let workspacesDir = appDir.appendingPathComponent("workspaces", isDirectory: true)
+            try fileManager.createDirectory(at: workspacesDir, withIntermediateDirectories: true)
+            return workspacesDir
+
+        #else
+            // Fallback
             let home = fileManager.homeDirectoryForCurrentUser
             let workspacesDir = home.appendingPathComponent(".monad/workspaces", isDirectory: true)
             try fileManager.createDirectory(at: workspacesDir, withIntermediateDirectories: true)
             return workspacesDir
-        }
-
-        let appDir = appSupport.appendingPathComponent("MonadAssistant", isDirectory: true)
-        let workspacesDir = appDir.appendingPathComponent("Workspaces", isDirectory: true)
-        try fileManager.createDirectory(at: workspacesDir, withIntermediateDirectories: true)
-        return workspacesDir
+        #endif
     }
 }

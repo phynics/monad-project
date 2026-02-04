@@ -43,20 +43,26 @@ public struct SystemInstructionsComponent: PromptSection {
 public struct ContextNotesComponent: PromptSection {
     public let sectionId = "context_notes"
     public let priority = 90
-    public let notes: [Note]
+    public let notes: [ContextFile]
 
-    public init(notes: [Note]) {
+    public init(notes: [ContextFile]) {
         self.notes = notes
     }
 
     public func generateContent() async -> String? {
         guard !notes.isEmpty else { return nil }
 
-        // Use Note's promptString (PromptFormattable protocol)
-        let notesText = notes.map { $0.promptString }.joined(separator: "\n\n")
+        let notesText = notes.map { note in
+            """
+            File: \(note.name)
+            Source: \(note.source)
+            Content:
+            \(note.content)
+            """
+        }.joined(separator: "\n\n")
 
         return """
-            The following context notes contain important information about the user, the project, and your persona. Use them to provide accurate and personalized responses.
+            The following context files contain important information about the user, the project, and your persona. Use them to provide accurate and personalized responses.
 
             \(notesText)
             """
@@ -70,7 +76,7 @@ public struct ContextNotesComponent: PromptSection {
 /// Relevant memories component (Semantic Context)
 public struct MemoriesComponent: PromptSection {
     public let sectionId = "memories"
-    public let priority = 85 // Higher than tools, lower than context notes
+    public let priority = 85  // Higher than tools, lower than context notes
     public let memories: [Memory]
 
     public init(memories: [Memory]) {
@@ -81,13 +87,13 @@ public struct MemoriesComponent: PromptSection {
         if memories.isEmpty {
             return """
                 No relevant memories found for this query.
-                
+
                 Memories are persistent facts, preferences, or notes about the user and past interactions that are stored in your long-term memory. You can create new memories using the `create_memory` tool or edit existing ones with `edit_memory`. 
-                
+
                 When creating or editing memories:
                 - Compress the content to be concise but informative.
                 - Use "quotes" around specific phrases or terms that might be useful to reference-back later for exact matching or clarity.
-                
+
                 Always use these tools to store important information that should be remembered across different chat sessions.
                 """
         }
@@ -166,7 +172,7 @@ public struct UserQueryComponent: PromptSection {
 /// Loaded documents component
 public struct DocumentsComponent: PromptSection {
     public let sectionId = "documents"
-    public let priority = 95 // High priority, below system instructions
+    public let priority = 95  // High priority, below system instructions
     public let documents: [DocumentContext]
 
     public init(documents: [DocumentContext]) {

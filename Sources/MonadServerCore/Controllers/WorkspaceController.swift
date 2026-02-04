@@ -68,12 +68,16 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
             status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
     }
 
+    public func getWorkspace(id: UUID) async throws -> Workspace? {
+        return try await dbWriter.read { db in
+            try Workspace.fetchOne(db, key: id)
+        }
+    }
+
     /// GET /workspaces/:id
     @Sendable func get(request: Request, context: Context) async throws -> Response {
         let id = try context.parameters.require("id", as: UUID.self)
-        let workspace = try await dbWriter.read { db in
-            try Workspace.fetchOne(db, key: id)
-        }
+        let workspace = try await getWorkspace(id: id)
 
         guard let workspace = workspace else {
             throw HTTPError(.notFound)

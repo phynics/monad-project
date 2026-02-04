@@ -18,15 +18,15 @@ public actor PromptBuilder {
     /// - Returns: Tuple of (messages for LLM, debug raw prompt string, structured prompt sections)
     public func buildPrompt(
         systemInstructions: String? = nil,
-        contextNotes: [Note],
+        contextNotes: [ContextFile],
         documents: [DocumentContext] = [],
         memories: [Memory] = [],
         tools: [Tool] = [],
         chatHistory: [Message],
         userQuery: String
     ) async -> (
-        messages: [ChatQuery.ChatCompletionMessageParam], 
-        rawPrompt: String, 
+        messages: [ChatQuery.ChatCompletionMessageParam],
+        rawPrompt: String,
         structuredContext: [String: String]
     ) {
 
@@ -42,12 +42,12 @@ public actor PromptBuilder {
         if !contextNotes.isEmpty {
             components.append(ContextNotesComponent(notes: contextNotes))
         }
-        
+
         // Documents
         if !documents.isEmpty {
             components.append(DocumentsComponent(documents: documents))
         }
-        
+
         // Memories (Semantic Context)
         var allMemories = memories
         for msg in chatHistory {
@@ -83,15 +83,16 @@ public actor PromptBuilder {
 
         // Build OpenAI messages
         let messages = await buildMessages(
-            systemContent: systemContent, 
-            history: historyMessages, 
+            systemContent: systemContent,
+            history: historyMessages,
             userQuery: userQuery,
             components: components
         )
 
         // Generate structured context for debug
-        let structuredContext = await generateStructuredContext(components: components, chatHistory: chatHistory)
-        
+        let structuredContext = await generateStructuredContext(
+            components: components, chatHistory: chatHistory)
+
         // Generate raw string from structured context (for backward compatibility/easy viewing)
         // Order by component priority? generateStructuredContext returns a Dict, so order is lost.
         // We should re-iterate components to build raw string to preserve order.
@@ -134,7 +135,8 @@ public actor PromptBuilder {
                 let history = chatHistory.map { msg in
                     "[\(msg.role.rawValue.uppercased())] \(msg.content)"
                 }.joined(separator: "\n\n")
-                sections.append("=== CHAT HISTORY ===\n\(history.isEmpty ? "[No history yet]" : history)")
+                sections.append(
+                    "=== CHAT HISTORY ===\n\(history.isEmpty ? "[No history yet]" : history)")
             } else if let content = await component.generateContent() {
                 sections.append("=== \(component.sectionId.uppercased()) ===\n\(content)")
             }
@@ -153,7 +155,9 @@ public actor PromptBuilder {
 
         // Generate content for each component
         for component in components {
-            if component.sectionId == "chat_history" || component.sectionId == "user_query" || component.sectionId == "memories" {
+            if component.sectionId == "chat_history" || component.sectionId == "user_query"
+                || component.sectionId == "memories"
+            {
                 // These are handled separately in buildMessages
                 continue
             }
@@ -183,8 +187,10 @@ public actor PromptBuilder {
         var combinedSystemContent = systemContent
 
         // Memories (Semantic Context) - Combine with system instructions
-        if let memoriesComponent = components.first(where: { $0.sectionId == "memories" }) as? MemoriesComponent,
-           let content = await memoriesComponent.generateContent() {
+        if let memoriesComponent = components.first(where: { $0.sectionId == "memories" })
+            as? MemoriesComponent,
+            let content = await memoriesComponent.generateContent()
+        {
             if !combinedSystemContent.isEmpty {
                 combinedSystemContent += "\n\n"
             }
@@ -206,31 +212,37 @@ public actor PromptBuilder {
                 if let think = msg.think {
                     content = "<think>\(think)</think>\n\(content)"
                 }
-                
+
                 // Map internal ToolCall to OpenAI ToolCall
-                let toolCalls: [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam]? = msg.toolCalls?.map { toolCall in
-                    .init(
-                        id: toolCall.id.uuidString, 
-                        function: .init(
-                            arguments: (try? toolCall.arguments.toJsonString()) ?? "{}",
-                            name: toolCall.name
-                        )
-                    )
-                }
-                
+                let toolCalls:
+                    [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam]? =
+                        msg.toolCalls?.map { toolCall in
+                            .init(
+                                id: toolCall.id.uuidString,
+                                function: .init(
+                                    arguments: (try? toolCall.arguments.toJsonString()) ?? "{}",
+                                    name: toolCall.name
+                                )
+                            )
+                        }
+
                 messages.append(
-                    .assistant(.init(content: .textContent(content), name: nil, toolCalls: toolCalls)))
+                    .assistant(
+                        .init(content: .textContent(content), name: nil, toolCalls: toolCalls)))
             case .system:
                 // History can contain system messages (e.g. context/summaries)
                 messages.append(.system(.init(content: .textContent(msg.content), name: nil)))
             case .tool:
                 // Tool responses are formatted as user messages with <tool_response> tags
                 // Add hidden instruction to guide the model's response
-                let hiddenInstruction = "\n[System: This is a system message hidden from user; now respond to the user about this result.]"
+                let hiddenInstruction =
+                    "\n[System: This is a system message hidden from user; now respond to the user about this result.]"
                 messages.append(
                     .user(
                         .init(
-                            content: .string("<tool_response>\n\(msg.content)\n</tool_response>\(hiddenInstruction)"),
+                            content: .string(
+                                "<tool_response>\n\(msg.content)\n</tool_response>\(hiddenInstruction)"
+                            ),
                             name: nil)))
             case .summary:
                 messages.append(.system(.init(content: .textContent(msg.content), name: nil)))
@@ -266,7 +278,8 @@ public actor PromptBuilder {
                 if result.count < messages.count {
                     let skippedCount = messages.count - result.count
                     let summary = Message(
-                        content: "[System: History truncated. \(skippedCount) earlier messages hidden. Use `view_chat_history` tool to retrieve them.]",
+                        content:
+                            "[System: History truncated. \(skippedCount) earlier messages hidden. Use `view_chat_history` tool to retrieve them.]",
                         role: .system,
                         isSummary: true
                     )

@@ -23,7 +23,11 @@ public struct SessionController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func create(_ request: Request, context: Context) async throws -> Response {
-        let session = try await sessionManager.createSession()
+        let input = try? await request.decode(as: CreateSessionRequest.self, context: context)
+        let session = try await sessionManager.createSession(
+            title: input?.title ?? "New Conversation",
+            persona: input?.persona
+        )
         let response = SessionResponse(
             id: session.id,
             title: session.title,
@@ -32,6 +36,7 @@ public struct SessionController<Context: RequestContext>: Sendable {
             isArchived: session.isArchived,
             tags: session.tagArray,
             workingDirectory: session.workingDirectory,
+            persona: session.persona,
             primaryWorkspaceId: session.primaryWorkspaceId,
             attachedWorkspaceIds: session.attachedWorkspaces
         )
@@ -53,6 +58,7 @@ public struct SessionController<Context: RequestContext>: Sendable {
                 isArchived: session.isArchived,
                 tags: session.tagArray,
                 workingDirectory: session.workingDirectory,
+                persona: session.persona,
                 primaryWorkspaceId: session.primaryWorkspaceId,
                 attachedWorkspaceIds: session.attachedWorkspaces
             )
@@ -77,8 +83,6 @@ public struct SessionController<Context: RequestContext>: Sendable {
         return Response(
             status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
     }
-    
-
 
     // MARK: - Workspace Endpoints
 
