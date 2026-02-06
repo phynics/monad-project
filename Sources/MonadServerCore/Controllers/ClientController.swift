@@ -17,6 +17,8 @@ public struct ClientController<Context: RequestContext>: Sendable {
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("register", use: register)
         group.get(":id", use: get)
+        group.get(use: list)
+        group.delete(":id", use: delete)
     }
 
     /// POST /clients/register
@@ -84,6 +86,33 @@ public struct ClientController<Context: RequestContext>: Sendable {
         headers[.contentType] = "application/json"
         return Response(
             status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+    }
+
+    /// GET /clients
+    @Sendable func list(request: Request, context: Context) async throws -> Response {
+        let clients = try await dbWriter.read { db in
+            try ClientIdentity.fetchAll(db)
+        }
+
+        let data = try SerializationUtils.jsonEncoder.encode(clients)
+        var headers = HTTPFields()
+        headers[.contentType] = "application/json"
+        return Response(
+            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+    }
+
+    /// DELETE /clients/:id
+    @Sendable func delete(request: Request, context: Context) async throws -> Response {
+        let id = try context.parameters.require("id", as: UUID.self)
+        let deleted = try await dbWriter.write { db in
+            try ClientIdentity.deleteOne(db, key: id)
+        }
+
+        guard deleted else {
+            throw HTTPError(.notFound)
+        }
+
+        return Response(status: .noContent)
     }
 }
 

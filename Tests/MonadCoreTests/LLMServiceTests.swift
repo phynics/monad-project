@@ -2,8 +2,6 @@ import OpenAI
 import MonadCore
 import Testing
 
-@testable import MonadCore
-
 @Suite @MainActor
 struct LLMServiceTests {
     private let llmService: LLMService
@@ -168,17 +166,17 @@ struct LLMServiceTests {
     func titleGeneration() async throws {
         let mockClient = MockLLMClient()
         mockClient.nextResponse = "SwiftUI Basics"
-        
+
         let service = LLMService(utilityClient: mockClient)
-        
+
         let messages = [
             Message(content: "How do I use SwiftUI?", role: .user),
             Message(content: "You use it by declaring views.", role: .assistant)
         ]
-        
+
         let title = try await service.generateTitle(for: messages)
         #expect(title == "SwiftUI Basics")
-        
+
         // Verify transcript was sent in the prompt
         if let lastMessage = mockClient.lastMessages.last {
             if case .user(let m) = lastMessage, case .string(let content) = m.content {

@@ -11,7 +11,7 @@ final class SessionSeedingTests: XCTestCase {
         persistence = MockPersistenceService()
         workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
-        
+
         sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: MockEmbeddingService(),
@@ -22,11 +22,11 @@ final class SessionSeedingTests: XCTestCase {
 
     func testSessionSeeding() async throws {
         let session = try await sessionManager.createSession(title: "Test Session")
-        
+
         let sessionDir = workspaceRoot.appendingPathComponent("sessions").appendingPathComponent(session.id.uuidString)
         let notesDir = sessionDir.appendingPathComponent("Notes")
         let personasDir = sessionDir.appendingPathComponent("Personas")
-        
+
         XCTAssertTrue(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Welcome.md").path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Project.md").path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: personasDir.appendingPathComponent("Default.md").path))

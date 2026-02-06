@@ -3,14 +3,14 @@ import MonadCore
 import Testing
 
 @Suite struct LLMConfigurationTests {
-    
+
     @Test("Default configuration validity")
     func defaultConfiguration() {
         let config = LLMConfiguration.openAI
         #expect(!config.isValid) // Invalid because API key is empty
         #expect(config.provider == .openAI)
     }
-    
+
     @Test("Valid OpenAI configuration")
     func validOpenAI() {
         let config = LLMConfiguration(
@@ -21,7 +21,7 @@ import Testing
         )
         #expect(config.isValid)
     }
-    
+
     @Test("Valid Ollama configuration (No API Key)")
     func validOllama() {
         let config = LLMConfiguration(
@@ -32,7 +32,7 @@ import Testing
         )
         #expect(config.isValid)
     }
-    
+
     @Test("Invalid Endpoint")
     func invalidEndpoint() {
         let config = LLMConfiguration(
@@ -43,7 +43,7 @@ import Testing
         )
         #expect(!config.isValid)
     }
-    
+
     @Test("Missing Model Name")
     func missingModel() {
         let config = LLMConfiguration(

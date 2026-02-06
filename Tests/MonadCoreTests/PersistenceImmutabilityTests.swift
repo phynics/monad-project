@@ -3,8 +3,6 @@ import GRDB
 import MonadCore
 import Testing
 
-@testable import MonadCore
-
 @Suite(.serialized)
 @MainActor
 struct PersistenceImmutabilityTests {
@@ -89,22 +87,22 @@ struct PersistenceImmutabilityTests {
         let fetchedMessages = try await persistence.fetchMessages(for: sessionId)
         #expect(fetchedMessages.isEmpty)
     }
-    
+
     @Test("Test that archived sessions cannot be deleted or modified")
     func sessionImmutability() async throws {
         var session = ConversationSession(title: "Permanent Session")
         session.isArchived = true
         try await persistence.saveSession(session)
-        
+
         let sessionId = session.id
-        
+
         // Attempt to delete session
         await #expect(throws: Error.self) {
             try await dbQueue.write { db in
                 try db.execute(sql: "DELETE FROM conversationSession WHERE id = ?", arguments: [sessionId])
             }
         }
-        
+
         // Attempt to update session title
         await #expect(throws: Error.self) {
             try await dbQueue.write { db in
@@ -118,19 +116,19 @@ struct PersistenceImmutabilityTests {
         var session = ConversationSession(title: "Temporary Session")
         session.isArchived = false
         try await persistence.saveSession(session)
-        
+
         let sessionId = session.id
-        
+
         // Attempt to update session title - SHOULD SUCCESS
         try await dbQueue.write { db in
             try db.execute(sql: "UPDATE conversationSession SET title = 'Changed' WHERE id = ?", arguments: [sessionId])
         }
-        
+
         // Attempt to delete session - SHOULD SUCCESS
         try await dbQueue.write { db in
             try db.execute(sql: "DELETE FROM conversationSession WHERE id = ?", arguments: [sessionId])
         }
-        
+
         let fetched = try await persistence.fetchSession(id: sessionId)
         #expect(fetched == nil)
     }

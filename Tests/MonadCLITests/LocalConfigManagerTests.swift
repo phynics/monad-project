@@ -23,7 +23,7 @@ final class LocalConfigManagerTests: XCTestCase {
 
         let sessionId = UUID().uuidString
         let workspaces = ["file:///tmp/test": UUID().uuidString]
-        
+
         manager.updateLastSessionId(sessionId)
         manager.updateClientWorkspaces(workspaces)
 

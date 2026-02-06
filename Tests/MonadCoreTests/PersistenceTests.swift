@@ -3,8 +3,6 @@ import GRDB
 import MonadCore
 import Testing
 
-@testable import MonadCore
-
 @Suite(.serialized)
 @MainActor
 struct PersistenceTests {
@@ -69,7 +67,7 @@ struct PersistenceTests {
 
         let fetchedMessages = try await persistence.fetchMessages(for: session.id)
         #expect(fetchedMessages.count == 1)
-        
+
         let uiMessage = fetchedMessages[0].toMessage()
         #expect(uiMessage.recalledMemories?.count == 2)
         #expect(uiMessage.recalledMemories?[0].title == "Memory 1")
@@ -190,13 +188,13 @@ struct PersistenceTests {
         // Create memories with distinct vectors
         let m1 = Memory(title: "Apple", content: "A fruit", embedding: [1.0, 0.0, 0.0])
         let m2 = Memory(title: "Banana", content: "Another fruit", embedding: [0.0, 1.0, 0.0])
-        
+
         _ = try await persistence.saveMemory(m1, policy: .immediate)
         _ = try await persistence.saveMemory(m2, policy: .immediate)
-        
+
         // Search for something close to m1
         let results = try await persistence.searchMemories(embedding: [0.9, 0.1, 0.0], limit: 1, minSimilarity: 0.1)
-        
+
         #expect(results.count == 1)
         #expect(results.first?.memory.title == "Apple")
         #expect(results.first?.similarity ?? 0 > 0.9)

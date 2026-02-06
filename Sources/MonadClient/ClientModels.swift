@@ -37,6 +37,9 @@ public typealias ToolCallDelta = MonadCore.ToolCallDelta
 /// Metadata about the context used for a chat response
 public typealias ChatMetadata = MonadCore.ChatMetadata
 
+// MARK: - Client API Models
+public typealias ClientIdentity = MonadCore.ClientIdentity
+
 // MARK: - Error Models
 
 /// Errors that can occur when communicating with the server

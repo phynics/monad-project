@@ -90,34 +90,66 @@ extension PersistenceService {
         }
     }
 
-    public func pruneSessions(olderThan timeInterval: TimeInterval, excluding: [UUID] = [])
+    public func pruneSessions(
+        olderThan timeInterval: TimeInterval, excluding: [UUID] = [], dryRun: Bool
+    )
         async throws -> Int
     {
         try await dbQueue.write { db in
             let cutoffDate = Date().addingTimeInterval(-timeInterval)
 
-            // If timeInterval is 0 (or very small), we mean "all sessions".
-            // But we still respect the cutoff date logic: Date() - 0 = Date().
-            // So we delete everything older than "now", which is everything.
-
             var query = ConversationSession.filter(Column("updatedAt") < cutoffDate)
+                .filter(Column("isArchived") == false)
 
             if !excluding.isEmpty {
                 query = query.filter(!excluding.contains(Column("id")))
             }
 
-            return try query.deleteAll(db)
+            if dryRun {
+                return try query.fetchCount(db)
+            } else {
+                let candidates = try query.fetchAll(db)
+                var deletedCount = 0
+                for session in candidates {
+                    // Double check before deleting
+                    if session.isArchived {
+                        logger.warning(
+                            "Skipping prune of archived session found in candidates: \(session.id)")
+                        continue
+                    }
+
+                    do {
+                        let didDelete = try ConversationSession.deleteOne(
+                            db, key: ["id": session.id])
+                        deletedCount += (didDelete ? 1 : 0)
+                        logger.debug("Pruned session: \(session.id)")
+                    } catch {
+                        logger.error("Failed to prune session \(session.id): \(error)")
+                        // Check if we should abort or continue?
+                        // For now continue to try pruning others
+                    }
+                }
+                return deletedCount
+            }
         }
     }
 
-    public func pruneMessages(olderThan timeInterval: TimeInterval) async throws -> Int {
+    public func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws
+        -> Int
+    {
         try await dbQueue.write { db in
             let cutoffDate = Date().addingTimeInterval(-timeInterval)
-            let count =
-                try ConversationMessage
-                .filter(Column("createdAt") < cutoffDate)
-                .deleteAll(db)
-            return count
+            let query =
+                ConversationMessage
+                .filter(Column("timestamp") < cutoffDate)
+                .filter(
+                    sql: "sessionId IN (SELECT id FROM conversationSession WHERE isArchived = 0)")
+
+            if dryRun {
+                return try query.fetchCount(db)
+            } else {
+                return try query.deleteAll(db)
+            }
         }
     }
 }

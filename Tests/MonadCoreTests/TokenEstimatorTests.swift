@@ -1,8 +1,6 @@
 import MonadCore
 import Testing
 
-@testable import MonadCore
-
 @Suite struct TokenEstimatorTests {
 
     @Test("Test empty string estimation")

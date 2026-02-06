@@ -6,16 +6,33 @@ struct MemoryCommand: SlashCommand {
     let aliases = ["memories"]
     let description = "Manage memories"
     let category: String? = "Data Management"
-    let usage = "/memory [list|search] <query>"
+    let usage = "/memory [all|list|search] <query>"
 
     func run(args: [String], context: ChatContext) async throws {
-        let subcommand = args.first ?? "list"
+        let subcommand = args.first
+
+        // Default to active list if no args
+        if subcommand == nil {
+            try await listActive(context: context)
+            return
+        }
+
         switch subcommand {
+        case "all":
+            let screen = MemoryScreen(client: context.client)
+            try await screen.show()
         case "list", "ls":
-            try await listMemories(context: context)
+            // "list" can be ambiguous, let's make it show active too?
+            // Or keep it as TUI? The user request said "info to direct user to /memory all".
+            // Let's make "list" alias to active list for consistency with other commands perhaps?
+            // Actually, keep "list" as TUI might be confusing if /memory listActive is default.
+            // Let's make 'list' show active, and 'all' show TUI.
+            try await listActive(context: context)
         case "search":
             if args.count > 1 {
-                try await searchMemories(args.dropFirst().joined(separator: " "), context: context)
+                let query = args.dropFirst().joined(separator: " ")
+                let screen = MemoryScreen(client: context.client)
+                try await screen.show(initialQuery: query)
             } else {
                 TerminalUI.printError("Usage: /memory search <query>")
             }
@@ -26,8 +43,35 @@ struct MemoryCommand: SlashCommand {
                 TerminalUI.printError("Usage: /memory view <id>")
             }
         default:
-            try await listMemories(context: context)
+            // Fallback to active list
+            try await listActive(context: context)
         }
+    }
+
+    private func listActive(context: ChatContext) async throws {
+        let memories = try await context.client.listMemories()
+        let config = try await context.client.getConfiguration()
+        let limit = config.memoryContextLimit
+        let activeMemories = Array(memories.prefix(limit))
+
+        print(
+            "\n\(TerminalUI.bold("Active Context Memories (\(activeMemories.count)/\(limit)):"))\n")
+
+        if activeMemories.isEmpty {
+            print(TerminalUI.dim("  No active memories."))
+        } else {
+            for memory in activeMemories {
+                let contentPreview = String(memory.content.prefix(60)).replacingOccurrences(
+                    of: "\n", with: " ")
+                print(
+                    "  \(TerminalUI.dim(memory.id.uuidString.prefix(8).description)) | \(contentPreview)..."
+                )
+            }
+        }
+
+        print("")
+        print(TerminalUI.dim("Use '/memory all' to manage all \(memories.count) memories."))
+        print("")
     }
 
     private func viewMemory(_ idPrefix: String, context: ChatContext) async throws {
@@ -62,60 +106,5 @@ struct MemoryCommand: SlashCommand {
         print("")
         print(memory.content)
         print("")
-    }
-
-    private func listMemories(context: ChatContext) async throws {
-        let memories = try await context.client.listMemories()
-        let config = try await context.client.getConfiguration()
-        let activeLimit = config.memoryContextLimit
-
-        if memories.isEmpty {
-            TerminalUI.printInfo("No memories found.")
-            return
-        }
-
-        print("\n\(TerminalUI.bold("Memories:"))")
-        print(
-            TerminalUI.dim("(\(min(memories.count, activeLimit)) active / \(memories.count) total)")
-        )
-        print("")
-
-        for (index, memory) in memories.prefix(20).enumerated() {
-            let isActive = index < activeLimit
-            let status = isActive ? TerminalUI.green("●") : TerminalUI.dim("○")
-            let dateStr = TerminalUI.formatDate(memory.createdAt)
-            let preview = String(memory.content.prefix(50)).replacingOccurrences(
-                of: "\n", with: " ")
-
-            print(
-                "  \(status) \(TerminalUI.dim(memory.id.uuidString.prefix(8).description))  \(preview)\(memory.content.count > 50 ? "..." : "")  \(TerminalUI.dim(dateStr))"
-            )
-        }
-
-        if memories.count > 20 {
-            print("  \(TerminalUI.dim("... and \(memories.count - 20) more"))")
-        }
-        print("")
-    }
-
-    private func searchMemories(_ query: String, context: ChatContext) async throws {
-        let memories = try await context.client.searchMemories(query, limit: 10)
-
-        if memories.isEmpty {
-            TerminalUI.printInfo("No memories found matching: \(query)")
-            return
-        }
-
-        print("\n\(TerminalUI.bold("Search Results:"))\n")
-
-        for memory in memories {
-            print(
-                "  \(TerminalUI.bold(String(memory.content.prefix(60))))\(memory.content.count > 60 ? "..." : "")"
-            )
-            if !memory.tagArray.isEmpty {
-                print("  \(TerminalUI.dim("Tags: \(memory.tagArray.joined(separator: ", "))"))")
-            }
-            print("")
-        }
     }
 }

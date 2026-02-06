@@ -311,24 +311,26 @@ public actor MonadClient {
 
     // MARK: - Prune API
 
-    public func pruneMemories(query: String) async throws -> Int {
+    public func pruneMemories(query: String, dryRun: Bool = false) async throws -> Int {
         var request = try buildRequest(path: "/api/prune/memories", method: "POST")
-        request.httpBody = try encoder.encode(PruneQueryRequest(query: query))
+        request.httpBody = try encoder.encode(PruneQueryRequest(query: query, dryRun: dryRun))
         let response: PruneResponse = try await perform(request)
         return response.count
     }
 
-    public func pruneSessions(olderThanDays days: Int, excluding: [UUID] = []) async throws -> Int {
+    public func pruneSessions(olderThanDays days: Int, excluding: [UUID] = [], dryRun: Bool = false)
+        async throws -> Int
+    {
         var request = try buildRequest(path: "/api/prune/sessions", method: "POST")
         request.httpBody = try encoder.encode(
-            PruneSessionRequest(days: days, excludedSessionIds: excluding))
+            PruneSessionRequest(days: days, excludedSessionIds: excluding, dryRun: dryRun))
         let response: PruneResponse = try await perform(request)
         return response.count
     }
 
-    public func pruneMessages(olderThanDays days: Int) async throws -> Int {
+    public func pruneMessages(olderThanDays days: Int, dryRun: Bool = false) async throws -> Int {
         var request = try buildRequest(path: "/api/prune/messages", method: "POST")
-        request.httpBody = try encoder.encode(PruneMessagesRequest(days: days))
+        request.httpBody = try encoder.encode(PruneMessagesRequest(days: days, dryRun: dryRun))
         let response: PruneResponse = try await perform(request)
         return response.count
     }
@@ -351,6 +353,16 @@ public actor MonadClient {
             )
         )
         return try await perform(request)
+    }
+
+    public func listClients() async throws -> [ClientIdentity] {
+        let request = try buildRequest(path: "/api/clients", method: "GET")
+        return try await perform(request)
+    }
+
+    public func deleteClient(_ id: UUID) async throws {
+        let request = try buildRequest(path: "/api/clients/\(id.uuidString)", method: "DELETE")
+        _ = try await performRaw(request)
     }
 
     // MARK: - Private Helpers

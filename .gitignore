@@ -86,3 +86,6 @@ GEMINI.md
 *.log
 tmp/
 conductor/
+
+# Testing
+.test_workspaces/

@@ -1,6 +1,7 @@
 # Monad
 
 ![Spark, a curious lynx](docs/assets/spark.png)
+ok
 
 A headless AI assistant built for deep context integration. Monad focuses on how your data and documents integrate with Large Language Models through a server/CLI architecture.
 

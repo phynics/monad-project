@@ -17,8 +17,8 @@ import Testing
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
         let sessionManager = SessionManager(
-            persistenceService: persistence, 
-            embeddingService: embedding, 
+            persistenceService: persistence,
+            embeddingService: embedding,
             llmService: llm,
             workspaceRoot: workspaceRoot
         )
@@ -54,8 +54,8 @@ import Testing
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
         let sessionManager = SessionManager(
-            persistenceService: persistence, 
-            embeddingService: embedding, 
+            persistenceService: persistence,
+            embeddingService: embedding,
             llmService: llm,
             workspaceRoot: workspaceRoot
         )
@@ -91,8 +91,8 @@ import Testing
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
         let sessionManager = SessionManager(
-            persistenceService: persistence, 
-            embeddingService: embedding, 
+            persistenceService: persistence,
+            embeddingService: embedding,
             llmService: llm,
             workspaceRoot: workspaceRoot
         )
@@ -120,8 +120,8 @@ import Testing
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
         let sessionManager = SessionManager(
-            persistenceService: persistence, 
-            embeddingService: embedding, 
+            persistenceService: persistence,
+            embeddingService: embedding,
             llmService: llm,
             workspaceRoot: workspaceRoot
         )
@@ -152,8 +152,8 @@ import Testing
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
         let sessionManager = SessionManager(
-            persistenceService: persistence, 
-            embeddingService: embedding, 
+            persistenceService: persistence,
+            embeddingService: embedding,
             llmService: llm,
             workspaceRoot: workspaceRoot
         )

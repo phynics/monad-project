@@ -46,6 +46,7 @@ actor ChatREPL: ChatREPLController {
         await registry.register(MemoryCommand())
         await registry.register(PruneSlashCommand())
         await registry.register(TaskCommand())
+        await registry.register(ClientCommand())
     }
 
     func run() async throws {
@@ -53,7 +54,7 @@ actor ChatREPL: ChatREPLController {
         await registerCommands()
 
         // Ensure client is registered and intrinsic tools are active
-        try? await RegistrationManager.shared.ensureRegistered(client: client)
+        _ = try? await RegistrationManager.shared.ensureRegistered(client: client)
 
         // Show active context (memories, documents) at startup
         await showContext()

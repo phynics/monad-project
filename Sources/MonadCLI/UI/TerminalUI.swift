@@ -25,6 +25,11 @@ public enum TerminalUI {
         "\(dimCode)\(text)\(reset)"
     }
 
+    public static func clearScreen() {
+        print("\u{001B}[2J\u{001B}[H", terminator: "")
+        fflush(stdout)
+    }
+
     public static func red(_ text: String) -> String {
         "\(redCode)\(text)\(reset)"
     }

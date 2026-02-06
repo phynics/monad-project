@@ -80,7 +80,7 @@ import Testing
 
         let messages: [Message] = [
             Message(content: "Hello", role: .user),
-            Message(content: "Hi there", role: .assistant),
+            Message(content: "Hi there", role: .assistant)
         ]
 
         let title = try await service.generateTitle(for: messages)

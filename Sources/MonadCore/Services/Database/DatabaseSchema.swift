@@ -350,11 +350,66 @@ public enum DatabaseSchema {
 
         // v20: Add persona column to conversationSession
         migrator.registerMigration("v20") { db in
-            if try !db.columns(in: "conversationSession").contains(where: { $0.name == "persona" }) {
+            if try !db.columns(in: "conversationSession").contains(where: { $0.name == "persona" })
+            {
                 try db.alter(table: "conversationSession") { t in
                     t.add(column: "persona", .text)
                 }
             }
+        }
+
+        // v21: Fix protection triggers (ensure they have correct conditions)
+        migrator.registerMigration("v21") { db in
+            // Drop existing triggers that might be malformed or missing conditions
+            try db.execute(sql: "DROP TRIGGER IF EXISTS prevent_session_deletion")
+            try db.execute(sql: "DROP TRIGGER IF EXISTS prevent_session_modification")
+            try db.execute(sql: "DROP TRIGGER IF EXISTS prevent_message_deletion")
+            try db.execute(sql: "DROP TRIGGER IF EXISTS prevent_message_modification")
+
+            // Re-create triggers with correct WHEN clauses
+            try db.execute(
+                sql: """
+                        CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
+                        BEFORE DELETE ON conversationSession
+                        FOR EACH ROW
+                        WHEN OLD.isArchived = 1
+                        BEGIN
+                            SELECT RAISE(ABORT, 'Archived sessions cannot be deleted');
+                        END;
+                    """)
+
+            try db.execute(
+                sql: """
+                        CREATE TRIGGER IF NOT EXISTS prevent_session_modification
+                        BEFORE UPDATE ON conversationSession
+                        FOR EACH ROW
+                        WHEN OLD.isArchived = 1
+                        BEGIN
+                            SELECT RAISE(ABORT, 'Archived sessions cannot be modified');
+                        END;
+                    """)
+
+            try db.execute(
+                sql: """
+                        CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
+                        BEFORE DELETE ON conversationMessage
+                        FOR EACH ROW
+                        WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
+                        BEGIN
+                            SELECT RAISE(ABORT, 'Archived messages cannot be deleted');
+                        END;
+                    """)
+
+            try db.execute(
+                sql: """
+                        CREATE TRIGGER IF NOT EXISTS prevent_message_modification
+                        BEFORE UPDATE ON conversationMessage
+                        FOR EACH ROW
+                        WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
+                        BEGIN
+                            SELECT RAISE(ABORT, 'Archived messages cannot be modified');
+                        END;
+                    """)
         }
     }
 

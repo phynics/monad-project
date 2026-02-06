@@ -66,7 +66,7 @@ final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
         return AsyncThrowingStream { continuation in
             var delta: [String: Any] = [
                 "role": "assistant",
-                "content": response,
+                "content": response
             ]
 
             if let tc = toolCalls {
@@ -82,9 +82,9 @@ final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
                     [
                         "index": 0,
                         "delta": delta,
-                        "finish_reason": toolCalls != nil ? "tool_calls" : "stop",
+                        "finish_reason": toolCalls != nil ? "tool_calls" : "stop"
                     ]
-                ],
+                ]
             ]
 
             do {
@@ -99,8 +99,7 @@ final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     }
 
     func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?) async throws
-        -> String
-    {
+        -> String {
         if shouldThrowError {
             throw NSError(
                 domain: "MockError", code: 1,
@@ -195,8 +194,7 @@ final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
     }
 
     func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws
-        -> [String: Double]
-    {
+        -> [String: Double] {
         return [:]
     }
 
@@ -299,29 +297,10 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
         return sessions.filter { $0.isArchived && $0.title.contains(query) }
     }
 
-    func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession]
-    {
+    func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession] {
         return sessions.filter { session in
             session.isArchived && !Set(session.tagArray).intersection(tags).isEmpty
         }
-    }
-
-    func pruneSessions(olderThan timeInterval: TimeInterval, excluding: [UUID] = []) async throws
-        -> Int
-    {
-        let cutoffDate = Date().addingTimeInterval(-timeInterval)
-        let countBefore = sessions.count
-        sessions.removeAll { session in
-            !session.isArchived && session.updatedAt < cutoffDate && !excluding.contains(session.id)
-        }
-        return countBefore - sessions.count
-    }
-
-    func pruneMessages(olderThan timeInterval: TimeInterval) async throws -> Int {
-        let cutoffDate = Date().addingTimeInterval(-timeInterval)
-        let countBefore = messages.count
-        messages.removeAll { $0.timestamp < cutoffDate }
-        return countBefore - messages.count
     }
 
     // Jobs
@@ -346,15 +325,44 @@ final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Senda
     }
 
     // MARK: - Prune
-    func pruneMemories(matching query: String) async throws -> Int {
+    func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int {
+        if dryRun {
+            return memories.filter { $0.title.contains(query) || $0.content.contains(query) }.count
+        }
         let countBefore = memories.count
         memories.removeAll { $0.title.contains(query) || $0.content.contains(query) }
         return countBefore - memories.count
     }
 
+    func pruneSessions(olderThan timeInterval: TimeInterval, excluding: [UUID] = [], dryRun: Bool)
+        async throws
+        -> Int {
+        let cutoffDate = Date().addingTimeInterval(-timeInterval)
+        if dryRun {
+            return sessions.filter { session in
+                !session.isArchived && session.updatedAt < cutoffDate
+                    && !excluding.contains(session.id)
+            }.count
+        }
+        let countBefore = sessions.count
+        sessions.removeAll { session in
+            !session.isArchived && session.updatedAt < cutoffDate && !excluding.contains(session.id)
+        }
+        return countBefore - sessions.count
+    }
+
+    func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int {
+        let cutoffDate = Date().addingTimeInterval(-timeInterval)
+        if dryRun {
+            return messages.filter { $0.timestamp < cutoffDate }.count
+        }
+        let countBefore = messages.count
+        messages.removeAll { $0.timestamp < cutoffDate }
+        return countBefore - messages.count
+    }
+
     // RAW SQL Support
-    func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]]
-    {
+    func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]] {
         // Simple mock implementation: return an error if it looks like a deletion we should block
         if sql.lowercased().contains("delete from note") {
             throw NSError(

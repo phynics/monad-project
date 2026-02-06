@@ -3,8 +3,6 @@ import OpenAI
 import MonadCore
 import Testing
 
-@testable import MonadCore
-
 @Suite @MainActor
 struct PromptBuilderRegressionTests {
 
@@ -28,8 +26,7 @@ struct PromptBuilderRegressionTests {
         #expect(userMessages.count == 1)
 
         if let first = userMessages.first, case .user(let params) = first,
-            case .string(let content) = params.content
-        {
+            case .string(let content) = params.content {
             #expect(content == "Hello")
         }
     }

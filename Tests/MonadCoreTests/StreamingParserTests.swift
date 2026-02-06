@@ -1,8 +1,6 @@
 import MonadCore
 import Testing
 
-@testable import MonadCore
-
 @Suite struct StreamingParserTests {
 
     @Test("Test basic content extraction")
@@ -52,7 +50,7 @@ import Testing
         let parser = StreamingParser()
         let chunks = [
             "<", "t", "h", "i", "n", "k", ">", "thought", "<", "/", "t", "h", "i", "n", "k", ">",
-            "content",
+            "content"
         ]
 
         for chunk in chunks {

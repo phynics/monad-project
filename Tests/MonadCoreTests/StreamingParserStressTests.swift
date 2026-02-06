@@ -35,7 +35,7 @@ import Testing
             "```\n",
             "print(\\\"<\\/think>\\\")\\n",
             "```\\n",
-            "</think>",
+            "</think>"
         ]
 
         for chunk in chunks {
@@ -157,7 +157,7 @@ import Testing
             "```\n",
             "End of reasoning.",
             "</", "think>",
-            "\nFinal Answer.",
+            "\nFinal Answer."
         ]
 
         for chunk in chunks {

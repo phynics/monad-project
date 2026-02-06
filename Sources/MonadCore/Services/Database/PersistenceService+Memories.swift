@@ -96,17 +96,21 @@ extension PersistenceService {
         return 0
     }
 
-    public func pruneMemories(matching query: String) async throws -> Int {
+    public func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int {
         try await dbQueue.write { db in
             let pattern = "%\(query)%"
-            let count =
-                try Memory
+            let request =
+                Memory
                 .filter(
                     Column("title").like(pattern) || Column("content").like(pattern)
                         || Column("tags").like(pattern)
                 )
-                .deleteAll(db)
-            return count
+
+            if dryRun {
+                return try request.fetchCount(db)
+            } else {
+                return try request.deleteAll(db)
+            }
         }
     }
 }
