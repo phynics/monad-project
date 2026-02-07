@@ -1,4 +1,4 @@
-# Track cli_server_sync_20260204 Context
+# Track system_status_20260207 Context
 
 - [Specification](./spec.md)
 - [Implementation Plan](./plan.md)

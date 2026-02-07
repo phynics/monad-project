@@ -1,34 +1,26 @@
-# Tech Stack
+# Technology Stack
 
-## Programming Language
-- **Swift 6.0:** Utilizing modern features like Structured Concurrency (Actors, Task) and the Observation framework.
+## Core Language & Runtime
+- **Swift 6.0**: Utilizing structured concurrency and strict concurrency checking for high-performance, safe operations.
+- **Platforms**: macOS (v14+) target.
 
-## Server Framework
-- **Hummingbird:** A modern, high-performance HTTP server framework for Swift, used to power MonadServer.
-- **ArgumentParser:** Used for both MonadServer and MonadCLI command-line interfaces.
+## Backend & API Server
+- **Hummingbird 2.0**: Lightweight, high-performance web framework for the MonadServer REST API.
+- **Swift Service Lifecycle**: Managing the startup and shutdown sequences of server components.
 
-## Logic and Architecture
-- **MonadCore:** A dedicated pure logic framework responsible for context management, persistence, and tool execution.
-- **MonadServerCore:** A server-side framework providing RESTful API controllers and session management.
-- **MonadClient:** HTTP client library for communicating with the server.
-- **Workspace Jailing:** Secure filesystem-level isolation for session-specific storage and tool execution.
-- **MonadCLI:** Command-line interface for interacting with the server.
-- **Modular Design:** Separation of concerns into Core, Server, and Client modules.
-- **Architectural Integrity:**
-    - **Protocol-Oriented Programming:** Services are defined by protocols to enable mocking and isolation.
-    - **Dependency Injection:** Core components like `ContextManager` receive their dependencies via constructor injection, facilitating testability and modularity.
-    - **Comprehensive Testing:** Commitment to high code coverage (>80% for core logic) using XCTest and mocking for all external interactions.
-    - **Database-Level Protection:** Utilizes SQLite triggers to enforce strict immutability for core data types like Notes and Archives.
+## Persistence & Data
+- **GRDB.swift / SQLite**: Robust, local-first persistence for session history, document metadata, and semantic memory.
 
-## Database and Persistence
-- **GRDB.swift:** A robust toolkit for SQLite databases, providing high-level Swift interfaces for concurrent database access.
-- **SQLite:** The underlying persistent storage for conversation history, memories, and notes.
+## AI & LLM Integration
+- **Multi-Provider Strategy**: Modular integration supporting several backends:
+    - **OpenAI**: Primary cloud-based LLM provider.
+    - **OpenRouter**: Unified access to diverse open-source and proprietary models.
+    - **Ollama**: Local LLM execution for enhanced privacy and offline use.
+    - **OpenAI-Compatible APIs**: Support for any backend adhering to the OpenAI specification.
+- **Embeddings**: Local or remote vector generation for semantic search and retrieval-augmented generation (RAG).
 
-## LLM Integration and Services
-- **OpenAI Swift SDK:** Direct integration with OpenAI's models (e.g., GPT-4o).
-- **Local Models (Ollama):** Support for local model execution for privacy and offline use.
-- **OpenRouter:** For accessing a wide variety of models through a single API.
+## Command Line Interface
+- **Swift Argument Parser**: Powering the `MonadCLI` for a robust, typed command-line experience.
 
-## Build and Dependency Management
-- **xcodegen:** For project generation from `project.yml`, ensuring a consistent Xcode environment.
-- **Swift Package Manager (SPM):** For managing external library dependencies.
+## Observability
+- **Swift Log**: Standardized logging across all modules (Core, Server, CLI).

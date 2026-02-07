@@ -1,25 +1,22 @@
 # Initial Concept
-A headless AI assistant focused on speed, deep context, and local-first privacy through semantic retrieval and document workspace management.
+A headless AI assistant built for deep context integration. Monad focuses on how your data and documents integrate with Large Language Models through a server/CLI architecture.
 
 # Product Guide
 
-## Vision
-Monad aims to redefine personal AI interactions by bridging the gap between large language models and local, personal data. It provides a high-performance, private, and deeply contextual environment through a server/CLI architecture.
+## Overview
+Monad is a high-performance, modular AI assistant designed for technical users who require deep context management and a terminal-centric workflow. By separating core logic into a server/client architecture, it provides a flexible environment where documents and data become active, stateful participants in conversations with Large Language Models.
 
-## Target Users
-- **Power Users and Developers:** Individuals who require fast, reliable LLM access and need to integrate it with their local development workflows and technical knowledge base.
-- **Privacy-Conscious Individuals:** Users who prioritize data ownership and want a local-first alternative to traditional cloud-based AI services.
-
-## Core Goals
-- **Deep Semantic Retrieval:** Move beyond simple keyword matching with a sophisticated vector-based context engine and direct SQL-driven data interaction.
-- **Local-First Privacy:** Build a robust architecture that prioritizes local processing and persistent storage (via GRDB/SQLite), ensuring user data remains private.
-- **Hybrid Server Architecture:** REST API server with streaming chat support and secure filesystem-based workspaces, accessible via CLI or HTTP clients.
+## Target Audience
+- **Developers:** Looking to integrate LLMs into their local development workflows and automate complex tasks.
+- **Technical Power Users:** Seeking a robust, terminal-based AI assistant that respects local data and provides powerful context controls.
 
 ## Key Features
-- **Adaptive Context Management:** Automatically retrieves relevant memories and globally injects notes, leveraging direct SQL-driven persistence.
-- **Standalone REST API:** Exposes all assistant capabilities (chat, memory, notes, tools) via a high-performance HTTP server for external integration.
-- **RAW SQL Execution:** Provides the agent with wide latitude to manage custom tables and state while ensuring core data remains immutable.
-- **File-Based Workspaces:** Persistent, jailed session directories on the server for storing Notes and Personas, with support for attaching client-side local directories.
-- **Persona-Driven Identity:** Dynamic persona switching and initialization, allowing the agent to adapt its behavior and instructions per session.
-- **Multi-Model Support:** Integration with providers like OpenAI and local models via Ollama or OpenRouter.
-- **Persistent Memory:** Robust storage of conversation history, memories, and notes with semantic search capabilities.
+- **Headless Architecture:** Clear separation between the core logic engine (MonadCore), the REST API (MonadServer), and the interaction layer (MonadCLI).
+- **Deep Context Integration:** A "Virtual Document Workspace" that allows users to load, pin, and manage document state as active context rather than static attachments.
+- **Semantic Memory:** Adaptive retrieval using vector embeddings and LLM-driven tag boosting to find relevant historical information.
+- **Local-First Approach:** High-performance persistence using GRDB and SQLite, ensuring that session data and local knowledge remain under the user's control.
+
+## Project Goals
+- **Robust Ecosystem:** Provide a stable and performant server/CLI framework for high-frequency AI interactions.
+- **Flexible Workspace:** Create an intuitive way to manage "virtual" documents, allowing the LLM to autonomously search, summarize, and navigate large contexts.
+- **Provider Agility:** Maintain a modular core that can seamlessly integrate with various LLM providers, starting with a strong OpenAI implementation.

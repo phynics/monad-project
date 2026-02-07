@@ -1,8 +1,0 @@
-{
-  "track_id": "cli_server_sync_20260204",
-  "type": "feature",
-  "status": "new",
-  "created_at": "2026-02-04T12:00:00Z",
-  "updated_at": "2026-02-04T12:00:00Z",
-  "description": "CLI/Server Sync, Workspace Robustness, and Prune Command Completion"
-}
