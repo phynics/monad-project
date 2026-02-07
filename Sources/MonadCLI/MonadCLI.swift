@@ -10,12 +10,14 @@ struct MonadCLI: AsyncParsableCommand {
         discussion: """
             An interactive AI assistant for your terminal.
 
-            All functionality is now accessible through the interactive REPL.
+            COMMANDS:
+              chat                          Start an interactive REPL (Default)
+              status                        Show server and component status
 
-            INTERACTIVE COMMANDS:
+            INTERACTIVE COMMANDS (Slash commands):
               /help                         Show available commands
+              /status                       Show server status
               /config                       View/edit configuration
-              /sessions, /memories          Manage data
               /quit                         Exit
               
             ENVIRONMENT VARIABLES:

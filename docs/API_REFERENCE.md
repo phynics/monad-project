@@ -7,28 +7,35 @@ Base URL: `/api`
 ### Standard Response
 All successful responses return JSON with status 200/201.
 
-### Pagination
-List endpoints return a paginated structure:
-```json
-{
-  "items": [...],
-  "metadata": {
-    "page": 1,
-    "perPage": 20,
-    "totalItems": 100,
-    "totalPages": 5
-  }
-}
-```
+---
 
-### Errors
-Error responses (4xx, 5xx) follow this format:
+## System Status
+
+### Health Check
+`GET /health`
+
+Returns `OK` (text/plain) if the server is running.
+
+### Detailed Status
+`GET /status`
+
+Returns detailed health status of all system components.
+
+**Response Body:**
 ```json
 {
-  "error": {
-    "code": "resource_not_found",
-    "message": "The requested session was not found.",
-    "details": { "id": "..." }
+  "status": "ok",
+  "version": "1.0.0",
+  "uptime": 12345,
+  "components": {
+    "database": {
+      "status": "ok",
+      "details": { "path": "/path/to/db.sqlite" }
+    },
+    "ai_provider": {
+      "status": "ok",
+      "details": { "provider": "openai", "model": "gpt-4" }
+    }
   }
 }
 ```

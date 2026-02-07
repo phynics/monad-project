@@ -44,6 +44,9 @@ swift run MonadServer
 
 # In another terminal, use the CLI
 swift run MonadCLI chat
+
+# Check server status
+swift run MonadCLI status
 ```
 
 ### With Xcode
