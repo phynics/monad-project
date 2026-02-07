@@ -1,11 +1,13 @@
 import Foundation
 
-public struct PruneQueryRequest: Codable {
-    public let query: String
+public struct PruneMemoriesRequest: Codable {
+    public let query: String?
+    public let days: Int?
     public let dryRun: Bool?
 
-    public init(query: String, dryRun: Bool? = false) {
+    public init(query: String? = nil, days: Int? = nil, dryRun: Bool? = false) {
         self.query = query
+        self.days = days
         self.dryRun = dryRun
     }
 }

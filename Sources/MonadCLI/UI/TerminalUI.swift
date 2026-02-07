@@ -146,9 +146,13 @@ public enum TerminalUI {
         print("")
     }
 
-    public static func printPrompt(workspace: String? = nil) {
+    public static func getPromptString(workspace: String? = nil) -> String {
         let wsPart = workspace != nil ? "[\(workspace!)] " : ""
-        print("\n\(green(wsPart))\(cyan("monad")) \(bold(">")) ", terminator: "")
+        return "\n\(green(wsPart))\(cyan("monad")) \(bold(">")) "
+    }
+
+    public static func printPrompt(workspace: String? = nil) {
+        print(getPromptString(workspace: workspace), terminator: "")
         fflush(stdout)
     }
 

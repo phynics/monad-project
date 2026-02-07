@@ -199,7 +199,7 @@ public class StreamingParser {
     // MARK: - Tool Parsing
 
     /// Extract tool calls from text containing XML tags
-    func extractToolCalls(from text: String) -> (cleanText: String, toolCalls: [ToolCall]) {
+    public func extractToolCalls(from text: String) -> (cleanText: String, toolCalls: [ToolCall]) {
         var cleanText = text
         var toolCalls: [ToolCall] = []
 

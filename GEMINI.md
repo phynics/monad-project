@@ -8,8 +8,8 @@ The project is built with **Swift 6.0**, utilizing the modern **Observation** fr
 
 ### Key Features
 
-- **Server Architecture:** REST API server with streaming chat support
-- **CLI Interface:** Command-line client for interacting with the server
+- **Server Architecture:** REST API server with **Server-Sent Events (SSE)** for real-time streaming
+- **CLI Interface:** Advanced command-line client with **autocomplete**, **history**, and **slash commands**
 - **LLM Integration:** Supports OpenAI (GPT-4o) and local Ollama models
 - **Persistent Memory:** Stores conversation history, memories, and notes using SQLite (via GRDB)
 - **Modern Swift:** Uses Actors, Structured Concurrency, and `@Observable`
@@ -22,35 +22,82 @@ The project follows a modular architecture organized into targets defined in `pr
 
 - **MonadCore:** The pure logic framework. Contains:
   - **Models:** `Configuration`, `Message`, `Memory`, `Note`, `Tool`
-  - **Services:** `LLMService`, `PersistenceService` (GRDB), `ToolExecutor`, `StreamingCoordinator`
+  - **Services:** 
+    - `LLMService`: Handles interaction with OpenAI/Ollama
+    - `PersistenceService`: Actor-isolated GRDB layer for database storage
+    - `ToolExecutor`: Manages tool execution
+    - `StreamingCoordinator`: Orchestrates real-time SSE streams
+    - `ContextManager`: Manages LLM context window and compression
   - **Utilities:** Logging, Encoding helpers
 
 - **MonadServerCore:** Server-specific services including controllers and route handlers.
+  - **Controllers:** `ChatController`, `SessionController`, `MemoryController`
+  - **Services:** `SessionManager` (Active session state), `ToolRouter` (Routing tool calls)
 
 - **MonadServer:** The REST API server executable. Provides:
-  - Chat endpoints (with streaming)
-  - Session management
-  - Memory and note CRUD
-  - Tool management
+  - Chat endpoints (with SSE streaming)
+  - Lifecycle management
+  - Configuration injection
 
 - **MonadClient:** HTTP client library for communicating with MonadServer.
+  - **SSEStreamReader:** Parses structured server-sent events
+  - **ClientConfiguration:** Manages API connection settings
 
 - **MonadCLI:** Command-line interface for:
-  - Interactive chat sessions
-  - Session management
-  - Memory and note operations
+  - **Interactive Chat:** REPL with streaming response rendering
+  - **Input Handling:** `LineReader` for raw terminal input, history navigation, and tab-autocomplete
+  - **Slash Commands:** Integrated system for commands like `/help`, `/prune`, `/memory`
 
 ### Test Targets
 
 - **MonadCoreTests:** Unit tests for core logic
 - **MonadServerTests:** Server endpoint tests
 
-### Data Flow
+## File Structure
 
-1. **CLI (`MonadCLI`):** User interacts via command line, requests sent to server
-2. **Client (`MonadClient`):** HTTP/SSE client library
-3. **Server (`MonadServer`):** Receives requests, orchestrates core services
-4. **Core (`MonadCore`):** Business logic, persistence, LLM communication
+```
+.
+├── Sources
+│   ├── MonadCLI           # Command-line interface & commands
+│   ├── MonadClient        # Networking & SSE handling
+│   ├── MonadCore          # Shared domain logic, models, & DB
+│   ├── MonadServer        # Server entry point & setup
+│   └── MonadServerCore    # Server controllers & routing
+├── Tests                  # Unit & Integration tests
+├── project.yml            # XcodeGen project definition
+└── Makefile               # Build & utility scripts
+```
+
+## Development Flow
+
+1. **User Interaction:** User inputs a message or slash command in `MonadCLI`.
+2. **Client Layer:** `MonadClient` serializes the request and sends it to `MonadServer`.
+3. **Routing:** `MonadServer` receives the request. `ChatController` or `ToolRouter` handles the logic.
+4. **Core Processing:** 
+   - `PersistenceService` retrieves context.
+   - `LLMService` communicates with the AI model.
+   - `ToolExecutor` runs any requested tools.
+5. **Streaming:** `StreamingCoordinator` pushes incremental updates (usage data, thoughts, tokens) via SSE.
+6. **Rendering:** `MonadCLI` uses `SSEStreamReader` to parse events and render them in real-time to the terminal.
+
+## Important Services
+
+- **PersistenceService (MonadCore):** 
+  - Centralized, actor-isolated access to the SQLite database.
+  - Handles CRUD operations for `ConversationSession`, `Memory`, and `Note`.
+  - Manages database migrations and thread safety.
+
+- **LLMService (MonadCore):**
+  - Abtracts interactions with LLM providers (OpenAI, Ollama).
+  - Handles token estimation and request formatting.
+
+- **SessionManager (MonadServerCore):**
+  - Manages active in-memory session state.
+  - Coordinates session lifecycles and context refreshing.
+
+- **ToolRouter (MonadServerCore):**
+  - Routes dynamic tool invocations to their respective handlers.
+  - Enables the agent to perform actions like web searches or file operations.
 
 ## Development Setup
 

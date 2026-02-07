@@ -5,9 +5,9 @@ import MonadCore
 import NIOCore
 
 public struct PruneController<Context: RequestContext>: Sendable {
-    public let persistenceService: any PersistenceServiceProtocol
+    public let persistenceService: PersistenceService
 
-    public init(persistenceService: any PersistenceServiceProtocol) {
+    public init(persistenceService: PersistenceService) {
         self.persistenceService = persistenceService
     }
 
@@ -20,10 +20,20 @@ public struct PruneController<Context: RequestContext>: Sendable {
     // MARK: - Handlers
 
     @Sendable func pruneMemories(_ request: Request, context: Context) async throws -> Response {
-        let input = try await request.decode(as: PruneQueryRequest.self, context: context)
+        let input = try await request.decode(as: PruneMemoriesRequest.self, context: context)
         let dryRun = input.dryRun ?? false
-        let count = try await persistenceService.pruneMemories(
-            matching: input.query, dryRun: dryRun)
+        let count: Int
+
+        if let query = input.query {
+            count = try await persistenceService.pruneMemories(matching: query, dryRun: dryRun)
+        } else if let days = input.days {
+            let timeInterval = Double(days) * 24 * 60 * 60
+            count = try await persistenceService.pruneMemories(
+                olderThan: timeInterval, dryRun: dryRun)
+        } else {
+            // Default to 0 or error? Currently treating as empty op if neither provided
+            count = 0
+        }
 
         let response = PruneResponse(count: count, dryRun: dryRun)
         let data = try SerializationUtils.jsonEncoder.encode(response)

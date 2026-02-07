@@ -313,7 +313,14 @@ public actor MonadClient {
 
     public func pruneMemories(query: String, dryRun: Bool = false) async throws -> Int {
         var request = try buildRequest(path: "/api/prune/memories", method: "POST")
-        request.httpBody = try encoder.encode(PruneQueryRequest(query: query, dryRun: dryRun))
+        request.httpBody = try encoder.encode(PruneMemoriesRequest(query: query, dryRun: dryRun))
+        let response: PruneResponse = try await perform(request)
+        return response.count
+    }
+
+    public func pruneMemories(olderThanDays days: Int, dryRun: Bool = false) async throws -> Int {
+        var request = try buildRequest(path: "/api/prune/memories", method: "POST")
+        request.httpBody = try encoder.encode(PruneMemoriesRequest(days: days, dryRun: dryRun))
         let response: PruneResponse = try await perform(request)
         return response.count
     }

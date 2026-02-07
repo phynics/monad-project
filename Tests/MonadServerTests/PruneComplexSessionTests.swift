@@ -1,6 +1,7 @@
 import Foundation
 import GRDB
 import MonadCore
+import MonadServerCore
 import Testing
 
 @Suite(.serialized)

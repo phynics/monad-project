@@ -27,8 +27,8 @@ import Testing
     @Test("Test executing a single successful tool")
     func executeSuccess() async throws {
         let mockTool = MockTool(id: "test_tool", name: "Test", description: "Test", shouldFail: false)
-        let manager = await SessionToolManager(availableTools: [mockTool])
-        let executor = await ToolExecutor(toolManager: manager)
+        let manager = SessionToolManager(availableTools: [mockTool])
+        let executor = ToolExecutor(toolManager: manager)
 
         let toolCall = ToolCall(name: "test_tool", arguments: [:])
         let resultMessage = try await executor.execute(toolCall)
@@ -40,8 +40,8 @@ import Testing
     @Test("Test executing a failing tool")
     func executeFailure() async throws {
         let mockTool = MockTool(id: "fail_tool", name: "Fail", description: "Fail", shouldFail: true)
-        let manager = await SessionToolManager(availableTools: [mockTool])
-        let executor = await ToolExecutor(toolManager: manager)
+        let manager = SessionToolManager(availableTools: [mockTool])
+        let executor = ToolExecutor(toolManager: manager)
 
         let toolCall = ToolCall(name: "fail_tool", arguments: [:])
         let resultMessage = try await executor.execute(toolCall)
@@ -52,8 +52,8 @@ import Testing
 
     @Test("Test executing a non-existent tool")
     func executeUnknownTool() async throws {
-        let manager = await SessionToolManager(availableTools: [])
-        let executor = await ToolExecutor(toolManager: manager)
+        let manager = SessionToolManager(availableTools: [])
+        let executor = ToolExecutor(toolManager: manager)
 
         let toolCall = ToolCall(name: "unknown_tool", arguments: [:])
 
@@ -66,8 +66,8 @@ import Testing
     func executeAll() async throws {
         let tool1 = MockTool(id: "tool_1", name: "T1", description: "T1", shouldFail: false)
         let tool2 = MockTool(id: "tool_2", name: "T2", description: "T2", shouldFail: false)
-        let manager = await SessionToolManager(availableTools: [tool1, tool2])
-        let executor = await ToolExecutor(toolManager: manager)
+        let manager = SessionToolManager(availableTools: [tool1, tool2])
+        let executor = ToolExecutor(toolManager: manager)
 
         let calls = [
             ToolCall(name: "tool_1", arguments: [:]),

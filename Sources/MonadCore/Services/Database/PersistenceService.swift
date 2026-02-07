@@ -188,6 +188,7 @@ public actor PersistenceService: PersistenceServiceProtocol {
             }
         }
     }
+    // Prune methods moved to MonadServerCore
 }
 
 // MARK: - Errors

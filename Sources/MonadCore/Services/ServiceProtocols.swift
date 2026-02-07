@@ -93,20 +93,14 @@ public protocol PersistenceServiceProtocol: Sendable {
     func fetchSession(id: UUID) async throws -> ConversationSession?
     func fetchAllSessions(includeArchived: Bool) async throws -> [ConversationSession]
     func deleteSession(id: UUID) async throws
-    func searchArchivedSessions(query: String) async throws -> [ConversationSession]
-    func searchArchivedSessions(matchingAnyTag tags: [String]) async throws -> [ConversationSession]
-    func pruneSessions(olderThan timeInterval: TimeInterval, excluding: [UUID], dryRun: Bool)
-        async throws -> Int
-    func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int
+    // searchArchivedSessions moved to MonadServerCore
+    // Prune methods moved to MonadServerCore
 
     // Jobs
     func saveJob(_ job: Job) async throws
     func fetchJob(id: UUID) async throws -> Job?
     func fetchAllJobs() async throws -> [Job]
     func deleteJob(id: UUID) async throws
-
-    // MARK: - Prune
-    func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int
 
     // RAW SQL Support
     func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]]

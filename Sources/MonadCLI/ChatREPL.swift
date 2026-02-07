@@ -18,6 +18,7 @@ actor ChatREPL: ChatREPLController {
 
     // Slash Command Registry
     private let registry = SlashCommandRegistry()
+    private let lineReader = LineReader()
 
     init(client: MonadClient, session: Session) {
         self.client = client
@@ -124,10 +125,22 @@ actor ChatREPL: ChatREPLController {
             wsName = (try? await client.getWorkspace(selectedId))?.uri.description
         }
 
-        TerminalUI.printPrompt(workspace: wsName)
+        let prompt = TerminalUI.getPromptString(workspace: wsName)
 
-        // Use readline for vi-style editing
-        guard let line = readLine() else {
+        // Prepare completion handler
+        let commandNames = await registry.allCommands.map { "/" + $0.name }
+        let aliases = await registry.allCommands.flatMap { cmd in cmd.aliases.map { "/" + $0 } }
+        let allCandidates = (commandNames + aliases).sorted()
+
+        // Use LineReader for vi-style editing and autocomplete
+        guard
+            let line = lineReader.readLine(
+                prompt: prompt,
+                completion: { text in
+                    guard text.hasPrefix("/") else { return [] }
+                    return allCandidates.filter { $0.hasPrefix(text) }
+                })
+        else {
             running = false
             return nil
         }
