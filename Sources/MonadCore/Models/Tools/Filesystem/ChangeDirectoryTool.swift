@@ -1,7 +1,7 @@
 import Foundation
 
 /// Tool to change the current working directory of the session
-public struct ChangeDirectoryTool: Tool, @unchecked Sendable {
+public struct ChangeDirectoryTool: Tool, Sendable {
     public let id = "change_directory"
     public let name = "Change Directory"
     public let description = "Change the current working directory for relative file operations."
@@ -15,11 +15,11 @@ public struct ChangeDirectoryTool: Tool, @unchecked Sendable {
         """
     }
     
-    private let onChange: (String) async -> Void
+    private let onChange: @Sendable (String) async -> Void
     private let currentPath: String
     private let root: String
     
-    public init(currentPath: String, root: String? = nil, onChange: @escaping (String) async -> Void) {
+    public init(currentPath: String, root: String? = nil, onChange: @escaping @Sendable (String) async -> Void) {
         self.currentPath = currentPath
         self.root = root ?? currentPath
         self.onChange = onChange

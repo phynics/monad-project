@@ -63,3 +63,14 @@ rebuild: clean build
 run: run-cli
 server: run-server
 
+
+# Install CLI
+install:
+	@echo "Installing MonadCLI..."
+	@swift build -c release
+	@cp -f .build/release/MonadCLI /usr/local/bin/monad
+
+# Lint project
+lint:
+	@echo "Linting..."
+	@swiftlint lint --strict --quiet

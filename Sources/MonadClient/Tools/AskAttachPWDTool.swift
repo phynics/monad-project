@@ -1,16 +1,18 @@
 import Foundation
 import MonadCore
 
-public struct AskAttachPWDTool: MonadCore.Tool, @unchecked Sendable {
+public struct AskAttachPWDTool: MonadCore.Tool, Sendable {
     public let id = "ask_attach_pwd"
     public let name = "ask_attach_pwd"
     public let description = "Ask the user to attach their current working directory as a workspace. Use this when you need access to local files but no workspace is attached."
     public let requiresPermission = false
-    public let parametersSchema: [String: Any] = [
-        "type": "object",
-        "properties": [:],
-        "required": []
-    ]
+    public var parametersSchema: [String: Any] {
+        [
+            "type": "object",
+            "properties": [:],
+            "required": []
+        ]
+    }
 
     public init() {}
 

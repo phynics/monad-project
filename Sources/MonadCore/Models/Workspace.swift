@@ -10,7 +10,7 @@ public struct Workspace: Codable, FetchableRecord, PersistableRecord, Sendable, 
     public var hostType: WorkspaceHostType
     public let ownerId: UUID?  // ClientIdentity.id or nil for server-owned
     public let tools: [ToolReference]  // Tools available in this workspace
-    public let rootPath: String?  // Filesystem root for the workspace
+    public var rootPath: String?  // Filesystem root for the workspace
     public var trustLevel: WorkspaceTrustLevel
     public var lastModifiedBy: UUID?  // Session ID that last modified
     public let createdAt: Date

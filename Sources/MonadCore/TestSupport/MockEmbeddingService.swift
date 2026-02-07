@@ -1,5 +1,5 @@
 import Foundation
-import MonadCore
+
 
 public final class MockEmbeddingService: EmbeddingService, @unchecked Sendable {
     public var mockEmbedding: [Double] = [0.1, 0.2, 0.3]

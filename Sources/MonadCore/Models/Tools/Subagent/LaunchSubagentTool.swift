@@ -2,7 +2,7 @@ import Foundation
 import OpenAI
 
 /// Tool to launch a focused subagent with specific documents
-public struct LaunchSubagentTool: Tool, @unchecked Sendable {
+public struct LaunchSubagentTool: Tool, Sendable {
     public let id = "launch_subagent"
     public let name = "Launch Subagent"
     public let description = "Launch a temporary subagent to process specific documents with a focused prompt. Use this for heavy processing of large files. IMPORTANT: Subagents cannot use tools; any information it needs must be provided in full via the 'documents' and 'prompt' parameters."

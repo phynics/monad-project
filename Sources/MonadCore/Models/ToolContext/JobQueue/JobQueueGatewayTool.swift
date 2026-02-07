@@ -5,7 +5,7 @@ import Foundation
 /// When executed, this tool activates the job queue context and makes
 /// job management tools available. Calling any non-context tool will
 /// automatically exit the job queue context.
-public final class JobQueueGatewayTool: ContextGatewayTool, @unchecked Sendable {
+public final class JobQueueGatewayTool: ContextGatewayTool, Sendable {
     public typealias Context = JobQueueContext
 
     public let id = "manage_jobs"

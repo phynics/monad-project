@@ -34,12 +34,12 @@ import NIOCore
             // 1. List (Empty)
             try await client.execute(uri: "/memories", method: .get) { response in
                 #expect(response.status == .ok)
-                let memories = try decoder.decode([Memory].self, from: response.body)
-                #expect(memories.isEmpty)
+                let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
+                #expect(paginated.items.isEmpty)
             }
 
             // 2. Create
-            let createReq = CreateMemoryRequest(title: "Test Memory", content: "Test Content", tags: ["test"])
+            let createReq = CreateMemoryRequest(content: "Test Content", title: "Test Memory", tags: ["test"])
             let createBuffer = ByteBuffer(bytes: try JSONEncoder().encode(createReq))
 
             try await client.execute(uri: "/memories", method: .post, body: createBuffer) { response in
@@ -52,13 +52,13 @@ import NIOCore
             // 3. List (1 item)
             try await client.execute(uri: "/memories", method: .get) { response in
                 #expect(response.status == .ok)
-                let memories = try decoder.decode([Memory].self, from: response.body)
-                #expect(memories.count == 1)
-                #expect(memories[0].title == "Test Memory")
+                let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
+                #expect(paginated.items.count == 1)
+                #expect(paginated.items[0].title == "Test Memory")
             }
 
             let listResponse = try await client.execute(uri: "/memories", method: .get) { $0 }
-            let memoryId = (try decoder.decode([Memory].self, from: listResponse.body))[0].id
+            let memoryId = (try decoder.decode(PaginatedResponse<Memory>.self, from: listResponse.body)).items[0].id
 
             // 4. Delete
             try await client.execute(uri: "/memories/\(memoryId)", method: .delete) { response in
@@ -67,15 +67,11 @@ import NIOCore
 
             // 5. List (Empty)
             try await client.execute(uri: "/memories", method: .get) { response in
-                let memories = try decoder.decode([Memory].self, from: response.body)
-                #expect(memories.isEmpty)
+                let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
+                #expect(paginated.items.isEmpty)
             }
         }
     }
 }
 
-public struct CreateMemoryRequest: Codable {
-    public let title: String
-    public let content: String
-    public let tags: [String]?
-}
+

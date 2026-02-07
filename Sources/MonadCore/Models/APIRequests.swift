@@ -263,7 +263,17 @@ public struct UpdateNoteRequest: Codable, Sendable {
 
 // MARK: - Memory API
 
-// MARK: - Memory API
+public struct CreateMemoryRequest: Codable, Sendable {
+    public let content: String
+    public let title: String?
+    public let tags: [String]?
+    
+    public init(content: String, title: String? = nil, tags: [String]? = nil) {
+        self.content = content
+        self.title = title
+        self.tags = tags
+    }
+}
 
 public struct MemorySearchRequest: Codable, Sendable {
     public let query: String
