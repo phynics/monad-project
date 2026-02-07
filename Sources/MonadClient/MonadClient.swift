@@ -217,6 +217,12 @@ public actor MonadClient {
 
     // MARK: - Health
 
+    /// Get the detailed health status of the server and its components
+    public func getStatus() async throws -> StatusResponse {
+        let request = try buildRequest(path: "/status", method: "GET", requiresAuth: false)
+        return try await perform(request)
+    }
+
     /// Check if the server is reachable
     public func healthCheck() async throws -> Bool {
         let request = try buildRequest(path: "/health", method: "GET", requiresAuth: false)

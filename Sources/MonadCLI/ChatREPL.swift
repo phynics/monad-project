@@ -29,6 +29,7 @@ actor ChatREPL: ChatREPLController {
         // Core
         await registry.register(HelpCommand(registry: registry))
         await registry.register(QuitCommand())
+        await registry.register(StatusCommand())
         await registry.register(NewSessionCommand())
         await registry.register(SessionCommand())
         await registry.register(ConfigCommand())

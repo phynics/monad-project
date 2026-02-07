@@ -10,6 +10,11 @@ public typealias Session = SessionResponse
 public typealias ChatRequest = MonadCore.ChatRequest
 public typealias ChatResponse = MonadCore.ChatResponse
 
+// Status Models
+public typealias StatusResponse = MonadCore.StatusResponse
+public typealias ComponentStatus = MonadCore.ComponentStatus
+public typealias HealthStatus = MonadCore.HealthStatus
+
 // Memory Models
 public typealias Memory = MonadCore.Memory
 public typealias MemorySearchRequest = MonadCore.MemorySearchRequest
