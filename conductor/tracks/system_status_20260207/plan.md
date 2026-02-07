@@ -1,7 +1,7 @@
 # Implementation Plan - Implement System Status & Health Check
 
 ## Phase 1: Server-Side Implementation
-- [ ] Task: Define Status Models
+- [x] Task: Define Status Models b4a508a
     - [ ] Create `StatusResponse` and `ComponentStatus` structs in `MonadCore` (shared models).
     - [ ] Ensure they are `Codable` and `Sendable`.
 - [ ] Task: Implement Service Health Protocols
