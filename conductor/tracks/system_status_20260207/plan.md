@@ -18,16 +18,16 @@
 - [x] Task: Conductor - User Manual Verification 'Server-Side Implementation' (Protocol in workflow.md)
 
 ## Phase 2: CLI Implementation
-- [ ] Task: Add Client Support
+- [x] Task: Add Client Support 6759b76
     - [ ] Update `MonadClient` to include a `getStatus()` method.
     - [ ] Map the JSON response to the shared `StatusResponse` model.
-- [ ] Task: Implement CLI Command
+- [x] Task: Implement CLI Command 6759b76
     - [ ] Create `Status.swift` command in `MonadCLI/Commands`.
     - [ ] Use `MonadClient` to fetch status.
-- [ ] Task: Format Output
+- [x] Task: Format Output 6759b76
     - [ ] Implement a standardized formatter (table/list) for the status response.
     - [ ] Add color support (Green for OK, Red for Error).
-- [ ] Task: Conductor - User Manual Verification 'CLI Implementation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'CLI Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Integration & Polish
 - [ ] Task: End-to-End Test
