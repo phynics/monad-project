@@ -22,7 +22,16 @@ struct MonadCLI: AsyncParsableCommand {
               MONAD_API_KEY                 API key for authentication
               MONAD_SERVER_URL              Server URL (default: http://127.0.0.1:8080)
             """,
-        version: "1.0.0"
+        version: "1.0.0",
+        subcommands: [Chat.self, Status.self],
+        defaultSubcommand: Chat.self
+    )
+}
+
+struct Chat: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "chat",
+        abstract: "Start an interactive chat session (Default)"
     )
 
     @Option(name: .long, help: "Server URL (defaults to auto-discovery or localhost)")
