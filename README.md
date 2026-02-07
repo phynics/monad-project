@@ -1,16 +1,15 @@
-# Monad
+# Conductor
 
 ![Spark, a curious lynx](docs/assets/spark.png)
 ok
 
-A headless AI assistant built for deep context integration. Monad focuses on how your data and documents integrate with Large Language Models through a server/CLI architecture.
+A headless AI assistant built for deep context integration. Conductor focuses on how your data and documents integrate with Large Language Models through a server/CLI architecture.
 
 Built with **Swift 6.0**, it features a modular architecture designed for high performance and a local-first approach.
 
 ## Architecture
 
-- **MonadCore**: Pure logic framework with context engine, persistence (GRDB/SQLite), and tool execution
-- **MonadServerCore**: Server-specific controllers and route handlers
+- **MonadCore**: Pure logic framework with session management, context engine, persistence (GRDB/SQLite), and tool execution
 - **MonadServer**: REST API server with streaming chat support
 - **MonadClient**: HTTP client library for server communication
 - **MonadCLI**: Command-line interface for interacting with the server

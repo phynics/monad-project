@@ -3,6 +3,8 @@ import GRDB
 import Hummingbird
 import Logging
 import MonadCore
+import HTTPTypes
+import NIOCore
 
 /// Controller for managing workspaces
 public struct WorkspaceController<Context: RequestContext>: Sendable {
@@ -18,6 +20,7 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
         group.post(use: create)
         group.get(use: list)
         group.get(":id", use: get)
+        group.patch(":id", use: update)
         group.delete(":id", use: delete)
         group.post(":id/tools", use: addTool)
         group.get(":id/tools", use: listTools)
@@ -58,10 +61,30 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
 
     /// GET /workspaces
     @Sendable func list(request: Request, context: Context) async throws -> Response {
+        let uri = request.uri
+        let components = URLComponents(string: uri.description)
+        let page = components?.queryItems?.first(where: { $0.name == "page" })?.value.flatMap(Int.init) ?? 1
+        let perPage = components?.queryItems?.first(where: { $0.name == "perPage" })?.value.flatMap(Int.init) ?? 20
+        
         let workspaces = try await dbWriter.read { db in
             try Workspace.fetchAll(db)
         }
-        let data = try SerializationUtils.jsonEncoder.encode(workspaces)
+        
+        // In-memory pagination
+        let total = workspaces.count
+        let start = (page - 1) * perPage
+        let paginatedWorkspaces: [Workspace]
+        if start < total {
+            let end = min(start + perPage, total)
+            paginatedWorkspaces = Array(workspaces[start..<end])
+        } else {
+            paginatedWorkspaces = []
+        }
+        
+        let metadata = PaginationMetadata(page: page, perPage: perPage, totalItems: total)
+        let response = PaginatedResponse(items: paginatedWorkspaces, metadata: metadata)
+        
+        let data = try SerializationUtils.jsonEncoder.encode(response)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
         return Response(
@@ -88,6 +111,29 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
         headers[.contentType] = "application/json"
         return Response(
             status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+    }
+    
+    /// PATCH /workspaces/:id
+    @Sendable func update(request: Request, context: Context) async throws -> Response {
+        let id = try context.parameters.require("id", as: UUID.self)
+        let input = try await request.decode(as: UpdateWorkspaceRequest.self, context: context)
+        
+        try await dbWriter.write { db in
+            guard var workspace = try Workspace.fetchOne(db, key: id) else {
+                throw HTTPError(.notFound)
+            }
+            
+            if let rootPath = input.rootPath {
+                workspace.rootPath = rootPath
+            }
+            if let trustLevel = input.trustLevel {
+                workspace.trustLevel = trustLevel
+            }
+            
+            try workspace.update(db)
+        }
+        
+        return try await get(request: request, context: context)
     }
 
     /// DELETE /workspaces/:id

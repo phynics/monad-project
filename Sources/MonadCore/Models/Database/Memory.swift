@@ -102,16 +102,16 @@ public struct Memory: Codable, Identifiable, FetchableRecord, PersistableRecord,
             }
         } else {
             // Try standard decoding which handles data blobs
-            self.id = try row["id"]
+            self.id = row["id"]
         }
         
-        self.title = try row["title"]
-        self.content = try row["content"]
-        self.createdAt = try row["createdAt"]
-        self.updatedAt = try row["updatedAt"]
-        self.tags = try row["tags"]
-        self.metadata = try row["metadata"]
-        self.embedding = try row["embedding"]
+        self.title = row["title"]
+        self.content = row["content"]
+        self.createdAt = row["createdAt"]
+        self.updatedAt = row["updatedAt"]
+        self.tags = row["tags"]
+        self.metadata = row["metadata"]
+        self.embedding = row["embedding"]
     }
 }
 

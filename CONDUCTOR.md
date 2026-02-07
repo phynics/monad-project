@@ -16,28 +16,20 @@ The project is built with **Swift 6.0**, utilizing the modern **Observation** fr
 
 ## Architecture
 
-The project follows a modular architecture organized into targets defined in `project.yml` (managed by `xcodegen`).
+For a detailed breakdown of module responsibilities and data flow, see [System Architecture](docs/ARCHITECTURE.md).
+
+The project is organized into the following targets:
 
 ### Targets
 
 - **MonadCore:** The pure logic framework. Contains:
   - **Models:** `Configuration`, `Message`, `Memory`, `Note`, `Tool`
-  - **Services:** 
-    - `LLMService`: Handles interaction with OpenAI/Ollama
-    - `PersistenceService`: Actor-isolated GRDB layer for database storage
-    - `ToolExecutor`: Manages tool execution
-    - `StreamingCoordinator`: Orchestrates real-time SSE streams
-    - `ContextManager`: Manages LLM context window and compression
-  - **Utilities:** Logging, Encoding helpers
+  - **Services:** `LLMService`, `PersistenceService`, `StreamingCoordinator`, `ContextManager`, `SessionManager`
 
-- **MonadServerCore:** Server-specific services including controllers and route handlers.
-  - **Controllers:** `ChatController`, `SessionController`, `MemoryController`
-  - **Services:** `SessionManager` (Active session state), `ToolRouter` (Routing tool calls)
-
-- **MonadServer:** The REST API server executable. Provides:
-  - Chat endpoints (with SSE streaming)
-  - Lifecycle management
-  - Configuration injection
+- **MonadServer:** The executable server application. Now includes all server-side logic.
+  - **API:** Hummingbird-based REST API with SSE streaming.
+  - **Controllers:** `ChatController`, `SessionController`, etc.
+  - **Tools:** `ToolRouter` for executing tool calls.
 
 - **MonadClient:** HTTP client library for communicating with MonadServer.
   - **SSEStreamReader:** Parses structured server-sent events
@@ -97,11 +89,11 @@ The project follows a modular architecture organized into targets defined in `pr
   - Abtracts interactions with LLM providers (OpenAI, Ollama).
   - Handles token estimation and request formatting.
 
-- **SessionManager (MonadServerCore):**
+- **SessionManager (MonadCore):**
   - Manages active in-memory session state.
   - Coordinates session lifecycles and context refreshing.
 
-- **ToolRouter (MonadServerCore):**
+- **ToolRouter (MonadServer):**
   - Routes dynamic tool invocations to their respective handlers.
   - Enables the agent to perform actions like web searches or file operations.
 
@@ -161,5 +153,5 @@ make open
 - `Package.swift`: Swift Package Manager manifest
 - `Sources/MonadCore/Services/LLMService.swift`: Core logic for LLM communication
 - `Sources/MonadCore/Services/Database/PersistenceService.swift`: Main interface for data persistence
-- `Sources/MonadServerCore/Controllers/`: Server endpoint controllers
+- `Sources/MonadServer/Controllers/`: Server endpoint controllers
 - `Sources/MonadCLI/Commands/`: CLI command implementations

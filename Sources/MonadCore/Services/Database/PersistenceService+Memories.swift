@@ -79,6 +79,12 @@ extension PersistenceService {
         }
     }
 
+    public func updateMemory(_ memory: Memory) async throws {
+        try await dbQueue.write { db in
+            try memory.update(db)
+        }
+    }
+
     public func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws {
         try await dbQueue.write { db in
             if var memory = try Memory.fetchOne(db, key: id) {

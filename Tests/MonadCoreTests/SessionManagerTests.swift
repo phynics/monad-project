@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import MonadServer
+@testable import MonadCore
 import MonadCore
 
 @Suite struct SessionManagerTests {

@@ -80,8 +80,10 @@ public protocol PersistenceServiceProtocol: Sendable {
     )]
     func searchMemories(matchingAnyTag tags: [String]) async throws -> [Memory]
     func deleteMemory(id: UUID) async throws
+    func updateMemory(_ memory: Memory) async throws
     func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws
     func vacuumMemories(threshold: Double) async throws -> Int
+
 
     // Messages
     func saveMessage(_ message: ConversationMessage) async throws
