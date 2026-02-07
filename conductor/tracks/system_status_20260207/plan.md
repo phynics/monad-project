@@ -1,6 +1,6 @@
 # Implementation Plan - Implement System Status & Health Check
 
-## Phase 1: Server-Side Implementation
+## Phase 1: Server-Side Implementation [checkpoint: dfcd01c]
 - [x] Task: Define Status Models b4a508a
     - [ ] Create `StatusResponse` and `ComponentStatus` structs in `MonadCore` (shared models).
     - [ ] Ensure they are `Codable` and `Sendable`.
@@ -15,7 +15,7 @@
 - [x] Task: Register Route & Verify b635b0a
     - [ ] Register the controller in `MonadServer/App.swift`.
     - [ ] Write a unit test in `MonadServerTests` to verify the JSON response format.
-- [ ] Task: Conductor - User Manual Verification 'Server-Side Implementation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Server-Side Implementation' (Protocol in workflow.md)
 
 ## Phase 2: CLI Implementation
 - [ ] Task: Add Client Support
