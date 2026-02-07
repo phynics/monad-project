@@ -102,6 +102,7 @@ public protocol PersistenceServiceProtocol: Sendable {
     func saveJob(_ job: Job) async throws
     func fetchJob(id: UUID) async throws -> Job?
     func fetchAllJobs() async throws -> [Job]
+    func fetchJobs(for sessionId: UUID) async throws -> [Job]
     func deleteJob(id: UUID) async throws
 
     // RAW SQL Support

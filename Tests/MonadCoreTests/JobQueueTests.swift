@@ -8,6 +8,7 @@ import Testing
 struct JobQueueTests {
     private let persistence: PersistenceService
     private let context: JobQueueContext
+    private let sessionId: UUID
 
     init() async throws {
         let queue = try DatabaseQueue()
@@ -15,8 +16,15 @@ struct JobQueueTests {
         DatabaseSchema.registerMigrations(in: &migrator)
         try migrator.migrate(queue)
 
-        persistence = PersistenceService(dbQueue: queue)
-        context = JobQueueContext(persistenceService: persistence)
+        let sid = UUID()
+        self.sessionId = sid
+        let persistenceService = PersistenceService(dbQueue: queue)
+        self.persistence = persistenceService
+        self.context = JobQueueContext(persistenceService: persistenceService, sessionId: sid)
+
+        try await queue.write { db in
+            try db.execute(sql: "INSERT INTO conversationSession (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)", arguments: [sid, "Test Session", Date(), Date()])
+        }
     }
 
     @Test("Add job via tool")

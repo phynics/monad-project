@@ -165,6 +165,10 @@ public final class MockPersistenceService: PersistenceServiceProtocol, @unchecke
         return jobs
     }
 
+    public func fetchJobs(for sessionId: UUID) async throws -> [Job] {
+        return jobs.filter { $0.sessionId == sessionId }
+    }
+
     public func deleteJob(id: UUID) async throws {
         jobs.removeAll(where: { $0.id == id })
     }

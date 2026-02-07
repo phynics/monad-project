@@ -114,7 +114,7 @@ public actor SessionManager {
         let toolContextSession = ToolContextSession()
         toolContextSessions[session.id] = toolContextSession
 
-        let jobQueueContext = JobQueueContext(persistenceService: persistenceService)
+        let jobQueueContext = JobQueueContext(persistenceService: persistenceService, sessionId: sessionId)
 
         // Setup Tools for session
         let toolManager = await createToolManager(
@@ -184,6 +184,56 @@ public actor SessionManager {
         return session
     }
 
+    public func hydrateSession(id: UUID) async throws {
+        // If already hydrated (has tool executor), skip
+        if toolExecutors[id] != nil { return }
+        
+        guard let session = try await persistenceService.fetchSession(id: id) else {
+            throw SessionError.sessionNotFound
+        }
+        
+        // Check if path exists
+        let sessionWorkspaceURL: URL
+        if let wd = session.workingDirectory {
+            sessionWorkspaceURL = URL(fileURLWithPath: wd)
+        } else {
+             sessionWorkspaceURL = workspaceRoot.appendingPathComponent(
+                "sessions", isDirectory: true
+            ).appendingPathComponent(id.uuidString, isDirectory: true)
+        }
+        
+        sessions[id] = session
+        
+        let contextManager = ContextManager(
+            persistenceService: persistenceService,
+            embeddingService: embeddingService,
+            workspaceRoot: sessionWorkspaceURL
+        )
+        contextManagers[session.id] = contextManager
+        
+        let documentManager = DocumentManager()
+        documentManagers[session.id] = documentManager
+        
+        let toolContextSession = ToolContextSession()
+        toolContextSessions[session.id] = toolContextSession
+        
+        let jobQueueContext = JobQueueContext(persistenceService: persistenceService, sessionId: id)
+        
+        // Setup Tools
+        let toolManager = await createToolManager(
+            for: session, jailRoot: sessionWorkspaceURL.path, documentManager: documentManager,
+            toolContextSession: toolContextSession,
+            jobQueueContext: jobQueueContext)
+        toolManagers[session.id] = toolManager
+        
+        let toolExecutor = ToolExecutor(
+            toolManager: toolManager,
+            contextSession: toolContextSession,
+            jobQueueContext: jobQueueContext
+        )
+        toolExecutors[session.id] = toolExecutor
+    }
+    
     public func updateSessionPersona(id: UUID, persona: String) async throws {
         var session: ConversationSession
         if let memorySession = sessions[id] {

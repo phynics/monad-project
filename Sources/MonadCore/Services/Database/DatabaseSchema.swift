@@ -411,6 +411,35 @@ public enum DatabaseSchema {
                         END;
                     """)
         }
+
+        // v22: Add sessionId to Job table
+        migrator.registerMigration("v22") { db in
+            // Since SQLite doesn't support adding a non-null column without a default efficiently for existing rows,
+            // (or we'd have to provide a default session ID which we don't know).
+            // Strategy:
+            // 1. Drop the table (it's a queue, so data loss is acceptable for this feature upgrade, or request user to clear it).
+            //    or
+            // 2. Add nullable column, fill it, then make not null.
+            // Given "Job" is transient, we'll recreate the table to enforce the constraint properly.
+
+            try db.drop(table: "job")
+
+            try db.create(table: "job") { t in
+                t.column("id", .blob).primaryKey()
+                t.column("sessionId", .blob).notNull()
+                    .references("conversationSession", onDelete: .cascade)
+                t.column("title", .text).notNull()
+                t.column("description", .text)
+                t.column("priority", .integer).notNull().defaults(to: 0)
+                t.column("status", .text).notNull().defaults(to: "pending")
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+            }
+
+            try db.create(index: "idx_job_status", on: "job", columns: ["status"])
+            try db.create(index: "idx_job_priority", on: "job", columns: ["priority"])
+            try db.create(index: "idx_job_session", on: "job", columns: ["sessionId"])
+        }
     }
 
     // MARK: - Workspace Tables

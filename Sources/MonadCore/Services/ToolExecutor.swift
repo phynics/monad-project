@@ -62,6 +62,11 @@ public actor ToolExecutor {
         return await toolManager.getTool(id: id)
     }
 
+    /// Get all available tools
+    public func getAvailableTools() async -> [any Tool] {
+        return await toolManager.getEnabledTools()
+    }
+
     /// Execute a single tool call
     public func execute(_ toolCall: ToolCall) async throws -> Message {
         // Loop detection check

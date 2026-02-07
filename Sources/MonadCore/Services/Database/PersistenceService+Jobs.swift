@@ -19,6 +19,12 @@ extension PersistenceService {
             try Job.fetchAll(db)
         }
     }
+
+    public func fetchJobs(for sessionId: UUID) async throws -> [Job] {
+        try await dbQueue.read { db in
+            try Job.filter(Column("sessionId") == sessionId).fetchAll(db)
+        }
+    }
     
     public func deleteJob(id: UUID) async throws {
         try await dbQueue.write { db in

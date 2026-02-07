@@ -26,6 +26,10 @@ public typealias Tool = MonadCore.ToolInfo
 public typealias Message = MonadCore.Message
 public typealias MessageRole = MonadCore.Message.MessageRole
 
+// Job Models
+public typealias Job = MonadCore.Job
+public typealias AddJobRequest = MonadCore.AddJobRequest
+
 // MARK: - Client-Specific Models
 
 /// A delta from a streaming chat response

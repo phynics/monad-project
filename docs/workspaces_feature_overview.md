@@ -1,101 +1,93 @@
 # Workspaces & Tool Execution
 
-## Motivation
-Workspaces enable the flexibility of local execution (similar to Claude Code) combined with the persistent, multi-device accessibility of remote execution (similar to ChatGPT). By establishing secure, addressable execution boundaries, Monad can maintain persistent file storage on the server while safely accessing a user's local development environment through a unified addressing scheme.
+## Overview
+Monad's architecture is built around the concept of **Workspaces**—secure, addressable execution environments where tools operate. This design unifies local execution (on the user's machine) and remote execution (on the server), providing a consistent interface for the AI to interact with files, run commands, and manage state.
 
 ## Key Concepts
 
-### 1. The Universal Address (URI)
-We use an SCP-like URI scheme to uniquely identify workspaces across the distributed system.
+### 1. The Workspace
+A **Workspace** is a defined environment with a specific root path, trust level, and set of available tools. It allows the AI to "visit" different locations (e.g., a local projected folder, a server-side session folder) without carrying over accidental state or violating security boundaries.
 
-| URI Example | Type | Description |
-| :--- | :--- | :--- |
-| `monad-server:/sessions/a1b2` | **Server** | A persistent workspace for a specific conversation. |
-| `macbook-pro:~/dev/monad` | **Client** | A developer's local project folder. |
-| `git:github.com/monad/core` | **Virtual** | A transient workspace cloned from a repository. |
+| Feature | Description |
+| :--- | :--- |
+| **URI** | Unique identifier (e.g., `macbook-pro:~/dev/monad`, `server:/sessions/a1b2`). |
+| **Root Path** | The filesystem directory that confines all file operations. |
+| **Host Type** | `Server` (managed by MonadServer) or `Client` (managed by MonadCLI/Client). |
+| **Trust Level** | `Full` (trusted, auto-execute) or `Restricted` (requires user approval). |
 
-### 2. Session Architecture
-Every conversation session is assigned a **Primary Workspace** on the server for long-term memory and state. Users can **Attach** additional workspaces (like local folders) to bring them into the context.
+### 2. The Session
+A **Session** (`ConversationSession`) represents a continuous thread of interaction between the User and the AI. It orchestrates context, memory, and tool execution.
+
+*   **Primary Workspace (Server)**: Every session has a dedicated, server-side workspace. This is where the AI stores conversation notes, generated artifacts, and "long-term" thinking. It is always trusted.
+*   **Attached Workspaces (Client/Remote)**: Users can "attach" their local development folders to a session. These workspaces reside on the user's machine but are accessible to the AI via the Monad Client.
 
 ```mermaid
 graph TD
-    User((User)) -->|Interacts with| Session[Session Controller]
+    User((User)) -->|Chat| Session[Session Manager]
     
-    subgraph "Server"
-        Session --> Primary[Primary Workspace]
+    subgraph "Server Environment"
+        Session -->|Owns| Primary[Primary Workspace]
+        Primary -->|Contains| Notes[Notes & Memory]
+        Primary -->|Contains| State[Session State]
     end
 
-    subgraph "Client (Local)"
-        Attached1["Attached Workspace\nmacbook:~/dev/project"]
+    subgraph "User Environment (Client)"
+        Attached1["Attached Workspace\nAttempted: ~/dev/project"]
+        Attached2["Attached Workspace\nAccessed: ~/docs"]
     end
 
-    Session -.->|Attaches| Attached1
+    Session -.->|Remote Tools| Attached1
+    Session -.->|Remote Tools| Attached2
 ```
 
-## Workflows
+## Tool Execution Flow
 
-### 1. Remote Tool Execution (Client-Side)
-This workflow demonstrates how the Server orchestrates tools running on the Client's machine (e.g., editing a local file).
+Tools are the hands of the AI. The `SessionToolManager` and `ToolExecutor` work together to route tool calls to the correct workspace.
 
-```mermaid
-sequenceDiagram
-    participant CLI as MonadCLI (Client)
-    participant Server as MonadServer
-    participant LLM as LLM Service
-    participant FS as Local Filesystem
+### 1. Discovery
+When a session starts, `SessionToolManager` aggregates all available tools from:
+1.  **System Tools**: Built-in capabilities (e.g., `search_web`, `memory_recall`).
+2.  **Primary Workspace**: File operations within the server session.
+3.  **Attached Workspaces**: File operations and commands on the user's machine.
 
-    Note over CLI: User attaches workspace\n"macbook:~/project"
-    
-    CLI->>Server: "Refactor main.swift"
-    Server->>LLM: Generate Response
-    
-    Note over LLM: Decides to edit file in\n"macbook:~/project"
-    
-    LLM->>Server: Tool Call: write_file(path="main.swift", ...)
-    
-    Server->>Server: Resolve Workspace URI
-    Note right of Server: Target is Client-owned
-    
-    Server->>CLI: Request Tool Execution (JSON)
-    
-    CLI->>CLI: Verify Permission
-    CLI->>FS: Write File
-    FS-->>CLI: Success
-    
-    CLI-->>Server: Execution Result
-    Server->>LLM: Result Context
-    LLM-->>Server: Final Response
-    Server-->>CLI: "Refactoring complete."
-```
-
-### 2. Intelligent Tool Resolution Strategy
-When the LLM requests a tool without a specific target, the system routes the request based on priority.
+### 2. Routing
+When the LLM requests a tool execution (e.g., `read_file(path: "main.swift")`), the system must decide *where* to run it.
 
 ```mermaid
 flowchart TD
-    Request[Tool Call Generated] --> CheckID{Workspace ID Defined?}
+    Req[Tool Call: read_file] --> CheckTarget{Target Specified?}
     
-    CheckID -- Yes --> Target[Target Workspace]
+    CheckTarget -- Yes --> TargetWS[Target Workspace]
     
-    CheckID -- No --> CheckPrimary{Tool in Primary?}
+    CheckTarget -- No --> Priority
     
-    CheckPrimary -- Yes --> Primary["Primary Workspace (Server)"]
+    subgraph Priority [Resolution Strategy]
+        P1{In Primary?} -- Yes --> Primary
+        P1 -- No --> P2{In Attached?}
+        P2 -- Yes --> Attached[First Matching Attached WS]
+        P2 -- No --> Error[Tool Not Found]
+    end
     
-    CheckPrimary -- No --> CheckAttached{Tool in Attached?}
-    
-    CheckAttached -- Yes --> FirstAttached["Attached Workspace (Client/Other)"]
-    
-    CheckAttached -- No --> Error[Error: Tool Not Found]
-    
-    Target --> Execute((Execute))
+    TargetWS --> Execute
     Primary --> Execute
-    FirstAttached --> Execute
+    Attached --> Execute
 ```
+
+### 3. Execution
+*   **Server Tools**: executed directly by `MonadServer`.
+*   **Client Tools**: The server sends a structural request to the connected `MonadClient`. The client prompts the user (if necessary), executes the tool locally, and returns the result to the server.
+
+### 4. The Request/Response Loop
+1.  **Assistant** generates a tool call (e.g., `list_dir`).
+2.  **Server** pauses generation and routes the call.
+3.  **Workspace** executes the tool (sandboxed to its root).
+4.  **Result** is fed back to the Assistant as a new message.
+5.  **Assistant** continues generation with the new context.
 
 ## Security & Isolation
 
-*   **Boundaries**: Tools are strictly confined to their workspace `rootPath`. Path traversal attempts are blocked at the framework level.
-*   **Trust Levels**: Workspaces are assigned levels (`Full` or `Restricted`). 
-    *   **Full**: Trusted environments where tools execute without per-call interruption.
-    *   **Restricted**: Local directories and untrusted environments (e.g., cloned git repos). These require explicit user approval for tool execution and operate with a limited toolset.
-*   **Locks**: Workspaces are locked during generation cycles to ensure state consistency between the user and the AI.
+*   **Jails**: All filesystem tools are "jailed" to the workspace's `rootPath`. Attempts to access `../` or absolute paths outside the root are blocked.
+*   **Trust Levels**:
+    *   **Full Trust**: Operations execute immediately. Used for the Primary Workspace and explicitly trusted local folders.
+    *   **Restricted**: Operations require per-action user approval. Used for sensitive or new directories.
+*   **State Isolation**: Each session has its own `ContextManager` and `ToolExecutor`, preventing cross-talk between concurrent conversations.

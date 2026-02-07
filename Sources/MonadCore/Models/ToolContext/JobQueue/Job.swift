@@ -6,6 +6,7 @@ import GRDB
 /// Represents a single job in the queue
 public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, PersistableRecord {
     public let id: UUID
+    public let sessionId: UUID
     public var title: String
     public var description: String?
     public var priority: Int
@@ -17,11 +18,13 @@ public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, 
         case pending
         case inProgress = "in_progress"
         case completed
+        case failed
         case cancelled
     }
 
     public init(
         id: UUID = UUID(),
+        sessionId: UUID,
         title: String,
         description: String? = nil,
         priority: Int = 0,
@@ -30,12 +33,26 @@ public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, 
         updatedAt: Date = Date()
     ) {
         self.id = id
+        self.sessionId = sessionId
         self.title = title
         self.description = description
         self.priority = priority
         self.status = status
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+}
+
+/// Request to add a new job
+public struct AddJobRequest: Codable, Sendable {
+    public let title: String
+    public let description: String?
+    public let priority: Int
+
+    public init(title: String, description: String? = nil, priority: Int = 0) {
+        self.title = title
+        self.description = description
+        self.priority = priority
     }
 }
 
@@ -55,6 +72,7 @@ extension Job {
         case .pending: statusIcon = "○"
         case .inProgress: statusIcon = "◐"
         case .completed: statusIcon = "●"
+        case .failed: statusIcon = "⊗"
         case .cancelled: statusIcon = "✕"
         }
 

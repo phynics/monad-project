@@ -3,6 +3,8 @@ import Foundation
 import Hummingbird
 import Logging
 import MonadCore
+import ServiceLifecycle
+import UnixSignals
 
 @main
 @available(macOS 14.0, *)
@@ -101,6 +103,9 @@ struct MonadServer: AsyncParsableCommand {
             sessionManager: sessionManager, llmService: llmService, verbose: verbose)
         chatController.addRoutes(to: protected.group("/sessions"))
 
+        let jobController = JobController<BasicRequestContext>(sessionManager: sessionManager)
+        jobController.addRoutes(to: protected.group("/sessions"))
+
         let memoryController = MemoryController<BasicRequestContext>(sessionManager: sessionManager)
         memoryController.addRoutes(to: protected.group("/memories"))
 
@@ -139,7 +144,20 @@ struct MonadServer: AsyncParsableCommand {
         let advertiser = BonjourAdvertiser(port: port)
         advertiser.start()
 
-        try await app.runService()
+        let jobRunner = JobRunnerService(sessionManager: sessionManager, llmService: llmService)
+
+        let serviceGroup = ServiceGroup(
+            configuration: ServiceGroupConfiguration(
+                services: [
+                    .init(service: app),
+                    .init(service: jobRunner)
+                ],
+                gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
+                logger: logger
+            )
+        )
+
+        try await serviceGroup.run()
         advertiser.stop()
     }
 

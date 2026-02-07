@@ -14,6 +14,7 @@ public actor JobQueueContext: ToolContext {
 
     private let logger = Logger.tools
     private let persistenceService: any PersistenceServiceProtocol
+    private let sessionId: UUID
 
     public var contextTools: [any Tool] {
         [
@@ -26,8 +27,9 @@ public actor JobQueueContext: ToolContext {
         ]
     }
 
-    public init(persistenceService: any PersistenceServiceProtocol) {
+    public init(persistenceService: any PersistenceServiceProtocol, sessionId: UUID) {
         self.persistenceService = persistenceService
+        self.sessionId = sessionId
     }
 
     public func activate() async {
@@ -39,7 +41,7 @@ public actor JobQueueContext: ToolContext {
     }
 
     public func formatState() async -> String {
-        guard let jobs = try? await persistenceService.fetchAllJobs() else {
+        guard let jobs = try? await persistenceService.fetchJobs(for: sessionId) else {
             return "**Job Queue**: Error fetching jobs"
         }
         
@@ -75,7 +77,7 @@ public actor JobQueueContext: ToolContext {
     // MARK: - Queue Operations
 
     public func addJob(title: String, description: String?, priority: Int) async throws -> Job {
-        let job = Job(title: title, description: description, priority: priority)
+        let job = Job(sessionId: sessionId, title: title, description: description, priority: priority)
         try await persistenceService.saveJob(job)
         logger.info("Added job: \(job.id)")
         return job
@@ -113,11 +115,11 @@ public actor JobQueueContext: ToolContext {
     }
 
     public func listJobs() async throws -> [Job] {
-        return try await persistenceService.fetchAllJobs().sorted { $0.priority > $1.priority }
+        return try await persistenceService.fetchJobs(for: sessionId).sorted { $0.priority > $1.priority }
     }
 
     public func clearQueue() async throws -> Int {
-        let jobs = try await persistenceService.fetchAllJobs()
+        let jobs = try await persistenceService.fetchJobs(for: sessionId)
         for job in jobs {
             try await persistenceService.deleteJob(id: job.id)
         }
@@ -130,7 +132,7 @@ public actor JobQueueContext: ToolContext {
     }
 
     public func findJob(idPrefix: String) async throws -> Job? {
-        let jobs = try await persistenceService.fetchAllJobs()
+        let jobs = try await persistenceService.fetchJobs(for: sessionId)
         return jobs.first { $0.id.uuidString.lowercased().hasPrefix(idPrefix.lowercased()) }
     }
 
@@ -138,7 +140,7 @@ public actor JobQueueContext: ToolContext {
     /// Marks the job as in_progress and returns it for processing.
     /// Returns nil if no pending jobs are available.
     public func dequeueNext() async throws -> Job? {
-        let jobs = try await persistenceService.fetchAllJobs()
+        let jobs = try await persistenceService.fetchJobs(for: sessionId)
         
         // Find highest priority pending job
         let pending = jobs.filter { $0.status == .pending }
@@ -159,7 +161,7 @@ public actor JobQueueContext: ToolContext {
 
     /// Check if there are pending jobs that can be dequeued
     public func hasPendingJobs() async throws -> Bool {
-        let jobs = try await persistenceService.fetchAllJobs()
+        let jobs = try await persistenceService.fetchJobs(for: sessionId)
         return jobs.contains { $0.status == .pending }
     }
     
