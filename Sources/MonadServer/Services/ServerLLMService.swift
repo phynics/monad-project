@@ -3,9 +3,39 @@ import Logging
 import MonadCore
 import OpenAI
 
-public actor ServerLLMService: LLMServiceProtocol {
+public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
     public private(set) var configuration: LLMConfiguration = .openAI
     public private(set) var isConfigured: Bool = false
+
+    // MARK: - HealthCheckable
+
+    public var healthStatus: HealthStatus {
+        get async {
+            return isConfigured ? .ok : .degraded
+        }
+    }
+
+    public var healthDetails: [String: String]? {
+        get async {
+            return [
+                "model": configuration.modelName,
+                "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom")
+            ]
+        }
+    }
+
+    public func checkHealth() async -> HealthStatus {
+        guard isConfigured else { return .degraded }
+        do {
+            if let client = client {
+                _ = try await client.fetchAvailableModels()
+                return .ok
+            }
+            return .degraded
+        } catch {
+            return .ok
+        }
+    }
 
     private var client: (any LLMClientProtocol)?
     private var utilityClient: (any LLMClientProtocol)?

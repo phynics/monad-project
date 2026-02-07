@@ -2,7 +2,17 @@ import Foundation
 import GRDB
 
 
-public final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Sendable {
+public final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Sendable, HealthCheckable {
+    public var mockHealthStatus: HealthStatus = .ok
+    public var mockHealthDetails: [String: String]? = ["mock": "true"]
+
+    public var healthStatus: HealthStatus { get async { mockHealthStatus } }
+    public var healthDetails: [String: String]? { get async { mockHealthDetails } }
+
+    public func checkHealth() async -> HealthStatus {
+        return mockHealthStatus
+    }
+    
     public var databaseWriter: DatabaseWriter
     public var memories: [Memory] = []
     public var searchResults: [(memory: Memory, similarity: Double)] = []

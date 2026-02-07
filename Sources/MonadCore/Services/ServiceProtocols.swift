@@ -3,7 +3,7 @@ import GRDB
 import OpenAI
 
 /// Protocol for LLM Service to enable mocking and isolation
-public protocol LLMServiceProtocol: Sendable {
+public protocol LLMServiceProtocol: HealthCheckable {
     var isConfigured: Bool { get async }
     var configuration: LLMConfiguration { get async }
 
@@ -67,7 +67,7 @@ public protocol LLMServiceProtocol: Sendable {
 }
 
 /// Protocol for Persistence Service to enable mocking and isolation
-public protocol PersistenceServiceProtocol: Sendable {
+public protocol PersistenceServiceProtocol: HealthCheckable {
     var databaseWriter: DatabaseWriter { get }
 
     // Memories

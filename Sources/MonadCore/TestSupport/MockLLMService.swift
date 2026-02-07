@@ -76,7 +76,17 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     }
 }
 
-public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable {
+public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, HealthCheckable {
+    public var mockHealthStatus: HealthStatus = .ok
+    public var mockHealthDetails: [String: String]? = ["mock": "true"]
+
+    public var healthStatus: HealthStatus { get async { mockHealthStatus } }
+    public var healthDetails: [String: String]? { get async { mockHealthDetails } }
+
+    public func checkHealth() async -> HealthStatus {
+        return mockHealthStatus
+    }
+
     public var isConfigured: Bool = true
     public var configuration: LLMConfiguration = .openAI
     public var nextResponse: String = ""
