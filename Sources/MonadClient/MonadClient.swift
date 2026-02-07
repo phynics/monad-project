@@ -39,7 +39,8 @@ public actor MonadClient {
 
     public func listSessions() async throws -> [SessionResponse] {
         let request = try buildRequest(path: "/api/sessions", method: "GET")
-        return try await perform(request)
+        let response: PaginatedResponse<SessionResponse> = try await perform(request)
+        return response.items
     }
 
     /// List available personas
@@ -142,7 +143,8 @@ public actor MonadClient {
     /// List all memories
     public func listMemories() async throws -> [Memory] {
         let request = try buildRequest(path: "/api/memories", method: "GET")
-        return try await perform(request)
+        let response: PaginatedResponse<Memory> = try await perform(request)
+        return response.items
     }
 
     /// Search memories
@@ -274,7 +276,8 @@ public actor MonadClient {
 
     public func listWorkspaces() async throws -> [Workspace] {
         let request = try buildRequest(path: "/api/workspaces", method: "GET")
-        return try await perform(request)
+        let response: PaginatedResponse<Workspace> = try await perform(request)
+        return response.items
     }
 
     public func getWorkspace(_ id: UUID) async throws -> Workspace {
