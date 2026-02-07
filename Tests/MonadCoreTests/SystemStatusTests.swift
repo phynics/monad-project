@@ -23,4 +23,20 @@ final class SystemStatusTests: XCTestCase {
         XCTAssertEqual(decoded.components["ai_provider"]?.status, .ok)
         XCTAssertEqual(decoded.components["ai_provider"]?.details?["provider"], "openai")
     }
+
+    func testHealthCheckableProtocol() async throws {
+        struct MockService: HealthCheckable {
+            var healthStatus: HealthStatus { get async { .ok } }
+            var healthDetails: [String: String]? { get async { ["test": "true"] } }
+            func checkHealth() async -> HealthStatus { .ok }
+        }
+        
+        let service = MockService()
+        let status = await service.checkHealth()
+        let currentStatus = await service.healthStatus
+        let currentDetails = await service.healthDetails
+        XCTAssertEqual(status, .ok)
+        XCTAssertEqual(currentStatus, .ok)
+        XCTAssertEqual(currentDetails?["test"], "true")
+    }
 }

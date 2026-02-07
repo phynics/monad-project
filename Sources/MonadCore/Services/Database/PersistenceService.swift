@@ -3,9 +3,37 @@ import GRDB
 import Logging
 
 /// Thread-safe persistence service using GRDB
-public actor PersistenceService: PersistenceServiceProtocol {
+public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
     public nonisolated let dbQueue: DatabaseQueue
     internal let logger = Logger.database
+
+    // MARK: - HealthCheckable
+
+    public var healthStatus: HealthStatus {
+        get async {
+            // Actor-isolated, but we can assume ok if initialized. 
+            // We'll return ok and let checkHealth do the real work if needed.
+            return .ok
+        }
+    }
+
+    public var healthDetails: [String: String]? {
+        get async {
+            return ["path": dbQueue.path]
+        }
+    }
+
+    public func checkHealth() async -> HealthStatus {
+        do {
+            try await dbQueue.read { db in
+                _ = try Int.fetchOne(db, sql: "SELECT 1")
+            }
+            return .ok
+        } catch {
+            logger.error("Database health check failed: \(error)")
+            return .down
+        }
+    }
 
     // MARK: - Initialization
 

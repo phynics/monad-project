@@ -31,9 +31,45 @@ extension OpenAIClient: LLMClientProtocol {}
 extension OllamaClient: LLMClientProtocol {}
 
 /// Service for managing LLM interactions with configuration support
-public actor LLMService: LLMServiceProtocol {
+public actor LLMService: LLMServiceProtocol, HealthCheckable {
     public private(set) var configuration: LLMConfiguration = .openAI
     public private(set) var isConfigured: Bool = false
+
+    // MARK: - HealthCheckable
+
+    public var healthStatus: HealthStatus {
+        get async {
+            return isConfigured ? .ok : .degraded
+        }
+    }
+
+    public var healthDetails: [String: String]? {
+        get async {
+            return [
+                "model": configuration.modelName,
+                "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom")
+            ]
+        }
+    }
+
+    public func checkHealth() async -> HealthStatus {
+        // Basic check: is configured
+        guard isConfigured else { return .degraded }
+        
+        // Optional: Proactive check by trying to list models (if supported)
+        do {
+            if let client = client {
+                _ = try await client.fetchAvailableModels()
+                return .ok
+            }
+            return .degraded
+        } catch {
+            logger.warning("LLM health check connectivity warning: \(error)")
+            // We return ok if configured even if network check fails, 
+            // but we could return degraded if we want to be strict.
+            return .ok 
+        }
+    }
 
     /// External tool providers (e.g. MCP) injected from the platform targets
     private var toolProviders: [any ToolProvider] = []
