@@ -8,7 +8,7 @@
     - [ ] Create a `HealthCheckable` protocol in `MonadCore`.
     - [ ] Implement this protocol in `DatabaseService` (check connection).
     - [ ] Implement this protocol in `AIService` (check config/connectivity).
-- [ ] Task: Create Status Controller
+- [x] Task: Create Status Controller c32f7d9
     - [ ] Create `StatusController` in `MonadServer`.
     - [ ] Implement `GET /status` handler.
     - [ ] Wire up dependency injection to access services.
