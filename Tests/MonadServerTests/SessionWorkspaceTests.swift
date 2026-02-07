@@ -1,7 +1,7 @@
 import XCTest
 import GRDB
 @testable import MonadCore
-@testable import MonadServerCore
+@testable import MonadServer
 
 final class SessionWorkspaceTests: XCTestCase {
     var sessionManager: SessionManager!

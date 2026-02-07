@@ -1,6 +1,6 @@
 import XCTest
 import MonadCore
-@testable import MonadServerCore
+@testable import MonadServer
 
 final class SessionSeedingTests: XCTestCase {
     var sessionManager: SessionManager!

@@ -6,7 +6,7 @@ import MonadCore
 import NIOCore
 import Testing
 
-@testable import MonadServerCore
+@testable import MonadServer
 
 @Suite struct EndpointEdgeCaseTests {
 

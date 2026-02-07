@@ -2,7 +2,7 @@ import Foundation
 import MonadCore
 import Testing
 
-@testable import MonadServerCore
+@testable import MonadServer
 
 @Suite struct ServerLLMServiceTests {
 

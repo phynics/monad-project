@@ -6,7 +6,7 @@ import NIOCore
 import OpenAI
 import Testing
 
-@testable import MonadServerCore
+@testable import MonadServer
 
 @Suite struct ChatControllerStreamingTests {
 

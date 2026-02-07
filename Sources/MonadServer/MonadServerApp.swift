@@ -3,7 +3,6 @@ import Foundation
 import Hummingbird
 import Logging
 import MonadCore
-import MonadServerCore
 
 @main
 @available(macOS 14.0, *)

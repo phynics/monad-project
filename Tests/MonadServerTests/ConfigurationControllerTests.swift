@@ -2,7 +2,7 @@ import Testing
 import Hummingbird
 import HummingbirdTesting
 import Foundation
-@testable import MonadServerCore
+@testable import MonadServer
 import MonadCore
 import NIOCore
 

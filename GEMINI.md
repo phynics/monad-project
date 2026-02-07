@@ -61,8 +61,14 @@ The project follows a modular architecture organized into targets defined in `pr
 │   ├── MonadCLI           # Command-line interface & commands
 │   ├── MonadClient        # Networking & SSE handling
 │   ├── MonadCore          # Shared domain logic, models, & DB
-│   ├── MonadServer        # Server entry point & setup
-│   └── MonadServerCore    # Server controllers & routing
+│    ├── MonadServer/
+    │   ├── Controllers/
+    │   ├── Extensions/
+    │   ├── Middleware/
+    │   ├── Models/
+    │   ├── Services/
+    │   ├── MonadServerApp.swift
+    │   └── ...
 ├── Tests                  # Unit & Integration tests
 ├── project.yml            # XcodeGen project definition
 └── Makefile               # Build & utility scripts
