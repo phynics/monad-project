@@ -30,10 +30,10 @@
 - [x] Task: Conductor - User Manual Verification 'CLI Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Integration & Polish
-- [ ] Task: End-to-End Test
-    - [ ] Run `MonadServer`.
-    - [ ] Run `swift run MonadCLI status` and verify output.
-- [ ] Task: Documentation
-    - [ ] Update `API_REFERENCE.md` with the new endpoint.
-    - [ ] Update `README.md` with the new command.
-- [ ] Task: Conductor - User Manual Verification 'Integration & Polish' (Protocol in workflow.md)
+- [x] Task: End-to-End Test f8be2d7
+    - [x] Run `MonadServer`.
+    - [x] Run `swift run MonadCLI status` and verify output.
+- [x] Task: Documentation 8f5ab28
+    - [x] Update `API_REFERENCE.md` with the new endpoint.
+    - [x] Update `README.md` with the new command.
+- [x] Task: Conductor - User Manual Verification 'Integration & Polish' (Protocol in workflow.md) [checkpoint: 5fbdfd7]
