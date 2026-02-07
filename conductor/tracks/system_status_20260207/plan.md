@@ -12,7 +12,7 @@
     - [ ] Create `StatusController` in `MonadServer`.
     - [ ] Implement `GET /status` handler.
     - [ ] Wire up dependency injection to access services.
-- [ ] Task: Register Route & Verify
+- [x] Task: Register Route & Verify b635b0a
     - [ ] Register the controller in `MonadServer/App.swift`.
     - [ ] Write a unit test in `MonadServerTests` to verify the JSON response format.
 - [ ] Task: Conductor - User Manual Verification 'Server-Side Implementation' (Protocol in workflow.md)
