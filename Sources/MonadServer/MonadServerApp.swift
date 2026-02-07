@@ -83,6 +83,12 @@ struct MonadServer: AsyncParsableCommand {
             return "OK"
         }
 
+        let statusController = StatusController<BasicRequestContext>(
+            persistenceService: persistenceService,
+            llmService: llmService
+        )
+        statusController.addRoutes(to: router)
+
         router.get("/") { _, _ -> String in
             return "Monad Server is running."
         }
