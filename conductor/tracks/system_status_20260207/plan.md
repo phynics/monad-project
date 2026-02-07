@@ -4,7 +4,7 @@
 - [x] Task: Define Status Models b4a508a
     - [ ] Create `StatusResponse` and `ComponentStatus` structs in `MonadCore` (shared models).
     - [ ] Ensure they are `Codable` and `Sendable`.
-- [ ] Task: Implement Service Health Protocols
+- [x] Task: Implement Service Health Protocols b26ec3d
     - [ ] Create a `HealthCheckable` protocol in `MonadCore`.
     - [ ] Implement this protocol in `DatabaseService` (check connection).
     - [ ] Implement this protocol in `AIService` (check config/connectivity).
