@@ -177,7 +177,7 @@ actor ChatREPL: ChatREPLController {
 
             return "\(wsSummary) | 🧠 \(activeCount) active memories"
         } catch {
-            return ""
+            return TerminalUI.yellow("⚠️ Context unavailable")
         }
     }
 
@@ -205,7 +205,7 @@ actor ChatREPL: ChatREPLController {
                 print("")
             }
         } catch {
-            // Silently fail
+            TerminalUI.printWarning("Could not load context: \(error.localizedDescription)")
         }
     }
 
@@ -240,7 +240,7 @@ actor ChatREPL: ChatREPLController {
             do {
                 try await command.run(args: Array(args.dropFirst()), context: context)
             } catch {
-                TerminalUI.printError("Command failed: \(error.localizedDescription)")
+                await handleError(error)
             }
         } else {
             TerminalUI.printError("Unknown command: \(cmdName). Type /help for available commands.")
@@ -311,6 +311,31 @@ actor ChatREPL: ChatREPLController {
 
         } catch {
             print("")
+            await handleError(error)
+        }
+    }
+
+    private func handleError(_ error: Error) async {
+        if let clientError = error as? MonadClientError {
+            switch clientError {
+            case .unauthorized:
+                TerminalUI.printError("Unauthorized. Please check your API key or configuration.")
+            case .serverNotReachable:
+                TerminalUI.printError("Server not reachable. Please ensure the server is running.")
+            case .notFound:
+                TerminalUI.printError("Resource not found.")
+            case .httpError(let statusCode, let message):
+                TerminalUI.printError("HTTP Error \(statusCode): \(message ?? "Unknown")")
+            case .networkError(let err):
+                TerminalUI.printError("Network Error: \(err.localizedDescription)")
+            case .decodingError(let err):
+                TerminalUI.printError("Decoding Error: \(err.localizedDescription)")
+            case .invalidURL:
+                 TerminalUI.printError("Invalid URL.")
+            case .unknown(let msg):
+                TerminalUI.printError("Error: \(msg)")
+            }
+        } else {
             TerminalUI.printError("Error: \(error.localizedDescription)")
         }
     }
