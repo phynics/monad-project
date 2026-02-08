@@ -9,7 +9,6 @@ public actor SessionManager {
     private var contextManagers: [UUID: ContextManager] = [:]
     private var toolManagers: [UUID: SessionToolManager] = [:]
     private var toolExecutors: [UUID: ToolExecutor] = [:]
-    private var documentManagers: [UUID: DocumentManager] = [:]
     private var toolContextSessions: [UUID: ToolContextSession] = [:]
 
     private let persistenceService: any PersistenceServiceProtocol
@@ -108,9 +107,6 @@ public actor SessionManager {
         )
         contextManagers[session.id] = contextManager
 
-        let documentManager = DocumentManager()
-        documentManagers[session.id] = documentManager
-
         let toolContextSession = ToolContextSession()
         toolContextSessions[session.id] = toolContextSession
 
@@ -118,7 +114,7 @@ public actor SessionManager {
 
         // Setup Tools for session
         let toolManager = await createToolManager(
-            for: session, jailRoot: sessionWorkspaceURL.path, documentManager: documentManager,
+            for: session, jailRoot: sessionWorkspaceURL.path,
             toolContextSession: toolContextSession,
             jobQueueContext: jobQueueContext)
         toolManagers[session.id] = toolManager
@@ -139,14 +135,12 @@ public actor SessionManager {
     private func createToolManager(
         for session: ConversationSession,
         jailRoot: String,
-        documentManager: DocumentManager,
         toolContextSession: ToolContextSession,
         jobQueueContext: JobQueueContext
     ) async -> SessionToolManager {
         let currentWD = session.workingDirectory ?? jailRoot
 
         let availableTools: [any MonadCore.Tool] = [
-            ExecuteSQLTool(persistenceService: persistenceService),
             // Filesystem Tools
             ChangeDirectoryTool(
                 currentPath: currentWD,
@@ -161,14 +155,6 @@ public actor SessionManager {
             SearchFilesTool(currentDirectory: currentWD, jailRoot: jailRoot),
             ReadFileTool(currentDirectory: currentWD, jailRoot: jailRoot),
             InspectFileTool(currentDirectory: currentWD, jailRoot: jailRoot),
-            // Document Tools
-            LoadDocumentTool(documentManager: documentManager),
-            UnloadDocumentTool(documentManager: documentManager),
-            SwitchDocumentViewTool(documentManager: documentManager),
-            FindExcerptsTool(llmService: llmService, documentManager: documentManager),
-            EditDocumentSummaryTool(documentManager: documentManager),
-            MoveDocumentExcerptTool(documentManager: documentManager),
-            LaunchSubagentTool(llmService: llmService, documentManager: documentManager),
             // Job Queue Gateway
             JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession),
         ]
@@ -211,9 +197,6 @@ public actor SessionManager {
         )
         contextManagers[session.id] = contextManager
         
-        let documentManager = DocumentManager()
-        documentManagers[session.id] = documentManager
-        
         let toolContextSession = ToolContextSession()
         toolContextSessions[session.id] = toolContextSession
         
@@ -221,7 +204,7 @@ public actor SessionManager {
         
         // Setup Tools
         let toolManager = await createToolManager(
-            for: session, jailRoot: sessionWorkspaceURL.path, documentManager: documentManager,
+            for: session, jailRoot: sessionWorkspaceURL.path,
             toolContextSession: toolContextSession,
             jobQueueContext: jobQueueContext)
         toolManagers[session.id] = toolManager
@@ -284,16 +267,11 @@ public actor SessionManager {
         return toolManagers[sessionId]
     }
 
-    public func getDocumentManager(for sessionId: UUID) -> DocumentManager? {
-        return documentManagers[sessionId]
-    }
-
     public func deleteSession(id: UUID) {
         sessions.removeValue(forKey: id)
         contextManagers.removeValue(forKey: id)
         toolManagers.removeValue(forKey: id)
         toolExecutors.removeValue(forKey: id)
-        documentManagers.removeValue(forKey: id)
         toolContextSessions.removeValue(forKey: id)
     }
 

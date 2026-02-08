@@ -129,56 +129,6 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
         }
     }
 
-    /// Execute raw SQL and return results as JSON-compatible dictionaries
-    public func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String:
-        AnyCodable]]
-    {
-        let results: [[String: AnyCodable]] = try await dbQueue.write { db in
-            let rows = try Row.fetchAll(db, sql: sql, arguments: StatementArguments(arguments))
-            return rows.map { row in
-                var dict: [String: AnyCodable] = [:]
-                for (column, value) in row {
-                    // Convert DatabaseValue to JSON-compatible type
-                    let jsonValue: Any
-                    if value.isNull {
-                        jsonValue = NSNull()
-                    } else if let dateValue = Date.fromDatabaseValue(value) {
-                        jsonValue = ISO8601DateFormatter().string(from: dateValue)
-                    } else if let intValue = Int64.fromDatabaseValue(value) {
-                        jsonValue = Int(intValue)
-                    } else if let doubleValue = Double.fromDatabaseValue(value) {
-                        jsonValue = doubleValue
-                    } else if let boolValue = Bool.fromDatabaseValue(value) {
-                        jsonValue = boolValue
-                    } else if let stringValue = String.fromDatabaseValue(value) {
-                        jsonValue = stringValue
-                    } else if let dataValue = Data.fromDatabaseValue(value) {
-                        // For blobs (like UUIDs), convert to string or hex if possible
-                        if dataValue.count == 16,
-                            let uuid = UUID(
-                                uuidString: dataValue.map { String(format: "%02hhx", $0) }.joined())
-                        {
-                            jsonValue = uuid.uuidString
-                        } else {
-                            jsonValue = dataValue.base64EncodedString()
-                        }
-                    } else {
-                        jsonValue = value.description
-                    }
-                    dict[column] = AnyCodable(jsonValue)
-                }
-                return dict
-            }
-        }
-
-        // Sync table directory after potential schema changes
-        if sql.lowercased().contains("create table") || sql.lowercased().contains("drop table") {
-            try await syncTableDirectory()
-        }
-
-        return results
-    }
-
     /// Synchronize table_directory with actual SQLite schema
     public func syncTableDirectory() async throws {
         try await dbQueue.write { db in

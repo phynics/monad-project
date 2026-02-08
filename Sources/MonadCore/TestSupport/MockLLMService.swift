@@ -119,7 +119,6 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
     public func chatStreamWithContext(
         userQuery: String,
         contextNotes: [ContextFile],
-        documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
         tools: [any MonadCore.Tool],
@@ -149,7 +148,6 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
     public func buildPrompt(
         userQuery: String,
         contextNotes: [ContextFile],
-        documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
         tools: [any MonadCore.Tool],

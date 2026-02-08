@@ -24,7 +24,6 @@ public protocol LLMServiceProtocol: HealthCheckable {
     func chatStreamWithContext(
         userQuery: String,
         contextNotes: [ContextFile],
-        documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
         tools: [any Tool],
@@ -47,7 +46,6 @@ public protocol LLMServiceProtocol: HealthCheckable {
     func buildPrompt(
         userQuery: String,
         contextNotes: [ContextFile],
-        documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
         tools: [any Tool],
@@ -105,17 +103,6 @@ public protocol PersistenceServiceProtocol: HealthCheckable {
     func fetchJobs(for sessionId: UUID) async throws -> [Job]
     func deleteJob(id: UUID) async throws
 
-    // RAW SQL Support
-    func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]]
-
     // Database Management
     func resetDatabase() async throws
-}
-
-/// Delegate for requesting user confirmation for sensitive operations
-public protocol SQLConfirmationDelegate: AnyObject, Sendable {
-    /// Request confirmation for a sensitive SQL operation
-    /// - Parameter sql: The SQL command to be executed
-    /// - Returns: True if user approved, false otherwise
-    func requestConfirmation(for sql: String) async -> Bool
 }
