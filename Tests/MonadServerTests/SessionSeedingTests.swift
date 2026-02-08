@@ -25,12 +25,8 @@ final class SessionSeedingTests: XCTestCase {
 
         let sessionDir = workspaceRoot.appendingPathComponent("sessions").appendingPathComponent(session.id.uuidString)
         let notesDir = sessionDir.appendingPathComponent("Notes")
-        let personasDir = sessionDir.appendingPathComponent("Personas")
-
         XCTAssertTrue(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Welcome.md").path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Project.md").path))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: personasDir.appendingPathComponent("Default.md").path))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: personasDir.appendingPathComponent("ProductManager.md").path))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: personasDir.appendingPathComponent("Architect.md").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Persona.md").path))
     }
 }
