@@ -69,7 +69,7 @@ public struct ContextNotesComponent: PromptSection {
     }
 
     public var estimatedTokens: Int {
-        notes.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) }
+        TokenEstimator.estimate(parts: notes.map(\.content))
     }
 }
 
@@ -115,7 +115,7 @@ public struct MemoriesComponent: PromptSection {
         if let summary = summarizedContent {
             return TokenEstimator.estimate(text: summary)
         }
-        return memories.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) }
+        return TokenEstimator.estimate(parts: memories.map(\.content))
     }
 }
 
@@ -157,7 +157,7 @@ public struct ChatHistoryComponent: PromptSection {
     }
 
     public var estimatedTokens: Int {
-        messages.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) }
+        TokenEstimator.estimate(parts: messages.map(\.content))
     }
 }
 

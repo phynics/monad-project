@@ -60,7 +60,7 @@ public actor PromptBuilder {
         var memoryContent: String?
         let memoryBudget = 4000 // Soft limit for raw memories
         if let compressor = memoryCompressor {
-             let rawTokens = allMemories.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) }
+             let rawTokens = TokenEstimator.estimate(parts: allMemories.map(\.content))
              if rawTokens > memoryBudget {
                  memoryContent = await compressor(allMemories, memoryBudget)
              }

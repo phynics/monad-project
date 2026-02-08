@@ -31,7 +31,12 @@ public enum TokenEstimator {
     }
 
     /// Estimate tokens for multiple components
+    ///
+    /// - Note: Batches token estimation by joining components first.
+    /// This reduces the overhead of tokenizer initialization from O(N) to O(1),
+    /// which is significant when estimating many small strings (e.g. chat history).
     public static func estimate(parts: [String]) -> Int {
-        parts.reduce(0) { $0 + estimate(text: $1) }
+        let combined = parts.joined(separator: " ")
+        return estimate(text: combined)
     }
 }
