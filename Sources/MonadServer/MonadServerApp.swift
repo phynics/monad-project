@@ -127,13 +127,15 @@ struct MonadServer: AsyncParsableCommand {
         // Create database writer accessor (since it's an actor property, access it async or assume safe access pattern)
         let dbWriter = persistenceService.databaseWriter
 
+        let workspacesGroup = protected.group("/workspaces")
+        
         let workspaceController = WorkspaceController<BasicRequestContext>(
             dbWriter: dbWriter, logger: logger)
-        workspaceController.addRoutes(to: protected.group("/workspaces"))
+        workspaceController.addRoutes(to: workspacesGroup)
 
         let filesController = FilesController<BasicRequestContext>(
             workspaceController: workspaceController)
-        filesController.addRoutes(to: protected.group("/workspaces/:id/files"))
+        filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
 
         let clientController = ClientController<BasicRequestContext>(
             dbWriter: dbWriter, logger: logger)
@@ -152,13 +154,15 @@ struct MonadServer: AsyncParsableCommand {
         let advertiser = BonjourAdvertiser(port: port)
 
         let jobRunner = JobRunnerService(sessionManager: sessionManager, llmService: llmService)
+        let orphanCleanup = OrphanCleanupService(persistenceService: persistenceService, workspaceRoot: workspaceRoot, logger: logger)
 
         let serviceGroup = ServiceGroup(
             configuration: ServiceGroupConfiguration(
                 services: [
                     .init(service: app),
                     .init(service: jobRunner),
-                    .init(service: advertiser)
+                    .init(service: advertiser),
+                    .init(service: orphanCleanup)
                 ],
                 gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                 logger: logger
@@ -166,6 +170,77 @@ struct MonadServer: AsyncParsableCommand {
         )
 
         try await serviceGroup.run()
+    }
+
+    /// Service to clean up orphaned workspaces
+    struct OrphanCleanupService: Service {
+        let persistenceService: PersistenceService
+        let workspaceRoot: URL
+        let logger: Logger
+
+        func run() async throws {
+            // Run initially
+            await cleanup()
+            
+            // Then run daily
+            while true {
+                 try await Task.sleep(for: .seconds(86400)) // 24 hours
+                 await cleanup()
+            }
+        }
+
+        private func cleanup() async {
+            logger.info("Starting orphaned workspace cleanup...")
+            do {
+                try await persistenceService.databaseWriter.write { db in
+                    let workspaces = try Workspace.fetchAll(db)
+                    let sessions = try ConversationSession.fetchAll(db)
+                    
+                    var referencedIds: Set<UUID> = []
+                    
+                    // Collect all referenced IDs
+                    for session in sessions {
+                        if let pid = session.primaryWorkspaceId {
+                            referencedIds.insert(pid)
+                        }
+                        for aid in session.attachedWorkspaces {
+                            referencedIds.insert(aid)
+                        }
+                    }
+                    
+                    var deletedCount = 0
+                    for ws in workspaces {
+                        if !referencedIds.contains(ws.id) {
+                            // Check if it's safe to delete (is it in the Monad Workspaces dir?)
+                            // We construct the path and check if the recorded rootPath matches
+                            if let rootPath = ws.rootPath, 
+                               rootPath.hasPrefix(workspaceRoot.path) || rootPath.contains("/.monad/workspaces/") || rootPath.contains("/Monad/Workspaces/") {
+                                
+                                // Delete DB Record
+                                try ws.delete(db)
+                                
+                                // Delete Filesystem
+                                if FileManager.default.fileExists(atPath: rootPath) {
+                                    try? FileManager.default.removeItem(atPath: rootPath)
+                                }
+                                deletedCount += 1
+                                logger.info("Deleted orphaned workspace: \(ws.id) at \(rootPath)")
+                            } else {
+                                logger.warning("Skipping cleanup of user-managed workspace: \(ws.id) at \(ws.rootPath ?? "nil")")
+                            }
+                        }
+                    }
+                    
+                    if deletedCount > 0 {
+                        logger.info("Cleanup complete. Removed \(deletedCount) orphaned workspaces.")
+                    } else {
+                        logger.info("Cleanup complete. No orphaned workspaces found.")
+                    }
+                }
+            } catch {
+                logger.error("Failed to run orphan cleanup: \(error)")
+            }
+        }
     }
 
     /// Default workspace path

@@ -34,7 +34,7 @@ public actor SessionManager {
     {
         let sessionId = UUID()
         // Default persona logic
-        let selectedPersona = persona ?? "Default.md"
+        let selectedPersonaContent = persona ?? "You are Monad, an intelligent AI assistant."
 
         // 1. Create Workspace
         let sessionWorkspaceURL = workspaceRoot.appendingPathComponent(
@@ -58,25 +58,9 @@ public actor SessionManager {
         try projectNote.write(
             to: notesDir.appendingPathComponent("Project.md"), atomically: true, encoding: .utf8)
 
-        // 1.2 Create Personas directory and default personas
-        let personasDir = sessionWorkspaceURL.appendingPathComponent("Personas", isDirectory: true)
-        try FileManager.default.createDirectory(at: personasDir, withIntermediateDirectories: true)
-
-        let defaultPersonaContent = "You are Monad, an intelligent AI assistant."
-        try defaultPersonaContent.write(
-            to: personasDir.appendingPathComponent("Default.md"), atomically: true, encoding: .utf8)
-
-        let productPersonaContent =
-            "You are an expert AI Product Manager. You specialize in defining requirements, user stories, and product strategy."
-        try productPersonaContent.write(
-            to: personasDir.appendingPathComponent("ProductManager.md"), atomically: true,
-            encoding: .utf8)
-
-        let architectPersonaContent =
-            "You are a Senior Software Architect. You focus on system design, scalability, and clean architecture."
-        try architectPersonaContent.write(
-            to: personasDir.appendingPathComponent("Architect.md"), atomically: true,
-            encoding: .utf8)
+        // 1.2 Create Persona file in Notes
+        try selectedPersonaContent.write(
+            to: notesDir.appendingPathComponent("Persona.md"), atomically: true, encoding: .utf8)
 
         let workspace = Workspace(
             uri: .serverSession(sessionId),
@@ -94,7 +78,7 @@ public actor SessionManager {
             id: sessionId,
             title: title,
             primaryWorkspaceId: workspace.id,
-            persona: selectedPersona
+            persona: "Persona.md" // Store filename relative to Notes or just mark it present
         )
         session.workingDirectory = sessionWorkspaceURL.path
 
@@ -231,7 +215,17 @@ public actor SessionManager {
             throw SessionError.sessionNotFound
         }
 
-        session.persona = persona
+        // Write content to Notes/Persona.md
+        if let workingDirectory = session.workingDirectory {
+            let personaPath = URL(fileURLWithPath: workingDirectory)
+                .appendingPathComponent("Notes")
+                .appendingPathComponent("Persona.md")
+            try persona.write(to: personaPath, atomically: true, encoding: .utf8)
+        }
+        
+        // We don't strictly need to update session.persona if it's always "Persona.md", 
+        // but we can keep it as a filename reference.
+        session.persona = "Persona.md"
         session.updatedAt = Date()
 
         if sessions[id] != nil {

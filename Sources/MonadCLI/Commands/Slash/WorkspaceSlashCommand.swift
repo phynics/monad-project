@@ -1,5 +1,6 @@
 import Foundation
 import MonadClient
+import MonadCore
 
 struct WorkspaceSlashCommand: SlashCommand {
     let name = "workspace"
@@ -50,24 +51,63 @@ struct WorkspaceSlashCommand: SlashCommand {
     }
 
     private func listWorkspaces(context: ChatContext) async throws {
-        let workspaces = try await context.client.listWorkspaces()
+        let allWorkspaces = try await context.client.listWorkspaces()
         let sessionWS = try await context.client.listSessionWorkspaces(
             sessionId: context.session.id)
 
-        print("\n\(TerminalUI.bold("Workspaces:"))\n")
+        let primaryId = sessionWS.primary?.id
+        let attachedIds = Set(sessionWS.attached.map { $0.id })
+        
+        let primaryWorkspace = allWorkspaces.first(where: { $0.id == primaryId })
+        let attachedWorkspaces = allWorkspaces.filter { attachedIds.contains($0.id) && $0.id != primaryId }
+        let availableWorkspaces = allWorkspaces.filter { $0.id != primaryId && !attachedIds.contains($0.id) }
 
-        for ws in workspaces {
-            let isPrimary = sessionWS.primary?.id == ws.id
-            let isAttached = sessionWS.attached.contains(where: { $0.id == ws.id })
-            let marker =
-                isPrimary ? TerminalUI.green(" ★") : (isAttached ? TerminalUI.blue(" ●") : " ○")
-
-            print("  \(marker) \(TerminalUI.bold(ws.uri.description))")
-            print("     ID: \(TerminalUI.dim(ws.id.uuidString))")
+        print("\n\(TerminalUI.bold("Current Session Workspaces:"))")
+        
+        if let primary = primaryWorkspace {
+            printWorkspace(primary, marker: "★", color: "green")
+        } else {
+             print("  \(TerminalUI.dim("No primary workspace"))")
         }
+        
+        for ws in attachedWorkspaces {
+            printWorkspace(ws, marker: "●", color: "blue")
+        }
+
+        if !availableWorkspaces.isEmpty {
+            print("\n\(TerminalUI.bold("Available Workspaces:"))")
+            for ws in availableWorkspaces {
+                printWorkspace(ws, marker: "○", color: "white")
+            }
+        }
+        
         print("")
         print("  ★ Primary  ● Attached  ○ Available")
         print("")
+    }
+
+    private func printWorkspace(_ ws: Workspace, marker: String, color: String) {
+        let markerStr: String
+        switch color {
+        case "green": markerStr = TerminalUI.green(marker)
+        case "blue": markerStr = TerminalUI.blue(marker)
+        default: markerStr = marker
+        }
+        
+        print("  \(markerStr) \(TerminalUI.bold(ws.uri.description))")
+        print("     ID: \(TerminalUI.dim(ws.id.uuidString))")
+        if let path = ws.rootPath {
+            print("     Path: \(TerminalUI.dim(path))")
+        }
+        if !ws.tools.isEmpty {
+            let toolNames = ws.tools.map { (ref: ToolReference) -> String in
+                switch ref {
+                case .known(let id): return id
+                case .custom(let def): return def.name
+                }
+            }
+            print("     Tools: \(toolNames.joined(separator: ", "))")
+        }
     }
 
     private func selectWorkspace(_ idStr: String, context: ChatContext) async throws {

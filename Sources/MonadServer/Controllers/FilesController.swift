@@ -13,15 +13,16 @@ public struct FilesController<Context: RequestContext>: Sendable {
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.get(use: listFiles)
-        group.get("{path:+}", use: getFileContent)
-        group.put("{path:+}", use: writeFileContent)
-        group.delete("{path:+}", use: deleteFile)
+
+        group.get("**", use: getFileContent)
+        group.put("**", use: writeFileContent)
+        group.delete("**", use: deleteFile)
     }
 
     // MARK: - Handlers
 
     @Sendable func listFiles(_ request: Request, context: Context) async throws -> Response {
-        let workspaceId = try context.parameters.require("id", as: UUID.self)
+        let workspaceId = try context.parameters.require("workspaceId", as: UUID.self)
         guard let workspace = try await workspaceController.getWorkspace(id: workspaceId) else {
             throw HTTPError(.notFound)
         }
@@ -58,23 +59,46 @@ public struct FilesController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func getFileContent(_ request: Request, context: Context) async throws -> Response {
-        let workspaceId = try context.parameters.require("id", as: UUID.self)
-        guard let path = context.parameters.get("path") else {
-            throw HTTPError(.badRequest, message: "Missing path")
+        let workspaceId = try context.parameters.require("workspaceId", as: UUID.self)
+        // Manually extract path from URI since we are using wildcard **
+        let uriPath = request.uri.path
+        guard let range = uriPath.range(of: "/files/") else {
+            throw HTTPError(.badRequest, message: "Invalid path structure")
+        }
+        let rawPath = String(uriPath[range.upperBound...])
+        guard let path = rawPath.removingPercentEncoding else {
+             throw HTTPError(.badRequest, message: "Invalid path encoding")
+        }
+        
+        // Skip hidden files or empty paths if needed, though security check handles it later.
+        if path.isEmpty {
+             throw HTTPError(.badRequest, message: "Empty path")
         }
 
+        // Debug logging via Logger and Print (fallback)
+        context.logger.info("[FilesController] getFileContent request: path=\(path)")
+
         guard let workspace = try await workspaceController.getWorkspace(id: workspaceId) else {
+            context.logger.warning("[FilesController] Workspace not found: \(workspaceId)")
+            print("[FilesController] Workspace not found: \(workspaceId)")
             throw HTTPError(.notFound)
         }
         guard let rootPath = workspace.rootPath else {
+            context.logger.error("[FilesController] Workspace has no root path")
+            print("[FilesController] Workspace has no root path")
             throw HTTPError(.badRequest, message: "Workspace has no root path")
         }
 
         let fileURL = URL(fileURLWithPath: rootPath).appendingPathComponent(path)
+        
+        context.logger.info("[FilesController] Resolving file: rootPath=\(rootPath), fullURL=\(fileURL.path)")
+        print("[FilesController] Resolving file: rootPath=\(rootPath), fullURL=\(fileURL.path)")
 
         // Security check: Ensure fileURL is inside rootPath
         guard fileURL.standardized.path.hasPrefix(URL(fileURLWithPath: rootPath).standardized.path)
         else {
+            context.logger.warning("[FilesController] Security check failed: \(fileURL.standardized.path) not in \(URL(fileURLWithPath: rootPath).standardized.path)")
+            print("[FilesController] Security check failed: \(fileURL.standardized.path) not in \(URL(fileURLWithPath: rootPath).standardized.path)")
             throw HTTPError(.forbidden)
         }
 
@@ -85,12 +109,14 @@ public struct FilesController<Context: RequestContext>: Sendable {
             return Response(
                 status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(string: content)))
         } catch {
+            context.logger.error("[FilesController] Failed to read file: \(error)")
+            print("[FilesController] Failed to read file: \(error)")
             throw HTTPError(.notFound)
         }
     }
 
     @Sendable func writeFileContent(_ request: Request, context: Context) async throws -> Response {
-        let workspaceId = try context.parameters.require("id", as: UUID.self)
+        let workspaceId = try context.parameters.require("workspaceId", as: UUID.self)
         guard let path = context.parameters.get("path") else {
             throw HTTPError(.badRequest, message: "Missing path")
         }
@@ -121,7 +147,7 @@ public struct FilesController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func deleteFile(_ request: Request, context: Context) async throws -> Response {
-        let workspaceId = try context.parameters.require("id", as: UUID.self)
+        let workspaceId = try context.parameters.require("workspaceId", as: UUID.self)
         guard let path = context.parameters.get("path") else {
             throw HTTPError(.badRequest, message: "Missing path")
         }

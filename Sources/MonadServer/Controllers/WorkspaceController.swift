@@ -19,11 +19,11 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post(use: create)
         group.get(use: list)
-        group.get(":id", use: get)
-        group.patch(":id", use: update)
-        group.delete(":id", use: delete)
-        group.post(":id/tools", use: addTool)
-        group.get(":id/tools", use: listTools)
+        group.get(":workspaceId", use: get)
+        group.patch(":workspaceId", use: update)
+        group.delete(":workspaceId", use: delete)
+        group.post(":workspaceId/tools", use: addTool)
+        group.get(":workspaceId/tools", use: listTools)
     }
 
     /// POST /workspaces
@@ -99,7 +99,7 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
 
     /// GET /workspaces/:id
     @Sendable func get(request: Request, context: Context) async throws -> Response {
-        let id = try context.parameters.require("id", as: UUID.self)
+        let id = try context.parameters.require("workspaceId", as: UUID.self)
         let workspace = try await getWorkspace(id: id)
 
         guard let workspace = workspace else {
@@ -115,7 +115,7 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
     
     /// PATCH /workspaces/:id
     @Sendable func update(request: Request, context: Context) async throws -> Response {
-        let id = try context.parameters.require("id", as: UUID.self)
+        let id = try context.parameters.require("workspaceId", as: UUID.self)
         let input = try await request.decode(as: UpdateWorkspaceRequest.self, context: context)
         
         try await dbWriter.write { db in
@@ -138,7 +138,7 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
 
     /// DELETE /workspaces/:id
     @Sendable func delete(request: Request, context: Context) async throws -> Response {
-        let id = try context.parameters.require("id", as: UUID.self)
+        let id = try context.parameters.require("workspaceId", as: UUID.self)
         try await dbWriter.write { db in
             _ = try Workspace.deleteOne(db, key: id)
         }
@@ -147,7 +147,7 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
 
     /// POST /workspaces/:id/tools
     @Sendable func addTool(request: Request, context: Context) async throws -> Response {
-        let id = try context.parameters.require("id", as: UUID.self)
+        let id = try context.parameters.require("workspaceId", as: UUID.self)
         let input = try await request.decode(as: RegisterToolRequest.self, context: context)
 
         try await dbWriter.write { db in
@@ -166,7 +166,7 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
 
     /// GET /workspaces/:id/tools
     @Sendable func listTools(request: Request, context: Context) async throws -> Response {
-        let id = try context.parameters.require("id", as: UUID.self)
+        let id = try context.parameters.require("workspaceId", as: UUID.self)
 
         let tools = try await dbWriter.read { db -> [ToolReference] in
             guard try Workspace.exists(db, key: id) else {
