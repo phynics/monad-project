@@ -116,6 +116,8 @@ actor ChatREPL: ChatREPLController {
     // MARK: - Internal Logic
 
     private func readInput() async -> String? {
+        print("")
+        
         // Fetch context summary
         let contextSummary = await getContextSummary()
         if !contextSummary.isEmpty {
