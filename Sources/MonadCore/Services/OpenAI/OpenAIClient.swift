@@ -60,7 +60,7 @@ public actor OpenAIClient {
 
         return AsyncThrowingStream { continuation in
             Task {
-                var hasYielded = false
+                let hasYielded = Locked(false)
 
                 do {
                     try await RetryPolicy.retry(
@@ -68,22 +68,22 @@ public actor OpenAIClient {
                         shouldRetry: { error in
                             // Only retry if we haven't started yielding data to avoid duplication
                             // and if the error is transient
-                            return !hasYielded && RetryPolicy.isTransient(error: error)
+                            return !hasYielded.value && RetryPolicy.isTransient(error: error)
                         }
                     ) {
                         // Create a new stream for each attempt
-                        let stream = client.chatsStream(query: query)
+                        let stream: AsyncThrowingStream<ChatStreamResult, Error> = client.chatsStream(query: query)
 
                         for try await result in stream {
                             if let delta = result.choices.first?.delta.content {
                                 if !delta.isEmpty {
-                                    hasYielded = true
+                                    hasYielded.value = true
                                     logger.debug("Yielding OpenAI chunk (\(delta.count) chars)")
                                 }
                             }
                             // Also mark as yielded if we get tool calls or other content
                             if result.choices.first?.delta.toolCalls != nil {
-                                hasYielded = true
+                                hasYielded.value = true
                             }
 
                             continuation.yield(result)
@@ -121,7 +121,7 @@ extension OpenAIClient {
             // because we are collecting it. However, chatStream's internal retry logic
             // stops retrying if it yielded. So if chatStream throws mid-stream,
             // THIS retry block will catch it and retry the whole thing.
-            for try await result in self.chatStream(messages: messages, responseFormat: responseFormat) {
+            for try await result in await self.chatStream(messages: messages, responseFormat: responseFormat) {
                 if let delta = result.choices.first?.delta.content {
                     fullContent += delta
                 }

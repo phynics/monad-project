@@ -52,13 +52,13 @@ public actor OllamaClient {
 
         return AsyncThrowingStream { continuation in
             Task {
-                var hasYielded = false
+                let hasYielded = Locked(false)
 
                 do {
                     try await RetryPolicy.retry(
                         maxRetries: maxRetries,
                         shouldRetry: { error in
-                            return !hasYielded && RetryPolicy.isTransient(error: error)
+                            return !hasYielded.value && RetryPolicy.isTransient(error: error)
                         }
                     ) {
                         // Access self safely inside Task (on actor).
@@ -100,10 +100,10 @@ public actor OllamaClient {
                                 if let converted = await self.convertToOpenAI(response) {
                                     // Check content or tool calls to mark yielded
                                     if let content = converted.choices.first?.delta.content, !content.isEmpty {
-                                        hasYielded = true
+                                        hasYielded.value = true
                                     }
                                     if converted.choices.first?.delta.toolCalls != nil {
-                                        hasYielded = true
+                                        hasYielded.value = true
                                     }
 
                                     logger.debug("Yielding Ollama chunk: \(converted.choices.first?.delta.content ?? "")")
@@ -317,7 +317,8 @@ public actor OllamaClient {
             ]
 
             var fullContent = ""
-            for try await result in self.chatStream(messages: messages, responseFormat: responseFormat) {
+            // chatStream is actor-isolated, so we must await it to get the stream
+            for try await result in await self.chatStream(messages: messages, responseFormat: responseFormat) {
                 if let delta = result.choices.first?.delta.content {
                     fullContent += delta
                 }

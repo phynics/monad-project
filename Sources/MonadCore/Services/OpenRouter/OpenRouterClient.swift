@@ -67,13 +67,13 @@ public actor OpenRouterClient: Sendable {
         
         return AsyncThrowingStream { continuation in
             Task {
-                var hasYielded = false
+                let hasYielded = Locked(false)
 
                 do {
                     try await RetryPolicy.retry(
                         maxRetries: maxRetries,
                         shouldRetry: { error in
-                            return !hasYielded && RetryPolicy.isTransient(error: error)
+                            return !hasYielded.value && RetryPolicy.isTransient(error: error)
                         }
                     ) {
                         var request = URLRequest(url: chatURL)
@@ -129,10 +129,10 @@ public actor OpenRouterClient: Sendable {
                                         let result = try JSONDecoder().decode(ChatStreamResult.self, from: data)
                                         // Mark as yielded if we have content or tool calls
                                         if let content = result.choices.first?.delta.content, !content.isEmpty {
-                                            hasYielded = true
+                                            hasYielded.value = true
                                         }
                                         if result.choices.first?.delta.toolCalls != nil {
-                                            hasYielded = true
+                                            hasYielded.value = true
                                         }
 
                                         continuation.yield(result)
@@ -164,7 +164,7 @@ public actor OpenRouterClient: Sendable {
             ]
 
             var fullContent = ""
-            for try await result in self.chatStream(messages: messages, responseFormat: responseFormat) {
+            for try await result in await self.chatStream(messages: messages, responseFormat: responseFormat) {
                 if let delta = result.choices.first?.delta.content {
                     fullContent += delta
                 }

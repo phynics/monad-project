@@ -14,8 +14,8 @@ public enum RetryPolicy {
     public static func retry<T>(
         maxRetries: Int = 3,
         baseDelay: TimeInterval = 1.0,
-        shouldRetry: @escaping (Error) -> Bool = RetryPolicy.isTransient,
-        operation: @escaping () async throws -> T
+        shouldRetry: @escaping @Sendable (Error) -> Bool = RetryPolicy.isTransient,
+        operation: @escaping @Sendable () async throws -> T
     ) async throws -> T {
         var attempts = 0
 
@@ -74,16 +74,6 @@ public enum RetryPolicy {
             default:
                 return false
             }
-        }
-
-        // Handle OpenAI Errors
-        if let apiError = error as? APIErrorResponse {
-            // Check known transient error codes if available in the error structure
-            // The library typically exposes APIErrorResponse
-            // We might need to inspect the inner error or status code if exposed
-            // This depends on the specific OpenAI library version.
-            // Assuming generic approach for now:
-            return true // OpenAI library errors are often API responses
         }
 
         // Handle Generic NSError (e.g., POSIX errors)

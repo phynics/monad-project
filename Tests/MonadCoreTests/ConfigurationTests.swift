@@ -34,7 +34,7 @@ import Testing
             provider: .ollama
         )
         #expect(config.isValid)
-        #expect(config.timeoutInterval == 120.0) // Ollama default is higher
+        #expect(config.timeoutInterval == 60.0)
     }
 
     @Test("Invalid Endpoint")
@@ -71,7 +71,7 @@ import Testing
 
     @Test("Legacy JSON Decoding")
     func legacyJSONDecoding() throws {
-        // Simulating JSON without timeout/retries
+        // Simulating JSON (dictionary format)
         let json = """
         {
             "activeProvider": "OpenAI",

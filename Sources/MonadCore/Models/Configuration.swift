@@ -257,7 +257,7 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
 
 // MARK: - LLM Providers
 
-public enum LLMProvider: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum LLMProvider: String, Codable, CaseIterable, Identifiable, Sendable, CodingKeyRepresentable {
     case openAI = "OpenAI"
     case openRouter = "OpenRouter"
     case openAICompatible = "OpenAI Compatible"
