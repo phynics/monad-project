@@ -122,6 +122,9 @@ struct MonadServer: AsyncParsableCommand {
         let toolController = ToolController<BasicRequestContext>(sessionManager: sessionManager)
         toolController.addRoutes(to: protected.group("/tools"))
 
+        let noteController = NoteController<BasicRequestContext>(sessionManager: sessionManager)
+        noteController.addRoutes(to: protected.group("/sessions/{id}/notes"))
+
         // Create database writer accessor (since it's an actor property, access it async or assume safe access pattern)
         let dbWriter = persistenceService.databaseWriter
 
@@ -131,7 +134,7 @@ struct MonadServer: AsyncParsableCommand {
 
         let filesController = FilesController<BasicRequestContext>(
             workspaceController: workspaceController)
-        filesController.addRoutes(to: protected.group("/workspaces/{id}/files"))
+        filesController.addRoutes(to: protected.group("/workspaces/:id/files"))
 
         let clientController = ClientController<BasicRequestContext>(
             dbWriter: dbWriter, logger: logger)

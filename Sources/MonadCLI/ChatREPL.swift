@@ -50,6 +50,7 @@ actor ChatREPL: ChatREPLController {
         await registry.register(TaskCommand())
         await registry.register(ClientCommand())
         await registry.register(JobSlashCommand())
+        await registry.register(NoteCommand())
     }
 
     func run() async throws {

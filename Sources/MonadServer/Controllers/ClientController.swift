@@ -16,9 +16,9 @@ public struct ClientController<Context: RequestContext>: Sendable {
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("register", use: register)
-        group.get("{id}", use: get)
+        group.get(":id", use: get)
         group.get(use: list)
-        group.delete("{id}", use: delete)
+        group.delete(":id", use: delete)
     }
 
     /// POST /clients/register

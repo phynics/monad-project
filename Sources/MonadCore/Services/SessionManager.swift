@@ -533,6 +533,65 @@ public actor SessionManager {
             return nil
         }
     }
+
+    // MARK: - Notes
+
+    public func listNotes(sessionId: UUID) async throws -> [ContextFile] {
+        guard let contextManager = contextManagers[sessionId] else {
+            // Try to hydrate if missing
+            do {
+                try await hydrateSession(id: sessionId)
+                if let cm = contextManagers[sessionId] {
+                    return try await cm.fetchAllNotes()
+                }
+            } catch {}
+            throw SessionError.sessionNotFound
+        }
+        return try await contextManager.fetchAllNotes()
+    }
+
+    public func getNote(sessionId: UUID, name: String) async throws -> ContextFile? {
+        let notes = try await listNotes(sessionId: sessionId)
+        return notes.first { $0.name == name }
+    }
+
+    public func createNote(sessionId: UUID, title: String, content: String) async throws -> ContextFile {
+        guard let session = sessions[sessionId] else { throw SessionError.sessionNotFound }
+        guard let wd = session.workingDirectory else { throw SessionError.sessionNotFound }
+
+        let notesDir = URL(fileURLWithPath: wd).appendingPathComponent("Notes", isDirectory: true)
+        let filename = title.hasSuffix(".md") ? title : "\(title).md"
+        let fileURL = notesDir.appendingPathComponent(filename)
+
+        try FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true)
+        try content.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        return ContextFile(
+            name: title.replacingOccurrences(of: ".md", with: ""),
+            content: content,
+            source: "Notes/\(filename)"
+        )
+    }
+
+    public func updateNote(sessionId: UUID, title: String, content: String) async throws -> ContextFile {
+        // Same as create/overwrite for filesystem notes
+        return try await createNote(sessionId: sessionId, title: title, content: content)
+    }
+
+    public func deleteNote(sessionId: UUID, title: String) async throws {
+        guard let session = sessions[sessionId] else { throw SessionError.sessionNotFound }
+        guard let wd = session.workingDirectory else { throw SessionError.sessionNotFound }
+
+        let notesDir = URL(fileURLWithPath: wd).appendingPathComponent("Notes", isDirectory: true)
+        let filename = title.hasSuffix(".md") ? title : "\(title).md"
+        let fileURL = notesDir.appendingPathComponent(filename)
+
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            try FileManager.default.removeItem(at: fileURL)
+        } else {
+            throw NSError(domain: "MonadServer", code: 404, userInfo: [NSLocalizedDescriptionKey: "Note not found"])
+        }
+    }
 }
 
 public enum SessionError: Error {

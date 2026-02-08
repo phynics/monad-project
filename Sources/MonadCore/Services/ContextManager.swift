@@ -94,7 +94,7 @@ public actor ContextManager {
         }
     }
 
-    private func fetchAllNotes() async throws -> [ContextFile] {
+    func fetchAllNotes() async throws -> [ContextFile] {
         var allNotes: [ContextFile] = []
 
         // 2. Fetch from Filesystem

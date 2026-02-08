@@ -160,6 +160,40 @@ public actor MonadClient {
         _ = try await performRaw(request)
     }
 
+    // MARK: - Note API
+
+    /// List notes in a session
+    public func listNotes(sessionId: UUID) async throws -> [ContextFile] {
+        let request = try buildRequest(path: "/api/sessions/\(sessionId.uuidString)/notes", method: "GET")
+        return try await perform(request)
+    }
+
+    /// Get a note
+    public func getNote(sessionId: UUID, title: String) async throws -> ContextFile {
+        let request = try buildRequest(path: "/api/sessions/\(sessionId.uuidString)/notes/\(title)", method: "GET")
+        return try await perform(request)
+    }
+
+    /// Create a note
+    public func createNote(sessionId: UUID, title: String, content: String) async throws -> ContextFile {
+        var request = try buildRequest(path: "/api/sessions/\(sessionId.uuidString)/notes", method: "POST")
+        request.httpBody = try encoder.encode(CreateNoteRequest(title: title, content: content))
+        return try await perform(request)
+    }
+
+    /// Update a note
+    public func updateNote(sessionId: UUID, title: String, content: String) async throws -> ContextFile {
+        var request = try buildRequest(path: "/api/sessions/\(sessionId.uuidString)/notes/\(title)", method: "PUT")
+        request.httpBody = try encoder.encode(UpdateNoteRequest(content: content))
+        return try await perform(request)
+    }
+
+    /// Delete a note
+    public func deleteNote(sessionId: UUID, title: String) async throws {
+        let request = try buildRequest(path: "/api/sessions/\(sessionId.uuidString)/notes/\(title)", method: "DELETE")
+        _ = try await performRaw(request)
+    }
+
     // MARK: - File API
 
     /// List all files in a workspace
