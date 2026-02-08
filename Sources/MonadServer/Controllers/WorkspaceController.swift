@@ -19,11 +19,11 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post(use: create)
         group.get(use: list)
-        group.get(":id", use: get)
-        group.patch(":id", use: update)
-        group.delete(":id", use: delete)
-        group.post(":id/tools", use: addTool)
-        group.get(":id/tools", use: listTools)
+        group.get("{id}", use: get)
+        group.patch("{id}", use: update)
+        group.delete("{id}", use: delete)
+        group.post("{id}/tools", use: addTool)
+        group.get("{id}/tools", use: listTools)
     }
 
     /// POST /workspaces

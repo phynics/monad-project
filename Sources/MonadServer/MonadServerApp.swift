@@ -131,7 +131,7 @@ struct MonadServer: AsyncParsableCommand {
 
         let filesController = FilesController<BasicRequestContext>(
             workspaceController: workspaceController)
-        filesController.addRoutes(to: protected.group("/workspaces/:id/files"))
+        filesController.addRoutes(to: protected.group("/workspaces/{id}/files"))
 
         let clientController = ClientController<BasicRequestContext>(
             dbWriter: dbWriter, logger: logger)
