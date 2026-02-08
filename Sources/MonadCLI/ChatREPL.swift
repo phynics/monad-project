@@ -61,6 +61,7 @@ actor ChatREPL: ChatREPLController {
 
         // Show active context (memories, documents) at startup
         await showContext()
+        await checkAndRestoreWorkspaces()
 
         while running {
             // Read input with vi-style editing via readline
@@ -99,6 +100,7 @@ actor ChatREPL: ChatREPLController {
         self.selectedWorkspaceId = nil
         TerminalUI.printInfo("Switched to session \(session.id.uuidString.prefix(8))")
         await showContext()
+        await checkAndRestoreWorkspaces()
     }
 
     func setSelectedWorkspace(_ id: UUID?) async {
@@ -111,6 +113,73 @@ actor ChatREPL: ChatREPLController {
 
     func refreshContext() async {
         await showContext()
+    }
+
+    private func checkAndRestoreWorkspaces() async {
+        do {
+            let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
+            var workspacesToRestore: [Workspace] = []
+
+            // Check Primary (Server)
+            if let primary = sessionWS.primary, primary.status == .missing {
+               workspacesToRestore.append(primary)
+            }
+
+            // Check Attached (Client)
+            // Get my identity
+            if let identity = RegistrationManager.shared.getIdentity() {
+                for ws in sessionWS.attached {
+                    if ws.hostType == .client, ws.ownerId == identity.clientId {
+                         // Check local existence
+                         // URI format: file://hostname/path
+                         if let url = URL(string: ws.uri.description), url.host == identity.hostname {
+                             let path = url.path
+                             if !FileManager.default.fileExists(atPath: path) {
+                                 // Missing locally!
+                                 // We can't "restore" it on server easily, but we can creating the folder locally.
+                                 // And maybe tell user.
+                                 // For now, let's treat it as something user might want to fix.
+                                 // Wait, if it's missing locally, I should probably prompt user to create it.
+                                 workspacesToRestore.append(ws)
+                             }
+                         }
+                    }
+                }
+            }
+
+            if !workspacesToRestore.isEmpty {
+                print(TerminalUI.dim("------------------------------------------------"))
+                TerminalUI.printWarning("Missing Workspaces Detected:")
+                for ws in workspacesToRestore {
+                    print(" - \(ws.uri.description) (\(ws.hostType == .server ? "Server" : "Client"))")
+                }
+                print("")
+                print("Do you want to restore these workspaces? [y/N] ", terminator: "")
+                fflush(stdout)
+
+                if let input = lineReader.readLine(prompt: "", completion: nil)?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y" {
+                    for ws in workspacesToRestore {
+                        if ws.hostType == .server {
+                            try await client.restoreWorkspace(sessionId: session.id, workspaceId: ws.id)
+                            TerminalUI.printSuccess("Restored server workspace: \(ws.uri.description)")
+                        } else {
+                            // Client workspace
+                             if let url = URL(string: ws.uri.description) {
+                                 try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+                                 TerminalUI.printSuccess("Created local directory: \(url.path)")
+                             }
+                        }
+                    }
+                } else {
+                     print("Skipping restoration.")
+                }
+                print(TerminalUI.dim("------------------------------------------------"))
+                print("")
+            }
+
+        } catch {
+            // Ignore errors here to not block startup
+        }
     }
 
     // MARK: - Internal Logic
@@ -158,7 +227,7 @@ actor ChatREPL: ChatREPLController {
             let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
             var wsSummary = "No Workspace"
 
-            let displayId = selectedWorkspaceId ?? sessionWS.primary
+            let displayId = selectedWorkspaceId ?? sessionWS.primary?.id
 
             if let targetId = displayId {
                 let ws = try await client.getWorkspace(targetId)

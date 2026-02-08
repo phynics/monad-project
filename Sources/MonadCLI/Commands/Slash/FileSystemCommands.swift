@@ -21,8 +21,8 @@ private func resolvePath(_ input: String?, context: ChatContext) async throws ->
     if let selected = selectedId {
         targetWorkspaceId = selected
         wsName = "Selected"
-    } else if let primaryId = sessionWS.primary {
-        targetWorkspaceId = primaryId
+    } else if let primary = sessionWS.primary {
+        targetWorkspaceId = primary.id
         wsName = "Primary"
     } else {
         throw MonadClientError.unknown("No workspace selected or attached.")
@@ -49,7 +49,7 @@ private func resolvePath(_ input: String?, context: ChatContext) async throws ->
     }
 
     // Default path logic
-    if targetWorkspaceId == sessionWS.primary && !input.contains("/") && !input.hasPrefix("Notes/")
+    if targetWorkspaceId == sessionWS.primary?.id && !input.contains("/") && !input.hasPrefix("Notes/")
         && !input.hasPrefix("Personas/")
     {
         return ResolvedPath(

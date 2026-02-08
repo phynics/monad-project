@@ -57,8 +57,8 @@ struct WorkspaceSlashCommand: SlashCommand {
         print("\n\(TerminalUI.bold("Workspaces:"))\n")
 
         for ws in workspaces {
-            let isPrimary = sessionWS.primary == ws.id
-            let isAttached = sessionWS.attached.contains(ws.id)
+            let isPrimary = sessionWS.primary?.id == ws.id
+            let isAttached = sessionWS.attached.contains(where: { $0.id == ws.id })
             let marker =
                 isPrimary ? TerminalUI.green(" ★") : (isAttached ? TerminalUI.blue(" ●") : " ○")
 
