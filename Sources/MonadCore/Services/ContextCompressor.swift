@@ -94,7 +94,7 @@ public actor ContextCompressor {
         }
         
         // Secondary Compression: "Broad Summary"
-        let totalTokens = compressedHistory.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) }
+        let totalTokens = TokenEstimator.estimate(parts: compressedHistory.map(\.content))
         
         if (totalTokens > broadSummaryThreshold || scope == .broad) && compressedHistory.count > 1 {
             let broadSummaryContent = await generateBroadSummary(from: compressedHistory, llmService: llmService)
@@ -121,7 +121,7 @@ public actor ContextCompressor {
         // 1. First pass: Collapse tool interactions to save space cheaply
         let collapsedMessages = summarizeToolInteractions(in: messages)
 
-        let currentTokens = collapsedMessages.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) }
+        let currentTokens = TokenEstimator.estimate(parts: collapsedMessages.map(\.content))
         if currentTokens <= targetTokens {
             return collapsedMessages
         }
@@ -147,7 +147,7 @@ public actor ContextCompressor {
 
         while iterations < maxIterations {
             let currentOlderTokens = nodes.reduce(0) { $0 + $1.tokens }
-            let availableForOlder = max(0, targetTokens - recentMessages.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) })
+            let availableForOlder = max(0, targetTokens - TokenEstimator.estimate(parts: recentMessages.map(\.content)))
 
             if currentOlderTokens <= availableForOlder {
                 break
