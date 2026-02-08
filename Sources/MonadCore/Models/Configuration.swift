@@ -10,6 +10,8 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
     public var utilityModel: String
     public var fastModel: String
     public var toolFormat: ToolCallFormat
+    public var timeoutInterval: TimeInterval
+    public var maxRetries: Int
 
     public init(
         endpoint: String,
@@ -17,7 +19,9 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
         modelName: String,
         utilityModel: String,
         fastModel: String,
-        toolFormat: ToolCallFormat
+        toolFormat: ToolCallFormat,
+        timeoutInterval: TimeInterval = 60.0,
+        maxRetries: Int = 3
     ) {
         self.endpoint = endpoint
         self.apiKey = apiKey
@@ -25,6 +29,20 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
         self.utilityModel = utilityModel
         self.fastModel = fastModel
         self.toolFormat = toolFormat
+        self.timeoutInterval = timeoutInterval
+        self.maxRetries = maxRetries
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        endpoint = try container.decode(String.self, forKey: .endpoint)
+        apiKey = try container.decode(String.self, forKey: .apiKey)
+        modelName = try container.decode(String.self, forKey: .modelName)
+        utilityModel = try container.decode(String.self, forKey: .utilityModel)
+        fastModel = try container.decode(String.self, forKey: .fastModel)
+        toolFormat = try container.decode(ToolCallFormat.self, forKey: .toolFormat)
+        timeoutInterval = try container.decodeIfPresent(TimeInterval.self, forKey: .timeoutInterval) ?? 60.0
+        maxRetries = try container.decodeIfPresent(Int.self, forKey: .maxRetries) ?? 3
     }
 
     public static func defaultFor(_ provider: LLMProvider) -> ProviderConfiguration {
@@ -36,7 +54,9 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
                 modelName: "gpt-4o",
                 utilityModel: "gpt-4o-mini",
                 fastModel: "gpt-4o-mini",
-                toolFormat: .openAI
+                toolFormat: .openAI,
+                timeoutInterval: 60.0,
+                maxRetries: 3
             )
         case .openRouter:
             return ProviderConfiguration(
@@ -45,7 +65,9 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
                 modelName: "openai/gpt-4o",
                 utilityModel: "openai/gpt-4o-mini",
                 fastModel: "openai/gpt-4o-mini",
-                toolFormat: .openAI
+                toolFormat: .openAI,
+                timeoutInterval: 60.0,
+                maxRetries: 3
             )
         case .ollama:
             return ProviderConfiguration(
@@ -54,7 +76,9 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
                 modelName: "llama3",
                 utilityModel: "llama3",
                 fastModel: "llama3",
-                toolFormat: .json
+                toolFormat: .json,
+                timeoutInterval: 120.0, // Local models can be slower
+                maxRetries: 3
             )
         case .openAICompatible:
             return ProviderConfiguration(
@@ -63,7 +87,9 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
                 modelName: "model",
                 utilityModel: "model",
                 fastModel: "model",
-                toolFormat: .openAI
+                toolFormat: .openAI,
+                timeoutInterval: 60.0,
+                maxRetries: 3
             )
         }
     }
@@ -109,6 +135,16 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
     public var toolFormat: ToolCallFormat {
         get { providers[activeProvider]?.toolFormat ?? .openAI }
         set { providers[activeProvider]?.toolFormat = newValue }
+    }
+
+    public var timeoutInterval: TimeInterval {
+        get { providers[activeProvider]?.timeoutInterval ?? 60.0 }
+        set { providers[activeProvider]?.timeoutInterval = newValue }
+    }
+
+    public var maxRetries: Int {
+        get { providers[activeProvider]?.maxRetries ?? 3 }
+        set { providers[activeProvider]?.maxRetries = newValue }
     }
 
     public var provider: LLMProvider {
@@ -158,7 +194,9 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         toolFormat: ToolCallFormat = .openAI,
         mcpServers: [MCPServerConfiguration] = [],
         memoryContextLimit: Int = 5,
-        documentContextLimit: Int = 5
+        documentContextLimit: Int = 5,
+        timeoutInterval: TimeInterval = 60.0,
+        maxRetries: Int = 3
     ) {
         self.activeProvider = provider
         self.mcpServers = mcpServers
@@ -179,7 +217,9 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
             modelName: modelName,
             utilityModel: utilityModel,
             fastModel: fastModel,
-            toolFormat: toolFormat
+            toolFormat: toolFormat,
+            timeoutInterval: timeoutInterval,
+            maxRetries: maxRetries
         )
 
         self.providers = initialProviders

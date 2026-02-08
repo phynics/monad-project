@@ -9,6 +9,8 @@ import Testing
         let config = LLMConfiguration.openAI
         #expect(!config.isValid) // Invalid because API key is empty
         #expect(config.provider == .openAI)
+        #expect(config.timeoutInterval == 60.0)
+        #expect(config.maxRetries == 3)
     }
 
     @Test("Valid OpenAI configuration")
@@ -20,6 +22,7 @@ import Testing
             provider: .openAI
         )
         #expect(config.isValid)
+        #expect(config.timeoutInterval == 60.0)
     }
 
     @Test("Valid Ollama configuration (No API Key)")
@@ -31,6 +34,7 @@ import Testing
             provider: .ollama
         )
         #expect(config.isValid)
+        #expect(config.timeoutInterval == 120.0) // Ollama default is higher
     }
 
     @Test("Invalid Endpoint")
@@ -53,5 +57,46 @@ import Testing
             provider: .openAI
         )
         #expect(!config.isValid)
+    }
+
+    @Test("Custom timeout and retries")
+    func customTimeoutAndRetries() {
+        var config = LLMConfiguration.openAI
+        config.timeoutInterval = 30.0
+        config.maxRetries = 10
+
+        #expect(config.timeoutInterval == 30.0)
+        #expect(config.maxRetries == 10)
+    }
+
+    @Test("Legacy JSON Decoding")
+    func legacyJSONDecoding() throws {
+        // Simulating JSON without timeout/retries
+        let json = """
+        {
+            "activeProvider": "OpenAI",
+            "providers": {
+                "OpenAI": {
+                    "endpoint": "https://api.openai.com",
+                    "apiKey": "sk-123",
+                    "modelName": "gpt-4",
+                    "utilityModel": "gpt-3.5",
+                    "fastModel": "gpt-3.5",
+                    "toolFormat": "Native (OpenAI)"
+                }
+            },
+            "mcpServers": [],
+            "memoryContextLimit": 5,
+            "documentContextLimit": 5,
+            "version": 5
+        }
+        """
+        guard let data = json.data(using: .utf8) else {
+            throw NSError(domain: "Test", code: 1, userInfo: nil)
+        }
+
+        let config = try JSONDecoder().decode(LLMConfiguration.self, from: data)
+        #expect(config.timeoutInterval == 60.0)
+        #expect(config.maxRetries == 3)
     }
 }

@@ -6,6 +6,8 @@ import Logging
 public actor OpenAIClient {
     private let client: OpenAI
     private let modelName: String
+    private let timeoutInterval: TimeInterval
+    private let maxRetries: Int
     private let logger = Logger(label: "com.monad.openai-client")
 
     public init(
@@ -13,17 +15,22 @@ public actor OpenAIClient {
         modelName: String = "gpt-4o",
         host: String = "api.openai.com",
         port: Int = 443,
-        scheme: String = "https"
+        scheme: String = "https",
+        timeoutInterval: TimeInterval = 60.0,
+        maxRetries: Int = 3
     ) {
         let configuration = OpenAI.Configuration(
             token: apiKey,
             host: host,
             port: port,
-            scheme: scheme
+            scheme: scheme,
+            timeoutInterval: timeoutInterval
         )
         self.client = OpenAI(configuration: configuration)
         self.modelName = modelName
-        logger.debug("Initialized OpenAIClient with model: \(modelName), host: \(host), port: \(port), scheme: \(scheme)")
+        self.timeoutInterval = timeoutInterval
+        self.maxRetries = maxRetries
+        logger.debug("Initialized OpenAIClient with model: \(modelName), host: \(host), port: \(port), scheme: \(scheme), timeout: \(timeoutInterval)s, maxRetries: \(maxRetries)")
     }
 
     /// Stream chat responses
@@ -32,6 +39,12 @@ public actor OpenAIClient {
         tools: [ChatQuery.ChatCompletionToolParam]? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil
     ) -> AsyncThrowingStream<ChatStreamResult, Error> {
+        // Capture dependencies locally to avoid actor isolation issues in the stream closure
+        let client = self.client
+        let logger = self.logger
+        let maxRetries = self.maxRetries
+        let modelName = self.modelName
+
         let query = ChatQuery(
             messages: messages,
             model: modelName,
@@ -40,23 +53,43 @@ public actor OpenAIClient {
             streamOptions: .init(includeUsage: true)
         )
 
-        logger.debug("Starting chat stream with model: \(self.modelName)")
-        logger.debug("Number of messages: \(messages.count)")
+        logger.debug("Starting chat stream with model: \(modelName)")
         if let tools = tools {
             logger.debug("Tools provided: \(tools.map { $0.function.name }.joined(separator: ", "))")
         }
 
         return AsyncThrowingStream { continuation in
-            let client = self.client
-            let logger = self.logger
             Task {
+                var hasYielded = false
+
                 do {
-                    for try await result in client.chatsStream(query: query) {
-                        if let delta = result.choices.first?.delta.content {
-                            logger.debug("Yielding OpenAI chunk (\(delta.count) chars)")
+                    try await RetryPolicy.retry(
+                        maxRetries: maxRetries,
+                        shouldRetry: { error in
+                            // Only retry if we haven't started yielding data to avoid duplication
+                            // and if the error is transient
+                            return !hasYielded && RetryPolicy.isTransient(error: error)
                         }
-                        continuation.yield(result)
+                    ) {
+                        // Create a new stream for each attempt
+                        let stream = client.chatsStream(query: query)
+
+                        for try await result in stream {
+                            if let delta = result.choices.first?.delta.content {
+                                if !delta.isEmpty {
+                                    hasYielded = true
+                                    logger.debug("Yielding OpenAI chunk (\(delta.count) chars)")
+                                }
+                            }
+                            // Also mark as yielded if we get tool calls or other content
+                            if result.choices.first?.delta.toolCalls != nil {
+                                hasYielded = true
+                            }
+
+                            continuation.yield(result)
+                        }
                     }
+
                     logger.debug("OpenAI stream finished normally")
                     continuation.finish()
                 } catch {
@@ -73,22 +106,36 @@ public actor OpenAIClient {
 extension OpenAIClient {
     /// Simple helper to send a user message via stream (collects all content)
     public func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat? = nil) async throws -> String {
-        let messages: [ChatQuery.ChatCompletionMessageParam] = [
-            .user(.init(content: .string(content)))
-        ]
+        // We wrap the entire operation in retry because for a non-streaming result,
+        // we can retry even if it failed midway (as we discard the partial result).
+        // Capture maxRetries to avoid actor isolation issues in closure
+        let maxRetries = self.maxRetries
 
-        var fullContent = ""
-        for try await result in chatStream(messages: messages, responseFormat: responseFormat) {
-            if let delta = result.choices.first?.delta.content {
-                fullContent += delta
+        return try await RetryPolicy.retry(maxRetries: maxRetries) {
+            let messages: [ChatQuery.ChatCompletionMessageParam] = [
+                .user(.init(content: .string(content)))
+            ]
+
+            var fullContent = ""
+            // We use the chatStream implementation, but here we don't mind if it fails mid-stream
+            // because we are collecting it. However, chatStream's internal retry logic
+            // stops retrying if it yielded. So if chatStream throws mid-stream,
+            // THIS retry block will catch it and retry the whole thing.
+            for try await result in self.chatStream(messages: messages, responseFormat: responseFormat) {
+                if let delta = result.choices.first?.delta.content {
+                    fullContent += delta
+                }
             }
+            return fullContent
         }
-        return fullContent
     }
 
     /// Fetch available models from the service
     public func fetchAvailableModels() async throws -> [String]? {
-        let models = try await client.models()
-        return models.data.map { $0.id }
+        let maxRetries = self.maxRetries
+        return try await RetryPolicy.retry(maxRetries: maxRetries) {
+            let models = try await self.client.models()
+            return models.data.map { $0.id }
+        }
     }
 }

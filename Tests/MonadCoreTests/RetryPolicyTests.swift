@@ -1,0 +1,73 @@
+import Testing
+@testable import MonadCore
+import Foundation
+
+@Suite("Retry Policy Tests")
+struct RetryPolicyTests {
+
+    @Test("Succeeds on first attempt")
+    func testSuccessOnFirstAttempt() async throws {
+        let result = try await RetryPolicy.retry(maxRetries: 3) {
+            return "Success"
+        }
+        #expect(result == "Success")
+    }
+
+    @Test("Succeeds after transient failures")
+    func testSuccessAfterRetries() async throws {
+        // Use a class to hold mutable state safely in escaping closure if needed,
+        // but `var attempts` captured by reference works in Swift closures locally.
+        // However, with async/await and concurrent execution, let's be safe.
+        // Since retry is serial, capturing local var is fine.
+
+        var attempts = 0
+        let result = try await RetryPolicy.retry(maxRetries: 3, baseDelay: 0.001) {
+            attempts += 1
+            if attempts <= 2 {
+                throw URLError(.timedOut) // Simulate timeout twice
+            }
+            return "Success"
+        }
+        #expect(result == "Success")
+        #expect(attempts == 3) // 1st try (fail), 2nd try (fail), 3rd try (success)
+    }
+
+    @Test("Fails after max retries exhausted")
+    func testFailsAfterMaxRetries() async throws {
+        var attempts = 0
+        await #expect(throws: URLError.self) {
+            try await RetryPolicy.retry(maxRetries: 2, baseDelay: 0.001) {
+                attempts += 1
+                throw URLError(.timedOut)
+            }
+        }
+        // maxRetries = 2
+        // 1st attempt (fail) -> attempts=1. Check: 0 >= 2 false. Retry 1.
+        // 2nd attempt (fail) -> attempts=2. Check: 1 >= 2 false. Retry 2.
+        // 3rd attempt (fail) -> attempts=3. Check: 2 >= 2 true. Throw.
+        #expect(attempts == 3)
+    }
+
+    @Test("Fails immediately on non-transient error")
+    func testFailsImmediately() async throws {
+        struct FatalError: Error {}
+
+        var attempts = 0
+
+        await #expect(throws: FatalError.self) {
+            try await RetryPolicy.retry(
+                maxRetries: 3,
+                baseDelay: 0.001,
+                shouldRetry: { error in
+                    // Default logic might not cover custom FatalError,
+                    // so we explicitly use default logic which returns false for unknown errors
+                    return RetryPolicy.isTransient(error: error)
+                }
+            ) {
+                attempts += 1
+                throw FatalError()
+            }
+        }
+        #expect(attempts == 1)
+    }
+}
