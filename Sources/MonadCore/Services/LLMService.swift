@@ -85,6 +85,8 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     public let promptBuilder: PromptBuilder
     internal let logger = Logger.llm
 
+    private let contextCompressor = ContextCompressor()
+
     // MARK: - Client Accessors
 
     public func getClient() -> (any LLMClientProtocol)? {
@@ -241,13 +243,23 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
         rawPrompt: String,
         structuredContext: [String: String]
     ) {
-        await promptBuilder.buildPrompt(
+        let historyCompressor: @Sendable ([Message], Int) async -> [Message] = { [contextCompressor, self] messages, limit in
+            return await contextCompressor.recursiveSummarize(messages: messages, targetTokens: limit, llmService: self)
+        }
+
+        let memoryCompressor: @Sendable ([Memory], Int) async -> String = { [contextCompressor, self] memories, limit in
+             return await contextCompressor.summarizeMemories(memories, targetTokens: limit, llmService: self)
+        }
+
+        return await promptBuilder.buildPrompt(
             systemInstructions: systemInstructions,
             contextNotes: contextNotes,
             memories: memories,
             tools: tools,
             chatHistory: chatHistory,
-            userQuery: userQuery
+            userQuery: userQuery,
+            historyCompressor: historyCompressor,
+            memoryCompressor: memoryCompressor
         )
     }
 }

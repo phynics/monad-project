@@ -78,12 +78,21 @@ public struct MemoriesComponent: PromptSection {
     public let sectionId = "memories"
     public let priority = 85  // Higher than tools, lower than context notes
     public let memories: [Memory]
+    public let summarizedContent: String?
 
-    public init(memories: [Memory]) {
+    public init(memories: [Memory], summarizedContent: String? = nil) {
         self.memories = memories
+        self.summarizedContent = summarizedContent
     }
 
     public func generateContent() async -> String? {
+        if let summary = summarizedContent {
+            return """
+            === MEMORY CONTEXT (SUMMARIZED) ===
+            \(summary)
+            """
+        }
+
         if memories.isEmpty {
             return """
                 No relevant memories found for this query.
@@ -103,7 +112,10 @@ public struct MemoriesComponent: PromptSection {
     }
 
     public var estimatedTokens: Int {
-        memories.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) }
+        if let summary = summarizedContent {
+            return TokenEstimator.estimate(text: summary)
+        }
+        return memories.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) }
     }
 }
 
