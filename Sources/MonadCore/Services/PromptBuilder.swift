@@ -23,7 +23,9 @@ public actor PromptBuilder {
         memories: [Memory] = [],
         tools: [Tool] = [],
         chatHistory: [Message],
-        userQuery: String
+        userQuery: String,
+        historyCompressor: (@Sendable ([Message], Int) async -> [Message])? = nil,
+        memoryCompressor: (@Sendable ([Memory], Int) async -> String)? = nil
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
         rawPrompt: String,
@@ -60,8 +62,18 @@ public actor PromptBuilder {
             }
         }
 
+        // Memory Compression
+        var memoryContent: String?
+        let memoryBudget = 4000 // Soft limit for raw memories
+        if let compressor = memoryCompressor {
+             let rawTokens = allMemories.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) }
+             if rawTokens > memoryBudget {
+                 memoryContent = await compressor(allMemories, memoryBudget)
+             }
+        }
+
         // Always add MemoriesComponent to provide guidance even if empty
-        components.append(MemoriesComponent(memories: allMemories))
+        components.append(MemoriesComponent(memories: allMemories, summarizedContent: memoryContent))
 
         // Tools
         if !tools.isEmpty {
@@ -79,7 +91,10 @@ public actor PromptBuilder {
 
         // Generate content and optimize
         let (systemContent, historyMessages) = await generateContent(
-            from: components, chatHistory: chatHistory)
+            from: components,
+            chatHistory: chatHistory,
+            historyCompressor: historyCompressor
+        )
 
         // Build OpenAI messages
         let messages = await buildMessages(
@@ -149,7 +164,8 @@ public actor PromptBuilder {
 
     private func generateContent(
         from components: [any PromptSection],
-        chatHistory: [Message]
+        chatHistory: [Message],
+        historyCompressor: (@Sendable ([Message], Int) async -> [Message])?
     ) async -> (systemContent: String, historyMessages: [Message]) {
         var systemParts: [String] = []
 
@@ -171,7 +187,10 @@ public actor PromptBuilder {
 
         // Optimize history if needed
         let optimizedHistory = await optimizeHistory(
-            chatHistory, availableTokens: maxContextTokens - estimateTokens(systemContent))
+            chatHistory,
+            availableTokens: maxContextTokens - estimateTokens(systemContent),
+            compressor: historyCompressor
+        )
 
         return (systemContent, optimizedHistory)
     }
@@ -194,7 +213,11 @@ public actor PromptBuilder {
             if !combinedSystemContent.isEmpty {
                 combinedSystemContent += "\n\n"
             }
-            combinedSystemContent += "--- RELEVANT MEMORY CONTEXT ---\n\(content)"
+            if memoriesComponent.summarizedContent != nil {
+                combinedSystemContent += content // Already includes header in MemoriesComponent
+            } else {
+                 combinedSystemContent += "--- RELEVANT MEMORY CONTEXT ---\n\(content)"
+            }
         }
 
         // System message (Instructions, Notes, and Memories)
@@ -263,7 +286,17 @@ public actor PromptBuilder {
         TokenEstimator.estimate(text: text)
     }
 
-    private func optimizeHistory(_ messages: [Message], availableTokens: Int) async -> [Message] {
+    private func optimizeHistory(
+        _ messages: [Message],
+        availableTokens: Int,
+        compressor: (@Sendable ([Message], Int) async -> [Message])?
+    ) async -> [Message] {
+        // If compressor provided, use it
+        if let compressor = compressor {
+            return await compressor(messages, availableTokens)
+        }
+
+        // Legacy simple truncation
         var result: [Message] = []
         var usedTokens = 0
 

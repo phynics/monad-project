@@ -11,9 +11,25 @@ public enum CompressionScope: String, Sendable, CustomStringConvertible {
     public var description: String { rawValue }
 }
 
+/// Recursive node structure for Raptor-style summarization
+public enum ConversationNode: Sendable {
+    case leaf(Message)
+    case summary(content: String, children: [ConversationNode])
+
+    var content: String {
+        switch self {
+        case .leaf(let msg): return msg.content
+        case .summary(let text, _): return text
+        }
+    }
+
+    var tokens: Int {
+        TokenEstimator.estimate(text: content)
+    }
+}
+
 /// Service to compress conversation context using summarization
 public actor ContextCompressor {
-    private let llmService: any LLMServiceProtocol
     private let logger = Logger(label: "com.monad.ContextCompressor")
     
     // Configuration
@@ -21,18 +37,16 @@ public actor ContextCompressor {
     private let recentMessageBuffer = 10 // Keep last N messages raw
     private let broadSummaryThreshold = 2000 // Tokens before triggering broad summary
     
-    public init(llmService: any LLMServiceProtocol) {
-        self.llmService = llmService
-    }
+    public init() {}
+
+    // MARK: - Legacy Compression (Topic/Broad)
     
     /// Compress the message history by summarizing older messages
-    ///
-    /// Strategy:
-    /// 1. Keep the most recent `recentMessageBuffer` messages raw.
-    /// 2. Group the older messages into chunks of `topicGroupSize`.
-    /// 3. Summarize each chunk into a single `.summary` message.
-    /// 4. If the total token count of summaries exceeds `broadSummaryThreshold` (or scope is .broad), collapse them into a "Broad Summary".
-    public func compress(messages: [Message], scope: CompressionScope = .topic) async throws -> [Message] {
+    public func compress(
+        messages: [Message],
+        scope: CompressionScope = .topic,
+        llmService: any LLMServiceProtocol
+    ) async throws -> [Message] {
         guard messages.count > recentMessageBuffer else {
             return messages
         }
@@ -67,7 +81,7 @@ public actor ContextCompressor {
             if let provided = providedSummary {
                 summaryContent = provided
             } else {
-                summaryContent = await generateSummary(for: chunk)
+                summaryContent = await generateSummary(for: chunk, llmService: llmService)
             }
             
             let summaryNode = Message(
@@ -80,12 +94,10 @@ public actor ContextCompressor {
         }
         
         // Secondary Compression: "Broad Summary"
-        // Calculate total tokens in the compressed history
         let totalTokens = compressedHistory.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) }
         
-        // If we exceed the threshold OR scope is .broad, collapse everything into one Broad Summary
         if (totalTokens > broadSummaryThreshold || scope == .broad) && compressedHistory.count > 1 {
-            let broadSummaryContent = await generateBroadSummary(from: compressedHistory)
+            let broadSummaryContent = await generateBroadSummary(from: compressedHistory, llmService: llmService)
             let broadSummaryNode = Message(
                 content: broadSummaryContent,
                 role: .summary,
@@ -98,7 +110,239 @@ public actor ContextCompressor {
         return compressedHistory + recentMessages
     }
     
-    /// Chunk messages based on explicit topic change markers or max size
+    // MARK: - Raptor / Recursive Compression
+
+    /// Recursively summarize messages to fit within a target token count
+    public func recursiveSummarize(
+        messages: [Message],
+        targetTokens: Int,
+        llmService: any LLMServiceProtocol
+    ) async -> [Message] {
+        // 1. First pass: Collapse tool interactions to save space cheaply
+        let collapsedMessages = summarizeToolInteractions(in: messages)
+
+        let currentTokens = collapsedMessages.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) }
+        if currentTokens <= targetTokens {
+            return collapsedMessages
+        }
+
+        // 2. Separate recent messages (preserve them)
+        let safeBuffer = min(recentMessageBuffer, collapsedMessages.count)
+        let splitIndex = collapsedMessages.count - safeBuffer
+
+        let olderMessages = Array(collapsedMessages.prefix(splitIndex))
+        let recentMessages = Array(collapsedMessages.suffix(from: splitIndex))
+
+        if olderMessages.isEmpty {
+            return recentMessages
+        }
+
+        // 3. Recursive summarization of older messages
+        // Convert to nodes
+        var nodes: [ConversationNode] = olderMessages.map { .leaf($0) }
+
+        // Loop until we fit or can't compress further
+        var iterations = 0
+        let maxIterations = 5
+
+        while iterations < maxIterations {
+            let currentOlderTokens = nodes.reduce(0) { $0 + $1.tokens }
+            let availableForOlder = max(0, targetTokens - recentMessages.reduce(0) { $0 + TokenEstimator.estimate(text: $1.content) })
+
+            if currentOlderTokens <= availableForOlder {
+                break
+            }
+
+            // Chunk nodes and summarize
+            nodes = await summarizeLevel(nodes: nodes, llmService: llmService)
+            iterations += 1
+        }
+
+        // 4. Flatten back to Messages
+        let summarizedHistory = nodes.map { node -> Message in
+            switch node {
+            case .leaf(let msg): return msg
+            case .summary(let content, _):
+                return Message(
+                    content: content,
+                    role: .summary,
+                    isSummary: true,
+                    summaryType: .topic
+                )
+            }
+        }
+
+        return summarizedHistory + recentMessages
+    }
+
+    /// Summarize a list of memories into a single narrative
+    public func summarizeMemories(
+        _ memories: [Memory],
+        targetTokens: Int,
+        llmService: any LLMServiceProtocol
+    ) async -> String {
+        guard !memories.isEmpty else { return "" }
+
+        let rawContent = memories.promptContent
+        if TokenEstimator.estimate(text: rawContent) <= targetTokens {
+            return rawContent
+        }
+
+        // Simple chunking and summarizing
+        let chunks = memories.chunked(into: 10)
+        var summaries: [String] = []
+
+        for chunk in chunks {
+            let chunkText = chunk.map { "- \($0.content)" }.joined(separator: "\n")
+            let prompt = """
+            Compress the following user memories into a single concise paragraph. Preserve key facts, names, and preferences.
+
+            MEMORIES:
+            \(chunkText)
+            """
+
+            do {
+                let summary = try await llmService.sendMessage(prompt, responseFormat: nil, useUtilityModel: true)
+                summaries.append(summary)
+            } catch {
+                summaries.append(chunkText)
+            }
+        }
+
+        let combined = summaries.joined(separator: "\n\n")
+
+        // If still too big, one final pass
+        if TokenEstimator.estimate(text: combined) > targetTokens {
+             let prompt = """
+            Create a high-level summary of the user's memory context.
+
+            CONTEXT:
+            \(combined)
+            """
+             do {
+                 return try await llmService.sendMessage(prompt, responseFormat: nil, useUtilityModel: true)
+             } catch {
+                 return combined
+             }
+        }
+
+        return combined
+    }
+
+    // MARK: - Tool Interaction Collapsing
+
+    /// Collapses tool call -> tool response pairs into a single summary message
+    /// Logic:
+    /// - Scans for Assistant (w/ ToolCalls) -> Tool (result) sequences.
+    /// - Keeps recent interactions raw (for context continuity).
+    /// - Collapses older completed interactions.
+    public func summarizeToolInteractions(in messages: [Message]) -> [Message] {
+        guard messages.count > recentMessageBuffer else { return messages }
+
+        let splitIndex = messages.count - recentMessageBuffer
+        let olderMessages = Array(messages.prefix(splitIndex))
+        let recentMessages = Array(messages.suffix(from: splitIndex))
+
+        var processed: [Message] = []
+        var i = 0
+
+        while i < olderMessages.count {
+            let msg = olderMessages[i]
+
+            // Check for tool call
+            if msg.role == .assistant, let toolCalls = msg.toolCalls, !toolCalls.isEmpty {
+                // Look ahead for tool results
+                var interactionNodes: [Message] = [msg]
+                var j = i + 1
+                var allResultsFound = true
+
+                // Expect a tool message for each tool call
+                // Note: Messages might be interleaved or sequential.
+                // Simple heuristic: Collect subsequent .tool messages until we hit a user/assistant message or run out
+
+                while j < olderMessages.count {
+                    let next = olderMessages[j]
+                    if next.role == .tool {
+                        interactionNodes.append(next)
+                        j += 1
+                    } else {
+                        break
+                    }
+                }
+
+                // Verify we have results? (Optional, but strictness helps)
+                // For now, if we found *any* tool results, we collapse.
+                if interactionNodes.count > 1 {
+                    let summary = Message(
+                        content: "[Tool Interaction: \(toolCalls.map { $0.name }.joined(separator: ", ")) executed. Results hidden.]",
+                        role: .summary,
+                        isSummary: true
+                    )
+                    processed.append(summary)
+                    i = j
+                    continue
+                }
+            }
+
+            processed.append(msg)
+            i += 1
+        }
+
+        return processed + recentMessages
+    }
+
+    // MARK: - Internal Helpers
+
+    private func summarizeLevel(nodes: [ConversationNode], llmService: any LLMServiceProtocol) async -> [ConversationNode] {
+        // Group nodes into chunks (e.g. 5 nodes or ~1000 tokens)
+        var newNodes: [ConversationNode] = []
+        var currentChunk: [ConversationNode] = []
+        var currentTokens = 0
+        let maxChunkTokens = 2000
+
+        for node in nodes {
+            let tokens = node.tokens
+            if currentTokens + tokens > maxChunkTokens && !currentChunk.isEmpty {
+                // Process chunk
+                let summaryNode = await summarizeChunk(currentChunk, llmService: llmService)
+                newNodes.append(summaryNode)
+                currentChunk = []
+                currentTokens = 0
+            }
+            currentChunk.append(node)
+            currentTokens += tokens
+        }
+
+        if !currentChunk.isEmpty {
+            if currentChunk.count == 1 {
+                newNodes.append(currentChunk[0]) // Don't re-summarize a single node
+            } else {
+                let summaryNode = await summarizeChunk(currentChunk, llmService: llmService)
+                newNodes.append(summaryNode)
+            }
+        }
+
+        return newNodes
+    }
+
+    private func summarizeChunk(_ nodes: [ConversationNode], llmService: any LLMServiceProtocol) async -> ConversationNode {
+        let transcript = nodes.map { $0.content }.joined(separator: "\n\n")
+        let prompt = """
+        Summarize the following conversation segment. Capture the key points, user intent, and outcomes.
+
+        TRANSCRIPT:
+        \(transcript)
+        """
+
+        do {
+            let summary = try await llmService.sendMessage(prompt, responseFormat: nil, useUtilityModel: true)
+            return .summary(content: summary, children: nodes)
+        } catch {
+            logger.error("Recursive summary failed")
+            return .summary(content: "Summary failed.", children: nodes)
+        }
+    }
+
     private func smartChunk(messages: [Message]) -> [[Message]] {
         var chunks: [[Message]] = []
         var currentChunk: [Message] = []
@@ -137,7 +381,7 @@ public actor ContextCompressor {
         return chunks
     }
     
-    private func generateSummary(for messages: [Message]) async -> String {
+    private func generateSummary(for messages: [Message], llmService: any LLMServiceProtocol) async -> String {
         let transcript = messages.map { "[\($0.role.rawValue.uppercased())] \($0.content)" }.joined(separator: "\n")
         let prompt = """
         Summarize the following discussion topic concisely (max 100 words). Focus on key decisions, technical details, and outcomes.
@@ -155,7 +399,7 @@ public actor ContextCompressor {
         }
     }
     
-    private func generateBroadSummary(from summaries: [Message]) async -> String {
+    private func generateBroadSummary(from summaries: [Message], llmService: any LLMServiceProtocol) async -> String {
         let transcript = summaries.map { $0.content }.joined(separator: "\n\n")
         let prompt = """
         Create a high-level "Broad Summary" of the conversation so far, based on the following topic summaries.

@@ -16,7 +16,7 @@ final class ContextCompressorTests: XCTestCase {
         config.providers[.openAI]?.apiKey = "test-key"
         try await llmService.updateConfiguration(config)
 
-        compressor = ContextCompressor(llmService: llmService)
+        compressor = ContextCompressor()
     }
 
     func testCompressionBasics() async throws {
@@ -39,7 +39,7 @@ final class ContextCompressorTests: XCTestCase {
             Message(content: "Message \(i)", role: .user)
         }
 
-        let compressed = try await compressor.compress(messages: messages)
+        let compressed = try await compressor.compress(messages: messages, llmService: llmService)
 
         // Expected: 2 summaries + 10 recent = 12 messages.
         XCTAssertEqual(compressed.count, 12)
@@ -79,7 +79,7 @@ final class ContextCompressorTests: XCTestCase {
         let recent = (0..<10).map { Message(content: "Recent \($0)", role: .user) }
         let input = hugeSummaries + recent
 
-        let output = try await compressor.compress(messages: input)
+        let output = try await compressor.compress(messages: input, llmService: llmService)
 
         // Expected: 1 Broad Summary + 10 recent = 11 messages.
         XCTAssertEqual(output.count, 11)
@@ -105,7 +105,7 @@ final class ContextCompressorTests: XCTestCase {
         let recent = (0..<10).map { Message(content: "Recent \($0)", role: .user) }
         let input = olderMessages + recent
 
-        let output = try await compressor.compress(messages: input)
+        let output = try await compressor.compress(messages: input, llmService: llmService)
 
         // Expected: 3 Topic Summaries + 10 recent = 13 messages.
         XCTAssertEqual(output.count, 13)
