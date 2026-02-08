@@ -232,7 +232,6 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     public func buildPrompt(
         userQuery: String,
         contextNotes: [ContextFile],
-        documents: [DocumentContext] = [],
         memories: [Memory] = [],
         chatHistory: [Message],
         tools: [any Tool] = [],
@@ -245,7 +244,6 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
         await promptBuilder.buildPrompt(
             systemInstructions: systemInstructions,
             contextNotes: contextNotes,
-            documents: documents,
             memories: memories,
             tools: tools,
             chatHistory: chatHistory,

@@ -240,7 +240,6 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
     public func chatStreamWithContext(
         userQuery: String,
         contextNotes: [ContextFile],
-        documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
         tools: [any MonadCore.Tool],
@@ -265,7 +264,6 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
         let (messages, rawPrompt, structuredContext) = await promptBuilder.buildPrompt(
             systemInstructions: systemInstructions,
             contextNotes: contextNotes,
-            documents: documents,
             memories: memories,
             tools: tools,
             chatHistory: chatHistory,
@@ -283,7 +281,6 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
     public func buildPrompt(
         userQuery: String,
         contextNotes: [ContextFile],
-        documents: [DocumentContext],
         memories: [Memory],
         chatHistory: [Message],
         tools: [any MonadCore.Tool],
@@ -296,7 +293,6 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
         await promptBuilder.buildPrompt(
             systemInstructions: systemInstructions,
             contextNotes: contextNotes,
-            documents: documents,
             memories: memories,
             tools: tools,
             chatHistory: chatHistory,

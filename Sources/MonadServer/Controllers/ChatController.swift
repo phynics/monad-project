@@ -107,7 +107,6 @@ public struct ChatController<Context: RequestContext>: Sendable {
         let (stream, _, _) = await llmService.chatStreamWithContext(
             userQuery: chatRequest.message,
             contextNotes: contextData.notes,
-            documents: [],
             memories: contextData.memories.map { $0.memory },
             chatHistory: history,
             tools: [],  // No tools for simple chat
@@ -226,7 +225,6 @@ public struct ChatController<Context: RequestContext>: Sendable {
         let (initialMessages, _, _) = await llmService.buildPrompt(
             userQuery: chatRequest.message,
             contextNotes: contextData.notes,
-            documents: [],
             memories: contextData.memories.map { $0.memory },
             chatHistory: history,
             tools: availableTools,

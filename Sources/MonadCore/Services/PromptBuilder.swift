@@ -19,7 +19,6 @@ public actor PromptBuilder {
     public func buildPrompt(
         systemInstructions: String? = nil,
         contextNotes: [ContextFile],
-        documents: [DocumentContext] = [],
         memories: [Memory] = [],
         tools: [Tool] = [],
         chatHistory: [Message],
@@ -41,11 +40,6 @@ public actor PromptBuilder {
         // Context notes
         if !contextNotes.isEmpty {
             components.append(ContextNotesComponent(notes: contextNotes))
-        }
-
-        // Documents
-        if !documents.isEmpty {
-            components.append(DocumentsComponent(documents: documents))
         }
 
         // Memories (Semantic Context)
