@@ -468,7 +468,30 @@ public actor SessionManager {
 
     public func getWorkspace(_ id: UUID) async throws -> Workspace? {
         return try await persistenceService.databaseWriter.read { db in
-            try Workspace.fetchOne(db, key: id)
+            guard let workspace = try Workspace.fetchOne(db, key: id) else {
+                return nil
+            }
+            
+            // Load associated tools from WorkspaceTool table
+            let workspaceTools = try WorkspaceTool
+                .filter(Column("workspaceId") == id)
+                .fetchAll(db)
+            
+            let toolRefs = workspaceTools.compactMap { try? $0.toToolReference() }
+            
+            // Create a new workspace with the tools populated
+            return Workspace(
+                id: workspace.id,
+                uri: workspace.uri,
+                hostType: workspace.hostType,
+                ownerId: workspace.ownerId,
+                tools: toolRefs,
+                rootPath: workspace.rootPath,
+                trustLevel: workspace.trustLevel,
+                lastModifiedBy: workspace.lastModifiedBy,
+                status: workspace.status,
+                createdAt: workspace.createdAt
+            )
         }
     }
 

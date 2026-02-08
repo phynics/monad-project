@@ -107,18 +107,7 @@ public struct SessionController<Context: RequestContext>: Sendable {
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
         
         guard let session = await sessionManager.getSession(id: id) else {
-             // Try DB fallback via fetchSession checks in manager or direct
-             // SessionManager.getSession calls internal map. 
-             // Ideally SessionManager should check DB too if not in memory.
-             // But existing getSession returns from map.
-             // We can use list logic or trust SessionManager. 
-             // But let's check basic list for now or rely on manager improvements.
-             // Actually, SessionManager.attachWorkspace does check DB.
-             // Let's rely on a get-or-fetch pattern if not present.
-             // For now, assume if not in manager it might be gone or not loaded.
-             // Wait, SessionManager.listSessions fetches from DB.
-             // We should improve SessionManager.getSession or just fetch from DB here?
-             // Accessing persistence service from here.
+             // Fallback to DB if not in memory
              let persistence = await sessionManager.getPersistenceService()
              if let dbSession = try? await persistence.fetchSession(id: id) {
                  let response = SessionResponse(

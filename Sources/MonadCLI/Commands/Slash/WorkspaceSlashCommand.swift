@@ -7,13 +7,15 @@ struct WorkspaceSlashCommand: SlashCommand {
     let aliases = ["workspaces"]
     let description = "Manage workspaces"
     let category: String? = "Tools & Environment"
-    let usage = "/workspace [list|select|attach|detach] <args>"
+    let usage = "/workspace [all|select|attach|detach] <args>"
 
     func run(args: [String], context: ChatContext) async throws {
-        let subcommand = args.first ?? "list"
+        let subcommand = args.first
         switch subcommand {
-        case "list", "ls":
-            try await listWorkspaces(context: context)
+        case "all", "list", "ls":
+            try await listAllWorkspaces(context: context)
+        case nil:
+            try await showSessionWorkspaces(context: context)
         case "select", "use":
             if args.count > 1 {
                 try await selectWorkspace(args[1], context: context)
@@ -46,11 +48,36 @@ struct WorkspaceSlashCommand: SlashCommand {
                 TerminalUI.printError("Usage: /workspace detach <id>")
             }
         default:
-            try await listWorkspaces(context: context)
+            try await showSessionWorkspaces(context: context)
         }
     }
 
-    private func listWorkspaces(context: ChatContext) async throws {
+    private func showSessionWorkspaces(context: ChatContext) async throws {
+        let sessionWS = try await context.client.listSessionWorkspaces(
+            sessionId: context.session.id)
+
+        let primaryWorkspace = sessionWS.primary
+        let attachedWorkspaces = sessionWS.attached
+
+        print("\n\(TerminalUI.bold("Session Workspaces:"))")
+        
+        if let primary = primaryWorkspace {
+            printWorkspace(primary, marker: "★", color: "green")
+        } else {
+             print("  \(TerminalUI.dim("No primary workspace"))")
+        }
+        
+        for ws in attachedWorkspaces {
+            printWorkspace(ws, marker: "●", color: "blue")
+        }
+
+        print("")
+        print("  ★ Primary  ● Attached")
+        print(TerminalUI.dim("  Use '/workspace all' to see all available workspaces."))
+        print("")
+    }
+
+    private func listAllWorkspaces(context: ChatContext) async throws {
         let allWorkspaces = try await context.client.listWorkspaces()
         let sessionWS = try await context.client.listSessionWorkspaces(
             sessionId: context.session.id)

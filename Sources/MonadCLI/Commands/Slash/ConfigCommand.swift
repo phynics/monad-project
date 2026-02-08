@@ -34,9 +34,6 @@ struct ConfigCommand: SlashCommand {
         case "help":
             printConfigHelp()
         default:
-            // If no args were passed (args is empty), subcommand is "edit" due to first line?
-            // Wait, if args is empty, subcommand is "edit".
-            // If args has "something", subcommand is "something".
             if args.isEmpty {
                 await interactiveConfigEdit(context: context)
             } else {

@@ -63,13 +63,7 @@ public actor AutonomousAgent {
         var turnCount = 0
         var isComplete = false
         
-        // We need a local copy of history that accumulates turns *during* this job execution
-        // We start with fetched history + our trigger message
-        
-        // Note: fetchMessages returns ConversationMessage. We need [Message] for LLM.
-        // We'll trust that the DB is up to date and re-fetch or append locally?
-        // Let's re-fetch to be safe and simple.
-        
+
         while turnCount < maxTurns && !isComplete {
             turnCount += 1
             
@@ -163,9 +157,6 @@ public actor AutonomousAgent {
                 
                 // 2. Execute Tools (if any)
                 if !toolCalls.isEmpty {
-                    // We need the OpenAI-style ToolCallParam for execution results in next turn
-                    // Wait, we execute locally here.
-                    
                     for toolCall in toolCalls {
                         let result: String
                         

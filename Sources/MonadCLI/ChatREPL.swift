@@ -103,9 +103,6 @@ actor ChatREPL: ChatREPLController {
 
     func switchSession(_ session: Session) async {
         self.session = session
-        // Keeping selected workspace ID if compatible? Or reset?
-        // Safest to reset or re-validate.
-        // Let's reset for now to avoid confusion.
         self.selectedWorkspaceId = nil
         TerminalUI.printInfo("Switched to session \(session.id.uuidString.prefix(8))")
         await showContext()
@@ -144,11 +141,6 @@ actor ChatREPL: ChatREPLController {
                          if let url = URL(string: ws.uri.description), url.host == identity.hostname {
                              let path = url.path
                              if !FileManager.default.fileExists(atPath: path) {
-                                 // Missing locally!
-                                 // We can't "restore" it on server easily, but we can creating the folder locally.
-                                 // And maybe tell user.
-                                 // For now, let's treat it as something user might want to fix.
-                                 // Wait, if it's missing locally, I should probably prompt user to create it.
                                  workspacesToRestore.append(ws)
                              }
                          }
@@ -291,12 +283,6 @@ actor ChatREPL: ChatREPLController {
         let parts = commandLine.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
         guard let cmdName = parts.first.map(String.init) else { return }
 
-        // Parse args properly?
-        // Logic for splitting args: "cmd arg1 arg2" -> ["cmd", "arg1", "arg2"]
-        // Some commands might want full string.
-        // SlashCommand protocol assumes [String].
-        // Let's do simple space splitting for now as standard.
-        // If commands need complex parsing they can rejoin.
         let args = commandLine.split(separator: " ", omittingEmptySubsequences: true).map(
             String.init)
 

@@ -23,13 +23,6 @@ struct ChatContext {
     let client: MonadClient
     let session: Session
     let output: TerminalOutput
-    // Mutable state needs to be handled carefully, maybe via actor or callbacks
-    // For now, let's expose specific actions via a delegate or closure if needed
-    // or keep it simple: commands perform actions using Client,
-    // and maybe return a 'state change' request?
-
-    // Actually, ChatREPL has state like 'selectedWorkspaceId', 'running'.
-    // We might need a 'ChatREPLController' or similar protocol to mutate REPL state.
     let repl: ChatREPLController
 }
 
@@ -62,10 +55,7 @@ public actor SlashCommandRegistry {
     }
 
     var allCommands: [SlashCommand] {
-        // Return unique commands, sorted by name
-
-        // Wait, SlashCommand is protocol, Set needs Hashable.
-        // Let's just iterate values and deduplicate by name
+        // Return unique commands, sorted by name (deduplicate by name)
         var seen = Set<String>()
         var result: [SlashCommand] = []
         for cmd in commands.values {

@@ -22,11 +22,6 @@ struct MemoryCommand: SlashCommand {
             let screen = MemoryScreen(client: context.client)
             try await screen.show()
         case "list", "ls":
-            // "list" can be ambiguous, let's make it show active too?
-            // Or keep it as TUI? The user request said "info to direct user to /memory all".
-            // Let's make "list" alias to active list for consistency with other commands perhaps?
-            // Actually, keep "list" as TUI might be confusing if /memory listActive is default.
-            // Let's make 'list' show active, and 'all' show TUI.
             try await listActive(context: context)
         case "search":
             if args.count > 1 {
