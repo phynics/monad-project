@@ -59,10 +59,8 @@ public actor ToolRouter {
 
     private func resolveWorkspace(for tool: ToolReference, in sessionId: UUID) async throws -> UUID?
     {
-        // TODO: Implement DB query to find which of the session's workspaces contains this tool.
-        // For now, simpler logic:
-        // If it's a known tool, check if it's available in the primary workspace.
-        // Ideally, we search all workspaces attached to the session.
+        // Resolve keys
+
 
         let workspaces = await sessionManager.getWorkspaces(for: sessionId)
         guard let wsList = workspaces else { return nil }
@@ -71,8 +69,8 @@ public actor ToolRouter {
         if let p = wsList.primary { candidates.append(p.id) }
         candidates.append(contentsOf: wsList.attached.map { $0.id })
 
-        // We need to check database for "WorkspaceTool" where workspaceId IN candidates AND toolId = tool.id
-        // This requires DB access. sessionManager has DB access but maybe we should add a method there.
+        // Check database for "WorkspaceTool" via SessionManager
+
         return try await sessionManager.findWorkspaceForTool(tool, in: candidates)
     }
 

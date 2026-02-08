@@ -15,7 +15,8 @@ import NIOCore
         let router = Router()
         let controller = StatusController<BasicRequestContext>(
             persistenceService: persistence,
-            llmService: llmService
+            llmService: llmService,
+            startTime: Date()
         )
         controller.addRoutes(to: router)
         

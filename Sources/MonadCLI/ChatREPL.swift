@@ -47,9 +47,11 @@ actor ChatREPL: ChatREPLController {
         await registry.register(WorkspaceSlashCommand())
         await registry.register(MemoryCommand())
         await registry.register(PruneSlashCommand())
-        await registry.register(TaskCommand())
         await registry.register(ClientCommand())
         await registry.register(JobSlashCommand())
+        
+        // Utilities
+        await registry.register(ClearCommand())
     }
 
     func run() async throws {
@@ -73,6 +75,13 @@ actor ChatREPL: ChatREPLController {
 
             if trimmed.isEmpty {
                 continue
+            }
+
+            // Handle :q vim-style quit shortcut
+            if trimmed == ":q" || trimmed == ":quit" {
+                running = false
+                TerminalUI.printInfo("Goodbye!")
+                break
             }
 
             // Handle slash commands

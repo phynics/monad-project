@@ -16,17 +16,22 @@ public final class JobRunnerService: Service, Sendable {
     public func run() async throws {
         logger.info("Job Runner Service started")
         
-        // Main Loop
-        while !Task.isCancelled {
-            do {
-                try await processNextJob()
-            } catch {
-                logger.error("Error processing job: \(error)")
+        // Use cancelWhenGracefulShutdown to properly respond to shutdown signals
+        try await cancelWhenGracefulShutdown {
+            // Main Loop
+            while !Task.isCancelled {
+                do {
+                    try await self.processNextJob()
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    self.logger.error("Error processing job: \(error)")
+                }
+                
+                // Sleep for a bit to avoid tight loop if no jobs
+                // In a real system, we might use a signal/notification or exponential backoff
+                try await Task.sleep(nanoseconds: 2 * 1_000_000_000) // 2 seconds
             }
-            
-            // Sleep for a bit to avoid tight loop if no jobs
-            // In a real system, we might use a signal/notification or exponential backoff
-            try? await Task.sleep(nanoseconds: 2 * 1_000_000_000) // 2 seconds
         }
         
         logger.info("Job Runner Service stopped")
@@ -76,8 +81,14 @@ public final class JobRunnerService: Service, Sendable {
             return
         }
         
-        // 5. Initialize Agent
-        let agent = AutonomousAgent(llmService: llmService, persistenceService: persistence)
+        
+        // 5. Initialize Agent with ContextManager (RAG)
+        let contextManager = await sessionManager.getContextManager(for: session.id)
+        let agent = AutonomousAgent(
+            llmService: llmService,
+            persistenceService: persistence,
+            contextManager: contextManager
+        )
         
         // 6. Execute
         await agent.execute(job: nextJob, session: session, toolExecutor: toolExecutor)

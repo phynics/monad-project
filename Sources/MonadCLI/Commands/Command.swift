@@ -1,3 +1,4 @@
+import ArgumentParser
 import Foundation
 import MonadClient
 
@@ -7,58 +8,118 @@ import MonadClient
     import Darwin
 #endif
 
-struct TaskCommand: SlashCommand {
-    let name = "task"
-    let aliases = ["shell", "cmd"]
-    let description = "Generate and execute shell commands"
-    let category: String? = "Tools & Environment"
-    let usage = "/task <description>"
+/// Shell command generation subcommand: `monad cmd find all TODO comments`
+struct Command: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "cmd",
+        abstract: "Generate shell command from natural language"
+    )
 
-    func run(args: [String], context: ChatContext) async throws {
-        let task = args.joined(separator: " ")
-        guard !task.isEmpty else {
-            TerminalUI.printError("Usage: /task <description>")
-            return
+    @Option(name: .long, help: "Server URL (defaults to auto-discovery or localhost)")
+    var server: String?
+
+    @Option(name: .long, help: "API key for authentication")
+    var apiKey: String?
+
+    @Flag(name: .long, help: "Enable verbose debug logging")
+    var verbose: Bool = false
+
+    @Option(name: .shortAndLong, help: "Session ID to use")
+    var session: String?
+
+    @Argument(parsing: .remaining, help: "Description of the task")
+    var task: [String]
+
+    func run() async throws {
+        let taskText = task.joined(separator: " ")
+        guard !taskText.isEmpty else {
+            print("Usage: monad cmd <description>")
+            print("Example: monad cmd find all TODO comments in Swift files")
+            throw ExitCode.failure
         }
 
+        // Load local config
+        let localConfig = LocalConfigManager.shared.getConfig()
+
+        // Determine explicit URL
+        let explicitURL: URL?
+        if let serverFlag = server {
+            explicitURL = URL(string: serverFlag)
+        } else {
+            explicitURL = localConfig.serverURL.flatMap { URL(string: $0) }
+        }
+
+        let config = await ClientConfiguration.autoDetect(
+            explicitURL: explicitURL,
+            apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"]
+                ?? localConfig.apiKey,
+            verbose: verbose
+        )
+
+        let client = MonadClient(configuration: config)
+
+        // Check server health
+        do {
+            guard try await client.healthCheck() else {
+                throw MonadClientError.serverNotReachable
+            }
+        } catch {
+            TerminalUI.printError(
+                "Could not connect to Monad Server at \(config.baseURL.absoluteString)")
+            throw ExitCode.failure
+        }
+
+        // Resolve session
+        let targetSession: Session
+        if let sessionId = session, let uuid = UUID(uuidString: sessionId) {
+            let sessions = try await client.listSessions()
+            guard let found = sessions.first(where: { $0.id == uuid }) else {
+                TerminalUI.printError("Session not found: \(sessionId)")
+                throw ExitCode.failure
+            }
+            targetSession = found
+        } else if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
+            let sessions = try await client.listSessions()
+            if let found = sessions.first(where: { $0.id == uuid }) {
+                targetSession = found
+            } else {
+                targetSession = try await client.createSession()
+            }
+        } else {
+            targetSession = try await client.createSession()
+        }
+
+        // Build command generation prompt
         let systemInfo = gatherSystemInfo()
-        let prompt = buildCommandPrompt(task: task, systemInfo: systemInfo)
+        let prompt = buildCommandPrompt(task: taskText, systemInfo: systemInfo)
 
         print(TerminalUI.dim("Analyzing request..."))
         print("")
 
         var fullResponse = ""
-        do {
-            // Use current session
-            let stream = try await context.client.chatStream(
-                sessionId: context.session.id, message: prompt)
+        let stream = try await client.chatStream(sessionId: targetSession.id, message: prompt)
 
-            for try await delta in stream {
-                if let content = delta.content {
-                    fullResponse += content
-                    print(content, terminator: "")
-                    fflush(stdout)
-                }
+        for try await delta in stream {
+            if let content = delta.content {
+                fullResponse += content
+                print(content, terminator: "")
+                fflush(stdout)
             }
-            print("\n")
-        } catch {
-            TerminalUI.printError("Error: \(error.localizedDescription)")
-            return
         }
+        print("\n")
 
-        // Extract command from response
+        // Extract command and offer interactive loop
         guard let command = extractCommand(from: fullResponse) else {
             TerminalUI.printInfo("No command was extracted. Try rephrasing your request.")
             return
         }
 
-        // Interactive loop
-        try await commandLoop(command: command, context: context)
+        try await commandLoop(command: command, client: client, session: targetSession)
     }
 
-    // MARK: - Loop
+    // MARK: - Command Loop
 
-    private func commandLoop(command: String, context: ChatContext) async throws {
+    private func commandLoop(command: String, client: MonadClient, session: Session) async throws {
         var currentCommand = command
 
         while true {
@@ -67,10 +128,9 @@ struct TaskCommand: SlashCommand {
             print("")
             print("Options:")
             print("  \(TerminalUI.bold("[r]"))un       Execute the command")
-            print("  \(TerminalUI.bold("[p]"))ipe      Run and send output back to chat")
             print("  \(TerminalUI.bold("[e]"))dit      Describe changes to make")
             print("  \(TerminalUI.bold("[c]"))opy      Copy to clipboard")
-            print("  \(TerminalUI.bold("[q]"))uit      Exit to chat")
+            print("  \(TerminalUI.bold("[q]"))uit      Exit")
             print("")
             print("Choice: ", terminator: "")
             fflush(stdout)
@@ -82,43 +142,6 @@ struct TaskCommand: SlashCommand {
             switch input {
             case "r", "run":
                 try await runCommand(currentCommand)
-                return
-
-            case "p", "pipe":
-                let output = try await runCommandWithOutput(currentCommand)
-                print("")
-                print(TerminalUI.dim("--- Command Output ---"))
-                print(output)
-                print(TerminalUI.dim("--- End Output ---"))
-                print("")
-
-                let followUp = """
-                    The command output was:
-                    ```
-                    \(output.prefix(2000))
-                    ```
-                    What should I do next? Or is there a better approach?
-                    """
-
-                print(TerminalUI.dim("Analyzing output..."))
-                print("")
-
-                var newResponse = ""
-                let stream = try await context.client.chatStream(
-                    sessionId: context.session.id, message: followUp)
-                for try await delta in stream {
-                    if let content = delta.content {
-                        newResponse += content
-                        print(content, terminator: "")
-                        fflush(stdout)
-                    }
-                }
-                print("\n")
-
-                if let newCommand = extractCommand(from: newResponse) {
-                    currentCommand = newCommand
-                    continue
-                }
                 return
 
             case "e", "edit":
@@ -142,8 +165,7 @@ struct TaskCommand: SlashCommand {
                 print("")
 
                 var editResponse = ""
-                let stream = try await context.client.chatStream(
-                    sessionId: context.session.id, message: editPrompt)
+                let stream = try await client.chatStream(sessionId: session.id, message: editPrompt)
                 for try await delta in stream {
                     if let content = delta.content {
                         editResponse += content
@@ -209,27 +231,6 @@ struct TaskCommand: SlashCommand {
         } else {
             TerminalUI.printError("Command exited with status \(process.terminationStatus)")
         }
-    }
-
-    private func runCommandWithOutput(_ command: String) async throws -> String {
-        print("")
-        print(TerminalUI.dim("$ \(command)"))
-        print("")
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-c", command]
-        process.currentDirectoryURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-
-        try process.run()
-        process.waitUntilExit()
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8) ?? ""
     }
 
     private func copyToClipboard(_ text: String) {

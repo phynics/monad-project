@@ -82,12 +82,14 @@ struct SessionCommand: SlashCommand {
     let aliases = ["sessions"]
     let description = "Manage sessions"
     let category: String? = "Session Management"
-    let usage = "/session [list|delete|rename|switch|log] [args]"
+    let usage = "/session [info|list|delete|rename|switch|log] [args]"
 
     func run(args: [String], context: ChatContext) async throws {
-        let subcommand = args.first ?? "list"
+        let subcommand = args.first ?? "info"
 
         switch subcommand {
+        case "info":
+            try await showInfo(context: context)
         case "list", "ls":
             try await listSessions(context: context)
         case "delete", "rm":
@@ -107,13 +109,100 @@ struct SessionCommand: SlashCommand {
             if args.count > 1 {
                 try await switchSession(args[1], context: context)
             } else {
-                TerminalUI.printError("Usage: /session switch <session-id-prefix>")
+                // Interactive TUI switch
+                try await interactiveSwitch(context: context)
             }
         case "log", "history":
             try await showHistory(context: context)
         default:
-            try await listSessions(context: context)
+            try await showInfo(context: context)
         }
+    }
+
+    private func showInfo(context: ChatContext) async throws {
+        let session = context.session
+        let messages = try await context.client.getHistory(sessionId: session.id)
+        let sessionWS = try await context.client.listSessionWorkspaces(sessionId: session.id)
+        
+        print("")
+        print(TerminalUI.bold("Current Session"))
+        print("")
+        print("  Title:    \(session.title ?? "Untitled")")
+        print("  ID:       \(session.id.uuidString)")
+        print("  Created:  \(TerminalUI.formatDate(session.createdAt))")
+        print("  Messages: \(messages.count)")
+        
+        // Workspaces
+        var wsDesc: [String] = []
+        if let primary = sessionWS.primary {
+            wsDesc.append("\(primary.uri.description) (★)")
+        }
+        for ws in sessionWS.attached.prefix(2) {
+            wsDesc.append("\(ws.uri.description) (●)")
+        }
+        if sessionWS.attached.count > 2 {
+            wsDesc.append("+\(sessionWS.attached.count - 2) more")
+        }
+        
+        if !wsDesc.isEmpty {
+            print("")
+            print("  Workspaces: \(wsDesc.joined(separator: ", "))")
+        }
+        
+        print("")
+        print(TerminalUI.dim("Use '/session list' for all sessions, '/session switch' to change."))
+        print("")
+    }
+
+    private func interactiveSwitch(context: ChatContext) async throws {
+        let sessions = try await context.client.listSessions()
+        guard !sessions.isEmpty else {
+            TerminalUI.printInfo("No other sessions found.")
+            return
+        }
+        
+        let currentId = context.session.id
+        let sortedSessions = sessions.sorted { $0.createdAt > $1.createdAt }
+        
+        print("")
+        print(TerminalUI.bold("Switch Session:"))
+        print("")
+        
+        for (i, s) in sortedSessions.enumerated() {
+            let title = s.title ?? "Untitled"
+            let isCurrent = s.id == currentId
+            let marker = isCurrent ? TerminalUI.green("[●]") : "[ ]"
+            let dateStr = TerminalUI.formatDate(s.createdAt)
+            
+            print("  \(i + 1). \(marker) \(title)  \(TerminalUI.dim(dateStr))")
+        }
+        
+        print("")
+        print("Enter number (1-\(sortedSessions.count)) or q to cancel: ", terminator: "")
+        fflush(stdout)
+        
+        guard let input = readLine()?.trimmingCharacters(in: .whitespaces) else {
+            return
+        }
+        
+        if input.lowercased() == "q" || input.isEmpty {
+            print("Cancelled.")
+            return
+        }
+        
+        guard let index = Int(input), index > 0, index <= sortedSessions.count else {
+            TerminalUI.printError("Invalid selection.")
+            return
+        }
+        
+        let selected = sortedSessions[index - 1]
+        if selected.id == currentId {
+            TerminalUI.printInfo("Already in this session.")
+            return
+        }
+        
+        await context.repl.switchSession(selected)
+        TerminalUI.printSuccess("Switched to session: \(selected.title ?? selected.id.uuidString)")
     }
 
     private func showHistory(context: ChatContext) async throws {

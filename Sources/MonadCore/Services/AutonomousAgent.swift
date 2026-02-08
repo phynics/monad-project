@@ -6,14 +6,17 @@ import OpenAI
 public actor AutonomousAgent {
     private let llmService: any LLMServiceProtocol
     private let persistenceService: any PersistenceServiceProtocol
+    private let contextManager: ContextManager?
     private let logger = Logger(label: "com.monad.autonomous-agent")
 
     public init(
         llmService: any LLMServiceProtocol,
-        persistenceService: any PersistenceServiceProtocol
+        persistenceService: any PersistenceServiceProtocol,
+        contextManager: ContextManager? = nil
     ) {
         self.llmService = llmService
         self.persistenceService = persistenceService
+        self.contextManager = contextManager
     }
 
     /// Execute a job within the context of a session
@@ -77,19 +80,32 @@ public actor AutonomousAgent {
             // Get available tools from executor
             let availableTools = await toolExecutor.getAvailableTools()
             
-            // Build Prompt using LLM Service
-            // We use `buildPrompt` to construct the context window.
-            // Note: `buildPrompt` expects `userQuery`. But here the "query" is implicitly the last message or the job prompt.
-            // We'll pass empty string or "." and rely on history? No, LLMService might need a distinct user query.
-            // Actually `chatStream` uses `messages` directly. Let's use `buildPrompt` to get context/memories, then append history.
-            
+            // Fetch Context from ContextManager (RAG)
+            var contextNotes: [ContextFile] = []
+            var contextMemories: [Memory] = []
+
+            if let contextManager = contextManager {
+                // Use last user message or job description as query
+                let query = latestHistory.last(where: { $0.role == .user })?.content ?? job.description ?? job.title
+                
+                do {
+                    let contextData = try await contextManager.gatherContext(
+                        for: query,
+                        history: latestHistory,
+                        limit: 5
+                    )
+                    contextNotes = contextData.notes
+                    // Convert SemanticSearchResult to Memory
+                    contextMemories = contextData.memories.map { $0.memory }
+                } catch {
+                    logger.warning("Failed to gather context for job: \(error)")
+                }
+            }
+
             let (messages, _, _) = await llmService.buildPrompt(
-                userQuery: "Continue execution", // Dummy query to trigger context retrieval if needed
-                contextNotes: [], // (We should fetch these via ContextManager if we have access, but AutonomousAgent is isolated)
-                // TODO: AutonomousAgent needs ContextManager access for RAG?
-                // For V1, let's assume context is in history or notes are injected by `buildPrompt` based on query.
-                documents: [], 
-                memories: [], 
+                userQuery: "Continue execution",
+                contextNotes: contextNotes,
+                memories: contextMemories,
                 chatHistory: latestHistory, 
                 tools: availableTools,
                 systemInstructions: "You are an autonomous agent executing a background job. Complete the task."

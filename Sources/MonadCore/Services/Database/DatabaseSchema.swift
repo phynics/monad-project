@@ -267,6 +267,7 @@ public enum DatabaseSchema {
                     t.column("trustLevel", .text).notNull().defaults(to: "full")
                     t.column("lastModifiedBy", .blob).references(
                         "conversationSession", onDelete: .setNull)
+                    t.column("status", .text).notNull().defaults(to: "active")
                     t.column("createdAt", .datetime).notNull()
                 }
             }
@@ -440,6 +441,15 @@ public enum DatabaseSchema {
             try db.create(index: "idx_job_priority", on: "job", columns: ["priority"])
             try db.create(index: "idx_job_session", on: "job", columns: ["sessionId"])
         }
+
+        // v23: Add status to workspace table
+        migrator.registerMigration("v23") { db in
+            if try !db.columns(in: "workspace").contains(where: { $0.name == "status" }) {
+                try db.alter(table: "workspace") { t in
+                    t.add(column: "status", .text).notNull().defaults(to: "active")
+                }
+            }
+        }
     }
 
     // MARK: - Workspace Tables
@@ -464,6 +474,7 @@ public enum DatabaseSchema {
             t.column("rootPath", .text)
             t.column("trustLevel", .text).notNull().defaults(to: "full")
             t.column("lastModifiedBy", .blob)
+            t.column("status", .text).notNull().defaults(to: "active")
             t.column("createdAt", .datetime).notNull()
         }
 

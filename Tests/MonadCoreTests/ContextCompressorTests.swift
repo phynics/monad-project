@@ -4,18 +4,10 @@ import XCTest
 @MainActor
 final class ContextCompressorTests: XCTestCase {
     var compressor: ContextCompressor!
-    var llmService: LLMService!
+    var llmService: MockLLMService!
 
     override func setUp() async throws {
-        let embeddingService = LocalEmbeddingService()
-        // Initialize with minimal dependencies. Storage will use standard defaults but we override config immediately.
-        llmService = LLMService(embeddingService: embeddingService)
-
-        // Manually set valid configuration
-        var config = LLMConfiguration.openAI
-        config.providers[.openAI]?.apiKey = "test-key"
-        try await llmService.updateConfiguration(config)
-
+        llmService = MockLLMService()
         compressor = ContextCompressor()
     }
 

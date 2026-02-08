@@ -1,8 +1,9 @@
 import Foundation
 import Logging
+import ServiceLifecycle
 
 /// Advertises the Monad Server on the local network using Bonjour (ZeroConf).
-final class BonjourAdvertiser: NSObject, NetServiceDelegate, @unchecked Sendable {
+final class BonjourAdvertiser: NSObject, NetServiceDelegate, Service, @unchecked Sendable {
     private let service: NetService
     private let logger: Logger
 
@@ -17,21 +18,29 @@ final class BonjourAdvertiser: NSObject, NetServiceDelegate, @unchecked Sendable
         self.service.delegate = self
     }
 
-    func start() {
+    func run() async throws {
         // NetService requires a RunLoop. We schedule it on the main run loop.
-        DispatchQueue.main.async {
-            self.logger.info(
-                "Starting Bonjour advertisement for service type '_monad-server._tcp.' on port \(self.service.port)"
+        await MainActor.run {
+            logger.info(
+                "Starting Bonjour advertisement for service type '_monad-server._tcp.' on port \(service.port)"
             )
-            self.service.schedule(in: .main, forMode: .common)
-            self.service.publish()
+            service.schedule(in: .main, forMode: .common)
+            service.publish()
         }
-    }
-
-    func stop() {
-        DispatchQueue.main.async {
-            self.service.stop()
+        
+        // Use cancelWhenGracefulShutdown to properly respond to shutdown signals
+        try? await cancelWhenGracefulShutdown {
+            // Wait for cancellation
+            while !Task.isCancelled {
+                try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            }
         }
+        
+        // Clean up on cancellation
+        await MainActor.run {
+            service.stop()
+        }
+        logger.info("Bonjour service stopped")
     }
 
     // MARK: - NetServiceDelegate

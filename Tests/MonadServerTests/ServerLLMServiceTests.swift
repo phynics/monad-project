@@ -128,7 +128,6 @@ import Testing
         let (stream, prompt, _) = await service.chatStreamWithContext(
             userQuery: "Hi",
             contextNotes: [],
-            documents: [],
             memories: [],
             chatHistory: [],
             tools: [],

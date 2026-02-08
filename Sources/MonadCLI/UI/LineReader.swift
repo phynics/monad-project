@@ -138,9 +138,26 @@ final class LineReader {
             // Apply unique completion
             replaceBuffer(with: candidates[0])
         } else {
-            // TODO: partial completion
-            // show candidates?
+            // Partial completion: Find longest common prefix
+            let prefix = longestCommonPrefix(of: candidates)
+            if !prefix.isEmpty && prefix.count > current.count {
+               replaceBuffer(with: prefix)
+            }
+            // Optional: Print candidates? (Complex in raw mode, skipping for now)
         }
+    }
+
+    private func longestCommonPrefix(of strings: [String]) -> String {
+        guard let first = strings.first else { return "" }
+        var prefix = first
+        
+        for str in strings.dropFirst() {
+            while !str.hasPrefix(prefix) {
+                prefix = String(prefix.dropLast())
+                if prefix.isEmpty { return "" }
+            }
+        }
+        return prefix
     }
 
     // MARK: - Navigation

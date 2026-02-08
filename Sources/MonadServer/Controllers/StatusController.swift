@@ -6,13 +6,17 @@ import NIOCore
 public struct StatusController<Context: RequestContext>: Sendable {
     public let persistenceService: any PersistenceServiceProtocol
     public let llmService: any LLMServiceProtocol
-    
+    public let startTime: Date
+    public let version = "1.0.0"
+
     public init(
         persistenceService: any PersistenceServiceProtocol,
-        llmService: any LLMServiceProtocol
+        llmService: any LLMServiceProtocol,
+        startTime: Date
     ) {
         self.persistenceService = persistenceService
         self.llmService = llmService
+        self.startTime = startTime
     }
     
     public func addRoutes(to router: Router<Context>) {
@@ -29,10 +33,12 @@ public struct StatusController<Context: RequestContext>: Sendable {
         
         let overallStatus: HealthStatus = (dbHealth == .ok && aiHealth == .ok) ? .ok : .degraded
         
+        let uptime = Date().timeIntervalSince(startTime)
+
         return StatusResponse(
             status: overallStatus,
-            version: "1.0.0", // TODO: Pull from config or build info
-            uptime: 0, // TODO: Implement uptime tracking
+            version: version,
+            uptime: uptime,
             components: [
                 "database": ComponentStatus(status: dbHealth, details: dbDetails),
                 "ai_provider": ComponentStatus(status: aiHealth, details: aiDetails)

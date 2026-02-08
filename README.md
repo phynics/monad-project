@@ -45,6 +45,12 @@ swift run MonadServer
 # In another terminal, use the CLI
 swift run MonadCLI chat
 
+# Quick one-off query (no quotes needed)
+swift run MonadCLI q what is the capital of France
+
+# Generate shell commands from natural language
+swift run MonadCLI cmd find all TODO comments in Swift files
+
 # Check server status
 swift run MonadCLI status
 ```

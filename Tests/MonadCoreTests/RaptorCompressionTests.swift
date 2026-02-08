@@ -1,5 +1,6 @@
 import XCTest
 @testable import MonadCore
+import OpenAI
 
 // Mock for LLMServiceProtocol
 actor MockLLMService: LLMServiceProtocol {
@@ -24,7 +25,7 @@ actor MockLLMService: LLMServiceProtocol {
         return summaryResponse
     }
 
-    func chatStreamWithContext(userQuery: String, contextNotes: [ContextFile], documents: [DocumentContext], memories: [Memory], chatHistory: [Message], tools: [any Tool], systemInstructions: String?, responseFormat: ChatQuery.ResponseFormat?, useFastModel: Bool) async -> (stream: AsyncThrowingStream<ChatStreamResult, Error>, rawPrompt: String, structuredContext: [String: String]) {
+    func chatStreamWithContext(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [any MonadCore.Tool], systemInstructions: String?, responseFormat: ChatQuery.ResponseFormat?, useFastModel: Bool) async -> (stream: AsyncThrowingStream<ChatStreamResult, Error>, rawPrompt: String, structuredContext: [String: String]) {
         fatalError("Not implemented")
     }
 
@@ -32,7 +33,7 @@ actor MockLLMService: LLMServiceProtocol {
         fatalError("Not implemented")
     }
 
-    func buildPrompt(userQuery: String, contextNotes: [ContextFile], documents: [DocumentContext], memories: [Memory], chatHistory: [Message], tools: [any Tool], systemInstructions: String?) async -> (messages: [ChatQuery.ChatCompletionMessageParam], rawPrompt: String, structuredContext: [String : String]) {
+    func buildPrompt(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [any MonadCore.Tool], systemInstructions: String?) async -> (messages: [ChatQuery.ChatCompletionMessageParam], rawPrompt: String, structuredContext: [String : String]) {
         fatalError("Not implemented")
     }
 

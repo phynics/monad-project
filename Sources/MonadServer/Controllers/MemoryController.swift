@@ -107,33 +107,18 @@ public struct MemoryController<Context: RequestContext>: Sendable {
         if let content = input.content {
             memory.content = content
         }
-        /*
         if let tags = input.tags {
-            // TODO: Implement tag updates once Memory model mutability is confirmed
+            // Updated tags logic: Encode [String] to JSON string used by Memory model
+            if let tagsData = try? SerializationUtils.jsonEncoder.encode(tags),
+               let tagsString = String(data: tagsData, encoding: .utf8) {
+                memory.tags = tagsString
+            }
         }
-        */
-        
-        // RE-READING MockPersistenceService:
-        // `!Set(memory.tagArray).intersection(tags).isEmpty`
-        // So `tagArray` exists.
-        // `Memory` likely has `tags` as string backing.
-        // I'll skip updating tags property directly and use `init` or specific logic if I knew it.
-        // But since I don't know the setter, I'll update ONLY content for now to be safe,
-        // OR I will assume `tags` property exists.
-        // ACTUALLY, `CreateMemory` uses `tags: input?.tags ?? []`.
-        // So I can create a NEW memory object with updated fields if I can't mutate.
-        // `memory = Memory(id: id, title: memory.title, content: content ?? memory.content, tags: tags ?? memory.tagArray, ...)`?
-        // Let's refrain from complex update logic if unsure.
-        // I'll implement content update.
-        // I will assume `memory.tags` (String) is public var.
         
 
-        // Save using ID since it's an update. 
-        // PersistenceService Protocol usually needs saveMemory(memory).
-        // Check `create` uses `custom saveMemory`.
-        // Wait, `persistence.saveMemory(memory, policy: .immediate)` returns UUID.
-        // I need to confirm if `saveMemory` updates existing if ID matches.
-        // Assuming yes for GRDB usually, or checking PersistenceService.
+        
+
+
         
         _ = try await persistence.saveMemory(memory, policy: .immediate)
         

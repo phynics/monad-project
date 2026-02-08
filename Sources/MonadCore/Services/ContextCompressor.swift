@@ -254,7 +254,7 @@ public actor ContextCompressor {
                 // Look ahead for tool results
                 var interactionNodes: [Message] = [msg]
                 var j = i + 1
-                var allResultsFound = true
+
 
                 // Expect a tool message for each tool call
                 // Note: Messages might be interleaved or sequential.

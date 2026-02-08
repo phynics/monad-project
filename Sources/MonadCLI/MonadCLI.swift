@@ -25,7 +25,7 @@ struct MonadCLI: AsyncParsableCommand {
               MONAD_SERVER_URL              Server URL (default: http://127.0.0.1:8080)
             """,
         version: "1.0.0",
-        subcommands: [Chat.self, Status.self],
+        subcommands: [Chat.self, Status.self, Query.self, Command.self],
         defaultSubcommand: Chat.self
     )
 }

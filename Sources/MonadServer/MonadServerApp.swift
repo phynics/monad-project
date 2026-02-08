@@ -83,9 +83,11 @@ struct MonadServer: AsyncParsableCommand {
             return "OK"
         }
 
+        let startTime = Date()
         let statusController = StatusController<BasicRequestContext>(
             persistenceService: persistenceService,
-            llmService: llmService
+            llmService: llmService,
+            startTime: startTime
         )
         statusController.addRoutes(to: router)
 
@@ -148,7 +150,6 @@ struct MonadServer: AsyncParsableCommand {
         logger.info("Server starting on \(hostname):\(port)")
 
         let advertiser = BonjourAdvertiser(port: port)
-        advertiser.start()
 
         let jobRunner = JobRunnerService(sessionManager: sessionManager, llmService: llmService)
 
@@ -156,7 +157,8 @@ struct MonadServer: AsyncParsableCommand {
             configuration: ServiceGroupConfiguration(
                 services: [
                     .init(service: app),
-                    .init(service: jobRunner)
+                    .init(service: jobRunner),
+                    .init(service: advertiser)
                 ],
                 gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                 logger: logger
@@ -164,7 +166,6 @@ struct MonadServer: AsyncParsableCommand {
         )
 
         try await serviceGroup.run()
-        advertiser.stop()
     }
 
     /// Default workspace path
