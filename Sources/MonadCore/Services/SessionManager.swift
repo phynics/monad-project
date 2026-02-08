@@ -147,6 +147,7 @@ public actor SessionManager {
 
         let availableTools: [any MonadCore.Tool] = [
             ExecuteSQLTool(persistenceService: persistenceService),
+            CreateMemoryEdgeTool(persistenceService: persistenceService),
             // Filesystem Tools
             ChangeDirectoryTool(
                 currentPath: currentWD,

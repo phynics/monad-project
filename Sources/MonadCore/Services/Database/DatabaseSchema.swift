@@ -440,6 +440,25 @@ public enum DatabaseSchema {
             try db.create(index: "idx_job_priority", on: "job", columns: ["priority"])
             try db.create(index: "idx_job_session", on: "job", columns: ["sessionId"])
         }
+
+        // v23: Add memoryEdge table
+        migrator.registerMigration("v23") { db in
+            try db.create(table: "memoryEdge") { t in
+                t.column("id", .blob).primaryKey()
+                t.column("sourceId", .blob).notNull()
+                    .references("memory", onDelete: .cascade)
+                t.column("targetId", .blob).notNull()
+                    .references("memory", onDelete: .cascade)
+                t.column("relationship", .text).notNull()
+                t.column("weight", .double).notNull().defaults(to: 1.0)
+                t.column("metadata", .text).notNull().defaults(to: "{}")
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+            }
+
+            try db.create(index: "idx_edge_source", on: "memoryEdge", columns: ["sourceId"])
+            try db.create(index: "idx_edge_target", on: "memoryEdge", columns: ["targetId"])
+        }
     }
 
     // MARK: - Workspace Tables

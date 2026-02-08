@@ -219,7 +219,21 @@ public actor ContextManager {
         )
 
         // Take top N based on limit
-        let topResults = Array(finalResults.prefix(limit))
+        var topResults = Array(finalResults.prefix(limit))
+
+        // 5. Graph Expansion (Related Memories)
+        // For the top 3 results, fetch related memories to stabilize context
+        let graphExpansionLimit = 3
+        for i in 0..<min(topResults.count, graphExpansionLimit) {
+            let memory = topResults[i].memory
+            if let related = try? await persistenceService.fetchRelatedMemories(for: memory.id, limit: 3) {
+                if !related.isEmpty {
+                    var updatedMemory = memory
+                    updatedMemory.relatedMemories = related
+                    topResults[i] = SemanticSearchResult(memory: updatedMemory, similarity: topResults[i].similarity)
+                }
+            }
+        }
 
         logger.info(
             "Recall performance: \(topResults.count) memories selected from \(semanticResults.count) semantic + \(tagResults.count) tag matches"

@@ -102,5 +102,46 @@ extension PersistenceService {
         return 0
     }
 
+    // MARK: - Memory Graph (Edges)
+
+    public func saveMemoryEdge(_ edge: MemoryEdge) async throws {
+        try await dbQueue.write { db in
+            try edge.save(db)
+        }
+    }
+
+    public func deleteMemoryEdge(id: UUID) async throws {
+        _ = try await dbQueue.write { db in
+            try MemoryEdge.deleteOne(db, key: id)
+        }
+    }
+
+    public func fetchMemoryEdges(from sourceId: UUID) async throws -> [MemoryEdge] {
+        try await dbQueue.read { db in
+            try MemoryEdge.filter(Column("sourceId") == sourceId).fetchAll(db)
+        }
+    }
+
+    public func fetchRelatedMemories(for memoryId: UUID, limit: Int = 5) async throws -> [Memory] {
+        try await dbQueue.read { db in
+            // Find edges where this memory is the source
+            let edges = try MemoryEdge
+                .filter(Column("sourceId") == memoryId)
+                .order(Column("weight").desc)
+                .limit(limit)
+                .fetchAll(db)
+
+            let targetIds = edges.map { $0.targetId }
+            guard !targetIds.isEmpty else { return [] }
+
+            let memories = try Memory.filter(targetIds.contains(Column("id"))).fetchAll(db)
+
+            // Re-sort to match edge weight order (which matches targetIds order)
+            return targetIds.compactMap { id in
+                memories.first(where: { $0.id == id })
+            }
+        }
+    }
+
 // Methods moved to MonadServerCore/Extensions/PersistenceService+Server.swift
 }

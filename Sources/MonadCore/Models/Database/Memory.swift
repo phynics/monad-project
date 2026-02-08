@@ -12,6 +12,9 @@ public struct Memory: Codable, Identifiable, FetchableRecord, PersistableRecord,
     public var metadata: String  // JSON object stored as string
     public var embedding: String // JSON array of Doubles stored as string (simulating vector storage)
 
+    // Non-persisted related memories (graph edges)
+    public var relatedMemories: [Memory] = []
+
     public init(
         id: UUID = UUID(),
         title: String,
@@ -113,6 +116,39 @@ public struct Memory: Codable, Identifiable, FetchableRecord, PersistableRecord,
         self.metadata = row["metadata"]
         self.embedding = row["embedding"]
     }
+
+    // MARK: - PersistableRecord
+
+    public func encode(to container: inout PersistenceContainer) throws {
+        container["id"] = id
+        container["title"] = title
+        container["content"] = content
+        container["createdAt"] = createdAt
+        container["updatedAt"] = updatedAt
+        container["tags"] = tags
+        container["metadata"] = metadata
+        container["embedding"] = embedding
+        // relatedMemories are excluded from persistence
+    }
+
+    // MARK: - Codable
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.title = try container.decode(String.self, forKey: .title)
+        self.content = try container.decode(String.self, forKey: .content)
+        self.createdAt = try container.decode(Date.self, forKey: .createdAt)
+        self.updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        self.tags = try container.decode(String.self, forKey: .tags)
+        self.metadata = try container.decode(String.self, forKey: .metadata)
+        self.embedding = try container.decode(String.self, forKey: .embedding)
+        self.relatedMemories = try container.decodeIfPresent([Memory].self, forKey: .relatedMemories) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, title, content, createdAt, updatedAt, tags, metadata, embedding, relatedMemories
+    }
 }
 
 public enum PersistenceError: LocalizedError {
@@ -157,6 +193,14 @@ extension Memory: PromptFormattable {
         // Content
         parts.append("Content:")
         parts.append(content)
+
+        // Related Memories
+        if !relatedMemories.isEmpty {
+            parts.append("\nRelated Memories:")
+            for related in relatedMemories {
+                parts.append("- \(related.title) (ID: \(related.id.uuidString))")
+            }
+        }
 
         return parts.joined(separator: "\n")
     }
