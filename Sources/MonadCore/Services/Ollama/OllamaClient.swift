@@ -5,12 +5,16 @@ import OpenAI
 public actor OllamaClient {
     private let endpoint: URL
     private let modelName: String
+    private let timeoutInterval: TimeInterval
+    private let maxRetries: Int
     private let session: URLSession
     private let logger = Logger(label: "com.monad.ollama-client")
 
     public init(
         endpoint: String,
-        modelName: String
+        modelName: String,
+        timeoutInterval: TimeInterval = 120.0,
+        maxRetries: Int = 3
     ) {
         var cleanEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
         if cleanEndpoint.hasSuffix("/") {
@@ -22,14 +26,16 @@ public actor OllamaClient {
         
         self.endpoint = URL(string: cleanEndpoint) ?? URL(string: "http://localhost:11434")!
         self.modelName = modelName
+        self.timeoutInterval = timeoutInterval
+        self.maxRetries = maxRetries
         
         // Use a custom configuration with longer timeout for local network robustness
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30 // Reduced for better UI response
-        config.timeoutIntervalForResource = 300 
+        config.timeoutIntervalForRequest = timeoutInterval
+        config.timeoutIntervalForResource = timeoutInterval * 5
         config.waitsForConnectivity = true
         self.session = URLSession(configuration: config)
-        logger.debug("Initialized OllamaClient with model: \(modelName), endpoint: \(self.endpoint.absoluteString)")
+        logger.debug("Initialized OllamaClient with model: \(modelName), endpoint: \(self.endpoint.absoluteString), timeout: \(timeoutInterval)s")
     }
 
     public func chatStream(
@@ -38,45 +44,71 @@ public actor OllamaClient {
         responseFormat: ChatQuery.ResponseFormat? = nil
     ) -> AsyncThrowingStream<ChatStreamResult, Error> {
         logger.debug("Ollama chat stream started for model: \(self.modelName)")
+
+        // Capture dependencies
+        let session = self.session
+        let maxRetries = self.maxRetries
+        let logger = self.logger
+
         return AsyncThrowingStream { continuation in
             Task {
+                var hasYielded = false
+
                 do {
-                    let request = try buildRequest(messages: messages, tools: tools, responseFormat: responseFormat)
-                    logger.debug("Ollama request URL: \(request.url?.absoluteString ?? "nil")")
-                    if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
-                        logger.debug("Ollama request body: \(bodyString)")
-                    }
-
-                    let (stream, response) = try await session.bytes(for: request)
-
-                    guard let httpResponse = response as? HTTPURLResponse else {
-                        throw LLMServiceError.networkError("Invalid response type from Ollama")
-                    }
-                    
-                    logger.debug("Ollama response status code: \(httpResponse.statusCode)")
-
-                    guard (200...299).contains(httpResponse.statusCode)
-                    else {
-                        // Attempt to read error body
-                        var errorBody = ""
-                        for try await line in stream.lines {
-                            errorBody += line
+                    try await RetryPolicy.retry(
+                        maxRetries: maxRetries,
+                        shouldRetry: { error in
+                            return !hasYielded && RetryPolicy.isTransient(error: error)
                         }
-                        logger.error("Ollama error response body: \(errorBody)")
-                        throw LLMServiceError.networkError(
-                            "Ollama API Error: \(httpResponse.statusCode) - \(errorBody)")
-                    }
+                    ) {
+                        // Access self safely inside Task (on actor).
+                        // Since we are inside an escaping closure passed to RetryPolicy (which runs async),
+                        // we must await actor-isolated methods.
+                        let request = try await self.buildRequest(messages: messages, tools: tools, responseFormat: responseFormat)
+                        logger.debug("Ollama request URL: \(request.url?.absoluteString ?? "nil")")
+                        if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
+                            logger.debug("Ollama request body: \(bodyString)")
+                        }
 
-                    for try await line in stream.lines {
-                        guard !line.isEmpty else { continue }
-                        guard let data = line.data(using: .utf8) else { continue }
+                        let (stream, response) = try await session.bytes(for: request)
 
-                        if let response = try? JSONDecoder().decode(
-                            OllamaChatResponse.self, from: data)
-                        {
-                            if let converted = convertToOpenAI(response) {
-                                logger.debug("Yielding Ollama chunk: \(response.message.content)")
-                                continuation.yield(converted)
+                        guard let httpResponse = response as? HTTPURLResponse else {
+                            throw LLMServiceError.networkError("Invalid response type from Ollama")
+                        }
+
+                        logger.debug("Ollama response status code: \(httpResponse.statusCode)")
+
+                        guard (200...299).contains(httpResponse.statusCode)
+                        else {
+                            // Attempt to read error body
+                            var errorBody = ""
+                            for try await line in stream.lines {
+                                errorBody += line
+                            }
+                            logger.error("Ollama error response body: \(errorBody)")
+                            throw LLMServiceError.networkError(
+                                "Ollama API Error: \(httpResponse.statusCode) - \(errorBody)")
+                        }
+
+                        for try await line in stream.lines {
+                            guard !line.isEmpty else { continue }
+                            guard let data = line.data(using: .utf8) else { continue }
+
+                            if let response = try? JSONDecoder().decode(
+                                OllamaChatResponse.self, from: data)
+                            {
+                                if let converted = await self.convertToOpenAI(response) {
+                                    // Check content or tool calls to mark yielded
+                                    if let content = converted.choices.first?.delta.content, !content.isEmpty {
+                                        hasYielded = true
+                                    }
+                                    if converted.choices.first?.delta.toolCalls != nil {
+                                        hasYielded = true
+                                    }
+
+                                    logger.debug("Yielding Ollama chunk: \(converted.choices.first?.delta.content ?? "")")
+                                    continuation.yield(converted)
+                                }
                             }
                         }
                     }
@@ -101,9 +133,6 @@ public actor OllamaClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let ollamaMessages = messages.map { msg -> OllamaMessage in
-            // Basic mapping
-            // Note: OpenAI messages enum is complex, need to extract content.
-            // Simplified for brevity, need full extraction logic usually.
             var role = "user"
             var content = ""
 
@@ -152,7 +181,6 @@ public actor OllamaClient {
             return OllamaMessage(role: role, content: content, tool_calls: nil)
         }
 
-        // Map responseFormat to Ollama's format parameter
         var format: String? = nil
         if let responseFormat = responseFormat {
             switch responseFormat {
@@ -282,47 +310,57 @@ public actor OllamaClient {
 
     // Simple helper
     public func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat? = nil) async throws -> String {
-        let messages: [ChatQuery.ChatCompletionMessageParam] = [
-            .user(.init(content: .string(content)))
-        ]
+        let maxRetries = self.maxRetries
+        return try await RetryPolicy.retry(maxRetries: maxRetries) {
+            let messages: [ChatQuery.ChatCompletionMessageParam] = [
+                .user(.init(content: .string(content)))
+            ]
 
-        var fullContent = ""
-        for try await result in chatStream(messages: messages, responseFormat: responseFormat) {
-            if let delta = result.choices.first?.delta.content {
-                fullContent += delta
+            var fullContent = ""
+            for try await result in self.chatStream(messages: messages, responseFormat: responseFormat) {
+                if let delta = result.choices.first?.delta.content {
+                    fullContent += delta
+                }
             }
+            return fullContent
         }
-        return fullContent
     }
 
     public func fetchAvailableModels() async throws -> [String]? {
-        let tagsURL = endpoint.appendingPathComponent("api/tags")
-        let request = URLRequest(url: tagsURL)
-        logger.debug("Fetching Ollama models from: \(tagsURL.absoluteString)")
-        
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMServiceError.networkError("Invalid response type from Ollama models API")
-        }
-        
-        logger.debug("Ollama models response status: \(httpResponse.statusCode)")
+        let maxRetries = self.maxRetries
+        let endpoint = self.endpoint
+        let session = self.session
+        let logger = self.logger
 
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw LLMServiceError.networkError("Ollama API Error: \(httpResponse.statusCode)")
-        }
-        
-        struct OllamaTagsResponse: Codable {
-            struct Model: Codable {
-                let name: String
+        return try await RetryPolicy.retry(maxRetries: maxRetries) {
+            let tagsURL = endpoint.appendingPathComponent("api/tags")
+            let request = URLRequest(url: tagsURL)
+            logger.debug("Fetching Ollama models from: \(tagsURL.absoluteString)")
+
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw LLMServiceError.networkError("Invalid response type from Ollama models API")
             }
-            let models: [Model]
+
+            logger.debug("Ollama models response status: \(httpResponse.statusCode)")
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw LLMServiceError.networkError("Ollama API Error: \(httpResponse.statusCode)")
+            }
+
+            struct OllamaTagsResponse: Codable {
+                struct Model: Codable {
+                    let name: String
+                }
+                let models: [Model]
+            }
+
+            let tagsResponse = try JSONDecoder().decode(OllamaTagsResponse.self, from: data)
+            let models = tagsResponse.models.map { $0.name }
+            logger.debug("Found \(models.count) Ollama models: \(models.joined(separator: ", "))")
+            return models
         }
-        
-        let tagsResponse = try JSONDecoder().decode(OllamaTagsResponse.self, from: data)
-        let models = tagsResponse.models.map { $0.name }
-        logger.debug("Found \(models.count) Ollama models: \(models.joined(separator: ", "))")
-        return models
     }
 }
 
