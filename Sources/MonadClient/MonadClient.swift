@@ -310,12 +310,20 @@ public actor MonadClient {
     }
 
     public func listSessionWorkspaces(sessionId: UUID) async throws -> (
-        primary: UUID?, attached: [UUID]
+        primary: Workspace?, attached: [Workspace]
     ) {
         let request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "GET")
         let response: SessionWorkspacesResponse = try await perform(request)
-        return (response.primaryWorkspaceId, response.attachedWorkspaceIds)
+        return (response.primaryWorkspace, response.attachedWorkspaces)
+    }
+
+    public func restoreWorkspace(sessionId: UUID, workspaceId: UUID) async throws {
+        let request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/workspaces/\(workspaceId.uuidString)/restore",
+            method: "POST"
+        )
+        _ = try await performRaw(request)
     }
 
     // MARK: - Prune API

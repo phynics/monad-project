@@ -27,6 +27,7 @@ public struct SessionController<Context: RequestContext>: Sendable {
         // Workspace routes
         group.post("/{id}/workspaces", use: attachWorkspace)
         group.delete("/{id}/workspaces/{wsId}", use: detachWorkspace)
+        group.post("/{id}/workspaces/{wsId}/restore", use: restoreWorkspace)
         group.get("/{id}/workspaces", use: listWorkspaces)
     }
 
@@ -268,8 +269,8 @@ public struct SessionController<Context: RequestContext>: Sendable {
         }
 
         let response = SessionWorkspacesResponse(
-            primaryWorkspaceId: workspaces.primary,
-            attachedWorkspaceIds: workspaces.attached
+            primaryWorkspace: workspaces.primary,
+            attachedWorkspaces: workspaces.attached
         )
 
         let data = try SerializationUtils.jsonEncoder.encode(response)
@@ -277,5 +278,18 @@ public struct SessionController<Context: RequestContext>: Sendable {
         headers[.contentType] = "application/json"
         return Response(
             status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+    }
+
+    @Sendable func restoreWorkspace(_ request: Request, context: Context) async throws -> Response {
+        let idString = try context.parameters.require("id")
+        let wsIdString = try context.parameters.require("wsId")
+        
+        guard let _ = UUID(uuidString: idString), let wsId = UUID(uuidString: wsIdString) else {
+            throw HTTPError(.badRequest)
+        }
+        
+        try await sessionManager.restoreWorkspace(wsId)
+        
+        return Response(status: .ok)
     }
 }

@@ -201,6 +201,10 @@ public actor SessionManager {
                 "sessions", isDirectory: true
             ).appendingPathComponent(id.uuidString, isDirectory: true)
         }
+
+        // Rehydration: Verify directory exists for Server-hosted sessions
+        // We do NOT auto-create here. We let the client/user decide if they want to restore it.
+        // The status will be checked in getWorkspaces.
         
         sessions[id] = session
         
@@ -421,20 +425,73 @@ public actor SessionManager {
         try await persistenceService.saveSession(session)
     }
 
-    public func getWorkspaces(for sessionId: UUID) async -> (primary: UUID?, attached: [UUID])? {
+    public func getWorkspaces(for sessionId: UUID) async -> (primary: Workspace?, attached: [Workspace])? {
+        var primaryId: UUID?
+        var attachedIds: [UUID] = []
+
         if let session = sessions[sessionId] {
-            return (session.primaryWorkspaceId, session.attachedWorkspaces)
+            primaryId = session.primaryWorkspaceId
+            attachedIds = session.attachedWorkspaces
+        } else if let session = try? await persistenceService.fetchSession(id: sessionId) {
+            primaryId = session.primaryWorkspaceId
+            attachedIds = session.attachedWorkspaces
+        } else {
+            return nil
         }
 
-        // Fallback: Try to fetch from database
-        if let session = try? await persistenceService.fetchSession(id: sessionId) {
-            // We do NOT add to in-memory `sessions` here to avoid partial state
-            // (missing ContextManager, etc.) unless we want to fully support lazy loading.
-            // For now, just returning the data is enough to satisfy the API.
-            return (session.primaryWorkspaceId, session.attachedWorkspaces)
+        var primary: Workspace?
+        if let pid = primaryId {
+            if var p = try? await getWorkspace(pid) {
+                if p.hostType == .server, let path = p.rootPath {
+                   if !FileManager.default.fileExists(atPath: path) {
+                       p.status = .missing
+                   }
+                }
+                primary = p
+            }
         }
 
-        return nil
+        var attached: [Workspace] = []
+        for aid in attachedIds {
+            if var ws = try? await getWorkspace(aid) {
+                if ws.hostType == .server, let path = ws.rootPath {
+                   if !FileManager.default.fileExists(atPath: path) {
+                       ws.status = .missing
+                   }
+                }
+                attached.append(ws)
+            }
+        }
+
+        return (primary, attached)
+    }
+
+    public func restoreWorkspace(_ id: UUID) async throws {
+        guard let workspace = try await getWorkspace(id) else {
+            throw SessionError.sessionNotFound // Or workspaceNotFound
+        }
+
+        if workspace.hostType == .server, let path = workspace.rootPath {
+            let sessionWorkspaceURL = URL(fileURLWithPath: path)
+            let fileManager = FileManager.default
+            if !fileManager.fileExists(atPath: path) {
+                try fileManager.createDirectory(at: sessionWorkspaceURL, withIntermediateDirectories: true)
+                
+                // If it looks like a session root, add subfolders
+                // We can check if path ends in "sessions/<uuid>" or just generic restoration of standard folders
+                // For now, let's just ensure the root exists.
+                // If it was a session root, we might want Notes/Personas.
+                // Let's check if we can infer it.
+                // A workspace doesn't explicitly say "I am a session root".
+                // But we can check if the workspace URI is .serverSession(id).
+                if workspace.uri.host == "monad-server" && workspace.uri.path.hasPrefix("/sessions/") {
+                     let notesDir = sessionWorkspaceURL.appendingPathComponent("Notes", isDirectory: true)
+                     try? fileManager.createDirectory(at: notesDir, withIntermediateDirectories: true)
+                     let personasDir = sessionWorkspaceURL.appendingPathComponent("Personas", isDirectory: true)
+                     try? fileManager.createDirectory(at: personasDir, withIntermediateDirectories: true)
+                }
+            }
+        }
     }
 
     public func getWorkspace(_ id: UUID) async throws -> Workspace? {

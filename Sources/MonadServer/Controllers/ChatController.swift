@@ -47,7 +47,13 @@ public struct ChatController<Context: RequestContext>: Sendable {
 
         let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
 
-        guard let session = await sessionManager.getSession(id: id) else {
+        var maybeSession = await sessionManager.getSession(id: id)
+        if maybeSession == nil {
+            try? await sessionManager.hydrateSession(id: id)
+            maybeSession = await sessionManager.getSession(id: id)
+        }
+
+        guard let session = maybeSession else {
             throw HTTPError(.notFound)
         }
 
@@ -142,7 +148,13 @@ public struct ChatController<Context: RequestContext>: Sendable {
 
         let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
 
-        guard let session = await sessionManager.getSession(id: id) else {
+        var maybeSession = await sessionManager.getSession(id: id)
+        if maybeSession == nil {
+            try? await sessionManager.hydrateSession(id: id)
+            maybeSession = await sessionManager.getSession(id: id)
+        }
+
+        guard let session = maybeSession else {
             throw HTTPError(.notFound)
         }
 

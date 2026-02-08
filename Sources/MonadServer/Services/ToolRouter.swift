@@ -68,8 +68,8 @@ public actor ToolRouter {
         guard let wsList = workspaces else { return nil }
 
         var candidates: [UUID] = []
-        if let p = wsList.primary { candidates.append(p) }
-        candidates.append(contentsOf: wsList.attached)
+        if let p = wsList.primary { candidates.append(p.id) }
+        candidates.append(contentsOf: wsList.attached.map { $0.id })
 
         // We need to check database for "WorkspaceTool" where workspaceId IN candidates AND toolId = tool.id
         // This requires DB access. sessionManager has DB access but maybe we should add a method there.

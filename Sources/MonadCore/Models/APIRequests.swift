@@ -76,12 +76,12 @@ public struct AttachWorkspaceRequest: Codable, Sendable {
 }
 
 public struct SessionWorkspacesResponse: Codable, Sendable {
-    public let primaryWorkspaceId: UUID?
-    public let attachedWorkspaceIds: [UUID]
+    public let primaryWorkspace: Workspace?
+    public let attachedWorkspaces: [Workspace]
 
-    public init(primaryWorkspaceId: UUID?, attachedWorkspaceIds: [UUID]) {
-        self.primaryWorkspaceId = primaryWorkspaceId
-        self.attachedWorkspaceIds = attachedWorkspaceIds
+    public init(primaryWorkspace: Workspace?, attachedWorkspaces: [Workspace]) {
+        self.primaryWorkspace = primaryWorkspace
+        self.attachedWorkspaces = attachedWorkspaces
     }
 }
 
