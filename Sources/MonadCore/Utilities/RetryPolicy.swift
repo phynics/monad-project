@@ -1,0 +1,98 @@
+import Foundation
+import Logging
+import OpenAI
+
+public enum RetryPolicy {
+    private static let logger = Logger(label: "com.monad.retry-policy")
+
+    /// Executes an async operation with retry logic
+    /// - Parameters:
+    ///   - maxRetries: Maximum number of retries (default: 3)
+    ///   - baseDelay: Base delay in seconds for exponential backoff (default: 1.0)
+    ///   - shouldRetry: Closure to determine if an error should trigger a retry (default: always true for known transient errors)
+    ///   - operation: The async operation to execute
+    public static func retry<T>(
+        maxRetries: Int = 3,
+        baseDelay: TimeInterval = 1.0,
+        shouldRetry: @escaping (Error) -> Bool = RetryPolicy.isTransient,
+        operation: @escaping () async throws -> T
+    ) async throws -> T {
+        var attempts = 0
+
+        while true {
+            do {
+                return try await operation()
+            } catch {
+                if attempts >= maxRetries {
+                    logger.error("Max retries (\(maxRetries)) reached. Final error: \(error.localizedDescription)")
+                    throw error
+                }
+
+                if !shouldRetry(error) {
+                    logger.error("Non-retryable error encountered: \(error.localizedDescription)")
+                    throw error
+                }
+
+                attempts += 1
+
+                // Exponential backoff: base * 2^(attempt-1)
+                let delay = baseDelay * pow(2.0, Double(attempts - 1))
+                // Add jitter (0-10% of delay)
+                let jitter = Double.random(in: 0.0...(delay * 0.1))
+                let finalDelay = delay + jitter
+
+                logger.warning("Retry attempt \(attempts)/\(maxRetries) in \(String(format: "%.2f", finalDelay))s due to: \(error.localizedDescription)")
+
+                try await Task.sleep(nanoseconds: UInt64(finalDelay * 1_000_000_000))
+            }
+        }
+    }
+
+    /// Default logic to determine if an error is transient
+    public static func isTransient(error: Error) -> Bool {
+        // Handle URLSession Errors
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .timedOut,
+                 .cannotFindHost,
+                 .cannotConnectToHost,
+                 .networkConnectionLost,
+                 .dnsLookupFailed,
+                 .httpTooManyRedirects,
+                 .resourceUnavailable:
+                return true
+            default:
+                return false
+            }
+        }
+
+        // Handle LLMService Errors
+        if let llmError = error as? LLMServiceError {
+            switch llmError {
+            case .networkError:
+                return true
+            default:
+                return false
+            }
+        }
+
+        // Handle OpenAI Errors
+        if let apiError = error as? APIErrorResponse {
+            // Check known transient error codes if available in the error structure
+            // The library typically exposes APIErrorResponse
+            // We might need to inspect the inner error or status code if exposed
+            // This depends on the specific OpenAI library version.
+            // Assuming generic approach for now:
+            return true // OpenAI library errors are often API responses
+        }
+
+        // Handle Generic NSError (e.g., POSIX errors)
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            // Re-check codes if it came as NSError
+            return isTransient(error: URLError(URLError.Code(rawValue: nsError.code)))
+        }
+
+        return false
+    }
+}

@@ -10,13 +10,30 @@ extension LLMService {
         Logger.llm.debug("Updating clients for provider: \(config.provider.rawValue)")
 
         let components = parseEndpoint(config.endpoint)
+        let timeout = config.timeoutInterval
+        let retries = config.maxRetries
         
         switch config.provider {
         case .ollama:
             self.setClients(
-                main: OllamaClient(endpoint: config.endpoint, modelName: config.modelName),
-                utility: OllamaClient(endpoint: config.endpoint, modelName: config.utilityModel),
-                fast: OllamaClient(endpoint: config.endpoint, modelName: config.fastModel)
+                main: OllamaClient(
+                    endpoint: config.endpoint,
+                    modelName: config.modelName,
+                    timeoutInterval: timeout,
+                    maxRetries: retries
+                ),
+                utility: OllamaClient(
+                    endpoint: config.endpoint,
+                    modelName: config.utilityModel,
+                    timeoutInterval: timeout,
+                    maxRetries: retries
+                ),
+                fast: OllamaClient(
+                    endpoint: config.endpoint,
+                    modelName: config.fastModel,
+                    timeoutInterval: timeout,
+                    maxRetries: retries
+                )
             )
 
         case .openRouter:
@@ -26,21 +43,27 @@ extension LLMService {
                     modelName: config.modelName,
                     host: components.host,
                     port: components.port,
-                    scheme: components.scheme
+                    scheme: components.scheme,
+                    timeoutInterval: timeout,
+                    maxRetries: retries
                 ),
                 utility: OpenRouterClient(
                     apiKey: config.apiKey,
                     modelName: config.utilityModel,
                     host: components.host,
                     port: components.port,
-                    scheme: components.scheme
+                    scheme: components.scheme,
+                    timeoutInterval: timeout,
+                    maxRetries: retries
                 ),
                 fast: OpenRouterClient(
                     apiKey: config.apiKey,
                     modelName: config.fastModel,
                     host: components.host,
                     port: components.port,
-                    scheme: components.scheme
+                    scheme: components.scheme,
+                    timeoutInterval: timeout,
+                    maxRetries: retries
                 )
             )
 
@@ -51,21 +74,27 @@ extension LLMService {
                     modelName: config.modelName,
                     host: components.host,
                     port: components.port,
-                    scheme: components.scheme
+                    scheme: components.scheme,
+                    timeoutInterval: timeout,
+                    maxRetries: retries
                 ),
                 utility: OpenAIClient(
                     apiKey: config.apiKey,
                     modelName: config.utilityModel,
                     host: components.host,
                     port: components.port,
-                    scheme: components.scheme
+                    scheme: components.scheme,
+                    timeoutInterval: timeout,
+                    maxRetries: retries
                 ),
                 fast: OpenAIClient(
                     apiKey: config.apiKey,
                     modelName: config.fastModel,
                     host: components.host,
                     port: components.port,
-                    scheme: components.scheme
+                    scheme: components.scheme,
+                    timeoutInterval: timeout,
+                    maxRetries: retries
                 )
             )
         }
