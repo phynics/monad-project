@@ -65,6 +65,13 @@ public actor AutonomousAgent {
         
 
         while turnCount < maxTurns && !isComplete {
+            // Check for cancellation at start of turn (Critical for graceful shutdown)
+            if Task.isCancelled {
+                logger.info("Job execution cancelled via Task")
+                await failJob(currentJob, reason: "Server Shutdown / Cancelled")
+                return
+            }
+
             turnCount += 1
             
             // Re-fetch history to get latest state (including own previous turns and tool outputs)
@@ -119,6 +126,11 @@ public actor AutonomousAgent {
                 )
                 
                 for try await result in stream {
+                    // Check for cancellation during stream
+                    if Task.isCancelled {
+                        throw CancellationError()
+                    }
+
                     if let content = result.choices.first?.delta.content {
                         assistantContent += content
                     }
@@ -158,6 +170,11 @@ public actor AutonomousAgent {
                 // 2. Execute Tools (if any)
                 if !toolCalls.isEmpty {
                     for toolCall in toolCalls {
+                        // Check cancellation before tool execution
+                        if Task.isCancelled {
+                           throw CancellationError()
+                        }
+
                         let result: String
                         
                         // Find matching tool
@@ -200,6 +217,10 @@ public actor AutonomousAgent {
                     }
                 }
                 
+            } catch is CancellationError {
+                logger.info("LLM Execution cancelled")
+                await failJob(currentJob, reason: "Server Shutdown / Cancelled")
+                return
             } catch {
                 logger.error("LLM Execution Failed: \(error)")
                 await failJob(currentJob, reason: "LLM Error: \(error.localizedDescription)")

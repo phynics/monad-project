@@ -121,14 +121,11 @@ public func formatToolsForPrompt(_ tools: [any Tool]) async -> String {
         Available tools:
         \(toolSpecs.joined(separator: "\n"))
 
-        Usage: Wrap JSON tool calls in <tool_call> tags:
-        <tool_call>{\"name\": \"tool_id\", \"arguments\": {...}}</tool_call>
-
         Rules:
         - Use tools only for missing context.
         - Create memories frequently via `create_memory`.
-        - `launch_subagent` for isolated tasks (no tools in subagents).
-        - Prefer `load_document` over `cat`.
+        - `launch_subagent` for isolated tasks.
+        - Summarize the result if it is excessively long.
         - If a tool call fails, you can attempt to recover by correcting the parameters and trying again.
         - Be specific.
         """

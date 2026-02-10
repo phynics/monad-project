@@ -54,15 +54,17 @@ public struct ContextNotesComponent: PromptSection {
 
         let notesText = notes.map { note in
             """
-            File: \(note.name)
-            Source: \(note.source)
-            Content:
+            [File: \(note.name) (\(note.source))]
             \(note.content)
             """
         }.joined(separator: "\n\n")
 
         return """
             The following context files contain important information about the user, the project, and your persona. Use them to provide accurate and personalized responses.
+
+            You can edit or create new files in the `Notes/` directory to store long-term information.
+            Examples:
+            You can edit or create new files in the `Notes/` directory to store long-term information.
 
             \(notesText)
             """
@@ -94,21 +96,14 @@ public struct MemoriesComponent: PromptSection {
         }
 
         if memories.isEmpty {
-            return """
-                No relevant memories found for this query.
-
-                Memories are persistent facts, preferences, or notes about the user and past interactions that are stored in your long-term memory. You can create new memories using the `create_memory` tool or edit existing ones with `edit_memory`. 
-
-                When creating or editing memories:
-                - Compress the content to be concise but informative.
-                - Use "quotes" around specific phrases or terms that might be useful to reference-back later for exact matching or clarity.
-
-                Always use these tools to store important information that should be remembered across different chat sessions.
-                """
+            return nil
         }
 
-        // Use Memory array extension
-        return memories.promptContent
+        return """
+            Found \(memories.count) relevant memories:
+            
+            \(memories.promptContent)
+            """
     }
 
     public var estimatedTokens: Int {

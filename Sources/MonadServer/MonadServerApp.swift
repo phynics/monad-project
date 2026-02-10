@@ -161,7 +161,7 @@ struct MonadServer: AsyncParsableCommand {
                 services: [
                     .init(service: app),
                     .init(service: jobRunner),
-                    .init(service: advertiser),
+                    // .init(service: advertiser),
                     .init(service: orphanCleanup)
                 ],
                 gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],

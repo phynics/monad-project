@@ -50,12 +50,12 @@ public actor SessionManager {
         let notesDir = sessionWorkspaceURL.appendingPathComponent("Notes", isDirectory: true)
         try FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true)
         let welcomeNote =
-            "# Welcome to Monad Notes\n\nThis is your personal notes space. You can create new notes and they will be part of the context."
+            "# Welcome to Monad Notes\n\nI should use this space to store long-term memories and context notes. I can create new notes here to help me remember important details."
         try welcomeNote.write(
             to: notesDir.appendingPathComponent("Welcome.md"), atomically: true, encoding: .utf8)
 
         let projectNote =
-            "# Project Notes\n\nThis note is automatically generated to track the goals and progress of the current session. The agent will fill this in based on your requests."
+            "# Project Notes\n\nI should use this file to track the goals and progress of the current session. I will update this file as I learn more about the user's objectives."
         try projectNote.write(
             to: notesDir.appendingPathComponent("Project.md"), atomically: true, encoding: .utf8)
 
@@ -139,7 +139,7 @@ public actor SessionManager {
             SearchFileContentTool(currentDirectory: currentWD, jailRoot: jailRoot),
             SearchFilesTool(currentDirectory: currentWD, jailRoot: jailRoot),
             ReadFileTool(currentDirectory: currentWD, jailRoot: jailRoot),
-            InspectFileTool(currentDirectory: currentWD, jailRoot: jailRoot),
+            // InspectFileTool removed as per user request to remove document workflow tools
             // Job Queue Gateway
             JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession),
         ]
