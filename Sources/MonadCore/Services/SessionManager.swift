@@ -538,6 +538,25 @@ public actor SessionManager {
         }
     }
 
+    /// Retrieve tools associated with a specific client (e.g. from their default workspace)
+    public func getClientTools(clientId: UUID) async throws -> [ToolReference] {
+        return try await persistenceService.databaseWriter.read { db in
+            // Find workspaces owned by this client
+            let workspaces = try Workspace
+                .filter(Column("ownerId") == clientId)
+                .fetchAll(db)
+            
+            let workspaceIds = workspaces.map { $0.id }
+            guard !workspaceIds.isEmpty else { return [] }
+
+            let tools = try WorkspaceTool
+                .filter(workspaceIds.contains(Column("workspaceId")))
+                .fetchAll(db)
+
+            return try tools.map { try $0.toToolReference() }
+        }
+    }
+
     public func getToolSource(toolId: String, for sessionId: UUID) async -> String? {
         guard let session = sessions[sessionId] else { return nil }
 

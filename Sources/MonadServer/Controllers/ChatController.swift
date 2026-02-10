@@ -203,7 +203,22 @@ public struct ChatController<Context: RequestContext>: Sendable {
         var availableTools: [any MonadCore.Tool] = []
         if let toolRouter = toolRouter {
             do {
-                let references = try await sessionManager.getAggregatedTools(for: id)
+                var references = try await sessionManager.getAggregatedTools(for: id)
+
+                // Include client tools if known
+                if let clientId = chatRequest.clientId {
+                    let clientTools = try await sessionManager.getClientTools(clientId: clientId)
+                    references.append(contentsOf: clientTools)
+                }
+
+                // Deduplicate by ID
+                var seenIds = Set<String>()
+                references = references.filter { ref in
+                    if seenIds.contains(ref.toolId) { return false }
+                    seenIds.insert(ref.toolId)
+                    return true
+                }
+
                 availableTools = references.compactMap {
                     (ref: ToolReference) -> (any MonadCore.Tool)? in
                     var def: WorkspaceToolDefinition?

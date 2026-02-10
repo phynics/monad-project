@@ -9,6 +9,9 @@ public struct ClientConfiguration: Sendable {
     /// API key for authentication
     public let apiKey: String?
 
+    /// Client ID for identification
+    public let clientId: UUID?
+
     /// Request timeout in seconds
     public let timeout: TimeInterval
 
@@ -21,11 +24,13 @@ public struct ClientConfiguration: Sendable {
     public init(
         baseURL: URL = URL(string: "http://127.0.0.1:8080")!,
         apiKey: String? = nil,
+        clientId: UUID? = nil,
         timeout: TimeInterval = 60,
         verbose: Bool = false
     ) {
         self.baseURL = baseURL
         self.apiKey = apiKey
+        self.clientId = clientId
         self.timeout = timeout
         self.verbose = verbose
 

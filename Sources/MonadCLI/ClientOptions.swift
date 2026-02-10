@@ -31,9 +31,13 @@ struct ClientOptions: ParsableArguments {
             baseURL = envConfig.baseURL
         }
 
+        // Read client ID from identity file
+        let identity = RegistrationManager.shared.getIdentity()
+
         return ClientConfiguration(
             baseURL: baseURL,
             apiKey: apiKey ?? envConfig.apiKey,
+            clientId: identity?.clientId,
             timeout: envConfig.timeout,
             verbose: verbose || envConfig.verbose
         )

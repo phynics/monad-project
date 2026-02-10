@@ -92,7 +92,8 @@ public actor MonadClient {
     public func chat(sessionId: UUID, message: String) async throws -> ChatResponse {
         var request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/chat", method: "POST")
-        request.httpBody = try encoder.encode(ChatRequest(message: message))
+        request.httpBody = try encoder.encode(
+            ChatRequest(message: message, clientId: configuration.clientId))
         return try await perform(request)
     }
 
@@ -103,7 +104,8 @@ public actor MonadClient {
         configuration.logger.debug("chatStream called for session \(sessionId)")
         var request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/chat/stream", method: "POST")
-        request.httpBody = try encoder.encode(ChatRequest(message: message))
+        request.httpBody = try encoder.encode(
+            ChatRequest(message: message, clientId: configuration.clientId))
 
         configuration.logger.debug(
             "Sending request to \(request.url?.absoluteString ?? "unknown")")

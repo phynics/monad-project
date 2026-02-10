@@ -100,10 +100,12 @@ public struct ToolOutputSubmission: Codable, Sendable {
 public struct ChatRequest: Codable, Sendable {
     public let message: String
     public let toolOutputs: [ToolOutputSubmission]?
+    public let clientId: UUID?
 
-    public init(message: String, toolOutputs: [ToolOutputSubmission]? = nil) {
+    public init(message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientId: UUID? = nil) {
         self.message = message
         self.toolOutputs = toolOutputs
+        self.clientId = clientId
     }
 }
 
