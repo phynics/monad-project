@@ -75,7 +75,8 @@ public actor MonadClient {
     public func getHistory(sessionId: UUID) async throws -> [Message] {
         let request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/history", method: "GET")
-        return try await perform(request)
+        let response: PaginatedResponse<Message> = try await perform(request)
+        return response.items
     }
 
     // MARK: - Chat API

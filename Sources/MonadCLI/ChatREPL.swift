@@ -104,6 +104,7 @@ actor ChatREPL: ChatREPLController {
     func switchSession(_ session: Session) async {
         self.session = session
         self.selectedWorkspaceId = nil
+        LocalConfigManager.shared.updateLastSessionId(session.id.uuidString)
         TerminalUI.printInfo("Switched to session \(session.id.uuidString.prefix(8))")
         await showContext()
         await checkAndRestoreWorkspaces()
