@@ -36,12 +36,12 @@ clean:
 # Run the server
 run-server:
 	@echo "Running MonadServer..."
-	@swift run MonadServer
+	@exec swift run MonadServer
 
 # Run the CLI (interactive chat)
 run-cli:
 	@echo "Running MonadCLI..."
-	@MONAD_API_KEY=monad-secret swift run MonadCLI $(ARGS)
+	@exec env MONAD_API_KEY=monad-secret swift run MonadCLI $(ARGS)
 
 # Quick query
 query:

@@ -37,6 +37,7 @@ public struct ChatController<Context: RequestContext>: Sendable {
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("/{id}/chat", use: chat)
         group.post("/{id}/chat/stream", use: chatStream)
+        group.get("/{id}/chat/debug", use: getDebug)
     }
 
     @Sendable func chat(_ request: Request, context: Context) async throws -> ChatResponse {
@@ -234,7 +235,7 @@ public struct ChatController<Context: RequestContext>: Sendable {
         }
 
         // 5. Build Initial Prompt
-        let (initialMessages, _, _) = await llmService.buildPrompt(
+        let (initialMessages, _, structuredContext) = await llmService.buildPrompt(
             userQuery: chatRequest.message,
             contextNotes: contextData.notes,
             memories: contextData.memories.map { $0.memory },
@@ -243,12 +244,18 @@ public struct ChatController<Context: RequestContext>: Sendable {
             systemInstructions: systemInstructions
         )
 
+        let modelName = await llmService.configuration.modelName
+
         // 6. Streaming Loop (ReAct)
         let sseStream = AsyncStream<ByteBuffer> { continuation in
-            Task { [availableTools, initialMessages, toolParams, contextData] in
+            Task { [availableTools, initialMessages, toolParams, contextData, sessionManager, structuredContext, modelName] in
                 var currentMessages = initialMessages
                 var turnCount = 0
                 let maxTurns = 5  // Safety limit
+
+                // Debug accumulation
+                var debugToolCalls: [ToolCallRecord] = []
+                var debugToolResults: [ToolResultRecord] = []
 
                 // A. Emit Metadata Event
                 let metadata = ChatMetadata(
@@ -333,6 +340,12 @@ public struct ChatController<Context: RequestContext>: Sendable {
                                         )
                                     }
 
+                            // Record tool calls for debug
+                            for (_, value) in sortedCalls {
+                                debugToolCalls.append(ToolCallRecord(
+                                    name: value.name, arguments: value.args, turn: turnCount))
+                            }
+
                             currentMessages.append(
                                 .assistant(
                                     .init(
@@ -364,6 +377,9 @@ public struct ChatController<Context: RequestContext>: Sendable {
 
                                 do {
                                     let result = try await tool.execute(parameters: argsDict)
+                                    debugToolResults.append(ToolResultRecord(
+                                        toolCallId: call.id, name: call.function.name,
+                                        output: result.output, turn: turnCount))
                                     executionResults.append(
                                         .tool(
                                             .init(
@@ -409,6 +425,15 @@ public struct ChatController<Context: RequestContext>: Sendable {
                                     toolCalls: callsJSON)
                                 try? await persistence.saveMessage(assistantMsg)
 
+                                // Store debug snapshot
+                                let snapshot = DebugSnapshot(
+                                    structuredContext: structuredContext,
+                                    toolCalls: debugToolCalls,
+                                    toolResults: debugToolResults,
+                                    model: modelName,
+                                    turnCount: turnCount)
+                                await sessionManager.setDebugSnapshot(snapshot, for: id)
+
                                 let doneDelta = ChatDelta(isDone: true)
                                 if let data = try? SerializationUtils.jsonEncoder.encode(doneDelta)
                                 {
@@ -436,6 +461,15 @@ public struct ChatController<Context: RequestContext>: Sendable {
                                     as: UTF8.self)
                             )
                             try? await persistence.saveMessage(assistantMsg)
+
+                            // Store debug snapshot
+                            let snapshot = DebugSnapshot(
+                                structuredContext: structuredContext,
+                                toolCalls: debugToolCalls,
+                                toolResults: debugToolResults,
+                                model: modelName,
+                                turnCount: turnCount)
+                            await sessionManager.setDebugSnapshot(snapshot, for: id)
 
                             let doneDelta = ChatDelta(isDone: true)
                             if let data = try? SerializationUtils.jsonEncoder.encode(doneDelta) {
@@ -468,5 +502,20 @@ public struct ChatController<Context: RequestContext>: Sendable {
         headers[.cacheControl] = "no-cache"
         headers[.connection] = "keep-alive"
         return Response(status: .ok, headers: headers, body: .init(asyncSequence: sseStream))
+    }
+
+    @Sendable func getDebug(_ request: Request, context: Context) async throws -> Response {
+        let idString = try context.parameters.require("id")
+        guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
+
+        guard let snapshot = await sessionManager.getDebugSnapshot(for: id) else {
+            throw HTTPError(.notFound)
+        }
+
+        let data = try SerializationUtils.jsonEncoder.encode(snapshot)
+        var headers = HTTPFields()
+        headers[.contentType] = "application/json"
+        return Response(
+            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
     }
 }

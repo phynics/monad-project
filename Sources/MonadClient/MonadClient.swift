@@ -79,6 +79,13 @@ public actor MonadClient {
         return response.items
     }
 
+    /// Get the debug snapshot for the most recent chat exchange
+    public func getDebugSnapshot(sessionId: UUID) async throws -> DebugSnapshot {
+        let request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/chat/debug", method: "GET")
+        return try await perform(request)
+    }
+
     // MARK: - Chat API
 
     /// Send a chat message (non-streaming)

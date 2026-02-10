@@ -10,6 +10,7 @@ public actor SessionManager {
     private var toolManagers: [UUID: SessionToolManager] = [:]
     private var toolExecutors: [UUID: ToolExecutor] = [:]
     private var toolContextSessions: [UUID: ToolContextSession] = [:]
+    private var debugSnapshots: [UUID: DebugSnapshot] = [:]
 
     private let persistenceService: any PersistenceServiceProtocol
     private let embeddingService: any EmbeddingService
@@ -584,6 +585,18 @@ public actor SessionManager {
             }
             return nil
         }
+    }
+
+    // MARK: - Debug Snapshots
+
+    /// Store the debug snapshot for the most recent chat exchange in a session
+    public func setDebugSnapshot(_ snapshot: DebugSnapshot, for sessionId: UUID) {
+        debugSnapshots[sessionId] = snapshot
+    }
+
+    /// Retrieve the debug snapshot for the most recent chat exchange
+    public func getDebugSnapshot(for sessionId: UUID) -> DebugSnapshot? {
+        return debugSnapshots[sessionId]
     }
 }
 
