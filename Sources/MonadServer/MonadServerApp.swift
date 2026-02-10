@@ -179,19 +179,23 @@ struct MonadServer: AsyncParsableCommand {
         let logger: Logger
 
         func run() async throws {
+            logger.info("OrphanCleanupService started")
             // Run initial cleanup
             await cleanup()
             
             // Then run periodically (every 24 hours)
-            while !Task.isCancelled {
-                do {
-                    try await Task.sleep(for: .seconds(86400)) // 24 hours
-                    await cleanup()
-                } catch is CancellationError {
-                    logger.info("OrphanCleanupService shutting down gracefully")
-                    return
+            try await cancelWhenGracefulShutdown {
+                while !Task.isCancelled {
+                    do {
+                        try await Task.sleep(for: .seconds(86400)) // 24 hours
+                        await cleanup()
+                    } catch is CancellationError {
+                        logger.info("OrphanCleanupService shutting down gracefully")
+                        return
+                    }
                 }
             }
+            logger.info("OrphanCleanupService stopped")
         }
 
         private func cleanup() async {
