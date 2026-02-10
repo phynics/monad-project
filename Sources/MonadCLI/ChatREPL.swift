@@ -316,24 +316,20 @@ actor ChatREPL: ChatREPLController {
     private func sendMessage(_ message: String) async {
         do {
             print("")
-            TerminalUI.printAssistantStart()
-
-            // Optimistic local echo or wait for stream?
-            // Usually we wait for stream.
 
             let stream = try await client.chatStream(sessionId: session.id, message: message)
 
             var toolCallState: [Int: (name: String, args: String)] = [:]
             var currentToolIndex: Int? = nil
+            var assistantStartPrinted = false
 
             for try await delta in stream {
-                // 1. Metadata
+                // 1. Metadata (printed before "Assistant:" prompt)
                 if let metadata = delta.metadata {
                     if !metadata.memories.isEmpty || !metadata.files.isEmpty {
                         let memories = metadata.memories.count
                         let files = metadata.files.count
-                        print(TerminalUI.dim(" [Using \(memories) memories and \(files) files]"))
-                        TerminalUI.printAssistantStart()  // Restart prompt line
+                        print(TerminalUI.dim("Using \(memories) memories and \(files) files"))
                     }
                 }
 
@@ -367,7 +363,12 @@ actor ChatREPL: ChatREPLController {
                     if currentToolIndex != nil {
                         print("\n")
                         TerminalUI.printAssistantStart()
+                        assistantStartPrinted = true
                         currentToolIndex = nil
+                    }
+                    if !assistantStartPrinted {
+                        TerminalUI.printAssistantStart()
+                        assistantStartPrinted = true
                     }
                     print(content, terminator: "")
                     fflush(stdout)

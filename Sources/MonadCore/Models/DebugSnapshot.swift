@@ -61,12 +61,7 @@ public struct ToolResultRecord: Codable, Sendable {
     public init(toolCallId: String, name: String, output: String, turn: Int) {
         self.toolCallId = toolCallId
         self.name = name
-        // Truncate very large outputs for the debug view
-        if output.count > 2000 {
-            self.output = String(output.prefix(2000)) + "\n... [truncated, \(output.count) chars total]"
-        } else {
-            self.output = output
-        }
+        self.output = output
         self.turn = turn
     }
 }

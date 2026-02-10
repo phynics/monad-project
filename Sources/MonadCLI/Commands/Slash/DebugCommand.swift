@@ -41,14 +41,7 @@ struct DebugCommand: SlashCommand {
                 guard let content = snapshot.structuredContext[key] else { continue }
                 let displayName = key.replacingOccurrences(of: "_", with: " ").capitalized
                 print(TerminalUI.bold("─── \(displayName) ───"))
-
-                // Truncate very long sections for readability
-                if content.count > 3000 {
-                    print(String(content.prefix(3000)))
-                    print(TerminalUI.dim("... [\(content.count) chars total, truncated]"))
-                } else {
-                    print(content)
-                }
+                print(content)
                 print("")
             }
 
@@ -79,13 +72,8 @@ struct DebugCommand: SlashCommand {
                 print(TerminalUI.bold("─── Tool Results ───"))
                 for result in snapshot.toolResults {
                     print(TerminalUI.green("  [Turn \(result.turn)] \(result.name)"))
-                    let lines = result.output.split(separator: "\n", omittingEmptySubsequences: false)
-                    let displayLines = lines.prefix(20)
-                    for line in displayLines {
+                    for line in result.output.split(separator: "\n", omittingEmptySubsequences: false) {
                         print(TerminalUI.dim("    \(line)"))
-                    }
-                    if lines.count > 20 {
-                        print(TerminalUI.dim("    ... [\(lines.count) lines total]"))
                     }
                 }
                 print("")
