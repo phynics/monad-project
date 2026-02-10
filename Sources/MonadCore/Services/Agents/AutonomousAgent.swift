@@ -149,11 +149,18 @@ public actor AutonomousAgent {
                 
                 // Process Result
                 // 1. Convert accumulated tool calls to MonadCore.ToolCall for storage
-                let toolCalls: [MonadCore.ToolCall] = toolCallAccumulators.sorted(by: { $0.key < $1.key }).compactMap { _, value in
-                    guard !value.name.isEmpty else { return nil }
-                    let argsData = value.args.data(using: .utf8) ?? Data()
-                    let args = (try? JSONDecoder().decode([String: AnyCodable].self, from: argsData)) ?? [:]
-                    return MonadCore.ToolCall(name: value.name, arguments: args)
+                var toolCalls: [MonadCore.ToolCall] = []
+                
+                if !toolCallAccumulators.isEmpty {
+                    toolCalls = toolCallAccumulators.sorted(by: { $0.key < $1.key }).compactMap { _, value in
+                        guard !value.name.isEmpty else { return nil }
+                        let argsData = value.args.data(using: .utf8) ?? Data()
+                        let args = (try? JSONDecoder().decode([String: AnyCodable].self, from: argsData)) ?? [:]
+                        return MonadCore.ToolCall(name: value.name, arguments: args)
+                    }
+                } else if let fallback = ToolOutputParser.parse(from: assistantContent) {
+                    logger.info("Detected fallback tool call in Agent content: \(fallback.name)")
+                    toolCalls = [MonadCore.ToolCall(name: fallback.name, arguments: fallback.arguments)]
                 }
                 
                 let toolCallsJSON = (try? SerializationUtils.jsonEncoder.encode(toolCalls)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"

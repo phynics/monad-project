@@ -344,8 +344,19 @@ public struct ChatController<Context: RequestContext>: Sendable {
                         }
 
                         // Process Turn Result
-                        if !toolCallAccumulators.isEmpty {
-                            let sortedCalls = toolCallAccumulators.sorted(by: { $0.key < $1.key })
+                        var finalToolCalls = toolCallAccumulators
+                        
+                        // Fallback: Check for tool calls in content if no native calls detected
+                        if finalToolCalls.isEmpty {
+                            if let fallback = ToolOutputParser.parse(from: fullResponse) {
+                                Logger.chat.info("Detected fallback tool call in content: \(fallback.name)")
+                                let argsJson = (try? SerializationUtils.jsonEncoder.encode(fallback.arguments)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+                                finalToolCalls[0] = (id: UUID().uuidString, name: fallback.name, args: argsJson)
+                            }
+                        }
+
+                        if !finalToolCalls.isEmpty {
+                            let sortedCalls = finalToolCalls.sorted(by: { $0.key < $1.key })
                             let toolCallsParam:
                                 [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam
                                     .ToolCallParam] = sortedCalls.map { _, value in
@@ -465,6 +476,7 @@ public struct ChatController<Context: RequestContext>: Sendable {
                             currentMessages.append(contentsOf: executionResults)
                             continue
                         } else {
+
                             // Final response
                             let assistantMsg = ConversationMessage(
                                 sessionId: id,
