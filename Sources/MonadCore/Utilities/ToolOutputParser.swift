@@ -33,9 +33,18 @@ public struct ToolOutputParser {
     /// - Parameter content: The raw text content from the LLM.
     /// - Returns: A FallbackToolCall object if successful, nil otherwise.
     public static func parse(from content: String) -> FallbackToolCall? {
-        // 1. Clean markdown code blocks
+        // 1. Clean content
         var cleaned = content
-        if let range = cleaned.range(of: "```json", options: .caseInsensitive),
+        
+        // A. Check for XML-style <tool_call> tags
+        // Simple regex to extract content between tags
+        if let regex = try? NSRegularExpression(pattern: "(?s)<tool_call>(.*?)</tool_call>", options: []),
+           let match = regex.firstMatch(in: content, options: [], range: NSRange(content.startIndex..., in: content)),
+           let range = Range(match.range(at: 1), in: content) {
+            cleaned = String(content[range])
+        }
+        // B. Check for markdown code blocks
+        else if let range = cleaned.range(of: "```json", options: .caseInsensitive),
            let endRange = cleaned.range(of: "```", options: .backwards) {
             if range.upperBound < endRange.lowerBound {
                 cleaned = String(cleaned[range.upperBound..<endRange.lowerBound])
