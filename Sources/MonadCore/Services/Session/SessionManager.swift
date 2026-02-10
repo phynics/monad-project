@@ -1,8 +1,6 @@
 import Foundation
 import GRDB
 import Logging
-import GRDB
-import Logging
 
 public actor SessionManager {
     private var sessions: [UUID: ConversationSession] = [:]
@@ -27,6 +25,35 @@ public actor SessionManager {
         self.embeddingService = embeddingService
         self.llmService = llmService
         self.workspaceRoot = workspaceRoot
+    }
+    
+    // Shared component setup logic
+    private func setupSessionComponents(session: ConversationSession, workspaceURL: URL) async {
+        let contextManager = ContextManager(
+            persistenceService: persistenceService,
+            embeddingService: embeddingService,
+            workspaceRoot: workspaceURL
+        )
+        contextManagers[session.id] = contextManager
+
+        let toolContextSession = ToolContextSession()
+        toolContextSessions[session.id] = toolContextSession
+
+        let jobQueueContext = JobQueueContext(persistenceService: persistenceService, sessionId: session.id)
+
+        // Setup Tools for session
+        let toolManager = await createToolManager(
+            for: session, jailRoot: workspaceURL.path,
+            toolContextSession: toolContextSession,
+            jobQueueContext: jobQueueContext)
+        toolManagers[session.id] = toolManager
+
+        let toolExecutor = ToolExecutor(
+            toolManager: toolManager,
+            contextSession: toolContextSession,
+            jobQueueContext: jobQueueContext
+        )
+        toolExecutors[session.id] = toolExecutor
     }
 
     public func createSession(title: String = "New Conversation", persona: String? = nil)
@@ -85,31 +112,7 @@ public actor SessionManager {
 
         sessions[session.id] = session
 
-        let contextManager = ContextManager(
-            persistenceService: persistenceService,
-            embeddingService: embeddingService,
-            workspaceRoot: sessionWorkspaceURL
-        )
-        contextManagers[session.id] = contextManager
-
-        let toolContextSession = ToolContextSession()
-        toolContextSessions[session.id] = toolContextSession
-
-        let jobQueueContext = JobQueueContext(persistenceService: persistenceService, sessionId: sessionId)
-
-        // Setup Tools for session
-        let toolManager = await createToolManager(
-            for: session, jailRoot: sessionWorkspaceURL.path,
-            toolContextSession: toolContextSession,
-            jobQueueContext: jobQueueContext)
-        toolManagers[session.id] = toolManager
-
-        let toolExecutor = ToolExecutor(
-            toolManager: toolManager,
-            contextSession: toolContextSession,
-            jobQueueContext: jobQueueContext
-        )
-        toolExecutors[session.id] = toolExecutor
+        await setupSessionComponents(session: session, workspaceURL: sessionWorkspaceURL)
 
         // Ensure session exists in database for foreign key constraints
         try await persistenceService.saveSession(session)
@@ -179,31 +182,7 @@ public actor SessionManager {
         
         sessions[id] = session
         
-        let contextManager = ContextManager(
-            persistenceService: persistenceService,
-            embeddingService: embeddingService,
-            workspaceRoot: sessionWorkspaceURL
-        )
-        contextManagers[session.id] = contextManager
-        
-        let toolContextSession = ToolContextSession()
-        toolContextSessions[session.id] = toolContextSession
-        
-        let jobQueueContext = JobQueueContext(persistenceService: persistenceService, sessionId: id)
-        
-        // Setup Tools
-        let toolManager = await createToolManager(
-            for: session, jailRoot: sessionWorkspaceURL.path,
-            toolContextSession: toolContextSession,
-            jobQueueContext: jobQueueContext)
-        toolManagers[session.id] = toolManager
-        
-        let toolExecutor = ToolExecutor(
-            toolManager: toolManager,
-            contextSession: toolContextSession,
-            jobQueueContext: jobQueueContext
-        )
-        toolExecutors[session.id] = toolExecutor
+        await setupSessionComponents(session: session, workspaceURL: sessionWorkspaceURL)
     }
     
     public func updateSessionPersona(id: UUID, persona: String) async throws {

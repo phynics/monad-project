@@ -49,7 +49,7 @@ public actor ToolRouter {
         switch workspace.hostType {
         case .server:
             // 3a. Execute Locally
-            return try await executeLocally(tool: tool, arguments: arguments, workspace: workspace)
+            return try await executeLocally(tool: tool, arguments: arguments, workspace: workspace, sessionId: sessionId)
 
         case .client:
             // 3b. Execute Remotely
@@ -77,13 +77,31 @@ public actor ToolRouter {
     private func executeLocally(
         tool: ToolReference,
         arguments: [String: AnyCodable],
-        workspace: Workspace
+        workspace: Workspace,
+        sessionId: UUID
     ) async throws -> String {
         logger.info("Executing locally: \(tool.displayName)")
-        // Access registered local tools service?
-        // We need a registry of actual Tool implementations on the server.
-        // For now, return stub.
-        return "Executed \(tool.displayName) locally."
+        
+        guard let toolManager = await sessionManager.getToolManager(for: sessionId) else {
+            throw ToolError.toolNotFound(tool.displayName)
+        }
+        
+        guard let realTool = await toolManager.getTool(id: tool.toolId) else {
+             throw ToolError.toolNotFound(tool.displayName)
+        }
+        
+        // Convert arguments to [String: Any] for the tool
+        var params: [String: Any] = [:]
+        for (key, val) in arguments {
+            params[key] = val.value
+        }
+        
+        let result = try await realTool.execute(parameters: params)
+        if result.success {
+            return result.output
+        } else {
+            throw ToolError.executionFailed(result.error ?? "Unknown error")
+        }
     }
 
     private func executeRemotely(

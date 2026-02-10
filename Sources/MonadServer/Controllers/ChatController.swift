@@ -378,59 +378,12 @@ public struct ChatController<Context: RequestContext>: Sendable {
                                         content: .textContent(.init(fullResponse)),
                                         toolCalls: toolCallsParam)))
 
-                            var executionResults: [ChatQuery.ChatCompletionMessageParam] = []
-                            var requiresClientExecution = false
-
-                            for call in toolCallsParam {
-                                guard
-                                    let tool = availableTools.first(where: {
-                                        $0.name == call.function.name
-                                    })
-                                else {
-                                    executionResults.append(
-                                        .tool(
-                                            .init(
-                                                content: .textContent(
-                                                    .init("Error: Tool not found")),
-                                                toolCallId: call.id)))
-                                    continue
-                                }
-
-                                let argsData = call.function.arguments.data(using: .utf8) ?? Data()
-                                let argsDict =
-                                    (try? JSONSerialization.jsonObject(with: argsData)
-                                        as? [String: Any]) ?? [:]
-
-                                do {
-                                    let result = try await tool.execute(parameters: argsDict)
-                                    debugToolResults.append(ToolResultRecord(
-                                        toolCallId: call.id, name: call.function.name,
-                                        output: result.output, turn: turnCount))
-                                    executionResults.append(
-                                        .tool(
-                                            .init(
-                                                content: .textContent(.init(result.output)),
-                                                toolCallId: call.id)))
-                                } catch let error as ToolError {
-                                    if case .clientExecutionRequired = error {
-                                        requiresClientExecution = true
-                                        break
-                                    }
-                                    executionResults.append(
-                                        .tool(
-                                            .init(
-                                                content: .textContent(
-                                                    .init("Error: \(error.localizedDescription)")),
-                                                toolCallId: call.id)))
-                                } catch {
-                                    executionResults.append(
-                                        .tool(
-                                            .init(
-                                                content: .textContent(
-                                                    .init("Error: \(error.localizedDescription)")),
-                                                toolCallId: call.id)))
-                                }
-                            }
+                            let (executionResults, requiresClientExecution, newDebugRecords) = await executeServerTools(
+                                calls: toolCallsParam,
+                                availableTools: availableTools,
+                                turnCount: turnCount
+                            )
+                            debugToolResults.append(contentsOf: newDebugRecords)
 
                             if requiresClientExecution {
                                 let callsForDB = toolCallsParam.compactMap { param -> ToolCall? in
@@ -544,5 +497,71 @@ public struct ChatController<Context: RequestContext>: Sendable {
         headers[.contentType] = "application/json"
         return Response(
             status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+    }
+
+    private func executeServerTools(
+        calls: [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam],
+        availableTools: [any MonadCore.Tool],
+        turnCount: Int
+    ) async -> (
+        results: [ChatQuery.ChatCompletionMessageParam], requiresClientExecution: Bool,
+        debugRecords: [ToolResultRecord]
+    ) {
+        var executionResults: [ChatQuery.ChatCompletionMessageParam] = []
+        var requiresClientExecution = false
+        var debugRecords: [ToolResultRecord] = []
+
+        for call in calls {
+            guard
+                let tool = availableTools.first(where: {
+                    $0.name == call.function.name
+                })
+            else {
+                executionResults.append(
+                    .tool(
+                        .init(
+                            content: .textContent(
+                                .init("Error: Tool not found")),
+                            toolCallId: call.id)))
+                continue
+            }
+
+            let argsData = call.function.arguments.data(using: .utf8) ?? Data()
+            let argsDict =
+                (try? JSONSerialization.jsonObject(with: argsData)
+                    as? [String: Any]) ?? [:]
+
+            do {
+                let result = try await tool.execute(parameters: argsDict)
+                debugRecords.append(
+                    ToolResultRecord(
+                        toolCallId: call.id, name: call.function.name,
+                        output: result.output, turn: turnCount))
+                executionResults.append(
+                    .tool(
+                        .init(
+                            content: .textContent(.init(result.output)),
+                            toolCallId: call.id)))
+            } catch let error as ToolError {
+                if case .clientExecutionRequired = error {
+                    requiresClientExecution = true
+                    break
+                }
+                executionResults.append(
+                    .tool(
+                        .init(
+                            content: .textContent(
+                                .init("Error: \(error.localizedDescription)")),
+                            toolCallId: call.id)))
+            } catch {
+                executionResults.append(
+                    .tool(
+                        .init(
+                            content: .textContent(
+                                .init("Error: \(error.localizedDescription)")),
+                            toolCallId: call.id)))
+            }
+        }
+        return (executionResults, requiresClientExecution, debugRecords)
     }
 }
