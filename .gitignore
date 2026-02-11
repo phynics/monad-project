@@ -88,3 +88,5 @@ conductor/
 
 # Testing
 .test_workspaces/
+swiftly-x86_64.tar.gz
+LICENSE.txt
