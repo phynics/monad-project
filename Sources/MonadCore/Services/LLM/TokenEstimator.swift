@@ -39,4 +39,22 @@ public enum TokenEstimator {
         let combined = parts.joined(separator: " ")
         return estimate(text: combined)
     }
+
+    /// Estimate tokens for multiple components individually
+    ///
+    /// - Note: Batches token estimation by reusing the same NLTokenizer instance.
+    /// This is faster than calling `estimate(text:)` in a loop because it avoids repeated initialization.
+    public static func estimateBatch(texts: [String]) -> [Int] {
+        let tokenizer = NLTokenizer(unit: .word)
+        return texts.map { text in
+            guard !text.isEmpty else { return 0 }
+            tokenizer.string = text
+            var count = 0
+            tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { _, _ in
+                count += 1
+                return true
+            }
+            return Int(Double(count) * 1.33)
+        }
+    }
 }
