@@ -29,22 +29,36 @@ public struct ToolOutputParser {
         }
     }
 
-    /// Attempts to parse a tool call from a string that might contain JSON code blocks.
+    /// Attempts to parse tool calls from a string that might contain XML-style tags or JSON code blocks.
     /// - Parameter content: The raw text content from the LLM.
-    /// - Returns: A FallbackToolCall object if successful, nil otherwise.
-    public static func parse(from content: String) -> FallbackToolCall? {
-        // 1. Clean content
+    /// - Returns: An array of FallbackToolCall objects.
+    public static func parse(from content: String) -> [FallbackToolCall] {
+        var foundCalls: [FallbackToolCall] = []
         var cleaned = content
         
         // A. Check for XML-style <tool_call> tags
-        // Simple regex to extract content between tags
-        if let regex = try? NSRegularExpression(pattern: "(?s)<tool_call>(.*?)</tool_call>", options: []),
-           let match = regex.firstMatch(in: content, options: [], range: NSRange(content.startIndex..., in: content)),
-           let range = Range(match.range(at: 1), in: content) {
-            cleaned = String(content[range])
+        // Loop through all matches
+        if let regex = try? NSRegularExpression(pattern: "(?s)<tool_call>(.*?)</tool_call>", options: []) {
+            let matches = regex.matches(in: content, options: [], range: NSRange(content.startIndex..., in: content))
+            
+            for match in matches {
+                if let range = Range(match.range(at: 1), in: content) {
+                    let jsonString = String(content[range])
+                    if let data = jsonString.data(using: .utf8),
+                       let call = try? JSONDecoder().decode(FallbackToolCall.self, from: data) {
+                        foundCalls.append(call)
+                    }
+                }
+            }
         }
-        // B. Check for markdown code blocks
-        else if let range = cleaned.range(of: "```json", options: .caseInsensitive),
+        
+        // If we found XML calls, return them. XML takes precedence as it supports multiple calls more robustly.
+        if !foundCalls.isEmpty {
+            return foundCalls
+        }
+
+        // B. Check for markdown code blocks (legacy/single call fallback)
+        if let range = cleaned.range(of: "```json", options: .caseInsensitive),
            let endRange = cleaned.range(of: "```", options: .backwards) {
             if range.upperBound < endRange.lowerBound {
                 cleaned = String(cleaned[range.upperBound..<endRange.lowerBound])
@@ -58,23 +72,22 @@ public struct ToolOutputParser {
         
         cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        guard !cleaned.isEmpty else { return nil }
+        guard !cleaned.isEmpty else { return [] }
         
-        // 2. Try to decode
-        guard let data = cleaned.data(using: .utf8) else { return nil }
+        // 2. Try to decode single json block
+        guard let data = cleaned.data(using: .utf8) else { return [] }
         
-        // Handle array of tools (take first) or single object
+        // Handle array of tools (take all) or single object
         if cleaned.hasPrefix("[") {
-            if let calls = try? JSONDecoder().decode([FallbackToolCall].self, from: data),
-               let first = calls.first {
-                return first
+            if let calls = try? JSONDecoder().decode([FallbackToolCall].self, from: data) {
+                 return calls
             }
         } else {
              if let call = try? JSONDecoder().decode(FallbackToolCall.self, from: data) {
-                return call
+                return [call]
             }
         }
         
-        return nil
+        return []
     }
 }

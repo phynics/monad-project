@@ -1,23 +1,6 @@
 import Foundation
 import Logging
 
-/// Error types specific to ContextManager
-public enum ContextManagerError: LocalizedError {
-    /// Embedding generation failed
-    case embeddingFailed(Error)
-    /// Database retrieval failed
-    case persistenceFailed(Error)
-    /// Tag generation failed (non-critical)
-    case tagGenerationFailed(Error)
-
-    public var errorDescription: String? {
-        switch self {
-        case .embeddingFailed(let e): return "Embedding failed: \(e.localizedDescription)"
-        case .persistenceFailed(let e): return "Database error: \(e.localizedDescription)"
-        case .tagGenerationFailed(let e): return "Tag generation failed: \(e.localizedDescription)"
-        }
-    }
-}
 
 /// Manages the retrieval and organization of context for the chat
 public actor ContextManager {
@@ -26,7 +9,6 @@ public actor ContextManager {
     private let workspaceRoot: URL?
     private let logger = Logger(label: "com.monad.ContextManager")
 
-    private let learner: ContextLearner
     private let ranker = ContextRanker()
 
     public init(
@@ -37,60 +19,78 @@ public actor ContextManager {
         self.persistenceService = persistenceService
         self.embeddingService = embeddingService
         self.workspaceRoot = workspaceRoot
-        self.learner = ContextLearner(persistenceService: persistenceService)
+    }
+
+    /// Events emitted during the context gathering process
+    public enum ContextGatheringEvent: Sendable {
+        case progress(Message.ContextGatheringProgress)
+        case complete(ContextData)
     }
 
     /// Gather all relevant context for a given user query
     /// - Parameters:
     ///   - query: The user's input text
     ///   - history: Recent conversation history to provide context for the search
+    ///   - limit: Maximum number of memories to retrieve
     ///   - tagGenerator: A function to generate tags from the query (e.g. via LLM)
-    /// - Returns: Structured context containing notes and memories
+    /// - Returns: A stream of progress events, finishing with the structured context
     public func gatherContext(
         for query: String,
         history: [Message] = [],
         limit: Int = 5,
-        tagGenerator: (@Sendable (String) async throws -> [String])? = nil,
-        onProgress: (@Sendable (Message.ContextGatheringProgress) -> Void)? = nil
-    ) async throws -> ContextData {
-        let startTime = CFAbsoluteTimeGetCurrent()
-        logger.debug(
-            "Gathering context for query length: \(query.count), history count: \(history.count)")
+        tagGenerator: (@Sendable (String) async throws -> [String])? = nil
+    ) -> AsyncThrowingStream<ContextGatheringEvent, Error> {
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                let startTime = CFAbsoluteTimeGetCurrent()
+                logger.debug(
+                    "Gathering context for query length: \(query.count), history count: \(history.count)")
 
-        onProgress?(.augmenting)
-        // Augment query with recent history for better tag generation
-        let tagGenerationContext = buildAugmentedContext(query: query, history: history)
+                continuation.yield(.progress(.augmenting))
+                // Augment query with recent history for better tag generation
+                let tagGenerationContext = buildAugmentedContext(query: query, history: history)
 
-        // Parallel execution of tasks
-        async let notesTask = fetchAllNotes()
-        async let memoriesDataTask = fetchRelevantMemories(
-            for: query,
-            tagContext: tagGenerationContext,
-            limit: limit,
-            tagGenerator: tagGenerator,
-            onProgress: onProgress
-        )
+                // Parallel execution of tasks
+                async let notesTask = fetchAllNotes()
+                async let memoriesDataTask = fetchRelevantMemories(
+                    for: query,
+                    tagContext: tagGenerationContext,
+                    limit: limit,
+                    tagGenerator: tagGenerator,
+                    onProgress: { progress in
+                        continuation.yield(.progress(progress))
+                    }
+                )
 
-        do {
-            let (notes, memoriesData) = try await (notesTask, memoriesDataTask)
+                do {
+                    let (notes, memoriesData) = try await (notesTask, memoriesDataTask)
 
-            let duration = CFAbsoluteTimeGetCurrent() - startTime
-            logger.info("Context gathered in \(String(format: "%.3f", duration))s")
+                    let duration = CFAbsoluteTimeGetCurrent() - startTime
+                    logger.info("Context gathered in \(String(format: "%.3f", duration))s")
 
-            onProgress?(.complete)
-            return ContextData(
-                notes: notes,
-                memories: memoriesData.memories,
-                generatedTags: memoriesData.tags,
-                queryVector: memoriesData.vector,
-                augmentedQuery: tagGenerationContext,
-                semanticResults: memoriesData.semanticResults,
-                tagResults: memoriesData.tagResults,
-                executionTime: duration
-            )
-        } catch {
-            logger.error("Context gathering failed: \(error.localizedDescription)")
-            throw error
+                    let contextData = ContextData(
+                        notes: notes,
+                        memories: memoriesData.memories,
+                        generatedTags: memoriesData.tags,
+                        queryVector: memoriesData.vector,
+                        augmentedQuery: tagGenerationContext,
+                        semanticResults: memoriesData.semanticResults,
+                        tagResults: memoriesData.tagResults,
+                        executionTime: duration
+                    )
+                    
+                    continuation.yield(.progress(.complete))
+                    continuation.yield(.complete(contextData))
+                    continuation.finish()
+                } catch {
+                    logger.error("Context gathering failed: \(error.localizedDescription)")
+                    continuation.finish(throwing: error)
+                }
+            }
+            
+            continuation.onTermination = { @Sendable _ in
+                task.cancel()
+            }
         }
     }
 
@@ -234,48 +234,5 @@ public actor ContextManager {
             },
             tagResults
         )
-    }
-
-    /// Adjust memory embeddings based on helpfulness scores
-    /// - Parameters:
-    ///   - evaluations: Dictionary of memory ID to helpfulness score (-1.0 to 1.0)
-    ///   - queryVectors: The vectors of the queries that triggered these recalls
-    public func adjustEmbeddings(
-        evaluations: [String: Double],
-        queryVectors: [[Double]]
-    ) async throws {
-        try await learner.adjustEmbeddings(evaluations: evaluations, queryVectors: queryVectors)
-    }
-}
-
-/// Structured context data
-public struct ContextData: Sendable {
-    public let notes: [ContextFile]
-    public let memories: [SemanticSearchResult]
-    public let generatedTags: [String]
-    public let queryVector: [Double]
-    public let augmentedQuery: String?
-    public let semanticResults: [SemanticSearchResult]
-    public let tagResults: [Memory]
-    public let executionTime: TimeInterval
-
-    public init(
-        notes: [ContextFile] = [],
-        memories: [SemanticSearchResult] = [],
-        generatedTags: [String] = [],
-        queryVector: [Double] = [],
-        augmentedQuery: String? = nil,
-        semanticResults: [SemanticSearchResult] = [],
-        tagResults: [Memory] = [],
-        executionTime: TimeInterval = 0
-    ) {
-        self.notes = notes
-        self.memories = memories
-        self.generatedTags = generatedTags
-        self.queryVector = queryVector
-        self.augmentedQuery = augmentedQuery
-        self.semanticResults = semanticResults
-        self.tagResults = tagResults
-        self.executionTime = executionTime
     }
 }

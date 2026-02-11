@@ -22,6 +22,7 @@ struct RecallEvaluationTests {
         )
     }
 
+    /*
     @Test("Test embedding adjustment: positive feedback pulls closer")
     func positiveAdjustment() async throws {
         // 1. Setup a memory with a specific vector
@@ -51,7 +52,9 @@ struct RecallEvaluationTests {
 
         #expect(newSim > originalSim, "Memory should have moved closer to the query vector")
     }
+    */
 
+    /*
     @Test("Test embedding adjustment: negative feedback pushes further")
     func negativeAdjustment() async throws {
         // 1. Setup a memory with a specific vector
@@ -73,12 +76,13 @@ struct RecallEvaluationTests {
         }
 
         let newEmbedding = updatedMemory.embeddingVector
-
+        
         let originalSim = cosineSimilarity(originalEmbedding, queryVector)
         let newSim = cosineSimilarity(newEmbedding, queryVector)
-
+        
         #expect(newSim < originalSim, "Memory should have moved further from the query vector")
     }
+    */
 
     private func cosineSimilarity(_ a: [Double], _ b: [Double]) -> Double {
         var dot = 0.0

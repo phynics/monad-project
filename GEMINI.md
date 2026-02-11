@@ -61,6 +61,8 @@ make open
 
 ## Development Conventions
 
+*   **Concurrency:** use `AsyncThrowingStream` for processes that emit progress updates, rather than closure callbacks. This allows for cleaner `for try await` loops at the call site.
+
 *   **Code Structure:**
     *   `Sources/`: Application source code.
     *   `Tests/`: Unit and integration tests.

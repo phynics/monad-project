@@ -90,14 +90,20 @@ public actor AutonomousAgent {
                 let query = latestHistory.last(where: { $0.role == .user })?.content ?? job.description ?? job.title
                 
                 do {
-                    let contextData = try await contextManager.gatherContext(
+                    let stream = await contextManager.gatherContext(
                         for: query,
                         history: latestHistory,
                         limit: 5
                     )
-                    contextNotes = contextData.notes
-                    // Convert SemanticSearchResult to Memory
-                    contextMemories = contextData.memories.map { $0.memory }
+                    
+                    for try await event in stream {
+                        if case .complete(let data) = event {
+                            let contextData = data
+                            contextNotes = contextData.notes
+                            // Convert SemanticSearchResult to Memory
+                            contextMemories = contextData.memories.map { $0.memory }
+                        }
+                    }
                 } catch {
                     logger.warning("Failed to gather context for job: \(error)")
                 }
@@ -158,9 +164,14 @@ public actor AutonomousAgent {
                         let args = (try? JSONDecoder().decode([String: AnyCodable].self, from: argsData)) ?? [:]
                         return MonadCore.ToolCall(name: value.name, arguments: args)
                     }
-                } else if let fallback = ToolOutputParser.parse(from: assistantContent) {
-                    logger.info("Detected fallback tool call in Agent content: \(fallback.name)")
-                    toolCalls = [MonadCore.ToolCall(name: fallback.name, arguments: fallback.arguments)]
+                } else {
+                    let fallbackCalls = ToolOutputParser.parse(from: assistantContent)
+                    if !fallbackCalls.isEmpty {
+                        logger.info("Detected fallback tool call in Agent content: \(fallbackCalls.map { $0.name })")
+                        toolCalls = fallbackCalls.compactMap { call in
+                            MonadCore.ToolCall(name: call.name, arguments: call.arguments)
+                        }
+                    }
                 }
                 
                 let toolCallsJSON = (try? SerializationUtils.jsonEncoder.encode(toolCalls)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"

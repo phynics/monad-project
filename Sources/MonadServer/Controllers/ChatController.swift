@@ -88,13 +88,23 @@ public struct ChatController<Context: RequestContext>: Sendable {
 
         var contextData = ContextData()
         if let contextManager = contextManager {
-            contextData = try await contextManager.gatherContext(
-                for: chatRequest.message.isEmpty
-                    ? (history.last?.content ?? "") : chatRequest.message,
-                history: history,
-                tagGenerator: { [llmService] query in try await llmService.generateTags(for: query)
+            do {
+                let stream = await contextManager.gatherContext(
+                    for: chatRequest.message.isEmpty
+                        ? (history.last?.content ?? "") : chatRequest.message,
+                    history: history,
+                    tagGenerator: { [llmService] query in try await llmService.generateTags(for: query)
+                    }
+                )
+                
+                for try await event in stream {
+                    if case .complete(let data) = event {
+                        contextData = data
+                    }
                 }
-            )
+            } catch {
+                Logger.chat.warning("Failed to gather context: \(error)")
+            }
         }
 
         guard await llmService.isConfigured else { throw HTTPError(.serviceUnavailable) }
@@ -188,13 +198,23 @@ public struct ChatController<Context: RequestContext>: Sendable {
 
         var contextData = ContextData()
         if let contextManager = contextManager {
-            contextData = try await contextManager.gatherContext(
-                for: chatRequest.message.isEmpty
-                    ? (history.last?.content ?? "") : chatRequest.message,
-                history: history,
-                tagGenerator: { [llmService] query in try await llmService.generateTags(for: query)
+            do {
+                let stream = await contextManager.gatherContext(
+                    for: chatRequest.message.isEmpty
+                        ? (history.last?.content ?? "") : chatRequest.message,
+                    history: history,
+                    tagGenerator: { [llmService] query in try await llmService.generateTags(for: query)
+                    }
+                )
+                
+                for try await event in stream {
+                    if case .complete(let data) = event {
+                        contextData = data
+                    }
                 }
-            )
+            } catch {
+                Logger.chat.warning("Failed to gather context: \(error)")
+            }
         }
 
         guard await llmService.isConfigured else { throw HTTPError(.serviceUnavailable) }
@@ -348,10 +368,31 @@ public struct ChatController<Context: RequestContext>: Sendable {
                         
                         // Fallback: Check for tool calls in content if no native calls detected
                         if finalToolCalls.isEmpty {
-                            if let fallback = ToolOutputParser.parse(from: fullResponse) {
-                                Logger.chat.info("Detected fallback tool call in content: \(fallback.name)")
-                                let argsJson = (try? SerializationUtils.jsonEncoder.encode(fallback.arguments)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
-                                finalToolCalls[0] = (id: UUID().uuidString, name: fallback.name, args: argsJson)
+                            let fallbackCalls = ToolOutputParser.parse(from: fullResponse)
+                            if !fallbackCalls.isEmpty {
+                                Logger.chat.info("Detected \(fallbackCalls.count) fallback tool calls in content")
+                                
+                                for (index, call) in fallbackCalls.enumerated() {
+                                    let argsJson = (try? SerializationUtils.jsonEncoder.encode(call.arguments)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+                                    finalToolCalls[index] = (id: UUID().uuidString, name: call.name, args: argsJson)
+                                }
+                                
+                                // CRITICAL: Notify client about these tools so it knows to execute them if needed
+                                // We construct a ChatDelta with all tool calls
+                                let toolDeltas = finalToolCalls.sorted(by: { $0.key < $1.key }).map { index, value in
+                                    ToolCallDelta(
+                                        index: index,
+                                        id: value.id,
+                                        name: value.name,
+                                        arguments: value.args
+                                    )
+                                }
+                                
+                                let chatDelta = ChatDelta(toolCalls: toolDeltas)
+                                if let data = try? SerializationUtils.jsonEncoder.encode(chatDelta) {
+                                    let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                                    continuation.yield(ByteBuffer(string: sseString))
+                                }
                             }
                         }
 
