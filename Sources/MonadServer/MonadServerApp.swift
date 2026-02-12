@@ -156,6 +156,12 @@ struct MonadServer: AsyncParsableCommand {
         let jobRunner = JobRunnerService(sessionManager: sessionManager, llmService: llmService)
         let orphanCleanup = OrphanCleanupService(persistenceService: persistenceService, workspaceRoot: workspaceRoot, logger: logger)
 
+        // One-off migration (can run asynchronously)
+        // Task {
+        //    let noteMigrator = NotesMigrationUtility(dbWriter: persistenceService.databaseWriter)
+        //    _ = try? await noteMigrator.migrateAllNotes()
+        // }
+
         let serviceGroup = ServiceGroup(
             configuration: ServiceGroupConfiguration(
                 services: [
