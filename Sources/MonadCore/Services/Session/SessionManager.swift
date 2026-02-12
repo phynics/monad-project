@@ -48,6 +48,20 @@ public actor SessionManager {
             jobQueueContext: jobQueueContext)
         toolManagers[session.id] = toolManager
 
+        // Hydrate workspaces and register with ToolManager
+        if let workspaces = await getWorkspaces(for: session.id) {
+            if let primary = workspaces.primary {
+                if let ws = try? WorkspaceFactory.create(from: primary) {
+                    await toolManager.registerWorkspace(ws)
+                }
+            }
+            for attached in workspaces.attached {
+                if let ws = try? WorkspaceFactory.create(from: attached) {
+                    await toolManager.registerWorkspace(ws)
+                }
+            }
+        }
+
         let toolExecutor = ToolExecutor(
             toolManager: toolManager,
             contextSession: toolContextSession,
@@ -90,7 +104,7 @@ public actor SessionManager {
         try selectedPersonaContent.write(
             to: notesDir.appendingPathComponent("Persona.md"), atomically: true, encoding: .utf8)
 
-        let workspace = Workspace(
+        let workspace = WorkspaceReference(
             uri: .serverSession(sessionId),
             hostType: .server,
             rootPath: sessionWorkspaceURL.path,
@@ -339,6 +353,15 @@ public actor SessionManager {
         }
         // Always save to DB
         try await persistenceService.saveSession(session)
+        
+        // Update ToolManager
+        if let toolManager = toolManagers[sessionId] {
+             if let wsRef = try? await getWorkspace(workspaceId) {
+                  if let ws = try? WorkspaceFactory.create(from: wsRef) {
+                      await toolManager.registerWorkspace(ws)
+                  }
+             }
+        }
     }
 
     public func detachWorkspace(_ workspaceId: UUID, from sessionId: UUID) async throws {
@@ -375,9 +398,14 @@ public actor SessionManager {
         }
 
         try await persistenceService.saveSession(session)
+        
+        // Update ToolManager
+        if let toolManager = toolManagers[sessionId] {
+             await toolManager.unregisterWorkspace(workspaceId)
+        }
     }
 
-    public func getWorkspaces(for sessionId: UUID) async -> (primary: Workspace?, attached: [Workspace])? {
+    public func getWorkspaces(for sessionId: UUID) async -> (primary: WorkspaceReference?, attached: [WorkspaceReference])? {
         var primaryId: UUID?
         var attachedIds: [UUID] = []
 
@@ -391,7 +419,7 @@ public actor SessionManager {
             return nil
         }
 
-        var primary: Workspace?
+        var primary: WorkspaceReference?
         if let pid = primaryId {
             if var p = try? await getWorkspace(pid) {
                 if p.hostType == .server, let path = p.rootPath {
@@ -403,7 +431,7 @@ public actor SessionManager {
             }
         }
 
-        var attached: [Workspace] = []
+        var attached: [WorkspaceReference] = []
         for aid in attachedIds {
             if var ws = try? await getWorkspace(aid) {
                 if ws.hostType == .server, let path = ws.rootPath {
@@ -446,9 +474,9 @@ public actor SessionManager {
         }
     }
 
-    public func getWorkspace(_ id: UUID) async throws -> Workspace? {
+    public func getWorkspace(_ id: UUID) async throws -> WorkspaceReference? {
         return try await persistenceService.databaseWriter.read { db in
-            guard let workspace = try Workspace.fetchOne(db, key: id) else {
+            guard let workspace = try WorkspaceReference.fetchOne(db, key: id) else {
                 return nil
             }
             
@@ -460,7 +488,7 @@ public actor SessionManager {
             let toolRefs = workspaceTools.compactMap { try? $0.toToolReference() }
             
             // Create a new workspace with the tools populated
-            return Workspace(
+            return WorkspaceReference(
                 id: workspace.id,
                 uri: workspace.uri,
                 hostType: workspace.hostType,
@@ -521,7 +549,7 @@ public actor SessionManager {
     public func getClientTools(clientId: UUID) async throws -> [ToolReference] {
         return try await persistenceService.databaseWriter.read { db in
             // Find workspaces owned by this client
-            let workspaces = try Workspace
+            let workspaces = try WorkspaceReference
                 .filter(Column("ownerId") == clientId)
                 .fetchAll(db)
             
@@ -564,7 +592,7 @@ public actor SessionManager {
                 .filter(Column("toolId") == toolId)
                 .filter(workspaceIds.contains(Column("workspaceId")))
                 .fetchOne(db),
-                let ws = try Workspace.fetchOne(db, key: toolRecord.workspaceId)
+                let ws = try WorkspaceReference.fetchOne(db, key: toolRecord.workspaceId)
             {
 
                 if ws.hostType == .client {

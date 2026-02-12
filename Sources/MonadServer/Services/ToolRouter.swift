@@ -47,7 +47,7 @@ public actor ToolRouter {
         }
 
         switch workspace.hostType {
-        case .server:
+        case .server, .serverSession:
             // 3a. Execute Locally
             return try await executeLocally(tool: tool, arguments: arguments, workspace: workspace, sessionId: sessionId)
 
@@ -77,7 +77,7 @@ public actor ToolRouter {
     private func executeLocally(
         tool: ToolReference,
         arguments: [String: AnyCodable],
-        workspace: Workspace,
+        workspace: WorkspaceReference,
         sessionId: UUID
     ) async throws -> String {
         logger.info("Executing locally: \(tool.displayName)")
@@ -107,7 +107,7 @@ public actor ToolRouter {
     private func executeRemotely(
         tool: ToolReference,
         arguments: [String: AnyCodable],
-        workspace: Workspace
+        workspace: WorkspaceReference
     ) async throws -> String {
         logger.info("Executing remotely on client: \(workspace.ownerId?.uuidString ?? "unknown")")
         // We need to send a message to the client associated with this workspace.

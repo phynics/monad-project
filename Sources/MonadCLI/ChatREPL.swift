@@ -126,11 +126,11 @@ actor ChatREPL: ChatREPLController {
     private func checkAndRestoreWorkspaces() async {
         do {
             let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
-            var workspacesToRestore: [Workspace] = []
+            var workspacesToRestore: [WorkspaceReference] = []
 
             // Check Primary (Server)
-            if let primary = sessionWS.primary, primary.status == .missing {
-               workspacesToRestore.append(primary)
+            if let primary = sessionWS.primary, primary.status == .missing, primary.hostType == .server {
+                workspacesToRestore.append(primary)
             }
 
             // Check Attached (Client)

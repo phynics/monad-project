@@ -4,7 +4,7 @@ import Foundation
 
 public struct CreateWorkspaceRequest: Codable, Sendable {
     public let uri: String
-    public let hostType: WorkspaceHostType
+    public let hostType: WorkspaceReference.WorkspaceHostType
     public let ownerId: UUID?
     public let rootPath: String?
     public let trustLevel: WorkspaceTrustLevel?
@@ -12,7 +12,7 @@ public struct CreateWorkspaceRequest: Codable, Sendable {
 
     public init(
         uri: String,
-        hostType: WorkspaceHostType,
+        hostType: WorkspaceReference.WorkspaceHostType,
         ownerId: UUID?,
         rootPath: String?,
         trustLevel: WorkspaceTrustLevel?,
@@ -76,10 +76,10 @@ public struct AttachWorkspaceRequest: Codable, Sendable {
 }
 
 public struct SessionWorkspacesResponse: Codable, Sendable {
-    public let primaryWorkspace: Workspace?
-    public let attachedWorkspaces: [Workspace]
+    public let primaryWorkspace: WorkspaceReference?
+    public let attachedWorkspaces: [WorkspaceReference]
 
-    public init(primaryWorkspace: Workspace?, attachedWorkspaces: [Workspace]) {
+    public init(primaryWorkspace: WorkspaceReference?, attachedWorkspaces: [WorkspaceReference]) {
         self.primaryWorkspace = primaryWorkspace
         self.attachedWorkspaces = attachedWorkspaces
     }

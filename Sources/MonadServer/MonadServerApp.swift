@@ -202,7 +202,7 @@ struct MonadServer: AsyncParsableCommand {
             logger.info("Starting orphaned workspace cleanup...")
             do {
                 try await persistenceService.databaseWriter.write { db in
-                    let workspaces = try Workspace.fetchAll(db)
+                    let workspaces = try WorkspaceReference.fetchAll(db)
                     let sessions = try ConversationSession.fetchAll(db)
                     
                     var referencedIds: Set<UUID> = []

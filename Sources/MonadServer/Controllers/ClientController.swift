@@ -40,13 +40,12 @@ public struct ClientController<Context: RequestContext>: Sendable {
 
         // Create default shell workspace
         let workspaceUri = client.shellWorkspaceURI
-        let defaultWorkspace = Workspace(
+        let defaultWorkspace = WorkspaceReference(
             uri: workspaceUri,
             hostType: .client,
             ownerId: id,
             rootPath: nil,  // Unknown until client reports it, or assume home
-            trustLevel: .full,
-            createdAt: now
+            trustLevel: .full
         )
 
         try await dbWriter.write { db in

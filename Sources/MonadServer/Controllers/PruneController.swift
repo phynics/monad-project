@@ -2,6 +2,7 @@ import Foundation
 import HTTPTypes
 import Hummingbird
 import MonadCore
+import MonadClient
 import NIOCore
 
 public struct PruneController<Context: RequestContext>: Sendable {

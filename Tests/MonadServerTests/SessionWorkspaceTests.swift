@@ -40,7 +40,7 @@ final class SessionWorkspaceTests: XCTestCase {
 
         // Verify workspace exists in DB
         let workspace = try await persistenceService.databaseWriter.read { db in
-            try Workspace.fetchOne(db, key: session.primaryWorkspaceId)
+            try WorkspaceReference.fetchOne(db, key: session.primaryWorkspaceId)
         }
 
         XCTAssertNotNil(workspace, "Primary workspace record should exist in database")

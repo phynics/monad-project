@@ -113,7 +113,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         print("")
     }
 
-    private func printWorkspace(_ ws: Workspace, marker: String, color: String) {
+    private func printWorkspace(_ ws: WorkspaceReference, marker: String, color: String) {
         let markerStr: String
         switch color {
         case "green": markerStr = TerminalUI.green(marker)

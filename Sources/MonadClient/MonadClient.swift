@@ -266,11 +266,11 @@ public actor MonadClient {
 
     public func createWorkspace(
         uri: WorkspaceURI,
-        hostType: WorkspaceHostType,
+        hostType: WorkspaceReference.WorkspaceHostType,
         ownerId: UUID?,
         rootPath: String?,
         trustLevel: WorkspaceTrustLevel?
-    ) async throws -> Workspace {
+    ) async throws -> WorkspaceReference {
         var request = try buildRequest(path: "/api/workspaces", method: "POST")
         request.httpBody = try encoder.encode(
             CreateWorkspaceRequest(
@@ -284,13 +284,13 @@ public actor MonadClient {
         return try await perform(request)
     }
 
-    public func listWorkspaces() async throws -> [Workspace] {
+    public func listWorkspaces() async throws -> [WorkspaceReference] {
         let request = try buildRequest(path: "/api/workspaces", method: "GET")
-        let response: PaginatedResponse<Workspace> = try await perform(request)
+        let response: PaginatedResponse<WorkspaceReference> = try await perform(request)
         return response.items
     }
 
-    public func getWorkspace(_ id: UUID) async throws -> Workspace {
+    public func getWorkspace(_ id: UUID) async throws -> WorkspaceReference {
         let request = try buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "GET")
         return try await perform(request)
     }
@@ -320,7 +320,7 @@ public actor MonadClient {
     }
 
     public func listSessionWorkspaces(sessionId: UUID) async throws -> (
-        primary: Workspace?, attached: [Workspace]
+        primary: WorkspaceReference?, attached: [WorkspaceReference]
     ) {
         let request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "GET")

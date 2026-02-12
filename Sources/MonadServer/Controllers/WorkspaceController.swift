@@ -38,7 +38,7 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
         let id = UUID()
         let now = Date()
 
-        let workspace = Workspace(
+        let workspace = WorkspaceReference(
             id: id,
             uri: uri,
             hostType: input.hostType,
@@ -67,13 +67,13 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
         let perPage = components?.queryItems?.first(where: { $0.name == "perPage" })?.value.flatMap(Int.init) ?? 20
         
         let workspaces = try await dbWriter.read { db in
-            try Workspace.fetchAll(db)
+            try WorkspaceReference.fetchAll(db)
         }
         
         // In-memory pagination
         let total = workspaces.count
         let start = (page - 1) * perPage
-        let paginatedWorkspaces: [Workspace]
+        let paginatedWorkspaces: [WorkspaceReference]
         if start < total {
             let end = min(start + perPage, total)
             paginatedWorkspaces = Array(workspaces[start..<end])
@@ -91,9 +91,9 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
             status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
     }
 
-    public func getWorkspace(id: UUID) async throws -> Workspace? {
+    public func getWorkspace(id: UUID) async throws -> WorkspaceReference? {
         return try await dbWriter.read { db in
-            try Workspace.fetchOne(db, key: id)
+            try WorkspaceReference.fetchOne(db, key: id)
         }
     }
 
@@ -119,7 +119,7 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
         let input = try await request.decode(as: UpdateWorkspaceRequest.self, context: context)
         
         try await dbWriter.write { db in
-            guard var workspace = try Workspace.fetchOne(db, key: id) else {
+            guard var workspace = try WorkspaceReference.fetchOne(db, key: id) else {
                 throw HTTPError(.notFound)
             }
             
@@ -140,7 +140,7 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
     @Sendable func delete(request: Request, context: Context) async throws -> Response {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         try await dbWriter.write { db in
-            _ = try Workspace.deleteOne(db, key: id)
+            _ = try WorkspaceReference.deleteOne(db, key: id)
         }
         return Response(status: .noContent)
     }
@@ -152,7 +152,7 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
 
         try await dbWriter.write { db in
             // Verify workspace exists
-            guard try Workspace.exists(db, key: id) else {
+            guard try WorkspaceReference.exists(db, key: id) else {
                 throw HTTPError(.notFound)
             }
 
@@ -169,7 +169,7 @@ public struct WorkspaceController<Context: RequestContext>: Sendable {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
 
         let tools = try await dbWriter.read { db -> [ToolReference] in
-            guard try Workspace.exists(db, key: id) else {
+            guard try WorkspaceReference.exists(db, key: id) else {
                 throw HTTPError(.notFound)
             }
 

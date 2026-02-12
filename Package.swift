@@ -34,6 +34,7 @@ let package = Package(
             name: "MonadServer",
             dependencies: [
                 "MonadCore",
+                "MonadClient",
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),

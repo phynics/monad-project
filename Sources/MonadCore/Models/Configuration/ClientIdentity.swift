@@ -61,9 +61,9 @@ public struct ClientRegistrationRequest: Codable, Sendable {
 /// Response from client registration
 public struct ClientRegistrationResponse: Codable, Sendable {
     public let client: ClientIdentity
-    public let defaultWorkspace: Workspace
+    public let defaultWorkspace: WorkspaceReference
 
-    public init(client: ClientIdentity, defaultWorkspace: Workspace) {
+    public init(client: ClientIdentity, defaultWorkspace: WorkspaceReference) {
         self.client = client
         self.defaultWorkspace = defaultWorkspace
     }

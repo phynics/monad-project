@@ -3,8 +3,10 @@ import GRDB
 
 // MARK: - Workspace
 
-/// A workspace is an execution environment where tools can operate
-public struct Workspace: Codable, FetchableRecord, PersistableRecord, Sendable, Identifiable {
+/// A workspace reference defines the metadata and location of a workspace
+public struct WorkspaceReference: Codable, FetchableRecord, PersistableRecord, Sendable, Identifiable {
+    public static var databaseTableName: String { "workspace" }
+    
     public let id: UUID
     public let uri: WorkspaceURI
     public var hostType: WorkspaceHostType
@@ -15,6 +17,12 @@ public struct Workspace: Codable, FetchableRecord, PersistableRecord, Sendable, 
     public var lastModifiedBy: UUID?  // Session ID that last modified
     public var status: WorkspaceStatus
     public let createdAt: Date
+
+    public enum WorkspaceHostType: String, Codable, Sendable, DatabaseValueConvertible {
+        case server
+        case serverSession  // A workspace specific to a session on the server
+        case client
+    }
 
     public enum WorkspaceStatus: String, Codable, Sendable, DatabaseValueConvertible {
         case active
@@ -61,8 +69,8 @@ public struct Workspace: Codable, FetchableRecord, PersistableRecord, Sendable, 
     public static func primaryForSession(
         _ sessionId: UUID,
         rootPath: String
-    ) -> Workspace {
-        Workspace(
+    ) -> WorkspaceReference {
+        WorkspaceReference(
             uri: .serverSession(sessionId),
             hostType: .server,
             rootPath: rootPath,
