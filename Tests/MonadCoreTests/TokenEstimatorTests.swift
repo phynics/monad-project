@@ -30,4 +30,18 @@ import Testing
         // Check range to allow for heuristic variance
         #expect(count > 1000 && count < 1500)
     }
+
+    @Test("Test batch estimation")
+    func batchEstimation() {
+        let texts = ["Hello world", "Swift is great", ""]
+        let counts = TokenEstimator.estimateBatch(texts: texts)
+
+        #expect(counts.count == 3)
+        // "Hello world" -> ~2
+        #expect(counts[0] >= 2)
+        // "Swift is great" -> ~3
+        #expect(counts[1] >= 3)
+        // "" -> 0
+        #expect(counts[2] == 0)
+    }
 }
