@@ -146,7 +146,7 @@ public actor ContextCompressor {
         let maxIterations = 5
 
         while iterations < maxIterations {
-            let currentOlderTokens = nodes.reduce(0) { $0 + $1.tokens }
+            let currentOlderTokens = TokenEstimator.estimate(parts: nodes.map(\.content))
             let availableForOlder = max(0, targetTokens - TokenEstimator.estimate(parts: recentMessages.map(\.content)))
 
             if currentOlderTokens <= availableForOlder {
@@ -295,13 +295,16 @@ public actor ContextCompressor {
 
     private func summarizeLevel(nodes: [ConversationNode], llmService: any LLMServiceProtocol) async -> [ConversationNode] {
         // Group nodes into chunks (e.g. 5 nodes or ~1000 tokens)
+        // Optimization: Pre-calculate tokens in batch to reuse tokenizer
+        let nodeTokens = TokenEstimator.estimateBatch(texts: nodes.map(\.content))
+
         var newNodes: [ConversationNode] = []
         var currentChunk: [ConversationNode] = []
         var currentTokens = 0
         let maxChunkTokens = 2000
 
-        for node in nodes {
-            let tokens = node.tokens
+        for (index, node) in nodes.enumerated() {
+            let tokens = nodeTokens[index]
             if currentTokens + tokens > maxChunkTokens && !currentChunk.isEmpty {
                 // Process chunk
                 let summaryNode = await summarizeChunk(currentChunk, llmService: llmService)
