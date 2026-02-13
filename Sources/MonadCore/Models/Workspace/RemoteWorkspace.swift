@@ -44,6 +44,11 @@ public actor RemoteWorkspace: WorkspaceProtocol {
          throw WorkspaceError.toolExecutionNotSupported
     }
     
+    public func deleteFile(path: String) async throws {
+        // TODO: RPC call
+         throw WorkspaceError.toolExecutionNotSupported
+    }
+    
     public func listFiles(path: String) async throws -> [String] {
         // TODO: RPC call
          throw WorkspaceError.toolExecutionNotSupported

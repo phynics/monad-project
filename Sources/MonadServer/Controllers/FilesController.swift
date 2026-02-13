@@ -5,9 +5,9 @@ import MonadCore
 import NIOCore
 
 public struct FilesController<Context: RequestContext>: Sendable {
-    public let workspaceController: WorkspaceController<Context>
+    public let workspaceController: MonadCore.WorkspaceController
 
-    public init(workspaceController: WorkspaceController<Context>) {
+    public init(workspaceController: MonadCore.WorkspaceController) {
         self.workspaceController = workspaceController
     }
 
@@ -23,33 +23,13 @@ public struct FilesController<Context: RequestContext>: Sendable {
 
     @Sendable func listFiles(_ request: Request, context: Context) async throws -> Response {
         let workspaceId = try context.parameters.require("workspaceId", as: UUID.self)
-        guard let workspace = try await workspaceController.getWorkspace(id: workspaceId) else {
-            throw HTTPError(.notFound)
+        
+        guard let workspace = await workspaceController.getWorkspace(id: workspaceId) else {
+             throw HTTPError(.notFound)
         }
-        guard let rootPath = workspace.rootPath else {
-            throw HTTPError(.badRequest, message: "Workspace has no root path")
-        }
-
-        let fileManager = FileManager.default
-        let rootURL = URL(fileURLWithPath: rootPath)
-
-        // Recursive list or just top level? Let's do recursive relative paths.
-        // For security, ensure we don't go outside.
-        // Enumerator approach
-        var files: [String] = []
-        if let enumerator = fileManager.enumerator(
-            at: rootURL, includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles])
-        {
-            while let fileURL = enumerator.nextObject() as? URL {
-                let resourceValues = try? fileURL.resourceValues(forKeys: [.isRegularFileKey])
-                if resourceValues?.isRegularFile == true {
-                    let relativePath = fileURL.path.replacingOccurrences(
-                        of: rootPath + "/", with: "")
-                    files.append(relativePath)
-                }
-            }
-        }
+        
+        // Use an empty path to list from root, or implement recursive list in the workspace
+        let files = try await workspace.listFiles(path: ".")
 
         let data = try SerializationUtils.jsonEncoder.encode(files)
         var headers = HTTPFields()
@@ -70,47 +50,18 @@ public struct FilesController<Context: RequestContext>: Sendable {
              throw HTTPError(.badRequest, message: "Invalid path encoding")
         }
         
-        // Skip hidden files or empty paths if needed, though security check handles it later.
-        if path.isEmpty {
-             throw HTTPError(.badRequest, message: "Empty path")
-        }
-
-        // Debug logging via Logger and Print (fallback)
-        context.logger.info("[FilesController] getFileContent request: path=\(path)")
-
-        guard let workspace = try await workspaceController.getWorkspace(id: workspaceId) else {
-            context.logger.warning("[FilesController] Workspace not found: \(workspaceId)")
-            print("[FilesController] Workspace not found: \(workspaceId)")
-            throw HTTPError(.notFound)
-        }
-        guard let rootPath = workspace.rootPath else {
-            context.logger.error("[FilesController] Workspace has no root path")
-            print("[FilesController] Workspace has no root path")
-            throw HTTPError(.badRequest, message: "Workspace has no root path")
-        }
-
-        let fileURL = URL(fileURLWithPath: rootPath).appendingPathComponent(path)
-        
-        context.logger.info("[FilesController] Resolving file: rootPath=\(rootPath), fullURL=\(fileURL.path)")
-        print("[FilesController] Resolving file: rootPath=\(rootPath), fullURL=\(fileURL.path)")
-
-        // Security check: Ensure fileURL is inside rootPath
-        guard fileURL.standardized.path.hasPrefix(URL(fileURLWithPath: rootPath).standardized.path)
-        else {
-            context.logger.warning("[FilesController] Security check failed: \(fileURL.standardized.path) not in \(URL(fileURLWithPath: rootPath).standardized.path)")
-            print("[FilesController] Security check failed: \(fileURL.standardized.path) not in \(URL(fileURLWithPath: rootPath).standardized.path)")
-            throw HTTPError(.forbidden)
+        guard let workspace = await workspaceController.getWorkspace(id: workspaceId) else {
+             throw HTTPError(.notFound)
         }
 
         do {
-            let content = try String(contentsOf: fileURL, encoding: .utf8)
+            let content = try await workspace.readFile(path: path)
             var headers = HTTPFields()
             headers[.contentType] = "text/plain"
             return Response(
                 status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(string: content)))
         } catch {
             context.logger.error("[FilesController] Failed to read file: \(error)")
-            print("[FilesController] Failed to read file: \(error)")
             throw HTTPError(.notFound)
         }
     }
@@ -121,27 +72,14 @@ public struct FilesController<Context: RequestContext>: Sendable {
             throw HTTPError(.badRequest, message: "Missing path")
         }
 
-        guard let workspace = try await workspaceController.getWorkspace(id: workspaceId) else {
+        guard let workspace = await workspaceController.getWorkspace(id: workspaceId) else {
             throw HTTPError(.notFound)
-        }
-        guard let rootPath = workspace.rootPath else {
-            throw HTTPError(.badRequest, message: "Workspace has no root path")
-        }
-
-        let fileURL = URL(fileURLWithPath: rootPath).appendingPathComponent(path)
-
-        // Security check
-        guard fileURL.standardized.path.hasPrefix(URL(fileURLWithPath: rootPath).standardized.path)
-        else {
-            throw HTTPError(.forbidden)
         }
 
         let buffer = try await request.body.collect(upTo: 10 * 1024 * 1024)  // 10MB limit
         let content = String(buffer: buffer)
 
-        try FileManager.default.createDirectory(
-            at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try content.write(to: fileURL, atomically: true, encoding: .utf8)
+        try await workspace.writeFile(path: path, content: content)
 
         return Response(status: .ok)
     }
@@ -152,22 +90,11 @@ public struct FilesController<Context: RequestContext>: Sendable {
             throw HTTPError(.badRequest, message: "Missing path")
         }
 
-        guard let workspace = try await workspaceController.getWorkspace(id: workspaceId) else {
+        guard let workspace = await workspaceController.getWorkspace(id: workspaceId) else {
             throw HTTPError(.notFound)
         }
-        guard let rootPath = workspace.rootPath else {
-            throw HTTPError(.badRequest, message: "Workspace has no root path")
-        }
-
-        let fileURL = URL(fileURLWithPath: rootPath).appendingPathComponent(path)
-
-        // Security check
-        guard fileURL.standardized.path.hasPrefix(URL(fileURLWithPath: rootPath).standardized.path)
-        else {
-            throw HTTPError(.forbidden)
-        }
-
-        try FileManager.default.removeItem(at: fileURL)
+        
+        try await workspace.deleteFile(path: path)
         return Response(status: .noContent)
     }
 }

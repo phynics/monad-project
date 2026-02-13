@@ -57,9 +57,36 @@ public actor LocalWorkspace: WorkspaceProtocol {
              throw WorkspaceError.accessDenied
         }
         
-        // Simple non-recursive list for now, or use FileManager
-        let urls = try FileManager.default.contentsOfDirectory(at: targetURL, includingPropertiesForKeys: nil)
-        return urls.map { $0.lastPathComponent }
+        // Recursive listing
+        var files: [String] = []
+        let rootPath = rootURL.resolvingSymlinksInPath().path
+        
+        if let enumerator = FileManager.default.enumerator(
+            at: rootURL, includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles])
+        {
+            while let fileURL = enumerator.nextObject() as? URL {
+                let resourceValues = try? fileURL.resourceValues(forKeys: [.isRegularFileKey])
+                if resourceValues?.isRegularFile == true {
+                    let filePath = fileURL.resolvingSymlinksInPath().path
+                    if filePath.hasPrefix(rootPath) {
+                        let relativePath = String(filePath.dropFirst(rootPath.count))
+                            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                        files.append(relativePath)
+                    }
+                }
+            }
+        }
+        return files
+    }
+    
+    public func deleteFile(path: String) async throws {
+        let fileURL = rootURL.appendingPathComponent(path)
+        guard fileURL.path.hasPrefix(rootURL.path) else {
+             throw WorkspaceError.accessDenied
+        }
+        
+        try FileManager.default.removeItem(at: fileURL)
     }
     
     public func healthCheck() async -> Bool {

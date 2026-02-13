@@ -7,7 +7,7 @@ import HTTPTypes
 import NIOCore
 
 /// Controller for managing workspaces
-public struct WorkspaceController<Context: RequestContext>: Sendable {
+public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     let dbWriter: DatabaseWriter
     let logger: Logger
 

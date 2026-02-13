@@ -23,6 +23,9 @@ public protocol WorkspaceProtocol: Sendable {
     /// List files in the workspace (optionally recursively)
     func listFiles(path: String) async throws -> [String]
     
+    /// Delete a file in the workspace
+    func deleteFile(path: String) async throws
+    
     /// Get the health/status of the workspace connection
     func healthCheck() async -> Bool
 }

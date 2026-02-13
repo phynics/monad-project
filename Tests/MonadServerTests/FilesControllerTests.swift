@@ -45,8 +45,9 @@ import Logging
         try content.write(to: filePath, atomically: true, encoding: .utf8)
         
         // Setup App & Controller
+        // Setup App & Controller
         let router = Router()
-        let workspaceController = WorkspaceController<BasicRequestContext>(dbWriter: persistence.databaseWriter, logger: Logger(label: "test"))
+        let workspaceController = try await WorkspaceController(dbWriter: persistence.databaseWriter)
         let controller = FilesController<BasicRequestContext>(workspaceController: workspaceController)
         
         // Register routes similar to MonadServerApp (flattened)
@@ -72,8 +73,11 @@ import Logging
         let embedding = MockEmbeddingService()
         let llmService = MockLLMService()
         
-        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        let workspaceRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
+        
+        // Cleanup
+        defer { try? FileManager.default.removeItem(at: workspaceRoot) }
         
         let sessionManager = SessionManager(
             persistenceService: persistence,
@@ -82,11 +86,18 @@ import Logging
             workspaceRoot: workspaceRoot
         )
 
-        let session = try await sessionManager.createSession()
+        let session = try await sessionManager.createSession(title: "List Files Session")
         guard let workspaceId = session.primaryWorkspaceId else { return }
         
+        // Inject fake files
+        let sessionWorkspacePath = workspaceRoot.appendingPathComponent("sessions").appendingPathComponent(session.id.uuidString)
+        let noteDir = sessionWorkspacePath.appendingPathComponent("Notes")
+        try FileManager.default.createDirectory(at: noteDir, withIntermediateDirectories: true)
+        try "Content".write(to: noteDir.appendingPathComponent("TestNote.md"), atomically: true, encoding: .utf8)
+        
+        
         let router = Router()
-        let workspaceController = WorkspaceController<BasicRequestContext>(dbWriter: persistence.databaseWriter, logger: Logger(label: "test"))
+        let workspaceController = try await WorkspaceController(dbWriter: persistence.databaseWriter)
         let controller = FilesController<BasicRequestContext>(workspaceController: workspaceController)
         controller.addRoutes(to: router.group("/workspaces/:workspaceId/files"))
         let app = Application(router: router)

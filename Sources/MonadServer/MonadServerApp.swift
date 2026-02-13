@@ -129,12 +129,14 @@ struct MonadServer: AsyncParsableCommand {
 
         let workspacesGroup = protected.group("/workspaces")
         
-        let workspaceController = WorkspaceController<BasicRequestContext>(
+        let workspaceAPIController = WorkspaceAPIController<BasicRequestContext>(
             dbWriter: dbWriter, logger: logger)
-        workspaceController.addRoutes(to: workspacesGroup)
+        workspaceAPIController.addRoutes(to: workspacesGroup)
+
+        let coreWorkspaceController = try await MonadCore.WorkspaceController(dbWriter: dbWriter)
 
         let filesController = FilesController<BasicRequestContext>(
-            workspaceController: workspaceController)
+            workspaceController: coreWorkspaceController)
         filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
 
         let clientController = ClientController<BasicRequestContext>(
@@ -151,16 +153,10 @@ struct MonadServer: AsyncParsableCommand {
 
         logger.info("Server starting on \(hostname):\(port)")
 
-        let advertiser = BonjourAdvertiser(port: port)
+        _ = BonjourAdvertiser(port: port)
 
         let jobRunner = JobRunnerService(sessionManager: sessionManager, llmService: llmService)
         let orphanCleanup = OrphanCleanupService(persistenceService: persistenceService, workspaceRoot: workspaceRoot, logger: logger)
-
-        // One-off migration (can run asynchronously)
-        // Task {
-        //    let noteMigrator = NotesMigrationUtility(dbWriter: persistenceService.databaseWriter)
-        //    _ = try? await noteMigrator.migrateAllNotes()
-        // }
 
         let serviceGroup = ServiceGroup(
             configuration: ServiceGroupConfiguration(
