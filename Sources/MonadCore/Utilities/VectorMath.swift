@@ -22,8 +22,33 @@ public enum VectorMath {
         
         let magnitudes = sqrt(sumSqA) * sqrt(sumSqB)
         guard magnitudes > 0 else { return 0.0 }
-        
         return dotProduct / magnitudes
+    }
+
+    /// Calculate magnitude (L2 norm) of a vector
+    /// - Parameter v: Vector
+    /// - Returns: Magnitude
+    public static func magnitude(_ v: [Double]) -> Double {
+        guard !v.isEmpty else { return 0.0 }
+        var sumSq: Double = 0.0
+        vDSP_svesqD(v, 1, &sumSq, vDSP_Length(v.count))
+        return sqrt(sumSq)
+    }
+
+    /// Calculate cosine similarity with pre-calculated magnitudes
+    /// - Parameters:
+    ///   - a: First vector
+    ///   - b: Second vector
+    ///   - aMagnitude: Magnitude of first vector
+    ///   - bMagnitude: Magnitude of second vector
+    /// - Returns: Similarity score
+    public static func cosineSimilarity(_ a: [Double], _ b: [Double], aMagnitude: Double, bMagnitude: Double) -> Double {
+        guard a.count == b.count, !a.isEmpty, aMagnitude > 0, bMagnitude > 0 else { return 0.0 }
+
+        var dotProduct: Double = 0.0
+        vDSP_dotprD(a, 1, b, 1, &dotProduct, vDSP_Length(a.count))
+
+        return dotProduct / (aMagnitude * bMagnitude)
     }
 
     /// Normalize a vector to unit length

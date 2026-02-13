@@ -57,8 +57,9 @@ public struct Memory: Codable, Identifiable, FetchableRecord, PersistableRecord,
     }
     
     public var embeddingVector: [Double] {
+        // Optimized parsing using JSONSerialization (faster than JSONDecoder for simple arrays)
         guard let data = embedding.data(using: .utf8),
-              let vector = try? JSONDecoder().decode([Double].self, from: data)
+              let vector = try? JSONSerialization.jsonObject(with: data) as? [Double]
         else {
             return []
         }
