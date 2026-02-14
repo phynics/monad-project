@@ -1,57 +1,5 @@
 import Foundation
 
-// MARK: - Subagent Context
-
-/// Context information for a subagent execution
-public struct SubagentContext: Equatable, Sendable, Codable {
-    public let prompt: String
-    public let documents: [String]  // Paths
-    public let rawResponse: String?  // Full output including thinking
-
-    public init(prompt: String, documents: [String], rawResponse: String? = nil) {
-        self.prompt = prompt
-        self.documents = documents
-        self.rawResponse = rawResponse
-    }
-}
-
-// MARK: - Tool Call
-
-/// Represents a tool call from the LLM
-public struct ToolCall: Identifiable, Equatable, Codable, Sendable, Hashable {
-    public let id: UUID
-    public let name: String
-    public let arguments: [String: AnyCodable]
-
-    public init(name: String, arguments: [String: AnyCodable]) {
-        self.id = UUID()
-        self.name = name
-        self.arguments = arguments
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case id, name, arguments
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = (try? container.decode(UUID.self, forKey: .id)) ?? UUID()
-        self.name = try container.decode(String.self, forKey: .name)
-        self.arguments = try container.decode([String: AnyCodable].self, forKey: .arguments)
-    }
-
-    public static func == (lhs: ToolCall, rhs: ToolCall) -> Bool {
-        lhs.name == rhs.name && lhs.arguments == rhs.arguments
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(name)
-        hasher.combine(arguments)
-    }
-}
-
-// MARK: - Debug Info
-
 /// Debug information for messages (not persisted)
 public struct MessageDebugInfo: Equatable, Sendable, Codable {
     /// For user messages: the full raw prompt sent to LLM (with context, notes, etc.)
@@ -182,52 +130,5 @@ public struct MessageDebugInfo: Equatable, Sendable, Codable {
             subagentContext: subagentContext,
             structuredContext: structuredContext
         )
-    }
-}
-
-/// OpenAI API response metadata
-public struct APIResponseMetadata: Equatable, Sendable, Codable {
-    public var model: String?
-    public var promptTokens: Int?
-    public var completionTokens: Int?
-    public var totalTokens: Int?
-    public var finishReason: String?
-    public var systemFingerprint: String?
-    public var duration: TimeInterval?
-    public var tokensPerSecond: Double?
-
-    public init(
-        model: String? = nil, promptTokens: Int? = nil, completionTokens: Int? = nil,
-        totalTokens: Int? = nil, finishReason: String? = nil, systemFingerprint: String? = nil,
-        duration: TimeInterval? = nil, tokensPerSecond: Double? = nil
-    ) {
-        self.model = model
-        self.promptTokens = promptTokens
-        self.completionTokens = completionTokens
-        self.totalTokens = totalTokens
-        self.finishReason = finishReason
-        self.systemFingerprint = systemFingerprint
-        self.duration = duration
-        self.tokensPerSecond = tokensPerSecond
-    }
-}
-
-// MARK: - SemanticSearchResult Codable
-
-extension SemanticSearchResult: Codable {
-    enum CodingKeys: String, CodingKey {
-        case memory, similarity
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.memory = try container.decode(Memory.self, forKey: .memory)
-        self.similarity = try container.decodeIfPresent(Double.self, forKey: .similarity)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(memory, forKey: .memory)
-        try container.encodeIfPresent(similarity, forKey: .similarity)
     }
 }
