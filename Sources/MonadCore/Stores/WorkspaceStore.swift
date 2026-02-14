@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-public actor WorkspaceController: Sendable {
+public actor WorkspaceStore: Sendable {
     private let dbWriter: DatabaseWriter
     private var loadedWorkspaces: [UUID: any WorkspaceProtocol] = [:]
     
@@ -47,5 +47,28 @@ public actor WorkspaceController: Sendable {
     
     public func unloadWorkspace(id: UUID) {
         loadedWorkspaces.removeValue(forKey: id)
+    }
+
+    /// Create a new workspace and store it in the database
+    public func createWorkspace(
+        uri: WorkspaceURI,
+        hostType: WorkspaceReference.WorkspaceHostType,
+        rootPath: String? = nil,
+        ownerId: UUID? = nil
+    ) async throws -> any WorkspaceProtocol {
+        let reference = WorkspaceReference(
+            uri: uri,
+            hostType: hostType,
+            ownerId: ownerId,
+            rootPath: rootPath
+        )
+        
+        try await dbWriter.write { db in
+            try reference.insert(db)
+        }
+        
+        let workspace = try WorkspaceFactory.create(from: reference)
+        loadedWorkspaces[reference.id] = workspace
+        return workspace
     }
 }

@@ -5,10 +5,10 @@ import MonadCore
 import NIOCore
 
 public struct FilesAPIController<Context: RequestContext>: Sendable {
-    public let workspaceController: MonadCore.WorkspaceController
+    public let workspaceStore: MonadCore.WorkspaceStore
 
-    public init(workspaceController: MonadCore.WorkspaceController) {
-        self.workspaceController = workspaceController
+    public init(workspaceStore: MonadCore.WorkspaceStore) {
+        self.workspaceStore = workspaceStore
     }
 
     public func addRoutes(to group: RouterGroup<Context>) {
@@ -24,7 +24,7 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
     @Sendable func listFiles(_ request: Request, context: Context) async throws -> Response {
         let workspaceId = try context.parameters.require("workspaceId", as: UUID.self)
         
-        guard let workspace = await workspaceController.getWorkspace(id: workspaceId) else {
+        guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
              throw HTTPError(.notFound)
         }
         
@@ -50,7 +50,7 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
              throw HTTPError(.badRequest, message: "Invalid path encoding")
         }
         
-        guard let workspace = await workspaceController.getWorkspace(id: workspaceId) else {
+        guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
              throw HTTPError(.notFound)
         }
 
@@ -72,7 +72,7 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.badRequest, message: "Missing path")
         }
 
-        guard let workspace = await workspaceController.getWorkspace(id: workspaceId) else {
+        guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
             throw HTTPError(.notFound)
         }
 
@@ -90,7 +90,7 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.badRequest, message: "Missing path")
         }
 
-        guard let workspace = await workspaceController.getWorkspace(id: workspaceId) else {
+        guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
             throw HTTPError(.notFound)
         }
         

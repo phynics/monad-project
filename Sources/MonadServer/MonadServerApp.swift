@@ -171,10 +171,10 @@ struct MonadServer: AsyncParsableCommand {
             dbWriter: dbWriter, logger: logger)
         workspaceAPIController.addRoutes(to: workspacesGroup)
 
-        let coreWorkspaceController = try await MonadCore.WorkspaceController(dbWriter: dbWriter)
+        let workspaceStore = try await MonadCore.WorkspaceStore(dbWriter: dbWriter)
 
         let filesController = FilesAPIController<AppRequestContext>(
-            workspaceController: coreWorkspaceController)
+            workspaceStore: workspaceStore)
         filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
 
         let clientController = ClientAPIController<AppRequestContext>(
