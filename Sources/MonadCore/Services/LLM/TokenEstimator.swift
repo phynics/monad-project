@@ -39,4 +39,22 @@ public enum TokenEstimator {
         let combined = parts.joined(separator: " ")
         return estimate(text: combined)
     }
+
+    /// Estimate tokens for multiple strings individually, reusing the tokenizer.
+    /// - Parameter texts: The list of strings to estimate.
+    /// - Returns: An array of token counts corresponding to the input strings.
+    public static func estimateBatch(texts: [String]) -> [Int] {
+        let tokenizer = NLTokenizer(unit: .word)
+        return texts.map { text in
+            guard !text.isEmpty else { return 0 }
+            tokenizer.string = text
+            var count = 0
+            tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { _, _ in
+                count += 1
+                return true
+            }
+            // Apply the same heuristic as estimate(text:)
+            return Int(Double(count) * 1.33)
+        }
+    }
 }
