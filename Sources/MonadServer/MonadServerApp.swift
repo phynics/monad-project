@@ -68,7 +68,20 @@ struct MonadServer: AsyncParsableCommand {
         router.add(middleware: LogMiddleware())
         router.add(middleware: ErrorMiddleware())
 
-        let embeddingService = LocalEmbeddingService()
+        // Initialize Embedding Service
+        let embeddingService: any EmbeddingServiceProtocol
+        if let apiKey = ProcessInfo.processInfo.environment["MONAD_OPENAI_API_KEY"] ?? ProcessInfo.processInfo.environment["OPENAI_API_KEY"], !apiKey.isEmpty {
+            embeddingService = OpenAIEmbeddingService(apiKey: apiKey)
+            logger.info("Using OpenAI Embedding Service")
+        } else {
+            embeddingService = LocalEmbeddingService()
+            logger.info("Using Local Embedding Service (OpenAI API Key not found)")
+        }
+        
+        // Initialize Vector Store (Mocked for now)
+        let vectorStore = MockVectorStore()
+        try? await vectorStore.initialize() // Best effort init
+        
         let llmService = ServerLLMService()
         await llmService.loadConfiguration()
 
@@ -80,6 +93,7 @@ struct MonadServer: AsyncParsableCommand {
         let sessionManager = SessionManager(
             persistenceService: persistenceService,
             embeddingService: embeddingService,
+            vectorStore: vectorStore,
             llmService: llmService,
             workspaceRoot: workspaceRoot,
             connectionManager: connectionManager

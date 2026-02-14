@@ -70,7 +70,7 @@ public actor ConversationArchiver {
                         title: title,
                         content: msg.content,
                         tags: tags,
-                        embedding: embedding
+                        embedding: embedding.map { Double($0) }
                     )
                     // Check similarity to avoid duplicate auto-generated memories
                     memoryId = try await persistence.saveMemory(memory, policy: .preventSimilar(threshold: 0.92))

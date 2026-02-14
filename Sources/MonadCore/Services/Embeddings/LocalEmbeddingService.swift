@@ -4,10 +4,10 @@ import NaturalLanguage
 #endif
 
 /// Embedding service using Apple's NaturalLanguage framework
-public final class LocalEmbeddingService: EmbeddingService {
+public final class LocalEmbeddingService: EmbeddingServiceProtocol {
     public init() {}
     
-    public func generateEmbedding(for text: String) async throws -> [Double] {
+    public func generateEmbedding(for text: String) async throws -> [Float] {
         #if canImport(NaturalLanguage)
         guard let embedding = NLEmbedding.sentenceEmbedding(for: .english) else {
             throw EmbeddingError.modelUnavailable
@@ -17,14 +17,14 @@ public final class LocalEmbeddingService: EmbeddingService {
             throw EmbeddingError.generationFailed
         }
         
-        return vector
+        return vector.map { Float($0) }
         #else
         throw EmbeddingError.platformNotSupported
         #endif
     }
     
-    public func generateEmbeddings(for texts: [String]) async throws -> [[Double]] {
-        var results: [[Double]] = []
+    public func generateEmbeddings(for texts: [String]) async throws -> [[Float]] {
+        var results: [[Float]] = []
         for text in texts {
             results.append(try await generateEmbedding(for: text))
         }

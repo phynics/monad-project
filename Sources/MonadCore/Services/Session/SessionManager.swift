@@ -11,20 +11,23 @@ public actor SessionManager {
     private var debugSnapshots: [UUID: DebugSnapshot] = [:]
 
     private let persistenceService: any PersistenceServiceProtocol
-    private let embeddingService: any EmbeddingService
+    private let embeddingService: any EmbeddingServiceProtocol
+    private let vectorStore: (any VectorStoreProtocol)?
     private let llmService: any LLMServiceProtocol
     private let workspaceRoot: URL
     private let connectionManager: (any ClientConnectionManagerProtocol)?
 
     public init(
         persistenceService: any PersistenceServiceProtocol,
-        embeddingService: any EmbeddingService,
+        embeddingService: any EmbeddingServiceProtocol,
+        vectorStore: (any VectorStoreProtocol)? = nil,
         llmService: any LLMServiceProtocol,
         workspaceRoot: URL,
         connectionManager: (any ClientConnectionManagerProtocol)? = nil
     ) {
         self.persistenceService = persistenceService
         self.embeddingService = embeddingService
+        self.vectorStore = vectorStore
         self.llmService = llmService
         self.workspaceRoot = workspaceRoot
         self.connectionManager = connectionManager
@@ -35,6 +38,7 @@ public actor SessionManager {
         let contextManager = ContextManager(
             persistenceService: persistenceService,
             embeddingService: embeddingService,
+            vectorStore: vectorStore,
             workspaceRoot: workspaceURL
         )
         contextManagers[session.id] = contextManager

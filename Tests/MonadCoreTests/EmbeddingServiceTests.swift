@@ -39,10 +39,10 @@ import Testing
         #expect(sim12 > 0.4) // NaturalLanguage embeddings can be quite sparse
     }
 
-    private func cosineSimilarity(_ a: [Double], _ b: [Double]) -> Double {
-        var dotProduct = 0.0
-        var magA = 0.0
-        var magB = 0.0
+    private func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
+        var dotProduct: Float = 0.0
+        var magA: Float = 0.0
+        var magB: Float = 0.0
         for i in 0..<a.count {
             dotProduct += a[i] * b[i]
             magA += a[i] * a[i]

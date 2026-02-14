@@ -5,7 +5,8 @@ import Logging
 /// Manages the retrieval and organization of context for the chat
 public actor ContextManager {
     private let persistenceService: any PersistenceServiceProtocol
-    private let embeddingService: any EmbeddingService
+    private let embeddingService: any EmbeddingServiceProtocol
+    private let vectorStore: (any VectorStoreProtocol)?
     private let workspaceRoot: URL?
     private let logger = Logger(label: "com.monad.ContextManager")
 
@@ -13,11 +14,13 @@ public actor ContextManager {
 
     public init(
         persistenceService: any PersistenceServiceProtocol,
-        embeddingService: any EmbeddingService,
+        embeddingService: any EmbeddingServiceProtocol,
+        vectorStore: (any VectorStoreProtocol)? = nil,
         workspaceRoot: URL? = nil
     ) {
         self.persistenceService = persistenceService
         self.embeddingService = embeddingService
+        self.vectorStore = vectorStore
         self.workspaceRoot = workspaceRoot
     }
 
@@ -182,7 +185,7 @@ public actor ContextManager {
 
         // 2. Generate Embedding (Critical)
         onProgress?(.embedding)
-        let embedding: [Double]
+        let embedding: [Float]
         do {
             embedding = try await embeddingService.generateEmbedding(for: query)
         } catch {
@@ -196,8 +199,12 @@ public actor ContextManager {
         onProgress?(.searching)
 
         let searchTags = tags  // Capture local copy for concurrency safety
+        
+        // Convert Float embedding to Double for PersistenceService (GRDB compatibility)
+        let doubleEmbedding = embedding.map { Double($0) }
+        
         async let semanticTask = persistenceService.searchMemories(
-            embedding: embedding,
+            embedding: doubleEmbedding,
             limit: limit * 2,  // Search for more to allow for tag-boosted re-ranking
             minSimilarity: 0.35  // Slightly lower to catch more candidates for re-ranking
         )
@@ -215,7 +222,7 @@ public actor ContextManager {
         let finalResults = ranker.rankMemories(
             semantic: semanticResults,
             tagBased: tagResults,
-            queryEmbedding: embedding
+            queryEmbedding: doubleEmbedding
         )
 
         // Take top N based on limit
@@ -228,7 +235,7 @@ public actor ContextManager {
         return (
             topResults,
             tags,
-            embedding,
+            doubleEmbedding,
             semanticResults.map {
                 SemanticSearchResult(memory: $0.memory, similarity: $0.similarity)
             },

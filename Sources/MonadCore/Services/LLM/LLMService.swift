@@ -75,7 +75,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     private var toolProviders: [any ToolProvider] = []
 
     /// Service for generating text embeddings
-    public nonisolated let embeddingService: any EmbeddingService
+    public nonisolated let embeddingService: any EmbeddingServiceProtocol
 
     private var client: (any LLMClientProtocol)?
     private var utilityClient: (any LLMClientProtocol)?
@@ -115,7 +115,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     public init(
         storage: ConfigurationStorage = ConfigurationStorage(),
         promptBuilder: PromptBuilder = PromptBuilder(),
-        embeddingService: (any EmbeddingService)? = nil,
+        embeddingService: (any EmbeddingServiceProtocol)? = nil,
         client: (any LLMClientProtocol)? = nil,
         utilityClient: (any LLMClientProtocol)? = nil,
         fastClient: (any LLMClientProtocol)? = nil
