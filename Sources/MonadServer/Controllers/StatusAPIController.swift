@@ -3,7 +3,7 @@ import Hummingbird
 import MonadCore
 import NIOCore
 
-public struct StatusController<Context: RequestContext>: Sendable {
+public struct StatusAPIController<Context: RequestContext>: Sendable {
     public let persistenceService: any PersistenceServiceProtocol
     public let llmService: any LLMServiceProtocol
     public let startTime: Date

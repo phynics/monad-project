@@ -16,7 +16,7 @@ public struct ExecuteToolRequest: Codable, Sendable {
     }
 }
 
-public struct ToolController<Context: RequestContext>: Sendable {
+public struct ToolAPIController<Context: RequestContext>: Sendable {
     public let sessionManager: SessionManager
 
     public init(sessionManager: SessionManager) {

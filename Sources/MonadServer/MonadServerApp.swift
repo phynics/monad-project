@@ -5,6 +5,7 @@ import Logging
 import MonadCore
 import ServiceLifecycle
 import UnixSignals
+import HummingbirdWebSocket
 
 @main
 @available(macOS 14.0, *)
@@ -38,6 +39,8 @@ struct MonadServer: AsyncParsableCommand {
         helpNames: [.short, .long]
     )
 
+    typealias AppRequestContext = BasicWebSocketRequestContext
+    
     @Option(name: .shortAndLong, help: "Hostname to bind to")
     var hostname: String = "127.0.0.1"
 
@@ -59,7 +62,7 @@ struct MonadServer: AsyncParsableCommand {
             throw error
         }
 
-        let router = Router()
+        let router = Router(context: AppRequestContext.self)
 
         // Add Global Middleware
         router.add(middleware: LogMiddleware())
@@ -70,12 +73,16 @@ struct MonadServer: AsyncParsableCommand {
         await llmService.loadConfiguration()
 
         let workspaceRoot = try Self.defaultWorkspacePath()
-
+        
+        // Initialize WebSocket Manager
+        let connectionManager = WebSocketConnectionManager()
+        
         let sessionManager = SessionManager(
             persistenceService: persistenceService,
             embeddingService: embeddingService,
             llmService: llmService,
-            workspaceRoot: workspaceRoot
+            workspaceRoot: workspaceRoot,
+            connectionManager: connectionManager
         )
 
         // Public routes
@@ -84,7 +91,7 @@ struct MonadServer: AsyncParsableCommand {
         }
 
         let startTime = Date()
-        let statusController = StatusController<BasicRequestContext>(
+        let statusController = StatusAPIController<AppRequestContext>(
             persistenceService: persistenceService,
             llmService: llmService,
             startTime: startTime
@@ -94,6 +101,10 @@ struct MonadServer: AsyncParsableCommand {
         router.get("/") { _, _ -> String in
             return "Monad Server is running."
         }
+        
+        // WebSocket Route
+        let wsController = WebSocketAPIController<AppRequestContext>(connectionManager: connectionManager)
+        wsController.addRoutes(to: router.group("/api"))
 
         // Protected routes
         let protected = router.group("/api")
@@ -103,25 +114,25 @@ struct MonadServer: AsyncParsableCommand {
             return "Authenticated!"
         }
 
-        let sessionController = SessionController<BasicRequestContext>(
+        let sessionController = SessionAPIController<AppRequestContext>(
             sessionManager: sessionManager)
         sessionController.addRoutes(to: protected.group("/sessions"))
 
-        let chatController = ChatController<BasicRequestContext>(
+        let chatController = ChatAPIController<AppRequestContext>(
             sessionManager: sessionManager, llmService: llmService, verbose: verbose)
         chatController.addRoutes(to: protected.group("/sessions"))
 
-        let jobController = JobController<BasicRequestContext>(sessionManager: sessionManager)
+        let jobController = JobAPIController<AppRequestContext>(sessionManager: sessionManager)
         jobController.addRoutes(to: protected.group("/sessions"))
 
-        let memoryController = MemoryController<BasicRequestContext>(sessionManager: sessionManager)
+        let memoryController = MemoryAPIController<AppRequestContext>(sessionManager: sessionManager)
         memoryController.addRoutes(to: protected.group("/memories"))
 
-        let pruneController = PruneController<BasicRequestContext>(
+        let pruneController = PruneAPIController<AppRequestContext>(
             persistenceService: persistenceService)
         pruneController.addRoutes(to: protected.group("/prune"))
 
-        let toolController = ToolController<BasicRequestContext>(sessionManager: sessionManager)
+        let toolController = ToolAPIController<AppRequestContext>(sessionManager: sessionManager)
         toolController.addRoutes(to: protected.group("/tools"))
 
         // Create database writer accessor (since it's an actor property, access it async or assume safe access pattern)
@@ -129,25 +140,29 @@ struct MonadServer: AsyncParsableCommand {
 
         let workspacesGroup = protected.group("/workspaces")
         
-        let workspaceAPIController = WorkspaceAPIController<BasicRequestContext>(
+        let workspaceAPIController = WorkspaceAPIController<AppRequestContext>(
             dbWriter: dbWriter, logger: logger)
         workspaceAPIController.addRoutes(to: workspacesGroup)
 
         let coreWorkspaceController = try await MonadCore.WorkspaceController(dbWriter: dbWriter)
 
-        let filesController = FilesController<BasicRequestContext>(
+        let filesController = FilesAPIController<AppRequestContext>(
             workspaceController: coreWorkspaceController)
         filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
 
-        let clientController = ClientController<BasicRequestContext>(
+        let clientController = ClientAPIController<AppRequestContext>(
             dbWriter: dbWriter, logger: logger)
         clientController.addRoutes(to: protected.group("/clients"))
 
-        let configController = ConfigurationController<BasicRequestContext>(llmService: llmService)
+        let configController = ConfigurationAPIController<AppRequestContext>(llmService: llmService)
         configController.addRoutes(to: protected.group("/config"))
+        
+        // Add WS routes to main router as well if needed, or group
+        // wsController.addRoutes(to: router.group("/ws"))
 
         let app = Application(
             router: router,
+            server: .http1WebSocketUpgrade(webSocketRouter: router, configuration: .init()),
             configuration: .init(address: .hostname(hostname, port: port))
         )
 

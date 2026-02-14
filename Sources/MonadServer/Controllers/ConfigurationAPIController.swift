@@ -4,7 +4,7 @@ import MonadCore
 import NIOCore
 import HTTPTypes
 
-public struct ConfigurationController<Context: RequestContext>: Sendable {
+public struct ConfigurationAPIController<Context: RequestContext>: Sendable {
     public let llmService: any LLMServiceProtocol
     
     public init(llmService: any LLMServiceProtocol) {

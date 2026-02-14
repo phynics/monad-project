@@ -31,7 +31,7 @@ import Testing
 
         // Setup App
         let router = Router()
-        let controller = ChatController<BasicRequestContext>(
+        let controller = ChatAPIController<BasicRequestContext>(
             sessionManager: sessionManager, llmService: llmService)
         controller.addRoutes(to: router.group("/sessions"))
 
@@ -79,7 +79,7 @@ import Testing
 
         // Setup App
         let router = Router()
-        let controller = ChatController<BasicRequestContext>(
+        let controller = ChatAPIController<BasicRequestContext>(
             sessionManager: sessionManager, llmService: llmService)
         controller.addRoutes(to: router.group("/sessions"))
 

@@ -5,7 +5,7 @@ import MonadCore
 import MonadClient
 import NIOCore
 
-public struct PruneController<Context: RequestContext>: Sendable {
+public struct PruneAPIController<Context: RequestContext>: Sendable {
     public let persistenceService: PersistenceService
 
     public init(persistenceService: PersistenceService) {

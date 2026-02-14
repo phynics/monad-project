@@ -4,7 +4,7 @@ import Hummingbird
 import MonadCore
 import NIOCore
 
-public struct SessionController<Context: RequestContext>: Sendable {
+public struct SessionAPIController<Context: RequestContext>: Sendable {
     public let sessionManager: SessionManager
 
     public init(sessionManager: SessionManager) {

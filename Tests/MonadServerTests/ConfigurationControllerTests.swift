@@ -13,7 +13,7 @@ import NIOCore
         let llm = MockLLMService()
 
         let router = Router()
-        let controller = ConfigurationController<BasicRequestContext>(llmService: llm)
+        let controller = ConfigurationAPIController<BasicRequestContext>(llmService: llm)
         controller.addRoutes(to: router.group("/config"))
 
         let app = Application(router: router)

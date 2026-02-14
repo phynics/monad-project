@@ -183,6 +183,19 @@ public final class MockPersistenceService: PersistenceServiceProtocol, @unchecke
         jobs.removeAll(where: { $0.id == id })
     }
 
+    public func fetchPendingJobs(limit: Int) async throws -> [Job] {
+        return Array(jobs.filter { $0.status == .pending }
+            .sorted { 
+                 if $0.priority != $1.priority { return $0.priority > $1.priority }
+                 return $0.createdAt < $1.createdAt
+             }
+            .prefix(limit))
+    }
+    
+    public func monitorJobs() async -> AsyncStream<JobEvent> {
+        return AsyncStream { _ in }
+    }
+
     // MARK: - Prune
     public func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int {
         if dryRun {

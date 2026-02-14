@@ -5,7 +5,7 @@ import Logging
 import MonadCore
 
 /// Controller for managing client identities
-public struct ClientController<Context: RequestContext>: Sendable {
+public struct ClientAPIController<Context: RequestContext>: Sendable {
     let dbWriter: DatabaseWriter
     let logger: Logger
 

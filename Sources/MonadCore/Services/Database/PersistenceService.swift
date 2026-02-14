@@ -2,10 +2,19 @@ import Foundation
 import GRDB
 import Logging
 
+public enum JobEvent: Sendable {
+    case jobUpdated(Job)
+    case jobDeleted(UUID)
+}
+
 /// Thread-safe persistence service using GRDB
 public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
     public nonisolated let dbQueue: DatabaseQueue
     internal let logger = Logger.database
+    
+    // Job Event Stream
+    private let jobStream: AsyncStream<JobEvent>
+    private let jobContinuation: AsyncStream<JobEvent>.Continuation
 
     // MARK: - HealthCheckable
 
@@ -39,6 +48,17 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
 
     public init(dbQueue: DatabaseQueue) {
         self.dbQueue = dbQueue
+        let (stream, continuation) = AsyncStream.makeStream(of: JobEvent.self)
+        self.jobStream = stream
+        self.jobContinuation = continuation
+    }
+    
+    public func monitorJobs() -> AsyncStream<JobEvent> {
+        return jobStream
+    }
+
+    internal func emit(_ event: JobEvent) {
+        jobContinuation.yield(event)
     }
 
     public nonisolated var databaseWriter: DatabaseWriter {

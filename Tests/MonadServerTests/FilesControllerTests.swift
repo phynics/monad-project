@@ -48,7 +48,7 @@ import Logging
         // Setup App & Controller
         let router = Router()
         let workspaceController = try await WorkspaceController(dbWriter: persistence.databaseWriter)
-        let controller = FilesController<BasicRequestContext>(workspaceController: workspaceController)
+        let controller = FilesAPIController<BasicRequestContext>(workspaceController: workspaceController)
         
         // Register routes similar to MonadServerApp (flattened)
         controller.addRoutes(to: router.group("/workspaces/:workspaceId/files"))
@@ -98,7 +98,7 @@ import Logging
         
         let router = Router()
         let workspaceController = try await WorkspaceController(dbWriter: persistence.databaseWriter)
-        let controller = FilesController<BasicRequestContext>(workspaceController: workspaceController)
+        let controller = FilesAPIController<BasicRequestContext>(workspaceController: workspaceController)
         controller.addRoutes(to: router.group("/workspaces/:workspaceId/files"))
         let app = Application(router: router)
         

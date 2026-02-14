@@ -13,7 +13,7 @@ import NIOCore
         let llmService = MockLLMService()
         
         let router = Router()
-        let controller = StatusController<BasicRequestContext>(
+        let controller = StatusAPIController<BasicRequestContext>(
             persistenceService: persistence,
             llmService: llmService,
             startTime: Date()

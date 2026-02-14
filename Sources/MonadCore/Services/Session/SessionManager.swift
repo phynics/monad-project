@@ -14,17 +14,20 @@ public actor SessionManager {
     private let embeddingService: any EmbeddingService
     private let llmService: any LLMServiceProtocol
     private let workspaceRoot: URL
+    private let connectionManager: (any ClientConnectionManagerProtocol)?
 
     public init(
         persistenceService: any PersistenceServiceProtocol,
         embeddingService: any EmbeddingService,
         llmService: any LLMServiceProtocol,
-        workspaceRoot: URL
+        workspaceRoot: URL,
+        connectionManager: (any ClientConnectionManagerProtocol)? = nil
     ) {
         self.persistenceService = persistenceService
         self.embeddingService = embeddingService
         self.llmService = llmService
         self.workspaceRoot = workspaceRoot
+        self.connectionManager = connectionManager
     }
     
     // Shared component setup logic
@@ -51,12 +54,12 @@ public actor SessionManager {
         // Hydrate workspaces and register with ToolManager
         if let workspaces = await getWorkspaces(for: session.id) {
             if let primary = workspaces.primary {
-                if let ws = try? WorkspaceFactory.create(from: primary) {
+                if let ws = try? WorkspaceFactory.create(from: primary, connectionManager: connectionManager) {
                     await toolManager.registerWorkspace(ws)
                 }
             }
             for attached in workspaces.attached {
-                if let ws = try? WorkspaceFactory.create(from: attached) {
+                if let ws = try? WorkspaceFactory.create(from: attached, connectionManager: connectionManager) {
                     await toolManager.registerWorkspace(ws)
                 }
             }
@@ -357,7 +360,7 @@ public actor SessionManager {
         // Update ToolManager
         if let toolManager = toolManagers[sessionId] {
              if let wsRef = try? await getWorkspace(workspaceId) {
-                  if let ws = try? WorkspaceFactory.create(from: wsRef) {
+                  if let ws = try? WorkspaceFactory.create(from: wsRef, connectionManager: connectionManager) {
                       await toolManager.registerWorkspace(ws)
                   }
              }

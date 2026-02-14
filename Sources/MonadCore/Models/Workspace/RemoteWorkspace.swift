@@ -11,13 +11,17 @@ public actor RemoteWorkspace: WorkspaceProtocol {
     // In a real implementation, this would inject a connection manager or similar.
     // For this refactor, we'll define the structure and stub the communication.
     
-    public init(reference: WorkspaceReference) throws {
+
+    public let connectionManager: any ClientConnectionManagerProtocol
+    
+    public init(reference: WorkspaceReference, connectionManager: any ClientConnectionManagerProtocol) throws {
         guard reference.hostType == .client, let owner = reference.ownerId else {
             throw WorkspaceError.invalidWorkspaceType
         }
         self.reference = reference
         self.id = reference.id
         self.clientId = owner
+        self.connectionManager = connectionManager
     }
     
     public func listTools() async throws -> [ToolReference] {
@@ -27,35 +31,70 @@ public actor RemoteWorkspace: WorkspaceProtocol {
     }
     
     public func executeTool(id: String, parameters: [String : AnyCodable]) async throws -> ToolResult {
-        // TODO: Implement RPC call to client
-        // 1. Construct ToolExecutionRequest
-        // 2. Send to ClientConnectionManager (to be injected)
-        // 3. Await response
-        return .failure("Remote execution not yet implemented")
+        let request = ToolExecutionRequest(toolId: id, parameters: parameters)
+        
+        let response = try await connectionManager.send(
+            method: "workspace/executeTool",
+            params: AnyCodable(request),
+            expecting: ToolExecutionResponse.self,
+            to: clientId
+        )
+        
+        if response.isSuccess {
+            return .success(response.output)
+        } else {
+            return .failure(response.error ?? "Unknown error")
+        }
     }
     
     public func readFile(path: String) async throws -> String {
-        // TODO: RPC call
-         throw WorkspaceError.toolExecutionNotSupported
+        let request = ReadFileRequest(path: path)
+        let response = try await connectionManager.send(
+            method: "workspace/readFile",
+            params: AnyCodable(request),
+            expecting: String.self,
+            to: clientId
+        )
+        return response
     }
     
     public func writeFile(path: String, content: String) async throws {
-        // TODO: RPC call
-         throw WorkspaceError.toolExecutionNotSupported
+        let request = WriteFileRequest(path: path, content: content)
+        _ = try await connectionManager.send(
+            method: "workspace/writeFile",
+            params: AnyCodable(request),
+            expecting: Bool.self, // Expecting simple ack
+            to: clientId
+        )
     }
     
     public func deleteFile(path: String) async throws {
-        // TODO: RPC call
-         throw WorkspaceError.toolExecutionNotSupported
+        // let request = ListFilesRequest(path: path) // Reuse struct for path? Read RPC definition.
+        // We lack a dedicated DeleteFileRequest in RPC.swift, let's assume one exists or use a generic path struct.
+        // Or simply define parameters inline if AnyCodable supports it.
+        // Let's use AnyCodable dictionary for simplicity if strict struct is not yet defined.
+        
+        let params: [String: AnyCodable] = ["path": AnyCodable(path)]
+        _ = try await connectionManager.send(
+            method: "workspace/deleteFile",
+            params: AnyCodable(params),
+            expecting: Bool.self,
+            to: clientId
+        )
     }
     
     public func listFiles(path: String) async throws -> [String] {
-        // TODO: RPC call
-         throw WorkspaceError.toolExecutionNotSupported
+        let request = ListFilesRequest(path: path)
+        let response = try await connectionManager.send(
+            method: "workspace/listFiles",
+            params: AnyCodable(request),
+            expecting: [String].self,
+            to: clientId
+        )
+        return response
     }
     
     public func healthCheck() async -> Bool {
-        // Check if client is connected
-        return false // Placeholder
+        return await connectionManager.isConnected(clientId: clientId)
     }
 }

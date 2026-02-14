@@ -9,6 +9,11 @@ public struct ToolExecutionRequest: Codable, Sendable {
         self.toolId = toolId
         self.parameters = parameters.mapValues { AnyCodable($0) }
     }
+    
+    public init(toolId: String, parameters: [String: AnyCodable]) {
+        self.toolId = toolId
+        self.parameters = parameters
+    }
 }
 
 /// Response object from a tool execution
@@ -54,6 +59,50 @@ public struct WriteFileRequest: Codable, Sendable {
     public init(path: String, content: String) {
         self.path = path
         self.content = content
+    }
+}
+
+
+/// Generic RPC Request Envelope
+public struct RPCRequest: Codable, Sendable {
+    public let id: String
+    public let method: String
+    public let params: AnyCodable?
+    
+    public init(id: String = UUID().uuidString, method: String, params: AnyCodable?) {
+        self.id = id
+        self.method = method
+        self.params = params
+    }
+}
+
+/// Generic RPC Response Envelope
+public struct RPCResponse: Codable, Sendable {
+    public let id: String
+    public let result: AnyCodable?
+    public let error: String?
+    
+    public init(id: String, result: AnyCodable?, error: String? = nil) {
+        self.id = id
+        self.result = result
+        self.error = error
+    }
+}
+
+/// Error type for RPC failures
+public enum RPCError: Error, LocalizedError {
+    case timeout
+    case connectionLost
+    case invalidResponse
+    case remoteError(String)
+    
+    public var errorDescription: String? {
+        switch self {
+        case .timeout: return "RPC request timed out"
+        case .connectionLost: return "Connection to client lost"
+        case .invalidResponse: return "Received invalid response from client"
+        case .remoteError(let msg): return "Remote error: \(msg)"
+        }
     }
 }
 

@@ -13,6 +13,10 @@ public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, 
     public var status: Status
     public let createdAt: Date
     public var updatedAt: Date
+    public var logs: [String]
+    public var retryCount: Int
+    public var lastRetryAt: Date?
+    public var nextRunAt: Date?
 
     public enum Status: String, Codable, Sendable, CaseIterable {
         case pending
@@ -30,7 +34,11 @@ public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, 
         priority: Int = 0,
         status: Status = .pending,
         createdAt: Date = Date(),
-        updatedAt: Date = Date()
+        updatedAt: Date = Date(),
+        logs: [String] = [],
+        retryCount: Int = 0,
+        lastRetryAt: Date? = nil,
+        nextRunAt: Date? = nil
     ) {
         self.id = id
         self.sessionId = sessionId
@@ -40,6 +48,10 @@ public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, 
         self.status = status
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.logs = logs
+        self.retryCount = retryCount
+        self.lastRetryAt = lastRetryAt
+        self.nextRunAt = nextRunAt
     }
 }
 

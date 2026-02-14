@@ -4,7 +4,7 @@ import Hummingbird
 import MonadCore
 import NIOCore
 
-public struct JobController<Context: RequestContext>: Sendable {
+public struct JobAPIController<Context: RequestContext>: Sendable {
     public let sessionManager: SessionManager
 
     public init(sessionManager: SessionManager) {

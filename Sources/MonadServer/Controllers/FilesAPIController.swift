@@ -4,7 +4,7 @@ import Hummingbird
 import MonadCore
 import NIOCore
 
-public struct FilesController<Context: RequestContext>: Sendable {
+public struct FilesAPIController<Context: RequestContext>: Sendable {
     public let workspaceController: MonadCore.WorkspaceController
 
     public init(workspaceController: MonadCore.WorkspaceController) {

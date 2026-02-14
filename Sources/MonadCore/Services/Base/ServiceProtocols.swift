@@ -101,7 +101,9 @@ public protocol PersistenceServiceProtocol: HealthCheckable {
     func fetchJob(id: UUID) async throws -> Job?
     func fetchAllJobs() async throws -> [Job]
     func fetchJobs(for sessionId: UUID) async throws -> [Job]
+    func fetchPendingJobs(limit: Int) async throws -> [Job]
     func deleteJob(id: UUID) async throws
+    func monitorJobs() async -> AsyncStream<JobEvent>
 
     // Database Management
     func resetDatabase() async throws

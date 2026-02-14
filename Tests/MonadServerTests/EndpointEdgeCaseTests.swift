@@ -26,8 +26,8 @@ import Testing
         let router = Router()
         router.add(middleware: ErrorMiddleware())
         let protected = router.group("/api").add(middleware: AuthMiddleware())
-        ChatController<BasicRequestContext>(
-            sessionManager: sessionManager, llmService: ServerLLMService()
+        ChatAPIController<BasicRequestContext>(
+            sessionManager: sessionManager, llmService: llm
         ).addRoutes(to: protected.group("/sessions"))
 
         let app = Application(router: router)
@@ -63,8 +63,8 @@ import Testing
         let router = Router()
         router.add(middleware: ErrorMiddleware())
         let protected = router.group("/api").add(middleware: AuthMiddleware())
-        ChatController<BasicRequestContext>(
-            sessionManager: sessionManager, llmService: ServerLLMService()
+        ChatAPIController<BasicRequestContext>(
+            sessionManager: sessionManager, llmService: llm
         ).addRoutes(to: protected.group("/sessions"))
 
         let app = Application(router: router)
@@ -100,7 +100,7 @@ import Testing
         let router = Router()
         router.add(middleware: ErrorMiddleware())
         let protected = router.group("/api").add(middleware: AuthMiddleware())
-        MemoryController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
+        MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
             to: protected.group("/memories"))
 
         let app = Application(router: router)
@@ -129,7 +129,7 @@ import Testing
         let router = Router()
         router.add(middleware: ErrorMiddleware())
         let protected = router.group("/api").add(middleware: AuthMiddleware())
-        MemoryController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
+        MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
             to: protected.group("/memories"))
 
         let app = Application(router: router)
@@ -161,7 +161,7 @@ import Testing
         let router = Router()
         router.add(middleware: ErrorMiddleware())
         let protected = router.group("/api").add(middleware: AuthMiddleware())
-        MemoryController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
+        MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
             to: protected.group("/memories"))
 
         let app = Application(router: router)

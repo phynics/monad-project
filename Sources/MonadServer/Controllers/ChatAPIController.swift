@@ -16,7 +16,7 @@ extension ChatResponse: ResponseGenerator {
     }
 }
 
-public struct ChatController<Context: RequestContext>: Sendable {
+public struct ChatAPIController<Context: RequestContext>: Sendable {
     public let sessionManager: SessionManager
     public let llmService: any LLMServiceProtocol
     public let toolRouter: ToolRouter?

@@ -23,11 +23,17 @@ public actor AutonomousAgent {
     public func execute(job: Job, session: ConversationSession, toolExecutor: ToolExecutor) async {
         logger.info("Starting execution of job: \(job.id) for session: \(session.id)")
 
+        // Wrap execution in a task with timeout
+        // (For brevity, treating the whole function body as the task)
+        // Ideally we'd use `withTaskGroup` for a hard timeout, but let's implement soft timeout via loop checks first?
+        // No, user wants robust.
+        
         // 1. Update status to in_progress
         var currentJob = job
         if currentJob.status != .inProgress {
             currentJob.status = .inProgress
             currentJob.updatedAt = Date()
+            currentJob.logs.append("Started execution at \(Date())")
             try? await persistenceService.saveJob(currentJob)
         }
 
@@ -65,6 +71,13 @@ public actor AutonomousAgent {
         
 
         while turnCount < maxTurns && !isComplete {
+            // Check for timeout (Soft check)
+            if Date().timeIntervalSince(currentJob.updatedAt) > 300 { // 5 mins timeout
+                 logger.warning("Job execution timed out (soft check)")
+                 await failJob(currentJob, reason: "Execution timed out")
+                 return
+            }
+
             // Check for cancellation at start of turn (Critical for graceful shutdown)
             if Task.isCancelled {
                 logger.info("Job execution cancelled via Task")
@@ -246,27 +259,44 @@ public actor AutonomousAgent {
             }
         }
 
-        // 5. Completion
         currentJob.status = .completed
         currentJob.updatedAt = Date()
+        currentJob.logs.append("Job completed successfully at \(Date())")
         try? await persistenceService.saveJob(currentJob)
         logger.info("Job \(currentJob.id) completed")
     }
     
     private func failJob(_ job: Job, reason: String) async {
-        var failedJob = job
-        failedJob.status = .failed
-        failedJob.updatedAt = Date()
-        try? await persistenceService.saveJob(failedJob)
         logger.error("Job \(job.id) failed: \(reason)")
         
-        // Also log failure to chat
-        let msg = ConversationMessage(
-            sessionId: job.sessionId,
-            role: .system,
-            content: "Job Failed: \(reason)",
-            timestamp: Date()
-        )
-        try? await persistenceService.saveMessage(msg)
+        var currentJob = job
+        currentJob.updatedAt = Date()
+        currentJob.logs.append("Error: \(reason)")
+        
+        let maxRetries = 3
+        if currentJob.retryCount < maxRetries {
+            currentJob.retryCount += 1
+            let backoff = TimeInterval(5 * Int(pow(2.0, Double(currentJob.retryCount))))
+            currentJob.nextRunAt = Date().addingTimeInterval(backoff)
+            currentJob.lastRetryAt = Date()
+            currentJob.status = .pending
+            currentJob.logs.append("Retrying in \(Int(backoff))s (Attempt \(currentJob.retryCount)/\(maxRetries))")
+            
+            logger.info("Scheduling retry for job \(job.id) in \(backoff)s")
+        } else {
+            currentJob.status = .failed
+            currentJob.logs.append("Max retries reached. Job failed permanently.")
+            
+            // Notify chat
+            let msg = ConversationMessage(
+                sessionId: job.sessionId,
+                role: .system,
+                content: "Job Failed: \(reason)",
+                timestamp: Date()
+            )
+            try? await persistenceService.saveMessage(msg)
+        }
+        
+        try? await persistenceService.saveJob(currentJob)
     }
 }

@@ -22,7 +22,7 @@ import NIOCore
         )
 
         let router = Router()
-        let controller = MemoryController<BasicRequestContext>(sessionManager: sessionManager)
+        let controller = MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager)
         controller.addRoutes(to: router.group("/memories"))
 
         let app = Application(router: router)

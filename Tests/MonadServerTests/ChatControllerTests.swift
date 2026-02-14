@@ -29,7 +29,7 @@ import NIOCore
 
         // Setup App
         let router = Router()
-        let controller = ChatController<BasicRequestContext>(sessionManager: sessionManager, llmService: llmService)
+        let controller = ChatAPIController<BasicRequestContext>(sessionManager: sessionManager, llmService: llmService)
         controller.addRoutes(to: router.group("/sessions"))
 
         let app = Application(router: router)
@@ -69,7 +69,7 @@ import NIOCore
 
         // Setup App
         let router = Router()
-        let controller = ChatController<BasicRequestContext>(sessionManager: sessionManager, llmService: llmService)
+        let controller = ChatAPIController<BasicRequestContext>(sessionManager: sessionManager, llmService: llmService)
         controller.addRoutes(to: router.group("/sessions"))
 
         let app = Application(router: router)

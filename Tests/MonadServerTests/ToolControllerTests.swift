@@ -22,7 +22,7 @@ import NIOCore
         )
 
         let router = Router()
-        let controller = ToolController<BasicRequestContext>(sessionManager: sessionManager)
+        let controller = ToolAPIController<BasicRequestContext>(sessionManager: sessionManager)
         controller.addRoutes(to: router.group("/tools"))
 
         let app = Application(router: router)

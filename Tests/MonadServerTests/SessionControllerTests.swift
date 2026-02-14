@@ -23,7 +23,7 @@ import MonadCore
 
         // Setup App
         let router = Router()
-        let controller = SessionController<BasicRequestContext>(sessionManager: sessionManager)
+        let controller = SessionAPIController<BasicRequestContext>(sessionManager: sessionManager)
         controller.addRoutes(to: router.group("/sessions"))
 
         let app = Application(router: router)
