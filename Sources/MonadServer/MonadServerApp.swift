@@ -98,7 +98,20 @@ struct MonadServer: AsyncParsableCommand {
             workspaceRoot: workspaceRoot,
             connectionManager: connectionManager
         )
-
+        
+        // Initialize Agent Registry
+        let agentRegistry = AgentRegistry()
+        
+        // Create and register default agent
+        let defaultAgent = AutonomousAgent(
+            id: "default",
+            name: "Default Agent",
+            description: "The default general-purpose agent.",
+            llmService: llmService,
+            persistenceService: persistenceService
+        )
+        await agentRegistry.register(defaultAgent)
+        
         // Public routes
         router.get("/health") { _, _ -> String in
             return "OK"
@@ -183,8 +196,12 @@ struct MonadServer: AsyncParsableCommand {
         logger.info("Server starting on \(hostname):\(port)")
 
         _ = BonjourAdvertiser(port: port)
-
-        let jobRunner = JobRunnerService(sessionManager: sessionManager, llmService: llmService)
+        
+        let jobRunner = JobRunnerService(
+            sessionManager: sessionManager,
+            llmService: llmService,
+            agentRegistry: agentRegistry
+        )
         let orphanCleanup = OrphanCleanupService(persistenceService: persistenceService, workspaceRoot: workspaceRoot, logger: logger)
 
         let serviceGroup = ServiceGroup(

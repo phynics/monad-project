@@ -10,6 +10,7 @@ public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, 
     public var title: String
     public var description: String?
     public var priority: Int
+    public var agentId: String
     public var status: Status
     public let createdAt: Date
     public var updatedAt: Date
@@ -32,6 +33,7 @@ public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, 
         title: String,
         description: String? = nil,
         priority: Int = 0,
+        agentId: String = "default",
         status: Status = .pending,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
@@ -45,6 +47,7 @@ public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, 
         self.title = title
         self.description = description
         self.priority = priority
+        self.agentId = agentId
         self.status = status
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -60,11 +63,14 @@ public struct AddJobRequest: Codable, Sendable {
     public let title: String
     public let description: String?
     public let priority: Int
+    public let agentId: String?
 
-    public init(title: String, description: String? = nil, priority: Int = 0) {
+
+    public init(title: String, description: String? = nil, priority: Int = 0, agentId: String? = nil) {
         self.title = title
         self.description = description
         self.priority = priority
+        self.agentId = agentId
     }
 }
 

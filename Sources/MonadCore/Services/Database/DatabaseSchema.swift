@@ -450,6 +450,29 @@ public enum DatabaseSchema {
                 }
             }
         }
+
+        // v24: Add agentId to Job table
+        migrator.registerMigration("v24") { db in
+            try db.drop(table: "job")
+
+            try db.create(table: "job") { t in
+                t.column("id", .blob).primaryKey()
+                t.column("sessionId", .blob).notNull()
+                    .references("conversationSession", onDelete: .cascade)
+                t.column("title", .text).notNull()
+                t.column("description", .text)
+                t.column("priority", .integer).notNull().defaults(to: 0)
+                t.column("agentId", .text).notNull().defaults(to: "default")
+                t.column("status", .text).notNull().defaults(to: "pending")
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+            }
+
+            try db.create(index: "idx_job_status", on: "job", columns: ["status"])
+            try db.create(index: "idx_job_priority", on: "job", columns: ["priority"])
+            try db.create(index: "idx_job_session", on: "job", columns: ["sessionId"])
+            try db.create(index: "idx_job_agent", on: "job", columns: ["agentId"])
+        }
     }
 
     // MARK: - Workspace Tables

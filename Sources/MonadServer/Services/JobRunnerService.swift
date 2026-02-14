@@ -6,11 +6,13 @@ import ServiceLifecycle
 public final class JobRunnerService: Service, Sendable {
     private let sessionManager: SessionManager
     private let llmService: any LLMServiceProtocol
+    private let agentRegistry: AgentRegistry
     private let logger = Logger(label: "com.monad.job-runner")
     
-    public init(sessionManager: SessionManager, llmService: any LLMServiceProtocol) {
+    public init(sessionManager: SessionManager, llmService: any LLMServiceProtocol, agentRegistry: AgentRegistry) {
         self.sessionManager = sessionManager
         self.llmService = llmService
+        self.agentRegistry = agentRegistry
     }
     
     public func run() async throws {
@@ -96,13 +98,21 @@ public final class JobRunnerService: Service, Sendable {
         
         // 4. Initialize Agent with ContextManager (RAG)
         let contextManager = await sessionManager.getContextManager(for: session.id)
-        let agent = AutonomousAgent(
-            llmService: llmService,
-            persistenceService: persistence,
+
+        // 5. Resolve Agent
+        let agentId = job.agentId
+        guard let agent = await agentRegistry.getAgent(id: agentId) else {
+            logger.error("Agent with ID '\(agentId)' not found for job \(job.id)")
+            // Optionally mark job as failed here
+            return
+        }
+
+        // 6. Execute
+        await agent.execute(
+            job: job,
+            session: session,
+            toolExecutor: toolExecutor,
             contextManager: contextManager
         )
-        
-        // 5. Execute
-        await agent.execute(job: job, session: session, toolExecutor: toolExecutor)
     }
 }

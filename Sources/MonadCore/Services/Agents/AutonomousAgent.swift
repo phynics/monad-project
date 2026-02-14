@@ -3,24 +3,36 @@ import Logging
 import OpenAI
 
 /// An autonomous agent that executes jobs in the background
-public actor AutonomousAgent {
+public actor AutonomousAgent: AgentProtocol {
+    public nonisolated let id: String
+    public nonisolated let name: String
+    public nonisolated let description: String
+    
     private let llmService: any LLMServiceProtocol
     private let persistenceService: any PersistenceServiceProtocol
-    private let contextManager: ContextManager?
     private let logger = Logger(label: "com.monad.autonomous-agent")
 
     public init(
+        id: String = "default",
+        name: String = "Autonomous Agent",
+        description: String = "General purpose autonomous agent",
         llmService: any LLMServiceProtocol,
-        persistenceService: any PersistenceServiceProtocol,
-        contextManager: ContextManager? = nil
+        persistenceService: any PersistenceServiceProtocol
     ) {
+        self.id = id
+        self.name = name
+        self.description = description
         self.llmService = llmService
         self.persistenceService = persistenceService
-        self.contextManager = contextManager
     }
 
     /// Execute a job within the context of a session
-    public func execute(job: Job, session: ConversationSession, toolExecutor: ToolExecutor) async {
+    public func execute(
+        job: Job,
+        session: ConversationSession,
+        toolExecutor: ToolExecutor,
+        contextManager: ContextManager?
+    ) async {
         logger.info("Starting execution of job: \(job.id) for session: \(session.id)")
 
         // Wrap execution in a task with timeout
