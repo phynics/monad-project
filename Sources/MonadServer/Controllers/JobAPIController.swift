@@ -27,9 +27,11 @@ public struct JobAPIController<Context: RequestContext>: Sendable {
         
         let job = Job(
             sessionId: sessionId,
+            parentId: input.parentId,
             title: input.title,
             description: input.description,
             priority: input.priority,
+            agentId: input.agentId ?? "default",
             status: .pending
         )
         

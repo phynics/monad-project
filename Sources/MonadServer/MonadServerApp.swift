@@ -173,6 +173,11 @@ struct MonadServer: AsyncParsableCommand {
             )
             toolController.addRoutes(to: protected.group("/tools"))
 
+            let agentController = AgentAPIController<AppRequestContext>(
+                agentRegistry: engine.agentRegistry
+            )
+            agentController.addRoutes(to: protected.group("/agents"))
+
             // Create database writer accessor (since it's an actor property, access it async or assume safe access pattern)
             let dbWriter = engine.persistenceService.databaseWriter
 
