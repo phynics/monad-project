@@ -1,18 +1,32 @@
 import Foundation
 import Logging
 import ServiceLifecycle
+import Dependencies
 
 /// Service that monitors and executes background jobs
-public final class JobRunnerService: Service, Sendable {
-    private let sessionManager: SessionManager
-    private let llmService: any LLMServiceProtocol
-    private let agentRegistry: AgentRegistry
+public final class JobRunnerService: Service, @unchecked Sendable {
+    @Dependency(\.sessionManager) private var defaultSessionManager
+    @Dependency(\.llmService) private var defaultLLMService
+    @Dependency(\.agentRegistry) private var defaultAgentRegistry
+    
+    private let explicitSessionManager: SessionManager?
+    private let explicitLLMService: (any LLMServiceProtocol)?
+    private let explicitAgentRegistry: AgentRegistry?
+
+    private var sessionManager: SessionManager { explicitSessionManager ?? defaultSessionManager }
+    private var llmService: any LLMServiceProtocol { explicitLLMService ?? defaultLLMService }
+    private var agentRegistry: AgentRegistry { explicitAgentRegistry ?? defaultAgentRegistry }
+    
     private let logger = Logger(label: "com.monad.job-runner")
     
-    public init(sessionManager: SessionManager, llmService: any LLMServiceProtocol, agentRegistry: AgentRegistry) {
-        self.sessionManager = sessionManager
-        self.llmService = llmService
-        self.agentRegistry = agentRegistry
+    public init(
+        sessionManager: SessionManager? = nil,
+        llmService: (any LLMServiceProtocol)? = nil,
+        agentRegistry: AgentRegistry? = nil
+    ) {
+        self.explicitSessionManager = sessionManager
+        self.explicitLLMService = llmService
+        self.explicitAgentRegistry = agentRegistry
     }
     
     /// Run the job execution loop

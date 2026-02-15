@@ -1,13 +1,17 @@
 import Foundation
 import Logging
+import Dependencies
 
 /// Routes tool execution requests to the appropriate handler (local or remote)
 public actor ToolRouter {
     private let logger = Logger(label: "com.monad.core.tools")
-    private let sessionManager: SessionManager
+    
+    @Dependency(\.sessionManager) private var defaultSessionManager
+    private let explicitSessionManager: SessionManager?
+    private var sessionManager: SessionManager { explicitSessionManager ?? defaultSessionManager }
 
-    public init(sessionManager: SessionManager) {
-        self.sessionManager = sessionManager
+    public init(sessionManager: SessionManager? = nil) {
+        self.explicitSessionManager = sessionManager
     }
 
     /// Execute a tool in the context of a session

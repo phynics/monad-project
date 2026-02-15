@@ -1,25 +1,37 @@
 import Foundation
 import Logging
 import OpenAI
+import Dependencies
 
 /// Orchestrates a single chat conversation turn, including context gathering, tool use, and streaming.
-public final class ChatOrchestrator: Sendable {
-    private let sessionManager: SessionManager
-    private let llmService: any LLMServiceProtocol
-    private let agentRegistry: AgentRegistry
-    private let toolRouter: ToolRouter
+public final class ChatOrchestrator: @unchecked Sendable {
+    @Dependency(\.sessionManager) private var defaultSessionManager
+    @Dependency(\.llmService) private var defaultLLMService
+    @Dependency(\.agentRegistry) private var defaultAgentRegistry
+    @Dependency(\.toolRouter) private var defaultToolRouter
+    
+    private let explicitSessionManager: SessionManager?
+    private let explicitLLMService: (any LLMServiceProtocol)?
+    private let explicitAgentRegistry: AgentRegistry?
+    private let explicitToolRouter: ToolRouter?
+
+    private var sessionManager: SessionManager { explicitSessionManager ?? defaultSessionManager }
+    private var llmService: any LLMServiceProtocol { explicitLLMService ?? defaultLLMService }
+    private var agentRegistry: AgentRegistry { explicitAgentRegistry ?? defaultAgentRegistry }
+    private var toolRouter: ToolRouter { explicitToolRouter ?? defaultToolRouter }
+    
     private let logger = Logger(label: "com.monad.core.chat-orchestrator")
     
     public init(
-        sessionManager: SessionManager,
-        llmService: any LLMServiceProtocol,
-        agentRegistry: AgentRegistry,
-        toolRouter: ToolRouter
+        sessionManager: SessionManager? = nil,
+        llmService: (any LLMServiceProtocol)? = nil,
+        agentRegistry: AgentRegistry? = nil,
+        toolRouter: ToolRouter? = nil
     ) {
-        self.sessionManager = sessionManager
-        self.llmService = llmService
-        self.agentRegistry = agentRegistry
-        self.toolRouter = toolRouter
+        self.explicitSessionManager = sessionManager
+        self.explicitLLMService = llmService
+        self.explicitAgentRegistry = agentRegistry
+        self.explicitToolRouter = toolRouter
     }
     
     /// Execute a chat request and return a stream of deltas.

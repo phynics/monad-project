@@ -2,6 +2,7 @@ import Foundation
 import Logging
 import Observation
 import OpenAI
+import Dependencies
 
 /// Protocol for LLM Clients
 public protocol LLMClientProtocol: Sendable {
@@ -31,7 +32,7 @@ extension OpenAIClient: LLMClientProtocol {}
 extension OllamaClient: LLMClientProtocol {}
 
 /// Service for managing LLM interactions with configuration support
-public actor LLMService: LLMServiceProtocol, HealthCheckable {
+public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendable {
     public private(set) var configuration: LLMConfiguration = .openAI
     public private(set) var isConfigured: Bool = false
 
@@ -75,7 +76,9 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     private var toolProviders: [any ToolProvider] = []
 
     /// Service for generating text embeddings
-    public nonisolated let embeddingService: any EmbeddingServiceProtocol
+    @Dependency(\.embeddingService) private var defaultEmbeddingService
+    private let explicitEmbeddingService: (any EmbeddingServiceProtocol)?
+    public var embeddingService: any EmbeddingServiceProtocol { explicitEmbeddingService ?? defaultEmbeddingService }
 
     private var client: (any LLMClientProtocol)?
     private var utilityClient: (any LLMClientProtocol)?
@@ -122,7 +125,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     ) {
         self.storage = storage
         self.promptBuilder = promptBuilder
-        self.embeddingService = embeddingService ?? LocalEmbeddingService()
+        self.explicitEmbeddingService = embeddingService
         self.client = client
         self.utilityClient = utilityClient
         self.fastClient = fastClient

@@ -1,11 +1,18 @@
 import Foundation
 import Logging
-
+import Dependencies
 
 /// Manages the retrieval and organization of context for the chat
-public actor ContextManager {
-    private let persistenceService: any PersistenceServiceProtocol
-    private let embeddingService: any EmbeddingServiceProtocol
+public actor ContextManager: @unchecked Sendable {
+    @Dependency(\.persistenceService) private var defaultPersistenceService
+    @Dependency(\.embeddingService) private var defaultEmbeddingService
+    
+    private let explicitPersistenceService: (any PersistenceServiceProtocol)?
+    private let explicitEmbeddingService: (any EmbeddingServiceProtocol)?
+
+    private var persistenceService: any PersistenceServiceProtocol { explicitPersistenceService ?? defaultPersistenceService }
+    private var embeddingService: any EmbeddingServiceProtocol { explicitEmbeddingService ?? defaultEmbeddingService }
+    
     private let vectorStore: (any VectorStoreProtocol)?
     private let workspaceRoot: URL?
     private let logger = Logger(label: "com.monad.ContextManager")
@@ -13,13 +20,13 @@ public actor ContextManager {
     private let ranker = ContextRanker()
 
     public init(
-        persistenceService: any PersistenceServiceProtocol,
-        embeddingService: any EmbeddingServiceProtocol,
+        persistenceService: (any PersistenceServiceProtocol)? = nil,
+        embeddingService: (any EmbeddingServiceProtocol)? = nil,
         vectorStore: (any VectorStoreProtocol)? = nil,
         workspaceRoot: URL? = nil
     ) {
-        self.persistenceService = persistenceService
-        self.embeddingService = embeddingService
+        self.explicitPersistenceService = persistenceService
+        self.explicitEmbeddingService = embeddingService
         self.vectorStore = vectorStore
         self.workspaceRoot = workspaceRoot
     }

@@ -1,6 +1,7 @@
 import Foundation
 import GRDB
 import Logging
+import Dependencies
 
 /// Manages conversation sessions, their associated context, and tool execution environments.
 ///
@@ -26,11 +27,22 @@ public actor SessionManager {
     /// Snapshots of tool and context state used for debugging chat turns.
     internal var debugSnapshots: [UUID: DebugSnapshot] = [:]
 
-    internal let persistenceService: any PersistenceServiceProtocol
-    internal let embeddingService: any EmbeddingServiceProtocol
+    @Dependency(\.persistenceService) private var defaultPersistenceService
+    @Dependency(\.embeddingService) private var defaultEmbeddingService
+    @Dependency(\.llmService) private var defaultLLMService
+    @Dependency(\.agentRegistry) private var defaultAgentRegistry
+
+    private let explicitPersistenceService: (any PersistenceServiceProtocol)?
+    private let explicitEmbeddingService: (any EmbeddingServiceProtocol)?
+    private let explicitLLMService: (any LLMServiceProtocol)?
+    private let explicitAgentRegistry: AgentRegistry?
+
+    internal var persistenceService: any PersistenceServiceProtocol { explicitPersistenceService ?? defaultPersistenceService }
+    internal var embeddingService: any EmbeddingServiceProtocol { explicitEmbeddingService ?? defaultEmbeddingService }
+    internal var llmService: any LLMServiceProtocol { explicitLLMService ?? defaultLLMService }
+    internal var agentRegistry: AgentRegistry { explicitAgentRegistry ?? defaultAgentRegistry }
+
     internal let vectorStore: (any VectorStoreProtocol)?
-    internal let llmService: any LLMServiceProtocol
-    internal let agentRegistry: AgentRegistry
     internal let workspaceRoot: URL
     internal let connectionManager: (any ClientConnectionManagerProtocol)?
 
@@ -44,19 +56,19 @@ public actor SessionManager {
     ///   - workspaceRoot: The root directory where session data is stored.
     ///   - connectionManager: Optional manager for client-side tool connections.
     public init(
-        persistenceService: any PersistenceServiceProtocol,
-        embeddingService: any EmbeddingServiceProtocol,
+        persistenceService: (any PersistenceServiceProtocol)? = nil,
+        embeddingService: (any EmbeddingServiceProtocol)? = nil,
         vectorStore: (any VectorStoreProtocol)? = nil,
-        llmService: any LLMServiceProtocol,
-        agentRegistry: AgentRegistry,
+        llmService: (any LLMServiceProtocol)? = nil,
+        agentRegistry: AgentRegistry? = nil,
         workspaceRoot: URL,
         connectionManager: (any ClientConnectionManagerProtocol)? = nil
     ) {
-        self.persistenceService = persistenceService
-        self.embeddingService = embeddingService
+        self.explicitPersistenceService = persistenceService
+        self.explicitEmbeddingService = embeddingService
         self.vectorStore = vectorStore
-        self.llmService = llmService
-        self.agentRegistry = agentRegistry
+        self.explicitLLMService = llmService
+        self.explicitAgentRegistry = agentRegistry
         self.workspaceRoot = workspaceRoot
         self.connectionManager = connectionManager
     }
