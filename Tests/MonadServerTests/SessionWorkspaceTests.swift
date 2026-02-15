@@ -26,7 +26,7 @@ final class SessionWorkspaceTests: XCTestCase {
         sessionManager = SessionManager(
             persistenceService: persistenceService,
             embeddingService: embeddingService,
-            llmService: llmService,
+            llmService: llmService, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
     }

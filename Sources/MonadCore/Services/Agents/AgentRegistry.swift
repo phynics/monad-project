@@ -26,9 +26,9 @@ public actor AgentRegistry {
     }
     
     /// List all registered agents
-    /// - Returns: Array of agent metadata (id, name, description)
-    public func listAgents() -> [(id: String, name: String, description: String)] {
-        return agents.values.map { ($0.id, $0.name, $0.description) }
+    /// - Returns: Array of agent manifests
+    public func listAgents() -> [AgentManifest] {
+        return agents.values.map { $0.manifest }
             .sorted { $0.id < $1.id }
     }
     

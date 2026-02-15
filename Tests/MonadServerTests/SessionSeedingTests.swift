@@ -15,7 +15,7 @@ final class SessionSeedingTests: XCTestCase {
         sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: MockEmbeddingService(),
-            llmService: MockLLMService(),
+            llmService: MockLLMService(), agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
     }

@@ -1,9 +1,8 @@
 import Foundation
-import MonadCore
 import Logging
-import ServiceLifecycle
 
-public final class JobRunnerService: Service, Sendable {
+/// Service that monitors and executes background jobs
+public final class JobRunnerService: Sendable {
     private let sessionManager: SessionManager
     private let llmService: any LLMServiceProtocol
     private let agentRegistry: AgentRegistry
@@ -15,47 +14,49 @@ public final class JobRunnerService: Service, Sendable {
         self.agentRegistry = agentRegistry
     }
     
+    /// Run the job execution loop
     public func run() async throws {
         logger.info("Job Runner Service started (Event Driven)")
         
-        // Use cancelWhenGracefulShutdown to properly respond to shutdown signals
-        try await cancelWhenGracefulShutdown {
-            let persistence = await self.sessionManager.getPersistenceService()
-            
-            // Initial scan
-            try? await self.processPendingJobs(persistence)
-            
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                // 1. Event Stream Listener
-                group.addTask {
-                    for await event in await persistence.monitorJobs() {
-                        if Task.isCancelled { break }
-                        switch event {
-                        case .jobUpdated(let job):
-                             if job.status == .pending {
-                                 // Immediate processing if ready and no schedule delay
-                                 if let nextRun = job.nextRunAt, nextRun > Date() {
-                                     continue
-                                 }
-                                 try? await self.processJob(job, persistence: persistence)
+        let persistence = await self.sessionManager.getPersistenceService()
+        
+        // Initial scan
+        try? await self.processPendingJobs(persistence)
+        
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            // 1. Event Stream Listener
+            group.addTask {
+                for await event in await persistence.monitorJobs() {
+                    if Task.isCancelled { break }
+                    switch event {
+                    case .jobUpdated(let job):
+                         if job.status == .pending {
+                             // Immediate processing if ready and no schedule delay
+                             if let nextRun = job.nextRunAt, nextRun > Date() {
+                                 continue
                              }
-                        case .jobDeleted:
-                             break
-                        }
+                             try? await self.processJob(job, persistence: persistence)
+                         }
+                    case .jobDeleted:
+                         break
                     }
                 }
-                
-                // 2. Periodic Scanner (for scheduled jobs and fail-safety)
-                group.addTask {
-                    while !Task.isCancelled {
-                        try? await Task.sleep(nanoseconds: 10 * 1_000_000_000) // Check every 10s
-                        try? await self.processPendingJobs(persistence)
-                    }
-                }
-                
-                try await group.next()
-                group.cancelAll()
             }
+            
+            // 2. Periodic Scanner (for scheduled jobs and fail-safety)
+            group.addTask {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 10 * 1_000_000_000) // Check every 10s
+                    try? await self.processPendingJobs(persistence)
+                }
+            }
+            
+            // Wait for cancellation or tasks to finish
+            while !Task.isCancelled {
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+            
+            group.cancelAll()
         }
         
         logger.info("Job Runner Service stopped")
@@ -84,7 +85,7 @@ public final class JobRunnerService: Service, Sendable {
         
         // 2. Ensure Session is Hydrated
         do {
-            try await sessionManager.hydrateSession(id: session.id)
+            try await sessionManager.hydrateSession(id: session.id, parentId: job.id)
         } catch {
              logger.error("Failed to hydrate session \(session.id): \(error)")
              return

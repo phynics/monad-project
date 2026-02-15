@@ -1,15 +1,13 @@
 import Foundation
-import MonadCore
 import OpenAI
 
-public struct ServerToolRegistry: Sendable {
-    public static let shared = ServerToolRegistry()
+/// Registry for built-in system tools within the Monad framework
+public struct SystemToolRegistry: Sendable {
+    public static let shared = SystemToolRegistry()
 
-    // Definitions of built-in server tools
     private var definitions: [String: WorkspaceToolDefinition] = [:]
 
     private init() {
-        // Register default tools
         var defs: [String: WorkspaceToolDefinition] = [:]
 
         let ms = WorkspaceToolDefinition(
@@ -39,7 +37,7 @@ public struct ServerToolRegistry: Sendable {
         definitions[id]
     }
 
-    /// Convert a ToolReference to an OpenAI Tool, resolving if necessary
+    /// Resolve a tool reference to an OpenAI-compatible tool parameter
     public func resolveToOpenAITool(_ ref: ToolReference) -> ChatQuery.ChatCompletionToolParam? {
         let def: WorkspaceToolDefinition
         switch ref {
@@ -49,9 +47,6 @@ public struct ServerToolRegistry: Sendable {
         case .custom(let definition):
             def = definition
         }
-
-        // Map to OpenAI Tool
-        // We construct the full JSONSchema object for "parameters" from the simplified definition.
 
         let properties = def.parametersSchema.reduce(into: [String: [String: Any]]()) {
             dict, pair in

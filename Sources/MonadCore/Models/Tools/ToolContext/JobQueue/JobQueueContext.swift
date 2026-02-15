@@ -82,6 +82,20 @@ public actor JobQueueContext: ToolContext {
         logger.info("Added job: \(job.id)")
         return job
     }
+    
+    public func launchSubagent(request: AddJobRequest) async throws -> Job {
+        let job = Job(
+            sessionId: sessionId,
+            parentId: request.parentId,
+            title: request.title,
+            description: request.description,
+            priority: request.priority,
+            agentId: request.agentId ?? "default"
+        )
+        try await persistenceService.saveJob(job)
+        logger.info("Launched subagent job: \(job.id) (agent: \(job.agentId))")
+        return job
+    }
 
     public func removeJob(id: UUID) async throws -> Job? {
         if let job = try await persistenceService.fetchJob(id: id) {

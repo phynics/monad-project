@@ -1,9 +1,7 @@
 import Foundation
-import Foundation
-import MonadCore
 
 /// A Tool implementation that delegates execution to a ToolRouter
-public struct DelegatingTool: MonadCore.Tool {
+public struct DelegatingTool: Tool {
     public let ref: ToolReference
     private let router: ToolRouter
     private let sessionId: UUID
@@ -48,7 +46,6 @@ public struct DelegatingTool: MonadCore.Tool {
     }
 
     public var parametersSchema: [String: Any] {
-        // Convert [String: AnyCodable] to [String: Any]
         var schema: [String: Any] = [:]
         for (key, value) in resolvedDefinition.parametersSchema {
             schema[key] = value.value
@@ -57,7 +54,6 @@ public struct DelegatingTool: MonadCore.Tool {
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        // Convert [String: Any] back to [String: AnyCodable]
         var args: [String: AnyCodable] = [:]
         for (key, value) in parameters {
             args[key] = AnyCodable(value)

@@ -16,6 +16,7 @@ import MonadCore
             persistenceService: persistence,
             embeddingService: embedding,
             llmService: llm,
+            agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
 
@@ -42,6 +43,7 @@ import MonadCore
             persistenceService: persistence,
             embeddingService: embedding,
             llmService: llm,
+            agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
 

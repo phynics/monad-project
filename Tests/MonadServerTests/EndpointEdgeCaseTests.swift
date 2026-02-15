@@ -19,15 +19,22 @@ import Testing
         let sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: embedding,
-            llmService: llm,
+            llmService: llm, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
+        )
+
+        let toolRouter = ToolRouter(sessionManager: sessionManager)
+        let orchestrator = ChatOrchestrator(
+            sessionManager: sessionManager,
+            llmService: llm, agentRegistry: AgentRegistry(),
+            toolRouter: toolRouter
         )
 
         let router = Router()
         router.add(middleware: ErrorMiddleware())
         let protected = router.group("/api").add(middleware: AuthMiddleware())
         ChatAPIController<BasicRequestContext>(
-            sessionManager: sessionManager, llmService: llm
+            sessionManager: sessionManager, chatOrchestrator: orchestrator
         ).addRoutes(to: protected.group("/sessions"))
 
         let app = Application(router: router)
@@ -56,15 +63,22 @@ import Testing
         let sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: embedding,
-            llmService: llm,
+            llmService: llm, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
+        )
+
+        let toolRouter = ToolRouter(sessionManager: sessionManager)
+        let orchestrator = ChatOrchestrator(
+            sessionManager: sessionManager,
+            llmService: llm, agentRegistry: AgentRegistry(),
+            toolRouter: toolRouter
         )
 
         let router = Router()
         router.add(middleware: ErrorMiddleware())
         let protected = router.group("/api").add(middleware: AuthMiddleware())
         ChatAPIController<BasicRequestContext>(
-            sessionManager: sessionManager, llmService: llm
+            sessionManager: sessionManager, chatOrchestrator: orchestrator
         ).addRoutes(to: protected.group("/sessions"))
 
         let app = Application(router: router)
@@ -93,7 +107,7 @@ import Testing
         let sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: embedding,
-            llmService: llm,
+            llmService: llm, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
 
@@ -122,7 +136,7 @@ import Testing
         let sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: embedding,
-            llmService: llm,
+            llmService: llm, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
 
@@ -154,7 +168,7 @@ import Testing
         let sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: embedding,
-            llmService: llm,
+            llmService: llm, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
 

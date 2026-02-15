@@ -7,6 +7,7 @@ import GRDB
 public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, PersistableRecord {
     public let id: UUID
     public let sessionId: UUID
+    public var parentId: UUID?
     public var title: String
     public var description: String?
     public var priority: Int
@@ -30,6 +31,7 @@ public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, 
     public init(
         id: UUID = UUID(),
         sessionId: UUID,
+        parentId: UUID? = nil,
         title: String,
         description: String? = nil,
         priority: Int = 0,
@@ -44,6 +46,7 @@ public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, 
     ) {
         self.id = id
         self.sessionId = sessionId
+        self.parentId = parentId
         self.title = title
         self.description = description
         self.priority = priority
@@ -64,13 +67,20 @@ public struct AddJobRequest: Codable, Sendable {
     public let description: String?
     public let priority: Int
     public let agentId: String?
+    public let parentId: UUID?
 
-
-    public init(title: String, description: String? = nil, priority: Int = 0, agentId: String? = nil) {
+    public init(
+        title: String,
+        description: String? = nil,
+        priority: Int = 0,
+        agentId: String? = nil,
+        parentId: UUID? = nil
+    ) {
         self.title = title
         self.description = description
         self.priority = priority
         self.agentId = agentId
+        self.parentId = parentId
     }
 }
 

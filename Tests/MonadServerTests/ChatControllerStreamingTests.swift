@@ -22,17 +22,24 @@ import Testing
         let sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: embedding,
-            llmService: llmService,
+            llmService: llmService, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
 
         // Create Session
         let session = try await sessionManager.createSession()
 
+        let toolRouter = ToolRouter(sessionManager: sessionManager)
+        let orchestrator = ChatOrchestrator(
+            sessionManager: sessionManager,
+            llmService: llmService, agentRegistry: AgentRegistry(),
+            toolRouter: toolRouter
+        )
+
         // Setup App
         let router = Router()
         let controller = ChatAPIController<BasicRequestContext>(
-            sessionManager: sessionManager, llmService: llmService)
+            sessionManager: sessionManager, chatOrchestrator: orchestrator)
         controller.addRoutes(to: router.group("/sessions"))
 
         let app = Application(router: router)
@@ -70,17 +77,24 @@ import Testing
         let sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: embedding,
-            llmService: llmService,
+            llmService: llmService, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
 
         // Create Session
         let session = try await sessionManager.createSession()
 
+        let toolRouter = ToolRouter(sessionManager: sessionManager)
+        let orchestrator = ChatOrchestrator(
+            sessionManager: sessionManager,
+            llmService: llmService, agentRegistry: AgentRegistry(),
+            toolRouter: toolRouter
+        )
+
         // Setup App
         let router = Router()
         let controller = ChatAPIController<BasicRequestContext>(
-            sessionManager: sessionManager, llmService: llmService)
+            sessionManager: sessionManager, chatOrchestrator: orchestrator)
         controller.addRoutes(to: router.group("/sessions"))
 
         let app = Application(router: router)

@@ -97,21 +97,4 @@ public struct CalculatorTool: ToolDefinition {
     }
 }
 
-// MARK: - Error Types
-
-public enum ToolError: Error, LocalizedError {
-    case missingArgument(String)
-    case invalidArgument(String)
-    case executionFailed(String)
-    
-    public var errorDescription: String? {
-        switch self {
-        case .missingArgument(let arg):
-            return "Missing required argument: \(arg)"
-        case .invalidArgument(let message):
-            return "Invalid argument: \(message)"
-        case .executionFailed(let message):
-            return "Tool execution failed: \(message)"
-        }
-    }
-}
+// MARK: - Calculator Tool

@@ -17,7 +17,7 @@ import NIOCore
         let sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: embedding,
-            llmService: llm,
+            llmService: llm, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
 

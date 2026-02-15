@@ -90,7 +90,7 @@ struct MonadServer: AsyncParsableCommand {
         // Initialize WebSocket Manager
         let connectionManager = WebSocketConnectionManager()
         
-        let sessionManager = SessionManager(
+        let engine = try await MonadEngine(
             persistenceService: persistenceService,
             embeddingService: embeddingService,
             vectorStore: vectorStore,
@@ -98,19 +98,25 @@ struct MonadServer: AsyncParsableCommand {
             workspaceRoot: workspaceRoot,
             connectionManager: connectionManager
         )
-        
-        // Initialize Agent Registry
-        let agentRegistry = AgentRegistry()
-        
+
         // Create and register default agent
         let defaultAgent = AutonomousAgent(
-            id: "default",
-            name: "Default Agent",
-            description: "The default general-purpose agent.",
-            llmService: llmService,
-            persistenceService: persistenceService
+            manifest: AgentManifest(
+                id: "default",
+                name: "Default Agent",
+                description: "The default general-purpose agent.",
+                capabilities: ["general", "tool-use"]
+            ),
+            llmService: engine.llmService,
+            persistenceService: engine.persistenceService
         )
-        await agentRegistry.register(defaultAgent)
+        await engine.agentRegistry.register(defaultAgent)
+        
+        let coordinatorAgent = AgentCoordinator(
+            llmService: engine.llmService,
+            persistenceService: engine.persistenceService
+        )
+        await engine.agentRegistry.register(coordinatorAgent)
         
         // Public routes
         router.get("/health") { _, _ -> String in
@@ -120,7 +126,7 @@ struct MonadServer: AsyncParsableCommand {
         let startTime = Date()
         let statusController = StatusAPIController<AppRequestContext>(
             persistenceService: persistenceService,
-            llmService: llmService,
+            llmService: engine.llmService,
             startTime: startTime
         )
         statusController.addRoutes(to: router)
@@ -142,28 +148,34 @@ struct MonadServer: AsyncParsableCommand {
         }
 
         let sessionController = SessionAPIController<AppRequestContext>(
-            sessionManager: sessionManager)
+            sessionManager: engine.sessionManager)
         sessionController.addRoutes(to: protected.group("/sessions"))
 
         let chatController = ChatAPIController<AppRequestContext>(
-            sessionManager: sessionManager, llmService: llmService, verbose: verbose)
+            sessionManager: engine.sessionManager,
+            chatOrchestrator: engine.chatOrchestrator,
+            verbose: verbose
+        )
         chatController.addRoutes(to: protected.group("/sessions"))
 
-        let jobController = JobAPIController<AppRequestContext>(sessionManager: sessionManager)
+        let jobController = JobAPIController<AppRequestContext>(sessionManager: engine.sessionManager)
         jobController.addRoutes(to: protected.group("/sessions"))
 
-        let memoryController = MemoryAPIController<AppRequestContext>(sessionManager: sessionManager)
+        let memoryController = MemoryAPIController<AppRequestContext>(sessionManager: engine.sessionManager)
         memoryController.addRoutes(to: protected.group("/memories"))
 
         let pruneController = PruneAPIController<AppRequestContext>(
             persistenceService: persistenceService)
         pruneController.addRoutes(to: protected.group("/prune"))
 
-        let toolController = ToolAPIController<AppRequestContext>(sessionManager: sessionManager)
+        let toolController = ToolAPIController<AppRequestContext>(
+            sessionManager: engine.sessionManager,
+            toolRouter: engine.toolRouter
+        )
         toolController.addRoutes(to: protected.group("/tools"))
 
         // Create database writer accessor (since it's an actor property, access it async or assume safe access pattern)
-        let dbWriter = persistenceService.databaseWriter
+        let dbWriter = engine.persistenceService.databaseWriter
 
         let workspacesGroup = protected.group("/workspaces")
         
@@ -171,21 +183,16 @@ struct MonadServer: AsyncParsableCommand {
             dbWriter: dbWriter, logger: logger)
         workspaceAPIController.addRoutes(to: workspacesGroup)
 
-        let workspaceStore = try await MonadCore.WorkspaceStore(dbWriter: dbWriter)
-
         let filesController = FilesAPIController<AppRequestContext>(
-            workspaceStore: workspaceStore)
+            workspaceStore: engine.workspaceStore)
         filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
 
         let clientController = ClientAPIController<AppRequestContext>(
             dbWriter: dbWriter, logger: logger)
         clientController.addRoutes(to: protected.group("/clients"))
 
-        let configController = ConfigurationAPIController<AppRequestContext>(llmService: llmService)
+        let configController = ConfigurationAPIController<AppRequestContext>(llmService: engine.llmService)
         configController.addRoutes(to: protected.group("/config"))
-        
-        // Add WS routes to main router as well if needed, or group
-        // wsController.addRoutes(to: router.group("/ws"))
 
         let app = Application(
             router: router,
@@ -196,21 +203,13 @@ struct MonadServer: AsyncParsableCommand {
         logger.info("Server starting on \(hostname):\(port)")
 
         _ = BonjourAdvertiser(port: port)
-        
-        let jobRunner = JobRunnerService(
-            sessionManager: sessionManager,
-            llmService: llmService,
-            agentRegistry: agentRegistry
-        )
-        let orphanCleanup = OrphanCleanupService(persistenceService: persistenceService, workspaceRoot: workspaceRoot, logger: logger)
 
         let serviceGroup = ServiceGroup(
             configuration: ServiceGroupConfiguration(
                 services: [
                     .init(service: app),
-                    .init(service: jobRunner),
-                    // .init(service: advertiser),
-                    .init(service: orphanCleanup)
+                    .init(service: engine.jobRunner),
+                    .init(service: engine.orphanCleanup)
                 ],
                 gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                 logger: logger
@@ -218,86 +217,6 @@ struct MonadServer: AsyncParsableCommand {
         )
 
         try await serviceGroup.run()
-    }
-
-    /// Service to clean up orphaned workspaces
-    struct OrphanCleanupService: Service {
-        let persistenceService: PersistenceService
-        let workspaceRoot: URL
-        let logger: Logger
-
-        func run() async throws {
-            logger.info("OrphanCleanupService started")
-            // Run initial cleanup
-            await cleanup()
-            
-            // Then run periodically (every 24 hours)
-            try await cancelWhenGracefulShutdown {
-                while !Task.isCancelled {
-                    do {
-                        try await Task.sleep(for: .seconds(86400)) // 24 hours
-                        await cleanup()
-                    } catch is CancellationError {
-                        logger.info("OrphanCleanupService shutting down gracefully")
-                        return
-                    }
-                }
-            }
-            logger.info("OrphanCleanupService stopped")
-        }
-
-        private func cleanup() async {
-            logger.info("Starting orphaned workspace cleanup...")
-            do {
-                try await persistenceService.databaseWriter.write { db in
-                    let workspaces = try WorkspaceReference.fetchAll(db)
-                    let sessions = try ConversationSession.fetchAll(db)
-                    
-                    var referencedIds: Set<UUID> = []
-                    
-                    // Collect all referenced IDs
-                    for session in sessions {
-                        if let pid = session.primaryWorkspaceId {
-                            referencedIds.insert(pid)
-                        }
-                        for aid in session.attachedWorkspaces {
-                            referencedIds.insert(aid)
-                        }
-                    }
-                    
-                    var deletedCount = 0
-                    for ws in workspaces {
-                        if !referencedIds.contains(ws.id) {
-                            // Check if it's safe to delete (is it in the Monad Workspaces dir?)
-                            // We construct the path and check if the recorded rootPath matches
-                            if let rootPath = ws.rootPath, 
-                               rootPath.hasPrefix(workspaceRoot.path) || rootPath.contains("/.monad/workspaces/") || rootPath.contains("/Monad/Workspaces/") {
-                                
-                                // Delete DB Record
-                                try ws.delete(db)
-                                
-                                // Delete Filesystem
-                                if FileManager.default.fileExists(atPath: rootPath) {
-                                    try? FileManager.default.removeItem(atPath: rootPath)
-                                }
-                                deletedCount += 1
-                                logger.info("Deleted orphaned workspace: \(ws.id) at \(rootPath)")
-                            } else {
-                                logger.warning("Skipping cleanup of user-managed workspace: \(ws.id) at \(ws.rootPath ?? "nil")")
-                            }
-                        }
-                    }
-                    
-                    if deletedCount > 0 {
-                        logger.info("Cleanup complete. Removed \(deletedCount) orphaned workspaces.")
-                    } else {
-                        logger.info("Cleanup complete. No orphaned workspaces found.")
-                    }
-                }
-            } catch {
-                logger.error("Failed to run orphan cleanup: \(error)")
-            }
-        }
     }
 
     /// Default workspace path
@@ -350,3 +269,6 @@ struct MonadServer: AsyncParsableCommand {
         #endif
     }
 }
+
+extension MonadCore.JobRunnerService: Service {}
+extension MonadCore.OrphanCleanupService: Service {}

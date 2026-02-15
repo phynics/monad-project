@@ -17,12 +17,14 @@ import NIOCore
         let sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: embedding,
-            llmService: llm,
+            llmService: llm, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
 
+        let toolRouter = ToolRouter(sessionManager: sessionManager)
         let router = Router()
-        let controller = ToolAPIController<BasicRequestContext>(sessionManager: sessionManager)
+        router.add(middleware: ErrorMiddleware())
+        let controller = ToolAPIController<BasicRequestContext>(sessionManager: sessionManager, toolRouter: toolRouter)
         controller.addRoutes(to: router.group("/tools"))
 
         let app = Application(router: router)

@@ -23,7 +23,7 @@ import Logging
         let sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: embedding,
-            llmService: llmService,
+            llmService: llmService, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
 
@@ -82,7 +82,7 @@ import Logging
         let sessionManager = SessionManager(
             persistenceService: persistence,
             embeddingService: embedding,
-            llmService: llmService,
+            llmService: llmService, agentRegistry: AgentRegistry(),
             workspaceRoot: workspaceRoot
         )
 

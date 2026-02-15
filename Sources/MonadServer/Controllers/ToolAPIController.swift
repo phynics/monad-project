@@ -18,9 +18,11 @@ public struct ExecuteToolRequest: Codable, Sendable {
 
 public struct ToolAPIController<Context: RequestContext>: Sendable {
     public let sessionManager: SessionManager
+    public let toolRouter: ToolRouter
 
-    public init(sessionManager: SessionManager) {
+    public init(sessionManager: SessionManager, toolRouter: ToolRouter) {
         self.sessionManager = sessionManager
+        self.toolRouter = toolRouter
     }
 
     public func addRoutes(to group: RouterGroup<Context>) {
@@ -135,22 +137,21 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         return toolInfos
     }
 
-    @Sendable func execute(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func execute(_ request: Request, context: Context) async throws -> String {
         let execReq = try await request.decode(as: ExecuteToolRequest.self, context: context)
 
-        guard let toolExecutor = await sessionManager.getToolExecutor(for: execReq.sessionId) else {
-            throw HTTPError(.notFound)
-        }
-
-        let toolCall = ToolCall(name: execReq.name, arguments: execReq.arguments)
         do {
-            let result = try await toolExecutor.execute(toolCall)
-            return try result.response(from: request, context: context)
-        } catch let error as ToolExecutorError {
-            switch error {
-            case .toolNotFound:
+            let output = try await toolRouter.execute(
+                tool: .known(execReq.name),
+                arguments: execReq.arguments,
+                sessionId: execReq.sessionId
+            )
+            return output
+        } catch let error as ToolError {
+            if case .toolNotFound = error {
                 throw HTTPError(.notFound)
             }
+            throw HTTPError(.internalServerError, message: error.localizedDescription)
         } catch {
             throw error
         }
