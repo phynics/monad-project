@@ -83,6 +83,7 @@ struct MonadServer: AsyncParsableCommand {
         let vectorStore = MockVectorStore()
         try? await vectorStore.initialize() // Best effort init
         
+        // Initialize LLM Service
         let llmService = ServerLLMService()
         await llmService.loadConfiguration()
 
@@ -91,18 +92,41 @@ struct MonadServer: AsyncParsableCommand {
         // Initialize WebSocket Manager
         let connectionManager = WebSocketConnectionManager()
         
-        let engine = try await MonadEngine(
-            persistenceService: persistenceService,
-            embeddingService: embeddingService,
-            vectorStore: vectorStore,
-            llmService: llmService,
+        // Initialize Core Services
+        let agentRegistry = AgentRegistry()
+        let sessionManager = SessionManager(
             workspaceRoot: workspaceRoot,
             connectionManager: connectionManager
         )
+        let toolRouter = ToolRouter()
+        let chatOrchestrator = ChatOrchestrator()
+        let jobRunner = JobRunnerService()
+        let orphanCleanup = OrphanCleanupService(workspaceRoot: workspaceRoot)
 
         try await withDependencies {
-            $0.withEngine(engine)
+            $0.persistenceService = persistenceService
+            $0.llmService = llmService
+            $0.embeddingService = embeddingService
+            $0.vectorStore = vectorStore
+            $0.agentRegistry = agentRegistry
+            $0.sessionManager = sessionManager
+            $0.toolRouter = toolRouter
+            $0.chatOrchestrator = chatOrchestrator
         } operation: {
+            // Register default agents
+            let defaultAgent = AutonomousAgent(
+                manifest: AgentManifest(
+                    id: "default",
+                    name: "Default Agent",
+                    description: "The default general-purpose agent.",
+                    capabilities: ["general", "tool-use"]
+                )
+            )
+            await agentRegistry.register(defaultAgent)
+            
+            let coordinatorAgent = AgentCoordinator()
+            await agentRegistry.register(coordinatorAgent)
+            
             // Public routes
             router.get("/health") { _, _ -> String in
                 return "OK"
@@ -111,7 +135,7 @@ struct MonadServer: AsyncParsableCommand {
             let startTime = Date()
             let statusController = StatusAPIController<AppRequestContext>(
                 persistenceService: persistenceService,
-                llmService: engine.llmService,
+                llmService: llmService,
                 startTime: startTime
             )
             statusController.addRoutes(to: router)
@@ -133,20 +157,20 @@ struct MonadServer: AsyncParsableCommand {
             }
 
             let sessionController = SessionAPIController<AppRequestContext>(
-                sessionManager: engine.sessionManager)
+                sessionManager: sessionManager)
             sessionController.addRoutes(to: protected.group("/sessions"))
 
             let chatController = ChatAPIController<AppRequestContext>(
-                sessionManager: engine.sessionManager,
-                chatOrchestrator: engine.chatOrchestrator,
+                sessionManager: sessionManager,
+                chatOrchestrator: chatOrchestrator,
                 verbose: verbose
             )
             chatController.addRoutes(to: protected.group("/sessions"))
 
-            let jobController = JobAPIController<AppRequestContext>(sessionManager: engine.sessionManager)
+            let jobController = JobAPIController<AppRequestContext>(sessionManager: sessionManager)
             jobController.addRoutes(to: protected.group("/sessions"))
 
-            let memoryController = MemoryAPIController<AppRequestContext>(sessionManager: engine.sessionManager)
+            let memoryController = MemoryAPIController<AppRequestContext>(sessionManager: sessionManager)
             memoryController.addRoutes(to: protected.group("/memories"))
 
             let pruneController = PruneAPIController<AppRequestContext>(
@@ -154,18 +178,18 @@ struct MonadServer: AsyncParsableCommand {
             pruneController.addRoutes(to: protected.group("/prune"))
 
             let toolController = ToolAPIController<AppRequestContext>(
-                sessionManager: engine.sessionManager,
-                toolRouter: engine.toolRouter
+                sessionManager: sessionManager,
+                toolRouter: toolRouter
             )
             toolController.addRoutes(to: protected.group("/tools"))
 
             let agentController = AgentAPIController<AppRequestContext>(
-                agentRegistry: engine.agentRegistry
+                agentRegistry: agentRegistry
             )
             agentController.addRoutes(to: protected.group("/agents"))
 
-            // Create database writer accessor (since it's an actor property, access it async or assume safe access pattern)
-            let dbWriter = engine.persistenceService.databaseWriter
+            // Create database writer accessor
+            let dbWriter = persistenceService.databaseWriter
 
             let workspacesGroup = protected.group("/workspaces")
             
@@ -173,15 +197,16 @@ struct MonadServer: AsyncParsableCommand {
                 dbWriter: dbWriter, logger: logger)
             workspaceAPIController.addRoutes(to: workspacesGroup)
 
+            let workspaceStore = try await WorkspaceStore(dbWriter: dbWriter)
             let filesController = FilesAPIController<AppRequestContext>(
-                workspaceStore: engine.workspaceStore)
+                workspaceStore: workspaceStore)
             filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
 
             let clientController = ClientAPIController<AppRequestContext>(
                 dbWriter: dbWriter, logger: logger)
             clientController.addRoutes(to: protected.group("/clients"))
 
-            let configController = ConfigurationAPIController<AppRequestContext>(llmService: engine.llmService)
+            let configController = ConfigurationAPIController<AppRequestContext>(llmService: llmService)
             configController.addRoutes(to: protected.group("/config"))
 
             let app = Application(
@@ -198,8 +223,8 @@ struct MonadServer: AsyncParsableCommand {
                 configuration: ServiceGroupConfiguration(
                     services: [
                         .init(service: app),
-                        .init(service: engine), // Engine manages jobRunner
-                        .init(service: engine.orphanCleanup)
+                        .init(service: jobRunner),
+                        .init(service: orphanCleanup)
                     ],
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                     logger: logger

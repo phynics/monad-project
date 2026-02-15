@@ -19,9 +19,9 @@ Execution is managed via **Jobs**.
 - **Status Tracking**: Pending, In-Progress, Completed, Failed, Cancelled.
 
 ### Orchestration
-- **`MonadEngine`**: The central entry point that ties together persistence, LLM services, and registries.
 - **`ReasoningEngine`**: Implements the core multi-turn loop (ReAct) used by agents.
 - **`JobRunnerService`**: A background service that monitors the database and executes pending jobs.
+- **`SessionManager`**: Manages the lifecycle of conversation sessions and their components.
 
 ---
 
@@ -67,11 +67,14 @@ Inside a `BaseAgent` subclass, you have access to:
 - `reasoningEngine`
 
 ### Registering Dependencies
-In your application entry point (e.g., `MonadServerApp`), inject the engine:
+In your application entry point (e.g., `MonadServerApp`), inject the services:
 
 ```swift
 try await withDependencies {
-    $0.withEngine(engine)
+    $0.persistenceService = persistenceService
+    $0.llmService = llmService
+    $0.agentRegistry = agentRegistry
+    $0.sessionManager = sessionManager
 } operation: {
     // Run your app here
 }
@@ -102,24 +105,25 @@ let tool = AgentAsTool(agent: researcher, jobQueueContext: jobQueue)
 
 ---
 
-## 5. Running the Engine
+## 5. Running the Framework
 
 ### Initialization
+Initialize your core services individually:
+
 ```swift
-let engine = try await MonadEngine(
-    persistenceService: persistence,
-    embeddingService: embedding,
-    llmService: llm,
-    workspaceRoot: rootURL
-)
+let persistence = try PersistenceService.create()
+let llm = ServerLLMService()
+let agentRegistry = AgentRegistry()
+let sessionManager = SessionManager(workspaceRoot: rootURL)
 ```
 
 ### Starting the Job Runner
-The `JobRunnerService` must be run in a background task:
+The `JobRunnerService` is a `Service` and can be run in a `ServiceGroup` or manually:
 
 ```swift
+let jobRunner = JobRunnerService()
 Task {
-    try await engine.jobRunner.run()
+    try await jobRunner.run()
 }
 ```
 
