@@ -81,8 +81,7 @@ public final class MonadEngine: Service, Sendable {
         
         self.orphanCleanup = OrphanCleanupService(
             persistenceService: configuration.persistenceService,
-            workspaceRoot: configuration.workspaceRoot,
-            logger: Logger(label: "com.monad.orphan-cleanup")
+            workspaceRoot: configuration.workspaceRoot
         )
         
         logger.info("MonadEngine initialized.")

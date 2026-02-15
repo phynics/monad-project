@@ -6,12 +6,11 @@ import ServiceLifecycle
 public final class OrphanCleanupService: Service, Sendable {
     private let persistenceService: any PersistenceServiceProtocol
     private let workspaceRoot: URL
-    private let logger: Logger
+    private let logger = Logger(label: "com.monad.orphan-cleanup")
 
-    public init(persistenceService: any PersistenceServiceProtocol, workspaceRoot: URL, logger: Logger) {
+    public init(persistenceService: any PersistenceServiceProtocol, workspaceRoot: URL) {
         self.persistenceService = persistenceService
         self.workspaceRoot = workspaceRoot
-        self.logger = logger
     }
 
     /// Run the cleanup loop

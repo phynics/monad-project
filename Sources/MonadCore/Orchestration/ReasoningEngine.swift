@@ -1,19 +1,27 @@
 import Foundation
 import Logging
 import OpenAI
+import Dependencies
 
 /// An engine that implements autonomous reasoning loops (e.g. ReAct)
-public final class ReasoningEngine: Sendable {
-    private let llmService: any LLMServiceProtocol
-    private let persistenceService: any PersistenceServiceProtocol
+public final class ReasoningEngine: @unchecked Sendable {
+    @Dependency(\.llmService) private var defaultLLMService
+    @Dependency(\.persistenceService) private var defaultPersistenceService
+    
+    private let explicitLLMService: (any LLMServiceProtocol)?
+    private let explicitPersistenceService: (any PersistenceServiceProtocol)?
+
+    public var llmService: any LLMServiceProtocol { explicitLLMService ?? defaultLLMService }
+    public var persistenceService: any PersistenceServiceProtocol { explicitPersistenceService ?? defaultPersistenceService }
+    
     private let logger = Logger(label: "com.monad.reasoning-engine")
 
     public init(
-        llmService: any LLMServiceProtocol,
-        persistenceService: any PersistenceServiceProtocol
+        llmService: (any LLMServiceProtocol)? = nil,
+        persistenceService: (any PersistenceServiceProtocol)? = nil
     ) {
-        self.llmService = llmService
-        self.persistenceService = persistenceService
+        self.explicitLLMService = llmService
+        self.explicitPersistenceService = persistenceService
     }
 
     /// Result of an autonomous execution turn

@@ -53,11 +53,7 @@ public enum ChatOrchestratorKey: DependencyKey {
 }
 
 public enum ReasoningEngineKey: DependencyKey {
-    public static let liveValue: ReasoningEngine = {
-        @Dependency(\.llmService) var llm
-        @Dependency(\.persistenceService) var persistence
-        return ReasoningEngine(llmService: llm, persistenceService: persistence)
-    }()
+    public static let liveValue = ReasoningEngine()
 }
 
 // MARK: - Dependency Values
