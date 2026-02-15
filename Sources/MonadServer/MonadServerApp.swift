@@ -6,6 +6,7 @@ import MonadCore
 import ServiceLifecycle
 import UnixSignals
 import HummingbirdWebSocket
+import Dependencies
 
 @main
 @available(macOS 14.0, *)
@@ -99,124 +100,123 @@ struct MonadServer: AsyncParsableCommand {
             connectionManager: connectionManager
         )
 
-        // Create and register default agent
-        let defaultAgent = AutonomousAgent(
-            manifest: AgentManifest(
-                id: "default",
-                name: "Default Agent",
-                description: "The default general-purpose agent.",
-                capabilities: ["general", "tool-use"]
-            ),
-            llmService: engine.llmService,
-            persistenceService: engine.persistenceService
-        )
-        await engine.agentRegistry.register(defaultAgent)
-        
-        let coordinatorAgent = AgentCoordinator(
-            llmService: engine.llmService,
-            persistenceService: engine.persistenceService
-        )
-        await engine.agentRegistry.register(coordinatorAgent)
-        
-        // Public routes
-        router.get("/health") { _, _ -> String in
-            return "OK"
-        }
-
-        let startTime = Date()
-        let statusController = StatusAPIController<AppRequestContext>(
-            persistenceService: persistenceService,
-            llmService: engine.llmService,
-            startTime: startTime
-        )
-        statusController.addRoutes(to: router)
-
-        router.get("/") { _, _ -> String in
-            return "Monad Server is running."
-        }
-        
-        // WebSocket Route
-        let wsController = WebSocketAPIController<AppRequestContext>(connectionManager: connectionManager)
-        wsController.addRoutes(to: router.group("/api"))
-
-        // Protected routes
-        let protected = router.group("/api")
-            .add(middleware: AuthMiddleware())
-
-        protected.get("/test") { _, _ -> String in
-            return "Authenticated!"
-        }
-
-        let sessionController = SessionAPIController<AppRequestContext>(
-            sessionManager: engine.sessionManager)
-        sessionController.addRoutes(to: protected.group("/sessions"))
-
-        let chatController = ChatAPIController<AppRequestContext>(
-            sessionManager: engine.sessionManager,
-            chatOrchestrator: engine.chatOrchestrator,
-            verbose: verbose
-        )
-        chatController.addRoutes(to: protected.group("/sessions"))
-
-        let jobController = JobAPIController<AppRequestContext>(sessionManager: engine.sessionManager)
-        jobController.addRoutes(to: protected.group("/sessions"))
-
-        let memoryController = MemoryAPIController<AppRequestContext>(sessionManager: engine.sessionManager)
-        memoryController.addRoutes(to: protected.group("/memories"))
-
-        let pruneController = PruneAPIController<AppRequestContext>(
-            persistenceService: persistenceService)
-        pruneController.addRoutes(to: protected.group("/prune"))
-
-        let toolController = ToolAPIController<AppRequestContext>(
-            sessionManager: engine.sessionManager,
-            toolRouter: engine.toolRouter
-        )
-        toolController.addRoutes(to: protected.group("/tools"))
-
-        // Create database writer accessor (since it's an actor property, access it async or assume safe access pattern)
-        let dbWriter = engine.persistenceService.databaseWriter
-
-        let workspacesGroup = protected.group("/workspaces")
-        
-        let workspaceAPIController = WorkspaceAPIController<AppRequestContext>(
-            dbWriter: dbWriter, logger: logger)
-        workspaceAPIController.addRoutes(to: workspacesGroup)
-
-        let filesController = FilesAPIController<AppRequestContext>(
-            workspaceStore: engine.workspaceStore)
-        filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
-
-        let clientController = ClientAPIController<AppRequestContext>(
-            dbWriter: dbWriter, logger: logger)
-        clientController.addRoutes(to: protected.group("/clients"))
-
-        let configController = ConfigurationAPIController<AppRequestContext>(llmService: engine.llmService)
-        configController.addRoutes(to: protected.group("/config"))
-
-        let app = Application(
-            router: router,
-            server: .http1WebSocketUpgrade(webSocketRouter: router, configuration: .init()),
-            configuration: .init(address: .hostname(hostname, port: port))
-        )
-
-        logger.info("Server starting on \(hostname):\(port)")
-
-        _ = BonjourAdvertiser(port: port)
-
-        let serviceGroup = ServiceGroup(
-            configuration: ServiceGroupConfiguration(
-                services: [
-                    .init(service: app),
-                    .init(service: engine.jobRunner),
-                    .init(service: engine.orphanCleanup)
-                ],
-                gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
-                logger: logger
+        try await withDependencies {
+            $0.withEngine(engine)
+        } operation: {
+            // Create and register default agent
+            let defaultAgent = AutonomousAgent(
+                manifest: AgentManifest(
+                    id: "default",
+                    name: "Default Agent",
+                    description: "The default general-purpose agent.",
+                    capabilities: ["general", "tool-use"]
+                )
             )
-        )
+            await engine.agentRegistry.register(defaultAgent)
+            
+            let coordinatorAgent = AgentCoordinator()
+            await engine.agentRegistry.register(coordinatorAgent)
+            
+            // Public routes
+            router.get("/health") { _, _ -> String in
+                return "OK"
+            }
 
-        try await serviceGroup.run()
+            let startTime = Date()
+            let statusController = StatusAPIController<AppRequestContext>(
+                persistenceService: persistenceService,
+                llmService: engine.llmService,
+                startTime: startTime
+            )
+            statusController.addRoutes(to: router)
+
+            router.get("/") { _, _ -> String in
+                return "Monad Server is running."
+            }
+            
+            // WebSocket Route
+            let wsController = WebSocketAPIController<AppRequestContext>(connectionManager: connectionManager)
+            wsController.addRoutes(to: router.group("/api"))
+
+            // Protected routes
+            let protected = router.group("/api")
+                .add(middleware: AuthMiddleware())
+
+            protected.get("/test") { _, _ -> String in
+                return "Authenticated!"
+            }
+
+            let sessionController = SessionAPIController<AppRequestContext>(
+                sessionManager: engine.sessionManager)
+            sessionController.addRoutes(to: protected.group("/sessions"))
+
+            let chatController = ChatAPIController<AppRequestContext>(
+                sessionManager: engine.sessionManager,
+                chatOrchestrator: engine.chatOrchestrator,
+                verbose: verbose
+            )
+            chatController.addRoutes(to: protected.group("/sessions"))
+
+            let jobController = JobAPIController<AppRequestContext>(sessionManager: engine.sessionManager)
+            jobController.addRoutes(to: protected.group("/sessions"))
+
+            let memoryController = MemoryAPIController<AppRequestContext>(sessionManager: engine.sessionManager)
+            memoryController.addRoutes(to: protected.group("/memories"))
+
+            let pruneController = PruneAPIController<AppRequestContext>(
+                persistenceService: persistenceService)
+            pruneController.addRoutes(to: protected.group("/prune"))
+
+            let toolController = ToolAPIController<AppRequestContext>(
+                sessionManager: engine.sessionManager,
+                toolRouter: engine.toolRouter
+            )
+            toolController.addRoutes(to: protected.group("/tools"))
+
+            // Create database writer accessor (since it's an actor property, access it async or assume safe access pattern)
+            let dbWriter = engine.persistenceService.databaseWriter
+
+            let workspacesGroup = protected.group("/workspaces")
+            
+            let workspaceAPIController = WorkspaceAPIController<AppRequestContext>(
+                dbWriter: dbWriter, logger: logger)
+            workspaceAPIController.addRoutes(to: workspacesGroup)
+
+            let filesController = FilesAPIController<AppRequestContext>(
+                workspaceStore: engine.workspaceStore)
+            filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
+
+            let clientController = ClientAPIController<AppRequestContext>(
+                dbWriter: dbWriter, logger: logger)
+            clientController.addRoutes(to: protected.group("/clients"))
+
+            let configController = ConfigurationAPIController<AppRequestContext>(llmService: engine.llmService)
+            configController.addRoutes(to: protected.group("/config"))
+
+            let app = Application(
+                router: router,
+                server: .http1WebSocketUpgrade(webSocketRouter: router, configuration: .init()),
+                configuration: .init(address: .hostname(hostname, port: port))
+            )
+
+            logger.info("Server starting on \(hostname):\(port)")
+
+            _ = BonjourAdvertiser(port: port)
+
+            let serviceGroup = ServiceGroup(
+                configuration: ServiceGroupConfiguration(
+                    services: [
+                        .init(service: app),
+                        .init(service: engine.jobRunner),
+                        .init(service: engine.orphanCleanup)
+                    ],
+                    gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
+                    logger: logger
+                )
+            )
+
+            try await serviceGroup.run()
+        }
     }
 
     /// Default workspace path

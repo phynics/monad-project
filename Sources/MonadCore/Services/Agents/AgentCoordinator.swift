@@ -6,8 +6,8 @@ import OpenAI
 public class AgentCoordinator: BaseAgent, @unchecked Sendable {
 
     public init(
-        llmService: any LLMServiceProtocol,
-        persistenceService: any PersistenceServiceProtocol,
+        llmService: (any LLMServiceProtocol)? = nil,
+        persistenceService: (any PersistenceServiceProtocol)? = nil,
         reasoningEngine: ReasoningEngine? = nil
     ) {
         let manifest = AgentManifest(

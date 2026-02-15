@@ -7,8 +7,8 @@ public class AutonomousAgent: BaseAgent, @unchecked Sendable {
     
     public override init(
         manifest: AgentManifest,
-        llmService: any LLMServiceProtocol,
-        persistenceService: any PersistenceServiceProtocol,
+        llmService: (any LLMServiceProtocol)? = nil,
+        persistenceService: (any PersistenceServiceProtocol)? = nil,
         reasoningEngine: ReasoningEngine? = nil
     ) {
         super.init(
@@ -23,8 +23,8 @@ public class AutonomousAgent: BaseAgent, @unchecked Sendable {
         id: String = "default",
         name: String = "Autonomous Agent",
         description: String = "General purpose autonomous agent",
-        llmService: any LLMServiceProtocol,
-        persistenceService: any PersistenceServiceProtocol
+        llmService: (any LLMServiceProtocol)? = nil,
+        persistenceService: (any PersistenceServiceProtocol)? = nil
     ) {
         let manifest = AgentManifest(id: id, name: name, description: description)
         super.init(
