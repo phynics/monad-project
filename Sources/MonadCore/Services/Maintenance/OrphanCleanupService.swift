@@ -1,8 +1,9 @@
 import Foundation
 import Logging
+import ServiceLifecycle
 
 /// Service that cleans up orphaned workspaces
-public final class OrphanCleanupService: Sendable {
+public final class OrphanCleanupService: Service, Sendable {
     private let persistenceService: any PersistenceServiceProtocol
     private let workspaceRoot: URL
     private let logger: Logger

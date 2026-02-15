@@ -103,20 +103,6 @@ struct MonadServer: AsyncParsableCommand {
         try await withDependencies {
             $0.withEngine(engine)
         } operation: {
-            // Create and register default agent
-            let defaultAgent = AutonomousAgent(
-                manifest: AgentManifest(
-                    id: "default",
-                    name: "Default Agent",
-                    description: "The default general-purpose agent.",
-                    capabilities: ["general", "tool-use"]
-                )
-            )
-            await engine.agentRegistry.register(defaultAgent)
-            
-            let coordinatorAgent = AgentCoordinator()
-            await engine.agentRegistry.register(coordinatorAgent)
-            
             // Public routes
             router.get("/health") { _, _ -> String in
                 return "OK"
@@ -212,7 +198,7 @@ struct MonadServer: AsyncParsableCommand {
                 configuration: ServiceGroupConfiguration(
                     services: [
                         .init(service: app),
-                        .init(service: engine.jobRunner),
+                        .init(service: engine), // Engine manages jobRunner
                         .init(service: engine.orphanCleanup)
                     ],
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
@@ -274,6 +260,3 @@ struct MonadServer: AsyncParsableCommand {
         #endif
     }
 }
-
-extension MonadCore.JobRunnerService: Service {}
-extension MonadCore.OrphanCleanupService: Service {}

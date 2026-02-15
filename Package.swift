@@ -32,6 +32,7 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "USearch", package: "USearch"),
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
             ],
             path: "Sources/MonadCore"
         ),

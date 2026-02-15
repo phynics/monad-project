@@ -1,8 +1,9 @@
 import Foundation
 import Logging
+import ServiceLifecycle
 
 /// Service that monitors and executes background jobs
-public final class JobRunnerService: Sendable {
+public final class JobRunnerService: Service, Sendable {
     private let sessionManager: SessionManager
     private let llmService: any LLMServiceProtocol
     private let agentRegistry: AgentRegistry
