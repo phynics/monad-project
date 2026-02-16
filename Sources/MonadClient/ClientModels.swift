@@ -20,10 +20,6 @@ public typealias HealthStatus = MonadCore.HealthStatus
 public typealias Memory = MonadCore.Memory
 public typealias MemorySearchRequest = MonadCore.MemorySearchRequest
 
-// Note Models
-public typealias Note = MonadCore.Note
-public typealias CreateNoteRequest = MonadCore.CreateNoteRequest
-public typealias UpdateNoteRequest = MonadCore.UpdateNoteRequest
 
 // Tool Models
 public typealias Tool = MonadCore.ToolInfo

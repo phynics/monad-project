@@ -140,11 +140,11 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
             try Memory.deleteAll(db)
             try Job.deleteAll(db)
 
-            // Note: Notes and conversationMessage/Session are now protected by triggers
+            // Note: Archives and conversationMessage/Session are now protected by triggers
             // and cannot be deleted or modified (for archived sessions).
             // We do not attempt to delete them here to avoid trigger violations.
             logger.info(
-                "Database reset: Memories cleared. Notes and Archives preserved due to immutability constraints."
+                "Database reset: Memories cleared. Archives preserved due to immutability constraints."
             )
         }
     }
@@ -202,13 +202,3 @@ public enum PersistenceServiceError: LocalizedError {
     }
 }
 
-public enum NoteError: LocalizedError {
-    case noteIsReadonly
-
-    public var errorDescription: String? {
-        switch self {
-        case .noteIsReadonly:
-            return "Cannot delete readonly note"
-        }
-    }
-}

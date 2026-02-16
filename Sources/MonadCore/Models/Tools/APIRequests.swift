@@ -228,27 +228,6 @@ public struct ToolInfo: Codable, Sendable, Identifiable {
     }
 }
 
-// MARK: - Note API
-
-public struct CreateNoteRequest: Codable, Sendable {
-    public let title: String
-    public let content: String
-
-    public init(title: String, content: String) {
-        self.title = title
-        self.content = content
-    }
-}
-
-public struct UpdateNoteRequest: Codable, Sendable {
-    public let title: String?
-    public let content: String?
-
-    public init(title: String? = nil, content: String? = nil) {
-        self.title = title
-        self.content = content
-    }
-}
 
 // MARK: - Memory API
 

@@ -235,12 +235,6 @@ public final class MockPersistenceService: PersistenceServiceProtocol, @unchecke
 
     // RAW SQL Support
     public func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]] {
-        // Simple mock implementation: return an error if it looks like a deletion we should block
-        if sql.lowercased().contains("delete from note") {
-            throw NSError(
-                domain: "SQLite", code: 19,
-                userInfo: [NSLocalizedDescriptionKey: "Notes cannot be deleted"])
-        }
         return []
     }
 

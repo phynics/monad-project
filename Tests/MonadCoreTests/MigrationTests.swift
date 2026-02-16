@@ -31,9 +31,6 @@ struct MigrationTests {
                 t.primaryKey("id", .blob).notNull()
                 t.column("sessionId", .blob).notNull().references("conversationSession")
             }
-            try db.create(table: "note") { t in
-                t.primaryKey("id", .blob).notNull()
-            }
         }
         try oldMigrator.migrate(queue)
 

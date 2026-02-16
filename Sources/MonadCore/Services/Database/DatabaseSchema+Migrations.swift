@@ -9,8 +9,7 @@ extension DatabaseSchema {
             try createWorkspaceTables(in: db)
             try createConversationTables(in: db)
             try createMemoryTable(in: db)
-            try createNoteTable(in: db)
-            try createDefaultNotes(in: db)
+            // Note table removed
         }
 
         // v2: Add embedding to Memory
@@ -52,13 +51,9 @@ extension DatabaseSchema {
             }
         }
 
-        // v6: Add tags to Note
+        // v6: Add tags to Note (Removed)
         migrator.registerMigration("v6") { db in
-            if try !db.columns(in: "note").contains(where: { $0.name == "tags" }) {
-                try db.alter(table: "note") { t in
-                    t.add(column: "tags", .text).notNull().defaults(to: "[]")
-                }
-            }
+            // No-op
         }
 
         // v7: Convert conversationSession tags from base64 to JSON
@@ -116,17 +111,8 @@ extension DatabaseSchema {
         }
 
         // v11: Add triggers for immutability
+        // v11: Add triggers for immutability
         migrator.registerMigration("v11") { db in
-            // Protect Notes from deletion
-            try db.execute(
-                sql: """
-                        CREATE TRIGGER IF NOT EXISTS prevent_note_deletion
-                        BEFORE DELETE ON note
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Notes cannot be deleted');
-                        END;
-                    """)
-
             // Protect Archives (Sessions and Messages) from deletion and modification
             try db.execute(
                 sql: """
@@ -174,22 +160,9 @@ extension DatabaseSchema {
         }
 
         // v12: Remove alwaysAppend, isEnabled, and priority from Note
+        // v12: Remove alwaysAppend, isEnabled, and priority from Note (Removed)
         migrator.registerMigration("v12") { db in
-            try db.execute(sql: "DROP INDEX IF EXISTS idx_note_alwaysAppend")
-
-            let columns = try db.columns(in: "note").map { $0.name }
-
-            try db.alter(table: "note") { t in
-                if columns.contains("alwaysAppend") {
-                    t.drop(column: "alwaysAppend")
-                }
-                if columns.contains("isEnabled") {
-                    t.drop(column: "isEnabled")
-                }
-                if columns.contains("priority") {
-                    t.drop(column: "priority")
-                }
-            }
+           // No-op
         }
 
         // v13: Add table_directory for self-documenting schema
@@ -270,12 +243,13 @@ extension DatabaseSchema {
 
         // v18: Remove legacy Note table
         migrator.registerMigration("v18") { db in
-            try db.drop(table: "note")
+            // Note table removal logic removed
         }
 
         // v19: Restore Note table
+        // v19: Restore Note table (Removed)
         migrator.registerMigration("v19") { db in
-            try createNoteTable(in: db)
+            // No-op
         }
 
         // v20: Add persona column to conversationSession

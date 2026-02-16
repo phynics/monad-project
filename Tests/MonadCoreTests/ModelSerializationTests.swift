@@ -103,25 +103,6 @@ import GRDB
         #expect(fetched?.id == uuid)
     }
 
-    // MARK: - Note
-
-    @Test("Note JSON Serialization")
-    func testNoteJSON() throws {
-        let note = Note(
-            id: UUID(),
-            name: "My Note",
-            content: "Line 1\nLine 2",
-            isReadonly: true,
-            tags: ["n1"]
-        )
-
-        let data = try JSONEncoder().encode(note)
-        let decoded = try JSONDecoder().decode(Note.self, from: data)
-
-        #expect(decoded.name == note.name)
-        #expect(decoded.isReadonly == true)
-    }
-
     // MARK: - Edge Cases
 
     @Test("Edge Case: Empty Fields")

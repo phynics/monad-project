@@ -27,15 +27,14 @@ struct LLMServiceTests {
     @Test("Test prompt building logic and structure")
     func promptBuilding() async throws {
         let promptBuilder = PromptBuilder()
-        let notes = [
-            Note(name: "Test Note", content: "Note Content")
+        let contextFiles = [
+            ContextFile(name: "Test Note", content: "Note Content", source: "note")
         ]
         let history = [
             Message(content: "Previous user message", role: .user),
             Message(content: "Previous assistant message", role: .assistant)
         ]
 
-        let contextFiles = notes.map { ContextFile(name: $0.name, content: $0.content, source: "note") }
         let (messages, rawPrompt, _) = await promptBuilder.buildPrompt(
             systemInstructions: "System rules",
             contextNotes: contextFiles,
