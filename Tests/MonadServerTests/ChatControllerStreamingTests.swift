@@ -5,6 +5,7 @@ import MonadCore
 import NIOCore
 import OpenAI
 import Testing
+import Dependencies
 
 @testable import MonadServer
 
@@ -19,48 +20,60 @@ import Testing
         llmService.mockClient.nextResponses = ["Hello", " ", "World"]
 
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
-        let sessionManager = SessionManager(
-            persistenceService: persistence,
-            embeddingService: embedding,
-            llmService: llmService, agentRegistry: AgentRegistry(),
-            workspaceRoot: workspaceRoot
-        )
-
-        // Create Session
-        let session = try await sessionManager.createSession()
-
-        let toolRouter = ToolRouter(sessionManager: sessionManager)
-        let orchestrator = ChatOrchestrator(
-            sessionManager: sessionManager,
-            llmService: llmService, agentRegistry: AgentRegistry(),
-            toolRouter: toolRouter
-        )
-
-        // Setup App
-        let router = Router()
-        let controller = ChatAPIController<BasicRequestContext>(
-            sessionManager: sessionManager, chatOrchestrator: orchestrator)
-        controller.addRoutes(to: router.group("/sessions"))
-
-        let app = Application(router: router)
-
-        // Test Request
-        let chatRequest = ChatRequest(message: "Hi")
-
-        try await app.test(.router) { client in
-            let buffer = ByteBuffer(bytes: try JSONEncoder().encode(chatRequest))
-
-            try await client.execute(
-                uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer
-            ) { response in
-                #expect(response.status == .ok)
-                #expect(response.headers[.contentType] == "text/event-stream")
-
-                // Collect body
-                let body = try await String(buffer: await response.body)
-                // SSE format check
-                #expect(body.contains("data:"))
-                #expect(body.contains("\"isDone\":true"))
+        
+        try await withDependencies {
+            $0.persistenceService = persistence
+            $0.embeddingService = embedding
+            $0.llmService = llmService
+            $0.agentRegistry = AgentRegistry()
+        } operation: {
+            let sessionManager = SessionManager(
+                workspaceRoot: workspaceRoot
+            )
+    
+            // Create Session
+            let session = try await sessionManager.createSession()
+    
+            // We need to inject sessionManager into the context for ToolRouter and ChatOrchestrator
+            // Since we created sessionManager explicitly, we should override it in dependencies for subsequent calls
+            try await withDependencies {
+                $0.sessionManager = sessionManager
+            } operation: {
+                let toolRouter = ToolRouter()
+                // Also override toolRouter for ChatOrchestrator
+                try await withDependencies {
+                    $0.toolRouter = toolRouter
+                } operation: {
+                    let orchestrator = ChatOrchestrator()
+            
+                    // Setup App
+                    let router = Router()
+                    let controller = ChatAPIController<BasicRequestContext>(
+                        sessionManager: sessionManager, chatOrchestrator: orchestrator)
+                    controller.addRoutes(to: router.group("/sessions"))
+            
+                    let app = Application(router: router)
+            
+                    // Test Request
+                    let chatRequest = ChatRequest(message: "Hi")
+            
+                    try await app.test(.router) { client in
+                        let buffer = ByteBuffer(bytes: try JSONEncoder().encode(chatRequest))
+            
+                        try await client.execute(
+                            uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer
+                        ) { response in
+                            #expect(response.status == .ok)
+                            #expect(response.headers[.contentType] == "text/event-stream")
+            
+                            // Collect body
+                            let body = try await String(buffer: await response.body)
+                            // SSE format check
+                            #expect(body.contains("data:"))
+                            #expect(body.contains("\"isDone\":true"))
+                        }
+                    }
+                }
             }
         }
     }
@@ -74,40 +87,49 @@ import Testing
         llmService.isConfigured = false
 
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
-        let sessionManager = SessionManager(
-            persistenceService: persistence,
-            embeddingService: embedding,
-            llmService: llmService, agentRegistry: AgentRegistry(),
-            workspaceRoot: workspaceRoot
-        )
-
-        // Create Session
-        let session = try await sessionManager.createSession()
-
-        let toolRouter = ToolRouter(sessionManager: sessionManager)
-        let orchestrator = ChatOrchestrator(
-            sessionManager: sessionManager,
-            llmService: llmService, agentRegistry: AgentRegistry(),
-            toolRouter: toolRouter
-        )
-
-        // Setup App
-        let router = Router()
-        let controller = ChatAPIController<BasicRequestContext>(
-            sessionManager: sessionManager, chatOrchestrator: orchestrator)
-        controller.addRoutes(to: router.group("/sessions"))
-
-        let app = Application(router: router)
-
-        // Test Request
-        let chatRequest = ChatRequest(message: "Hi")
-
-        try await app.test(.router) { client in
-            let buffer = ByteBuffer(bytes: try JSONEncoder().encode(chatRequest))
-            try await client.execute(
-                uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer
-            ) { response in
-                #expect(response.status != .ok)
+        
+        try await withDependencies {
+            $0.persistenceService = persistence
+            $0.embeddingService = embedding
+            $0.llmService = llmService
+            $0.agentRegistry = AgentRegistry()
+        } operation: {
+            let sessionManager = SessionManager(
+                workspaceRoot: workspaceRoot
+            )
+    
+            // Create Session
+            let session = try await sessionManager.createSession()
+    
+            try await withDependencies {
+                $0.sessionManager = sessionManager
+            } operation: {
+                let toolRouter = ToolRouter()
+                 try await withDependencies {
+                    $0.toolRouter = toolRouter
+                } operation: {
+                    let orchestrator = ChatOrchestrator()
+            
+                    // Setup App
+                    let router = Router()
+                    let controller = ChatAPIController<BasicRequestContext>(
+                        sessionManager: sessionManager, chatOrchestrator: orchestrator)
+                    controller.addRoutes(to: router.group("/sessions"))
+            
+                    let app = Application(router: router)
+            
+                    // Test Request
+                    let chatRequest = ChatRequest(message: "Hi")
+            
+                    try await app.test(.router) { client in
+                        let buffer = ByteBuffer(bytes: try JSONEncoder().encode(chatRequest))
+                        try await client.execute(
+                            uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer
+                        ) { response in
+                            #expect(response.status != .ok)
+                        }
+                    }
+                }
             }
         }
     }

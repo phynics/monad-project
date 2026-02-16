@@ -6,31 +6,14 @@ import Dependencies
 open class BaseAgent: AgentProtocol, @unchecked Sendable {
     public let manifest: AgentManifest
     
-    @Dependency(\.llmService) private var defaultLLMService
-    @Dependency(\.persistenceService) private var defaultPersistenceService
-    @Dependency(\.reasoningEngine) private var defaultReasoningEngine
-    
-    private let explicitLLMService: (any LLMServiceProtocol)?
-    private let explicitPersistenceService: (any PersistenceServiceProtocol)?
-    private let explicitReasoningEngine: ReasoningEngine?
-
-    public var llmService: any LLMServiceProtocol { explicitLLMService ?? defaultLLMService }
-    public var persistenceService: any PersistenceServiceProtocol { explicitPersistenceService ?? defaultPersistenceService }
-    public var reasoningEngine: ReasoningEngine { explicitReasoningEngine ?? defaultReasoningEngine }
+    @Dependency(\.llmService) public var llmService
+    @Dependency(\.persistenceService) public var persistenceService
+    @Dependency(\.reasoningEngine) public var reasoningEngine
     
     public let logger: Logger
 
-    public init(
-        manifest: AgentManifest,
-        llmService: (any LLMServiceProtocol)? = nil,
-        persistenceService: (any PersistenceServiceProtocol)? = nil,
-        reasoningEngine: ReasoningEngine? = nil
-    ) {
+    public init(manifest: AgentManifest) {
         self.manifest = manifest
-        self.explicitLLMService = llmService
-        self.explicitPersistenceService = persistenceService
-        self.explicitReasoningEngine = reasoningEngine
-        
         self.logger = Logger(label: "com.monad.agent.\(manifest.id)")
     }
 

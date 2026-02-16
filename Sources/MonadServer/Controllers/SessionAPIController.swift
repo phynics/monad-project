@@ -22,7 +22,6 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         group.get("/{id}/messages", use: getMessages)
         group.get("/{id}/history", use: getMessages) // Legacy alias
 
-        group.get("/personas", use: listPersonas)
 
         // Workspace routes
         group.post("/{id}/workspaces", use: attachWorkspace)
@@ -34,8 +33,7 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
     @Sendable func create(_ request: Request, context: Context) async throws -> Response {
         let input = try? await request.decode(as: CreateSessionRequest.self, context: context)
         let session = try await sessionManager.createSession(
-            title: input?.title ?? "New Conversation",
-            persona: input?.persona
+            title: input?.title ?? "New Conversation"
         )
         let response = SessionResponse(
             id: session.id,
@@ -45,7 +43,6 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
             isArchived: session.isArchived,
             tags: session.tagArray,
             workingDirectory: session.workingDirectory,
-            persona: session.persona,
             primaryWorkspaceId: session.primaryWorkspaceId,
             attachedWorkspaceIds: session.attachedWorkspaces
         )
@@ -86,7 +83,6 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
                 isArchived: session.isArchived,
                 tags: session.tagArray,
                 workingDirectory: session.workingDirectory,
-                persona: session.persona,
                 primaryWorkspaceId: session.primaryWorkspaceId,
                 attachedWorkspaceIds: session.attachedWorkspaces
             )
@@ -118,7 +114,6 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
                      isArchived: dbSession.isArchived,
                      tags: dbSession.tagArray,
                      workingDirectory: dbSession.workingDirectory,
-                     persona: dbSession.persona,
                      primaryWorkspaceId: dbSession.primaryWorkspaceId,
                      attachedWorkspaceIds: dbSession.attachedWorkspaces
                  )
@@ -138,7 +133,6 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
             isArchived: session.isArchived,
             tags: session.tagArray,
             workingDirectory: session.workingDirectory,
-            persona: session.persona,
             primaryWorkspaceId: session.primaryWorkspaceId,
             attachedWorkspaceIds: session.attachedWorkspaces
         )
@@ -158,9 +152,6 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         if let title = input.title {
             try await sessionManager.updateSessionTitle(id: id, title: title)
         }
-        if let persona = input.persona {
-            try await sessionManager.updateSessionPersona(id: id, persona: persona)
-        }
         
         return try await get(request, context: context)
     }
@@ -179,14 +170,6 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         return Response(status: .noContent)
     }
 
-    @Sendable func listPersonas(_ request: Request, context: Context) async throws -> Response {
-        let personas = await sessionManager.listPersonas()
-        let data = try SerializationUtils.jsonEncoder.encode(personas)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
-    }
 
     @Sendable func getMessages(_ request: Request, context: Context) async throws -> Response {
         let idString = try context.parameters.require("id")

@@ -1,4 +1,5 @@
 import Foundation
+import MonadShared
 import MonadCore
 
 // MARK: - Type Aliases from MonadCore
@@ -33,7 +34,7 @@ public typealias MessageRole = MonadCore.Message.MessageRole
 
 // Job Models
 public typealias Job = MonadCore.Job
-public typealias AddJobRequest = MonadCore.AddJobRequest
+public typealias AddJobRequest = MonadShared.AddJobRequest
 
 // MARK: - Client-Specific Models
 

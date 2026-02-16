@@ -5,29 +5,13 @@ import Dependencies
 
 /// Service that monitors and executes background jobs
 public final class JobRunnerService: Service, @unchecked Sendable {
-    @Dependency(\.sessionManager) private var defaultSessionManager
-    @Dependency(\.llmService) private var defaultLLMService
-    @Dependency(\.agentRegistry) private var defaultAgentRegistry
-    
-    private let explicitSessionManager: SessionManager?
-    private let explicitLLMService: (any LLMServiceProtocol)?
-    private let explicitAgentRegistry: AgentRegistry?
-
-    private var sessionManager: SessionManager { explicitSessionManager ?? defaultSessionManager }
-    private var llmService: any LLMServiceProtocol { explicitLLMService ?? defaultLLMService }
-    private var agentRegistry: AgentRegistry { explicitAgentRegistry ?? defaultAgentRegistry }
+    @Dependency(\.sessionManager) private var sessionManager
+    @Dependency(\.llmService) private var llmService
+    @Dependency(\.agentRegistry) private var agentRegistry
     
     private let logger = Logger(label: "com.monad.job-runner")
     
-    public init(
-        sessionManager: SessionManager? = nil,
-        llmService: (any LLMServiceProtocol)? = nil,
-        agentRegistry: AgentRegistry? = nil
-    ) {
-        self.explicitSessionManager = sessionManager
-        self.explicitLLMService = llmService
-        self.explicitAgentRegistry = agentRegistry
-    }
+    public init() {}
     
     /// Run the job execution loop
     public func run() async throws {

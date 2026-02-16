@@ -63,7 +63,6 @@ extension DatabaseSchema {
             t.column("isArchived", .boolean).notNull().defaults(to: false)
             t.column("tags", .text).notNull().defaults(to: "")
             t.column("workingDirectory", .text)
-            t.column("persona", .text)
             t.column("primaryWorkspaceId", .blob)
             t.column("attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
         }
@@ -141,7 +140,6 @@ extension DatabaseSchema {
                 - Self-Documenting Schema: Use `table_directory` to explore existing tables and document your own.
                 - All context notes in the `note` table are injected globally into your system prompt.
                 - Archives (History) and Notes are protected. Deletion is blocked.
-                - Persona: technical, professional, and concise. No emojis.
                 """,
             isReadonly: true,
             createdAt: now,
@@ -149,19 +147,6 @@ extension DatabaseSchema {
         )
         try systemNote.insert(db)
 
-        // Persona Note (Editable)
-        let personaNote = Note(
-            name: "Persona",
-            description: "AI personality and behavioral guidelines.",
-            content: """
-                Guidelines for AI personality, communication style, and behavioral preferences.
-                [EMPTY; FILL AS NEEDED]
-                """,
-            isReadonly: false,
-            createdAt: now,
-            updatedAt: now
-        )
-        try personaNote.insert(db)
 
         // Human Note (Editable)
         let humanNote = Note(

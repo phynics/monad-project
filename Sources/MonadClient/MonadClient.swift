@@ -1,4 +1,5 @@
 import Foundation
+import MonadShared
 import MonadCore
 
 /// HTTP client for communicating with MonadServer
@@ -29,11 +30,11 @@ public actor MonadClient {
 
     /// Create a new chat session
     public func createSession(
-        title: String? = nil, persona: String? = nil, workspaceId: UUID? = nil
+        title: String? = nil, workspaceId: UUID? = nil
     ) async throws -> Session {
         var request = try buildRequest(path: "/api/sessions", method: "POST")
         request.httpBody = try encoder.encode(
-            CreateSessionRequest(title: title, primaryWorkspaceId: workspaceId, persona: persona))
+            CreateSessionRequest(title: title, primaryWorkspaceId: workspaceId))
         return try await perform(request)
     }
 
@@ -43,19 +44,6 @@ public actor MonadClient {
         return response.items
     }
 
-    /// List available personas
-    public func listPersonas() async throws -> [Persona] {
-        let request = try buildRequest(path: "/api/sessions/personas", method: "GET")
-        return try await perform(request)
-    }
-
-    /// Update session persona
-    public func updatePersona(_ persona: String, sessionId: UUID) async throws {
-        var request = try buildRequest(
-            path: "/api/sessions/\(sessionId.uuidString)/persona", method: "PATCH")
-        request.httpBody = try encoder.encode(UpdatePersonaRequest(persona: persona))
-        _ = try await performRaw(request)
-    }
 
     /// Update session title
     public func updateSessionTitle(_ title: String, sessionId: UUID) async throws {

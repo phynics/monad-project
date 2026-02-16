@@ -5,23 +5,14 @@ import OpenAI
 /// An agent that specializes in coordinating other agents to complete complex tasks
 public class AgentCoordinator: BaseAgent, @unchecked Sendable {
 
-    public init(
-        llmService: (any LLMServiceProtocol)? = nil,
-        persistenceService: (any PersistenceServiceProtocol)? = nil,
-        reasoningEngine: ReasoningEngine? = nil
-    ) {
+    public init() {
         let manifest = AgentManifest(
             id: "coordinator",
             name: "Agent Coordinator",
             description: "Expert at breaking down complex tasks and delegating them to specialized subagents.",
             capabilities: ["coordination", "planning", "delegation"]
         )
-        super.init(
-            manifest: manifest,
-            llmService: llmService,
-            persistenceService: persistenceService,
-            reasoningEngine: reasoningEngine
-        )
+        super.init(manifest: manifest)
     }
 
     open override var systemInstructions: String {

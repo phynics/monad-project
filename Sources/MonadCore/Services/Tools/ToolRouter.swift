@@ -6,13 +6,9 @@ import Dependencies
 public actor ToolRouter {
     private let logger = Logger(label: "com.monad.core.tools")
     
-    @Dependency(\.sessionManager) private var defaultSessionManager
-    private let explicitSessionManager: SessionManager?
-    private var sessionManager: SessionManager { explicitSessionManager ?? defaultSessionManager }
+    @Dependency(\.sessionManager) private var sessionManager
 
-    public init(sessionManager: SessionManager? = nil) {
-        self.explicitSessionManager = sessionManager
-    }
+    public init() {}
 
     /// Execute a tool in the context of a session
     public func execute(

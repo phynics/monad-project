@@ -49,8 +49,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             sessionId: id,
             message: chatRequest.message,
             clientId: chatRequest.clientId,
-            toolOutputs: chatRequest.toolOutputs,
-            verbose: verbose
+            toolOutputs: chatRequest.toolOutputs
         )
 
         var fullResponse = ""
@@ -76,8 +75,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             sessionId: id,
             message: chatRequest.message,
             clientId: chatRequest.clientId,
-            toolOutputs: chatRequest.toolOutputs,
-            verbose: verbose
+            toolOutputs: chatRequest.toolOutputs
         )
 
         let sseStream = AsyncStream<ByteBuffer> { continuation in

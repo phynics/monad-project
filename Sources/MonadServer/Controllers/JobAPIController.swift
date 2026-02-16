@@ -1,6 +1,7 @@
 import Foundation
 import HTTPTypes
 import Hummingbird
+import MonadShared
 import MonadCore
 import NIOCore
 

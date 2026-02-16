@@ -43,7 +43,6 @@ actor ChatREPL: ChatREPLController {
 
         // Tools & Env
         await registry.register(ToolCommand())
-        await registry.register(PersonaCommand())
         await registry.register(WorkspaceSlashCommand())
         await registry.register(MemoryCommand())
         await registry.register(PruneSlashCommand())

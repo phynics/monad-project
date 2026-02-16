@@ -95,6 +95,24 @@ extension SessionManager {
         }
     }
 
+    /// Aggregates all available tool references for a session, including those from the client.
+    public func getAllToolReferences(sessionId: UUID, clientId: UUID? = nil) async throws -> [ToolReference] {
+        var references = try await getAggregatedTools(for: sessionId)
+        
+        if let clientId = clientId {
+            let clientTools = try await getClientTools(clientId: clientId)
+            references.append(contentsOf: clientTools)
+        }
+        
+        // Deduplicate by ID
+        var seenIds = Set<String>()
+        return references.filter { ref in
+            if seenIds.contains(ref.toolId) { return false }
+            seenIds.insert(ref.toolId)
+            return true
+        }
+    }
+
     public func getToolSource(toolId: String, for sessionId: UUID) async -> String? {
         guard let session = sessions[sessionId] else { return nil }
 
@@ -112,7 +130,7 @@ extension SessionManager {
         let workspaceIds = ids
         if workspaceIds.isEmpty { return nil }
 
-        return try? await persistenceService.databaseWriter.read { db in
+        return try? await persistenceService.databaseWriter.read { db -> String? in
             if let toolRecord =
                 try WorkspaceTool
                 .filter(Column("toolId") == toolId)

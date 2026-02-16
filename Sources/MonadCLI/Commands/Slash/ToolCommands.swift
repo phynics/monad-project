@@ -50,34 +50,3 @@ struct ToolCommand: SlashCommand {
     }
 }
 
-struct PersonaCommand: SlashCommand {
-    let name = "persona"
-    let aliases = ["personas"]
-    let description = "Manage personas"
-    let category: String? = "Tools & Environment"
-    let usage = "/persona [list|use] <name>"
-
-    func run(args: [String], context: ChatContext) async throws {
-        let subcommand = args.first ?? "list"
-        switch subcommand {
-        case "list", "ls":
-            let personas = try await context.client.listPersonas()
-            print("\n\(TerminalUI.bold("Available Personas:"))")
-            for p in personas {
-                print("  👤 \(p.id)")
-            }
-            print("")
-        case "use", "set":
-            if args.count > 1 {
-                let name = args[1]
-                let file = name.hasSuffix(".md") ? name : "\(name).md"
-                try await context.client.updatePersona(file, sessionId: context.session.id)
-                TerminalUI.printSuccess("Persona updated to \(file)")
-            } else {
-                TerminalUI.printError("Usage: /persona use <name>")
-            }
-        default:
-            TerminalUI.printError("Unknown subcommand. Use list or use.")
-        }
-    }
-}

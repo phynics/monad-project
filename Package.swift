@@ -11,6 +11,7 @@ let package = Package(
         .library(name: "MonadClient", targets: ["MonadClient"]),
         .executable(name: "MonadServer", targets: ["MonadServer"]),
         .executable(name: "MonadCLI", targets: ["MonadCLI"]),
+        .library(name: "MonadShared", targets: ["MonadShared"]),
     ],
     dependencies: [
         .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main"),
@@ -25,8 +26,14 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "MonadShared",
+            dependencies: [],
+            path: "Sources/MonadShared"
+        ),
+        .target(
             name: "MonadCore",
             dependencies: [
+                "MonadShared",
                 .product(name: "OpenAI", package: "OpenAI"),
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "Logging", package: "swift-log"),
@@ -76,6 +83,7 @@ let package = Package(
                 "MonadServer",
                 "MonadCore",
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
+                .product(name: "Dependencies", package: "swift-dependencies"),
             ],
             path: "Tests/MonadServerTests"
         ),

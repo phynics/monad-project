@@ -3,7 +3,7 @@ import Foundation
 public struct ContextFile: Sendable, Codable, CustomStringConvertible {
     public let name: String
     public let content: String
-    public let source: String  // e.g. "Notes/Welcome.md" or "Personas/Default.md"
+    public let source: String  // e.g. "Notes/Welcome.md"
 
     public var description: String {
         return "ContextFile(name: \(name), source: \(source))"

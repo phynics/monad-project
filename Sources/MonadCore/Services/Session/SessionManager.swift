@@ -27,20 +27,15 @@ public actor SessionManager {
     /// Snapshots of tool and context state used for debugging chat turns.
     internal var debugSnapshots: [UUID: DebugSnapshot] = [:]
 
-    @Dependency(\.persistenceService) private var defaultPersistenceService
-    @Dependency(\.embeddingService) private var defaultEmbeddingService
-    @Dependency(\.llmService) private var defaultLLMService
-    @Dependency(\.agentRegistry) private var defaultAgentRegistry
+    @Dependency(\.persistenceService) private var _persistenceService
+    @Dependency(\.embeddingService) private var _embeddingService
+    @Dependency(\.llmService) private var _llmService
+    @Dependency(\.agentRegistry) private var _agentRegistry
 
-    private let explicitPersistenceService: (any PersistenceServiceProtocol)?
-    private let explicitEmbeddingService: (any EmbeddingServiceProtocol)?
-    private let explicitLLMService: (any LLMServiceProtocol)?
-    private let explicitAgentRegistry: AgentRegistry?
-
-    internal var persistenceService: any PersistenceServiceProtocol { explicitPersistenceService ?? defaultPersistenceService }
-    internal var embeddingService: any EmbeddingServiceProtocol { explicitEmbeddingService ?? defaultEmbeddingService }
-    internal var llmService: any LLMServiceProtocol { explicitLLMService ?? defaultLLMService }
-    internal var agentRegistry: AgentRegistry { explicitAgentRegistry ?? defaultAgentRegistry }
+    internal var persistenceService: any PersistenceServiceProtocol { _persistenceService }
+    internal var embeddingService: any EmbeddingServiceProtocol { _embeddingService }
+    internal var llmService: any LLMServiceProtocol { _llmService }
+    internal var agentRegistry: AgentRegistry { _agentRegistry }
 
     internal let vectorStore: (any VectorStoreProtocol)?
     internal let workspaceRoot: URL
@@ -56,25 +51,26 @@ public actor SessionManager {
     ///   - workspaceRoot: The root directory where session data is stored.
     ///   - connectionManager: Optional manager for client-side tool connections.
     public init(
-        persistenceService: (any PersistenceServiceProtocol)? = nil,
-        embeddingService: (any EmbeddingServiceProtocol)? = nil,
         vectorStore: (any VectorStoreProtocol)? = nil,
-        llmService: (any LLMServiceProtocol)? = nil,
-        agentRegistry: AgentRegistry? = nil,
         workspaceRoot: URL,
         connectionManager: (any ClientConnectionManagerProtocol)? = nil
     ) {
-        self.explicitPersistenceService = persistenceService
-        self.explicitEmbeddingService = embeddingService
         self.vectorStore = vectorStore
-        self.explicitLLMService = llmService
-        self.explicitAgentRegistry = agentRegistry
         self.workspaceRoot = workspaceRoot
         self.connectionManager = connectionManager
     }
     
     // MARK: - Component Setup
-
+    /// Initializes and configures the internal components for a conversation session.
+    ///
+    /// This method sets up the `ContextManager`, `ToolContextSession`, `SessionToolManager`,
+    /// and `ToolExecutor` for the given session. It also handles workspace hydration
+    /// and registration.
+    ///
+    /// - Parameters:
+    ///   - session: The conversation session to set up components for.
+    ///   - workspaceURL: The file system URL for the session's workspace.
+    ///   - parentId: An optional parent session ID for context inheritance.
     internal func setupSessionComponents(
         session: ConversationSession,
         workspaceURL: URL,
@@ -128,14 +124,12 @@ public actor SessionManager {
     /// Creates a new conversation session, initializes its workspace, and saves it to persistence.
     /// - Parameters:
     ///   - title: The initial title of the session.
-    ///   - persona: The initial persona content (optional).
     /// - Returns: The newly created `ConversationSession`.
-    public func createSession(title: String = "New Conversation", persona: String? = nil)
+    public func createSession(title: String = "New Conversation")
         async throws
         -> ConversationSession
     {
         let sessionId = UUID()
-        let selectedPersonaContent = persona ?? "You are Monad, an intelligent AI assistant."
 
         let sessionWorkspaceURL = workspaceRoot.appendingPathComponent(
             "sessions", isDirectory: true
@@ -154,8 +148,6 @@ public actor SessionManager {
         let projectNote = "# Project Notes\n\nI should use this file to track the goals and progress..."
         try projectNote.write(to: notesDir.appendingPathComponent("Project.md"), atomically: true, encoding: .utf8)
 
-        try selectedPersonaContent.write(to: notesDir.appendingPathComponent("Persona.md"), atomically: true, encoding: .utf8)
-
         let workspace = WorkspaceReference(
             uri: .serverSession(sessionId),
             hostType: .server,
@@ -170,8 +162,7 @@ public actor SessionManager {
         var session = ConversationSession(
             id: sessionId,
             title: title,
-            primaryWorkspaceId: workspace.id,
-            persona: "Persona.md"
+            primaryWorkspaceId: workspace.id
         )
         session.workingDirectory = sessionWorkspaceURL.path
 
@@ -220,36 +211,6 @@ public actor SessionManager {
         )
     }
     
-    /// Updates the persona content for a specific session.
-    /// - Parameters:
-    ///   - id: The session ID.
-    ///   - persona: The new persona content.
-    public func updateSessionPersona(id: UUID, persona: String) async throws {
-        var session: ConversationSession
-        if let memorySession = sessions[id] {
-            session = memorySession
-        } else if let dbSession = try await persistenceService.fetchSession(id: id) {
-            session = dbSession
-        } else {
-            throw SessionError.sessionNotFound
-        }
-
-        if let workingDirectory = session.workingDirectory {
-            let personaPath = URL(fileURLWithPath: workingDirectory)
-                .appendingPathComponent("Notes")
-                .appendingPathComponent("Persona.md")
-            try persona.write(to: personaPath, atomically: true, encoding: .utf8)
-        }
-        
-        session.persona = "Persona.md"
-        session.updatedAt = Date()
-
-        if sessions[id] != nil {
-            sessions[id] = session
-        }
-        try await persistenceService.saveSession(session)
-    }
-
     /// Updates the title of a specific session.
     /// - Parameters:
     ///   - id: The session ID.
@@ -314,14 +275,6 @@ public actor SessionManager {
         return try await persistenceService.fetchAllSessions(includeArchived: false)
     }
 
-    /// Returns a list of available system personas.
-    public func listPersonas() -> [Persona] {
-        return [
-            Persona(id: "Default.md", content: "You are Monad, an intelligent AI assistant."),
-            Persona(id: "ProductManager.md", content: "You are an expert AI Product Manager..."),
-            Persona(id: "Architect.md", content: "You are a Senior Software Architect...")
-        ]
-    }
 
     /// Removes active sessions from memory that have not been updated within the specified interval.
     public func cleanupStaleSessions(maxAge: TimeInterval) {

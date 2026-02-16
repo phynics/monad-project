@@ -9,7 +9,6 @@ struct CLISessionManager {
     /// Resolves which session to use (Resume or New)
     func resolveSession(
         explicitId: String?, 
-        persona: String?,
         localConfig: LocalConfig
     ) async throws -> Session {
         
@@ -37,10 +36,10 @@ struct CLISessionManager {
         }
         
         // 3. Interactive Menu
-        return try await showSessionMenu(persona: persona)
+        return try await showSessionMenu()
     }
     
-    private func showSessionMenu(persona: String?) async throws -> Session {
+    private func showSessionMenu() async throws -> Session {
         print("")
         print(TerminalUI.bold("No active session found."))
         print("  [1] Create New Session")
@@ -54,7 +53,7 @@ struct CLISessionManager {
             let sessions = try await client.listSessions()
             if sessions.isEmpty {
                 print("No sessions found. Creating new one.")
-                return try await createNewSessionFlow(persona: persona)
+                return try await createNewSessionFlow()
             }
             
             print("")
@@ -76,33 +75,13 @@ struct CLISessionManager {
                 throw ExitCode.failure
             }
         } else {
-            return try await createNewSessionFlow(persona: persona)
+            return try await createNewSessionFlow()
         }
     }
     
-    private func createNewSessionFlow(persona: String?) async throws -> Session {
-        var selectedPersona = persona
-        
-        if selectedPersona == nil {
-            let personas = try await client.listPersonas()
-            print("")
-            print(TerminalUI.bold("Select a Persona:"))
-            for (i, p) in personas.enumerated() {
-                print("  [\(i+1)] \(p.id)")
-            }
-            print("")
-            print("Select [1]: ", terminator: "")
-            let choice = readLine()?.trimmingCharacters(in: .whitespaces) ?? "1"
-            let index = (Int(choice) ?? 1) - 1
-            if index >= 0 && index < personas.count {
-                selectedPersona = personas[index].id
-            } else {
-                selectedPersona = "Default.md"
-            }
-        }
-        
-        let session = try await client.createSession(persona: selectedPersona)
-        TerminalUI.printSuccess("Created new session \(session.id.uuidString.prefix(8)) with persona \(selectedPersona!)")
+    private func createNewSessionFlow() async throws -> Session {
+        let session = try await client.createSession()
+        TerminalUI.printSuccess("Created new session \(session.id.uuidString.prefix(8))")
         return session
     }
     

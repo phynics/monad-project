@@ -5,16 +5,12 @@ import Dependencies
 
 /// Service that cleans up orphaned workspaces
 public final class OrphanCleanupService: Service, @unchecked Sendable {
-    @Dependency(\.persistenceService) private var defaultPersistenceService
-    
-    private let explicitPersistenceService: (any PersistenceServiceProtocol)?
-    private var persistenceService: any PersistenceServiceProtocol { explicitPersistenceService ?? defaultPersistenceService }
+    @Dependency(\.persistenceService) private var persistenceService
     
     private let workspaceRoot: URL
     private let logger = Logger(label: "com.monad.orphan-cleanup")
 
-    public init(persistenceService: (any PersistenceServiceProtocol)? = nil, workspaceRoot: URL) {
-        self.explicitPersistenceService = persistenceService
+    public init(workspaceRoot: URL) {
         self.workspaceRoot = workspaceRoot
     }
 

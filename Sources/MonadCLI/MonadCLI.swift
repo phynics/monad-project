@@ -48,8 +48,6 @@ struct Chat: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "Session ID to resume")
     var session: String?
 
-    @Option(name: .long, help: "Persona to use for new session")
-    var persona: String?
 
     func run() async throws {
         // Load local config
@@ -115,7 +113,6 @@ struct Chat: AsyncParsableCommand {
         let cliSessionManager = CLISessionManager(client: client)
         let finalSession = try await cliSessionManager.resolveSession(
             explicitId: session,
-            persona: persona,
             localConfig: localConfig
         )
 

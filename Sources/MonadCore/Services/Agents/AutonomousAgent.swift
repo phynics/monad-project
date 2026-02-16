@@ -5,33 +5,17 @@ import OpenAI
 /// An autonomous agent that executes jobs in the background
 public class AutonomousAgent: BaseAgent, @unchecked Sendable {
     
-    public override init(
-        manifest: AgentManifest,
-        llmService: (any LLMServiceProtocol)? = nil,
-        persistenceService: (any PersistenceServiceProtocol)? = nil,
-        reasoningEngine: ReasoningEngine? = nil
-    ) {
-        super.init(
-            manifest: manifest,
-            llmService: llmService,
-            persistenceService: persistenceService,
-            reasoningEngine: reasoningEngine
-        )
+    public override init(manifest: AgentManifest) {
+        super.init(manifest: manifest)
     }
     
     public init(
         id: String = "default",
         name: String = "Autonomous Agent",
-        description: String = "General purpose autonomous agent",
-        llmService: (any LLMServiceProtocol)? = nil,
-        persistenceService: (any PersistenceServiceProtocol)? = nil
+        description: String = "General purpose autonomous agent"
     ) {
         let manifest = AgentManifest(id: id, name: name, description: description)
-        super.init(
-            manifest: manifest,
-            llmService: llmService,
-            persistenceService: persistenceService
-        )
+        super.init(manifest: manifest)
     }
 
     open override var systemInstructions: String {

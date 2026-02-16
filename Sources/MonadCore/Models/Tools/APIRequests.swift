@@ -40,22 +40,13 @@ public struct RegisterToolRequest: Codable, Sendable {
 public struct CreateSessionRequest: Codable, Sendable {
     public let title: String?
     public let primaryWorkspaceId: UUID?
-    public let persona: String?
 
-    public init(title: String? = nil, primaryWorkspaceId: UUID? = nil, persona: String? = nil) {
+    public init(title: String? = nil, primaryWorkspaceId: UUID? = nil) {
         self.title = title
         self.primaryWorkspaceId = primaryWorkspaceId
-        self.persona = persona
     }
 }
 
-public struct UpdatePersonaRequest: Codable, Sendable {
-    public let persona: String
-
-    public init(persona: String) {
-        self.persona = persona
-    }
-}
 
 public struct UpdateSessionTitleRequest: Codable, Sendable {
     public let title: String
@@ -179,7 +170,6 @@ public struct SessionResponse: Codable, Sendable, Identifiable {
     public let isArchived: Bool
     public let tags: [String]
     public let workingDirectory: String?
-    public let persona: String?
     public let primaryWorkspaceId: UUID?
     public let attachedWorkspaceIds: [UUID]
 
@@ -191,7 +181,6 @@ public struct SessionResponse: Codable, Sendable, Identifiable {
         isArchived: Bool,
         tags: [String],
         workingDirectory: String?,
-        persona: String?,
         primaryWorkspaceId: UUID?,
         attachedWorkspaceIds: [UUID]
     ) {
@@ -202,7 +191,6 @@ public struct SessionResponse: Codable, Sendable, Identifiable {
         self.isArchived = isArchived
         self.tags = tags
         self.workingDirectory = workingDirectory
-        self.persona = persona
         self.primaryWorkspaceId = primaryWorkspaceId
         self.attachedWorkspaceIds = attachedWorkspaceIds
     }
@@ -215,7 +203,6 @@ public struct SessionResponse: Codable, Sendable, Identifiable {
         self.isArchived = false
         self.tags = []
         self.workingDirectory = nil
-        self.persona = nil
         self.primaryWorkspaceId = nil
         self.attachedWorkspaceIds = []
     }
@@ -355,11 +342,9 @@ public struct APIErrorResponse: Codable, Sendable {
 
 public struct UpdateSessionRequest: Codable, Sendable {
     public let title: String?
-    public let persona: String?
     
-    public init(title: String? = nil, persona: String? = nil) {
+    public init(title: String? = nil) {
         self.title = title
-        self.persona = persona
     }
 }
 

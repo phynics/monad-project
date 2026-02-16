@@ -149,8 +149,6 @@ extension SessionManager {
                 if workspace.uri.host == "monad-server" && workspace.uri.path.hasPrefix("/sessions/") {
                      let notesDir = sessionWorkspaceURL.appendingPathComponent("Notes", isDirectory: true)
                      try? fileManager.createDirectory(at: notesDir, withIntermediateDirectories: true)
-                     let personasDir = sessionWorkspaceURL.appendingPathComponent("Personas", isDirectory: true)
-                     try? fileManager.createDirectory(at: personasDir, withIntermediateDirectories: true)
                 }
             }
         }
