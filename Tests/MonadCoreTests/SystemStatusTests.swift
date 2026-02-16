@@ -1,10 +1,11 @@
+import MonadShared
 import XCTest
 @testable import MonadCore
 
 final class SystemStatusTests: XCTestCase {
     func testStatusResponseSerialization() throws {
-        let component = ComponentStatus(status: .ok, details: ["provider": "openai"])
-        let response = StatusResponse(
+        let component = MonadShared.ComponentStatus(status: .ok, details: ["provider": "openai"])
+        let response = MonadShared.StatusResponse(
             status: .ok,
             version: "1.0.0",
             uptime: 3600,
@@ -15,7 +16,7 @@ final class SystemStatusTests: XCTestCase {
         let data = try encoder.encode(response)
         
         let decoder = JSONDecoder()
-        let decoded = try decoder.decode(StatusResponse.self, from: data)
+        let decoded = try decoder.decode(MonadShared.StatusResponse.self, from: data)
         
         XCTAssertEqual(decoded.status, .ok)
         XCTAssertEqual(decoded.version, "1.0.0")
@@ -26,15 +27,15 @@ final class SystemStatusTests: XCTestCase {
 
     func testHealthCheckableProtocol() async throws {
         struct MockService: HealthCheckable {
-            var healthStatus: HealthStatus { get async { .ok } }
-            var healthDetails: [String: String]? { get async { ["test": "true"] } }
-            func checkHealth() async -> HealthStatus { .ok }
+            func getHealthStatus() async -> MonadCore.HealthStatus { .ok }
+            func getHealthDetails() async -> [String: String]? { ["test": "true"] }
+            func checkHealth() async -> MonadCore.HealthStatus { .ok }
         }
         
         let service = MockService()
         let status = await service.checkHealth()
-        let currentStatus = await service.healthStatus
-        let currentDetails = await service.healthDetails
+        let currentStatus = await service.getHealthStatus()
+        let currentDetails = await service.getHealthDetails()
         XCTAssertEqual(status, .ok)
         XCTAssertEqual(currentStatus, .ok)
         XCTAssertEqual(currentDetails?["test"], "true")

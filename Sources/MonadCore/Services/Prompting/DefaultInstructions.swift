@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Default system instructions for the LLM

@@ -1,3 +1,4 @@
+import MonadShared
 import Testing
 import Hummingbird
 import HummingbirdTesting
@@ -39,12 +40,12 @@ import NIOCore
                 // 1. List (Empty)
                 try await client.execute(uri: "/memories", method: .get) { response in
                     #expect(response.status == .ok)
-                    let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
+                    let paginated = try decoder.decode(MonadShared.PaginatedResponse<Memory>.self, from: response.body)
                     #expect(paginated.items.isEmpty)
                 }
     
                 // 2. Create
-                let createReq = CreateMemoryRequest(content: "Test Content", title: "Test Memory", tags: ["test"])
+                let createReq = MonadShared.CreateMemoryRequest(content: "Test Content", title: "Test Memory", tags: ["test"])
                 let createBuffer = ByteBuffer(bytes: try JSONEncoder().encode(createReq))
     
                 try await client.execute(uri: "/memories", method: .post, body: createBuffer) { response in
@@ -57,13 +58,13 @@ import NIOCore
                 // 3. List (1 item)
                 try await client.execute(uri: "/memories", method: .get) { response in
                     #expect(response.status == .ok)
-                    let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
+                    let paginated = try decoder.decode(MonadShared.PaginatedResponse<Memory>.self, from: response.body)
                     #expect(paginated.items.count == 1)
                     #expect(paginated.items[0].title == "Test Memory")
                 }
     
                 let listResponse = try await client.execute(uri: "/memories", method: .get) { $0 }
-                let memoryId = (try decoder.decode(PaginatedResponse<Memory>.self, from: listResponse.body)).items[0].id
+                let memoryId = (try decoder.decode(MonadShared.PaginatedResponse<Memory>.self, from: listResponse.body)).items[0].id
     
                 // 4. Delete
                 try await client.execute(uri: "/memories/\(memoryId)", method: .delete) { response in
@@ -72,7 +73,7 @@ import NIOCore
     
                 // 5. List (Empty)
                 try await client.execute(uri: "/memories", method: .get) { response in
-                    let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
+                    let paginated = try decoder.decode(MonadShared.PaginatedResponse<Memory>.self, from: response.body)
                     #expect(paginated.items.isEmpty)
                 }
             }

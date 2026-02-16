@@ -1,6 +1,7 @@
+import MonadShared
 import Foundation
 
-/// Request to add a new job
+/// Internal request to add a new job in the core framework
 public struct AddJobRequest: Codable, Sendable {
     public let title: String
     public let description: String?

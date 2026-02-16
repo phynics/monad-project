@@ -60,6 +60,8 @@ let package = Package(
             name: "MonadClient",
             dependencies: [
                 "MonadCore",
+                "MonadShared",
+                .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MonadClient"

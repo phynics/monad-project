@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// A simple terminal spinner for async operations

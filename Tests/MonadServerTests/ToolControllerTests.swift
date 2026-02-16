@@ -1,3 +1,4 @@
+import MonadShared
 import Testing
 import Hummingbird
 import HummingbirdTesting
@@ -40,7 +41,7 @@ import Dependencies
                 // 1. List
                 try await client.execute(uri: "/tools/\(session.id)", method: .get) { response in
                     #expect(response.status == .ok)
-                    let tools = try JSONDecoder().decode([ToolInfo].self, from: response.body)
+                    let tools = try JSONDecoder().decode([MonadShared.ToolInfo].self, from: response.body)
                     #expect(tools.count >= 0)
                 }
     

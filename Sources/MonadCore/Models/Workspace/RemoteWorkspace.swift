@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Implementation of WorkspaceProtocol that forwards requests to a remote client via RPC/WebSocket
@@ -15,7 +16,7 @@ public actor RemoteWorkspace: WorkspaceProtocol {
     public let connectionManager: any ClientConnectionManagerProtocol
     
     public init(reference: WorkspaceReference, connectionManager: any ClientConnectionManagerProtocol) throws {
-        guard reference.hostType == .client, let owner = reference.ownerId else {
+        guard reference.hostType == WorkspaceReference.WorkspaceHostType.client, let owner = reference.ownerId else {
             throw WorkspaceError.invalidWorkspaceType
         }
         self.reference = reference

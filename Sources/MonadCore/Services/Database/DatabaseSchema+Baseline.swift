@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import GRDB
 
@@ -21,6 +22,7 @@ extension DatabaseSchema {
             t.column("uri", .text).notNull().unique()
             t.column("hostType", .text).notNull()
             t.column("ownerId", .blob).references("clientIdentity", onDelete: .setNull)
+            t.column("tools", .text).notNull().defaults(to: "[]")
             t.column("rootPath", .text)
             t.column("trustLevel", .text).notNull().defaults(to: "full")
             t.column("lastModifiedBy", .blob)

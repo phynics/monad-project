@@ -23,7 +23,7 @@ public struct JobAPIController<Context: RequestContext>: Sendable {
         let idString = try context.parameters.require("id")
         guard let sessionId = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
         
-        let input = try await request.decode(as: AddJobRequest.self, context: context)
+        let input = try await request.decode(as: MonadShared.AddJobRequest.self, context: context)
         let persistence = await sessionManager.getPersistenceService()
         
         let job = Job(

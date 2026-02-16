@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Tool to read file content (cat)

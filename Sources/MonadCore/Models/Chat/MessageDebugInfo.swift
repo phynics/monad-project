@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Debug information for messages (not persisted)

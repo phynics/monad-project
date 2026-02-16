@@ -1,3 +1,4 @@
+import MonadShared
 import XCTest
 @testable import MonadCore
 import OpenAI
@@ -42,9 +43,9 @@ actor MockLLMService: LLMServiceProtocol {
     func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws -> [String : Double] { return [:] }
     func fetchAvailableModels() async throws -> [String]? { return [] }
 
-    var healthStatus: HealthStatus { get async { .ok } }
-    var healthDetails: [String : String]? { get async { [:] } }
-    func checkHealth() async -> HealthStatus { .ok }
+    func getHealthStatus() async -> MonadCore.HealthStatus { .ok }
+    func getHealthDetails() async -> [String : String]? { [:] }
+    func checkHealth() async -> MonadCore.HealthStatus { .ok }
 }
 
 @MainActor

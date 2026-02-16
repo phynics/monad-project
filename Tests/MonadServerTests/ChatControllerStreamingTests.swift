@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import Hummingbird
 import HummingbirdTesting
@@ -55,7 +56,7 @@ import Dependencies
                     let app = Application(router: router)
             
                     // Test Request
-                    let chatRequest = ChatRequest(message: "Hi")
+                    let chatRequest = MonadShared.ChatRequest(message: "Hi")
             
                     try await app.test(.router) { client in
                         let buffer = ByteBuffer(bytes: try JSONEncoder().encode(chatRequest))
@@ -119,7 +120,7 @@ import Dependencies
                     let app = Application(router: router)
             
                     // Test Request
-                    let chatRequest = ChatRequest(message: "Hi")
+                    let chatRequest = MonadShared.ChatRequest(message: "Hi")
             
                     try await app.test(.router) { client in
                         let buffer = ByteBuffer(bytes: try JSONEncoder().encode(chatRequest))

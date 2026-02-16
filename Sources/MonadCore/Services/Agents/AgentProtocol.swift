@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Protocol defining the behavior of an agent in the system

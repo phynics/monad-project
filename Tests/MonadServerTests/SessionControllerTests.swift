@@ -1,3 +1,4 @@
+import MonadShared
 import Testing
 import Hummingbird
 import HummingbirdTesting
@@ -40,7 +41,7 @@ import Dependencies
                     
                     let decoder = JSONDecoder()
                     decoder.dateDecodingStrategy = .iso8601
-                    let session = try decoder.decode(SessionResponse.self, from: response.body)
+                    let session = try decoder.decode(MonadShared.SessionResponse.self, from: response.body)
                     #expect(session.id.uuidString.isEmpty == false)
                 }
             }

@@ -1,3 +1,4 @@
+import MonadShared
 import Darwin
 import Foundation
 import MonadClient

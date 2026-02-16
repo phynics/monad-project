@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Wraps a tool from a workspace to conform to the Tool protocol

@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Defines the capabilities and behaviors of a workspace

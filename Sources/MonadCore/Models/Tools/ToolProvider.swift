@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// A protocol that defines a provider of tools for the LLM.

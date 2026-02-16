@@ -3,6 +3,7 @@ import HTTPTypes
 import Hummingbird
 import Logging
 import MonadCore
+import MonadShared
 import NIOCore
 import OpenAI
 
@@ -43,13 +44,13 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.badRequest)
         }
 
-        let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
+        let chatRequest = try await request.decode(as: MonadShared.ChatRequest.self, context: context)
 
         let stream = try await chatOrchestrator.chatStream(
             sessionId: id,
             message: chatRequest.message,
             clientId: chatRequest.clientId,
-            toolOutputs: chatRequest.toolOutputs
+            toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) }
         )
 
         var fullResponse = ""
@@ -69,20 +70,21 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.badRequest)
         }
 
-        let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
+        let chatRequest = try await request.decode(as: MonadShared.ChatRequest.self, context: context)
 
         let chatOrchestratorStream = try await chatOrchestrator.chatStream(
             sessionId: id,
             message: chatRequest.message,
             clientId: chatRequest.clientId,
-            toolOutputs: chatRequest.toolOutputs
+            toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) }
         )
 
         let sseStream = AsyncStream<ByteBuffer> { continuation in
             Task {
                 do {
-                    for try await delta in chatOrchestratorStream {
-                        if let data = try? SerializationUtils.jsonEncoder.encode(delta) {
+                    for try await coreDelta in chatOrchestratorStream {
+                        let apiDelta = MonadShared.ChatDelta(fromCore: coreDelta)
+                        if let data = try? SerializationUtils.jsonEncoder.encode(apiDelta) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))
                         }
@@ -90,7 +92,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                     continuation.finish()
                 } catch {
                     Logger.chat.error("Stream error: \(error)")
-                    let errorDelta = ChatDelta(error: error.localizedDescription)
+                    let errorDelta = MonadShared.ChatDelta(error: error.localizedDescription)
                     if let data = try? SerializationUtils.jsonEncoder.encode(errorDelta) {
                         let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                         continuation.yield(ByteBuffer(string: sseString))
@@ -120,5 +122,38 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         headers[.contentType] = "application/json"
         return Response(
             status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+    }
+}
+
+extension MonadShared.ChatDelta {
+    init(fromCore delta: MonadCore.ChatDelta) {
+        self.init(
+            content: delta.content,
+            thought: delta.thought,
+            toolCalls: delta.toolCalls?.map { .init(fromCore: $0) },
+            metadata: delta.metadata.map { .init(fromCore: $0) },
+            error: delta.error,
+            isDone: delta.isDone
+        )
+    }
+}
+
+extension MonadShared.ToolCallDelta {
+    init(fromCore delta: MonadCore.ToolCallDelta) {
+        self.init(
+            index: delta.index,
+            id: delta.id,
+            name: delta.name,
+            arguments: delta.arguments
+        )
+    }
+}
+
+extension MonadShared.ChatMetadata {
+    init(fromCore metadata: MonadCore.ChatMetadata) {
+        self.init(
+            memories: metadata.memories,
+            files: metadata.files
+        )
     }
 }

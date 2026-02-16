@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import HTTPTypes
 import Hummingbird
@@ -7,9 +8,9 @@ import NIOCore
 public struct ExecuteToolRequest: Codable, Sendable {
     public let sessionId: UUID
     public let name: String
-    public let arguments: [String: AnyCodable]
+    public let arguments: [String: MonadShared.AnyCodable]
 
-    public init(sessionId: UUID, name: String, arguments: [String: AnyCodable]) {
+    public init(sessionId: UUID, name: String, arguments: [String: MonadShared.AnyCodable]) {
         self.sessionId = sessionId
         self.name = name
         self.arguments = arguments

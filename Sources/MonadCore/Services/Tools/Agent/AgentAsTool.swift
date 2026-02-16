@@ -1,5 +1,5 @@
-import Foundation
 import MonadShared
+import Foundation
 import Logging
 
 /// A tool wrapper that allows an Agent to be called as a tool by another agent or chat session.

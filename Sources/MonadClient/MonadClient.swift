@@ -38,9 +38,9 @@ public actor MonadClient {
         return try await perform(request)
     }
 
-    public func listSessions() async throws -> [SessionResponse] {
+    public func listSessions() async throws -> [MonadShared.SessionResponse] {
         let request = try buildRequest(path: "/api/sessions", method: "GET")
-        let response: PaginatedResponse<SessionResponse> = try await perform(request)
+        let response: MonadShared.PaginatedResponse<MonadShared.SessionResponse> = try await perform(request)
         return response.items
     }
 
@@ -49,7 +49,7 @@ public actor MonadClient {
     public func updateSessionTitle(_ title: String, sessionId: UUID) async throws {
         var request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/title", method: "PATCH")
-        request.httpBody = try encoder.encode(UpdateSessionTitleRequest(title: title))
+        request.httpBody = try encoder.encode(MonadShared.UpdateSessionTitleRequest(title: title))
         _ = try await performRaw(request)
     }
 
@@ -63,7 +63,7 @@ public actor MonadClient {
     public func getHistory(sessionId: UUID) async throws -> [Message] {
         let request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/history", method: "GET")
-        let response: PaginatedResponse<Message> = try await perform(request)
+        let response: MonadShared.PaginatedResponse<Message> = try await perform(request)
         return response.items
     }
 
@@ -77,23 +77,23 @@ public actor MonadClient {
     // MARK: - Chat API
 
     /// Send a chat message (non-streaming)
-    public func chat(sessionId: UUID, message: String) async throws -> ChatResponse {
+    public func chat(sessionId: UUID, message: String) async throws -> MonadShared.ChatResponse {
         var request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/chat", method: "POST")
         request.httpBody = try encoder.encode(
-            ChatRequest(message: message, clientId: configuration.clientId))
+            MonadShared.ChatRequest(message: message, clientId: configuration.clientId))
         return try await perform(request)
     }
 
     /// Send a chat message with streaming response
     public func chatStream(sessionId: UUID, message: String) async throws -> AsyncThrowingStream<
-        ChatDelta, Error
+        MonadShared.ChatDelta, Error
     > {
         configuration.logger.debug("chatStream called for session \(sessionId)")
         var request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/chat/stream", method: "POST")
         request.httpBody = try encoder.encode(
-            ChatRequest(message: message, clientId: configuration.clientId))
+            MonadShared.ChatRequest(message: message, clientId: configuration.clientId))
 
         configuration.logger.debug(
             "Sending request to \(request.url?.absoluteString ?? "unknown")")
@@ -141,14 +141,14 @@ public actor MonadClient {
     /// List all memories
     public func listMemories() async throws -> [Memory] {
         let request = try buildRequest(path: "/api/memories", method: "GET")
-        let response: PaginatedResponse<Memory> = try await perform(request)
+        let response: MonadShared.PaginatedResponse<Memory> = try await perform(request)
         return response.items
     }
 
     /// Search memories
     public func searchMemories(_ query: String, limit: Int? = nil) async throws -> [Memory] {
         var request = try buildRequest(path: "/api/memories/search", method: "POST")
-        request.httpBody = try encoder.encode(MemorySearchRequest(query: query, limit: limit))
+        request.httpBody = try encoder.encode(MonadShared.MemorySearchRequest(query: query, limit: limit))
         return try await perform(request)
     }
 
@@ -261,7 +261,7 @@ public actor MonadClient {
     ) async throws -> WorkspaceReference {
         var request = try buildRequest(path: "/api/workspaces", method: "POST")
         request.httpBody = try encoder.encode(
-            CreateWorkspaceRequest(
+            MonadShared.CreateWorkspaceRequest(
                 uri: uri.description,
                 hostType: hostType,
                 ownerId: ownerId,
@@ -274,7 +274,7 @@ public actor MonadClient {
 
     public func listWorkspaces() async throws -> [WorkspaceReference] {
         let request = try buildRequest(path: "/api/workspaces", method: "GET")
-        let response: PaginatedResponse<WorkspaceReference> = try await perform(request)
+        let response: MonadShared.PaginatedResponse<WorkspaceReference> = try await perform(request)
         return response.items
     }
 
@@ -294,7 +294,7 @@ public actor MonadClient {
         var request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "POST")
         request.httpBody = try encoder.encode(
-            AttachWorkspaceRequest(workspaceId: workspaceId, isPrimary: isPrimary)
+            MonadShared.AttachWorkspaceRequest(workspaceId: workspaceId, isPrimary: isPrimary)
         )
         _ = try await performRaw(request)
     }
@@ -312,7 +312,7 @@ public actor MonadClient {
     ) {
         let request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "GET")
-        let response: SessionWorkspacesResponse = try await perform(request)
+        let response: MonadShared.SessionWorkspacesResponse = try await perform(request)
         return (response.primaryWorkspace, response.attachedWorkspaces)
     }
 
@@ -328,15 +328,15 @@ public actor MonadClient {
 
     public func pruneMemories(query: String, dryRun: Bool = false) async throws -> Int {
         var request = try buildRequest(path: "/api/prune/memories", method: "POST")
-        request.httpBody = try encoder.encode(PruneMemoriesRequest(query: query, dryRun: dryRun))
-        let response: PruneResponse = try await perform(request)
+        request.httpBody = try encoder.encode(MonadShared.PruneMemoriesRequest(query: query, dryRun: dryRun))
+        let response: MonadShared.PruneResponse = try await perform(request)
         return response.count
     }
 
     public func pruneMemories(olderThanDays days: Int, dryRun: Bool = false) async throws -> Int {
         var request = try buildRequest(path: "/api/prune/memories", method: "POST")
-        request.httpBody = try encoder.encode(PruneMemoriesRequest(days: days, dryRun: dryRun))
-        let response: PruneResponse = try await perform(request)
+        request.httpBody = try encoder.encode(MonadShared.PruneMemoriesRequest(days: days, dryRun: dryRun))
+        let response: MonadShared.PruneResponse = try await perform(request)
         return response.count
     }
 
@@ -345,15 +345,15 @@ public actor MonadClient {
     {
         var request = try buildRequest(path: "/api/prune/sessions", method: "POST")
         request.httpBody = try encoder.encode(
-            PruneSessionRequest(days: days, excludedSessionIds: excluding, dryRun: dryRun))
-        let response: PruneResponse = try await perform(request)
+            MonadShared.PruneSessionRequest(days: days, excludedSessionIds: excluding, dryRun: dryRun))
+        let response: MonadShared.PruneResponse = try await perform(request)
         return response.count
     }
 
     public func pruneMessages(olderThanDays days: Int, dryRun: Bool = false) async throws -> Int {
         var request = try buildRequest(path: "/api/prune/messages", method: "POST")
-        request.httpBody = try encoder.encode(PruneMessagesRequest(days: days, dryRun: dryRun))
-        let response: PruneResponse = try await perform(request)
+        request.httpBody = try encoder.encode(MonadShared.PruneMessagesRequest(days: days, dryRun: dryRun))
+        let response: MonadShared.PruneResponse = try await perform(request)
         return response.count
     }
 
@@ -364,10 +364,10 @@ public actor MonadClient {
         displayName: String,
         platform: String,
         tools: [ToolReference] = []
-    ) async throws -> ClientRegistrationResponse {
+    ) async throws -> MonadShared.ClientRegistrationResponse {
         var request = try buildRequest(path: "/api/clients/register", method: "POST")
         request.httpBody = try encoder.encode(
-            ClientRegistrationRequest(
+            MonadShared.ClientRegistrationRequest(
                 hostname: hostname,
                 displayName: displayName,
                 platform: platform,

@@ -1,3 +1,4 @@
+import MonadShared
 import XCTest
 import MonadCore
 import Dependencies

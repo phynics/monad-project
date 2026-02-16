@@ -1,3 +1,4 @@
+import MonadShared
 import XCTest
 import GRDB
 @testable import MonadCore
@@ -44,11 +45,11 @@ final class SessionWorkspaceTests: XCTestCase {
     
             // Verify workspace exists in DB
             let workspace = try await persistenceService.databaseWriter.read { db in
-                try WorkspaceReference.fetchOne(db, key: session.primaryWorkspaceId)
+                try MonadShared.WorkspaceReference.fetchOne(db, key: session.primaryWorkspaceId)
             }
     
             XCTAssertNotNil(workspace, "Primary workspace record should exist in database")
-            XCTAssertEqual(workspace?.hostType, .server, "Primary workspace should be hosted on server")
+            XCTAssertEqual(workspace?.hostType, MonadShared.WorkspaceReference.WorkspaceHostType.server, "Primary workspace should be hosted on server")
             XCTAssertEqual(workspace?.uri.path, "/sessions/\(session.id.uuidString)", "Workspace URI path should match session ID convention")
         }
     }

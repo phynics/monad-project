@@ -1,6 +1,6 @@
+import MonadShared
 import Foundation
 import GRDB
-import MonadShared
 
 // MARK: - Job Model
 

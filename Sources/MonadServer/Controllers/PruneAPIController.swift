@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import HTTPTypes
 import Hummingbird
@@ -22,7 +23,7 @@ public struct PruneAPIController<Context: RequestContext>: Sendable {
 
     @Sendable func pruneMemories(_ request: Request, context: Context) async throws -> Response {
         let input = try await request.decode(as: PruneMemoriesRequest.self, context: context)
-        let dryRun = input.dryRun ?? false
+        let dryRun = input.dryRun
         let count: Int
 
         if let query = input.query {
@@ -48,11 +49,11 @@ public struct PruneAPIController<Context: RequestContext>: Sendable {
         let input = try await request.decode(as: PruneSessionRequest.self, context: context)
         // Convert days to seconds
         let timeInterval = Double(input.days) * 24 * 60 * 60
-        let dryRun = input.dryRun ?? false
+        let dryRun = input.dryRun
         let count: Int
         do {
             count = try await persistenceService.pruneSessions(
-                olderThan: timeInterval, excluding: input.excludedSessionIds ?? [], dryRun: dryRun
+                olderThan: timeInterval, excluding: input.excludedSessionIds, dryRun: dryRun
             )
         } catch {
             print("[PruneController] pruneSessions error: \(error)")
@@ -70,7 +71,7 @@ public struct PruneAPIController<Context: RequestContext>: Sendable {
     @Sendable func pruneMessages(_ request: Request, context: Context) async throws -> Response {
         let input = try await request.decode(as: PruneMessagesRequest.self, context: context)
         let timeInterval = Double(input.days) * 24 * 60 * 60
-        let dryRun = input.dryRun ?? false
+        let dryRun = input.dryRun
         let count = try await persistenceService.pruneMessages(
             olderThan: timeInterval, dryRun: dryRun)
 

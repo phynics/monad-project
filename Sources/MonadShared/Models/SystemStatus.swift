@@ -1,13 +1,13 @@
 import Foundation
 
-/// Represents the overall status of the system.
+/// Represents the overall status of the system for API responses.
 public enum HealthStatus: String, Codable, Sendable {
     case ok
     case degraded
     case down
 }
 
-/// Represents the status of a specific system component.
+/// Represents the status of a specific system component for API responses.
 public struct ComponentStatus: Codable, Sendable {
     public let status: HealthStatus
     public let details: [String: String]?

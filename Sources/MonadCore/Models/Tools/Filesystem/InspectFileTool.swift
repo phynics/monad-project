@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Tool to inspect file metadata and type (similar to unix 'file' command)

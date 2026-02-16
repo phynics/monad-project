@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Tool to search text content in files (grep-like)

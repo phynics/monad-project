@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import GRDB
 import Logging
@@ -18,21 +19,17 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
 
     // MARK: - HealthCheckable
 
-    public var healthStatus: HealthStatus {
-        get async {
-            // Actor-isolated, but we can assume ok if initialized. 
-            // We'll return ok and let checkHealth do the real work if needed.
-            return .ok
-        }
+    public func getHealthStatus() async -> MonadCore.HealthStatus {
+        // Actor-isolated, but we can assume ok if initialized. 
+        // We'll return ok and let checkHealth do the real work if needed.
+        return .ok
     }
 
-    public var healthDetails: [String: String]? {
-        get async {
-            return ["path": dbQueue.path]
-        }
+    public func getHealthDetails() async -> [String: String]? {
+        return ["path": dbQueue.path]
     }
 
-    public func checkHealth() async -> HealthStatus {
+    public func checkHealth() async -> MonadCore.HealthStatus {
         do {
             try await dbQueue.read { db in
                 _ = try Int.fetchOne(db, sql: "SELECT 1")

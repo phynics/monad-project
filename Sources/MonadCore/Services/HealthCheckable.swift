@@ -1,12 +1,20 @@
+import MonadShared
 import Foundation
+
+/// Internal health status for core services.
+public enum HealthStatus: String, Sendable {
+    case ok
+    case degraded
+    case down
+}
 
 /// Protocol for services that can report their health status.
 public protocol HealthCheckable: Sendable {
     /// Returns the current cached health status.
-    var healthStatus: HealthStatus { get async }
+    func getHealthStatus() async -> HealthStatus
     
     /// Returns any additional details about the health status.
-    var healthDetails: [String: String]? { get async }
+    func getHealthDetails() async -> [String: String]?
     
     /// Performs a fresh health check and returns the result.
     func checkHealth() async -> HealthStatus

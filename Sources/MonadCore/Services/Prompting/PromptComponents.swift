@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Protocol for prompt components that can be added to the prompt builder

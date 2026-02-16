@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import Testing
 @testable import MonadCore
@@ -17,17 +18,22 @@ struct MockComplexTool: Tool, @unchecked Sendable {
 
     func execute(parameters: [String: Any]) async throws -> ToolResult {
         // Verify we received the expected types
-        guard let tags = parameters["tags"] as? [String] else {
-            return .failure("Expected 'tags' to be [String], got \(type(of: parameters["tags"])) ")
+        guard let tags = parameters["tags"] as? [Any] else {
+            return .failure("Expected 'tags' to be [Any], got \(type(of: parameters["tags"])) ")
         }
 
         guard let user = parameters["user"] as? [String: Any],
               let name = user["name"] as? String,
-              let age = user["age"] as? Int else {
+              let ageValue = user["age"] else {
             return .failure("Expected 'user' dictionary with name/age")
         }
+        
+        let age: Int
+        if let a = ageValue as? Int { age = a }
+        else if let d = ageValue as? Double { age = Int(d) }
+        else { return .failure("Age is not a number") }
 
-        return .success("Received tags: \(tags.joined(separator: ", ")), User: \(name) (\(age))")
+        return .success("Received tags: \(tags.compactMap { $0 as? String }.joined(separator: ", ")), User: \(name) (\(age))")
     }
 }
 
@@ -98,7 +104,7 @@ struct ToolCallRegressionTests {
 
         if let user = args?["user"]?.value as? [String: Any] {
              #expect(user["name"] as? String == "Alice")
-             #expect(user["age"] as? Int == 30)
+             #expect(user["age"] as? Double == 30.0)
         } else {
              Issue.record("user argument is missing or not a dictionary")
         }
@@ -115,9 +121,9 @@ struct ToolCallRegressionTests {
         // IMPORTANT: AnyCodable stores [Any], not [AnyCodable] for arrays if initialized with [Any]
         // But here we construct manually.
 
-        let args: [String: AnyCodable] = [
-            "tags": AnyCodable(["swift", "testing"]),
-            "user": AnyCodable([
+        let args: [String: MonadShared.AnyCodable] = [
+            "tags": MonadShared.AnyCodable(["swift", "testing"]),
+            "user": MonadShared.AnyCodable([
                 "name": "Bob",
                 "age": 25
             ] as [String: Any])
@@ -160,6 +166,6 @@ struct ToolCallRegressionTests {
         #expect(tags?[0] as? String == "a")
 
         let nested = args?["nested"]?.value as? [String: Any]
-        #expect(nested?["val"] as? Int == 1)
+        #expect(nested?["val"] as? Double == 1.0)
     }
 }

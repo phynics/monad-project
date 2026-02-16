@@ -1,3 +1,4 @@
+import MonadShared
 import Testing
 import Hummingbird
 import HummingbirdTesting

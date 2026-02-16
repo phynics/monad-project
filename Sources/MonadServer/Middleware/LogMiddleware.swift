@@ -1,3 +1,4 @@
+import MonadShared
 import Hummingbird
 import Logging
 import Foundation

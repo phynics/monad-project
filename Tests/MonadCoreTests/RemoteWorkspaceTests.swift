@@ -1,10 +1,11 @@
+import MonadShared
 import XCTest
 import MonadCore
 
 // Mock Connection Manager
 actor MockConnectionManager: ClientConnectionManagerProtocol {
     var lastMethod: String?
-    var lastParams: AnyCodable?
+    var lastParams: MonadShared.AnyCodable?
     var lastClientId: UUID?
     var nextResponse: Any?
     var shouldThrow: Error?
@@ -13,7 +14,7 @@ actor MockConnectionManager: ClientConnectionManagerProtocol {
         self.nextResponse = response
     }
     
-    func send<T: Codable & Sendable>(method: String, params: AnyCodable?, expecting: T.Type, to clientId: UUID) async throws -> T {
+    func send<T: Codable & Sendable>(method: String, params: MonadShared.AnyCodable?, expecting: T.Type, to clientId: UUID) async throws -> T {
         lastMethod = method
         lastParams = params
         lastClientId = clientId
@@ -42,7 +43,7 @@ final class RemoteWorkspaceTests: XCTestCase {
     
     override func setUp() async throws {
         mockConnection = MockConnectionManager()
-        let ref = WorkspaceReference(
+        let ref = MonadShared.WorkspaceReference(
             id: UUID(),
             uri: WorkspaceURI(host: "client-host", path: "/remote"),
             hostType: .client,
@@ -57,7 +58,7 @@ final class RemoteWorkspaceTests: XCTestCase {
         let response = ToolExecutionResponse(status: "success", output: "Tool executed")
         await mockConnection.setNextResponse(response)
         
-        let result = try await workspace.executeTool(id: "test_tool", parameters: ["arg": AnyCodable("value")])
+        let result = try await workspace.executeTool(id: "test_tool", parameters: ["arg": MonadShared.AnyCodable("value")])
         
         // Use await to access actor properties if needed, but actor isolation prevents direct access from XCTestCase?
         // Wait, MockConnectionManager is an actor.
@@ -76,7 +77,7 @@ final class RemoteWorkspaceTests: XCTestCase {
         
         XCTAssertEqual(requestObj.toolId, "test_tool")
         
-        // requestObj.parameters is [String: AnyCodable]
+        // requestObj.parameters is [String: MonadShared.AnyCodable]
         XCTAssertEqual(requestObj.parameters["arg"]?.value as? String, "value")
         
         // Check result

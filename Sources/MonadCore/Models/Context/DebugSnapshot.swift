@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// A snapshot of what was sent to the LLM for debuggging purposes

@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import Logging
 import OpenAI
@@ -26,8 +27,8 @@ public final class ChatOrchestrator: @unchecked Sendable {
         sessionId: UUID,
         message: String,
         clientId: UUID? = nil,
-        toolOutputs: [ToolOutputSubmission]? = nil
-    ) async throws -> AsyncThrowingStream<ChatDelta, Error> {
+        toolOutputs: [MonadCore.ToolOutputSubmission]? = nil
+    ) async throws -> AsyncThrowingStream<MonadCore.ChatDelta, Error> {
         
         // 3. Ensure Session is Hydrated
         try await sessionManager.hydrateSession(id: sessionId)
@@ -63,7 +64,7 @@ public final class ChatOrchestrator: @unchecked Sendable {
         
         let modelName = await llmService.configuration.modelName
         
-        return AsyncThrowingStream<ChatDelta, Error> { continuation in
+        return AsyncThrowingStream<MonadCore.ChatDelta, Error> { continuation in
             Task {
                 await self.runChatLoop(
                     continuation: continuation,
@@ -85,7 +86,7 @@ public final class ChatOrchestrator: @unchecked Sendable {
     }
 
     private func runChatLoop(
-        continuation: AsyncThrowingStream<ChatDelta, Error>.Continuation,
+        continuation: AsyncThrowingStream<MonadCore.ChatDelta, Error>.Continuation,
         sessionId: UUID,
         initialMessages: [ChatQuery.ChatCompletionMessageParam],
         toolParams: [ChatQuery.ChatCompletionToolParam],
@@ -99,11 +100,11 @@ public final class ChatOrchestrator: @unchecked Sendable {
         let maxTurns = 5
         
         // A. Emit Metadata Event
-        let metadata = ChatMetadata(
+        let metadata = MonadCore.ChatMetadata(
             memories: contextData.memories.map { $0.memory.id },
             files: contextData.notes.map { $0.name }
         )
-        continuation.yield(ChatDelta(metadata: metadata))
+        continuation.yield(MonadCore.ChatDelta(metadata: metadata))
         
         while turnCount < maxTurns {
             turnCount += 1
@@ -148,7 +149,7 @@ public final class ChatOrchestrator: @unchecked Sendable {
         modelName: String,
         turnCount: Int,
         sessionId: UUID,
-        continuation: AsyncThrowingStream<ChatDelta, Error>.Continuation
+        continuation: AsyncThrowingStream<MonadCore.ChatDelta, Error>.Continuation
     ) async throws -> TurnResult {
         var debugToolCalls: [ToolCallRecord] = []
         var debugToolResults: [ToolResultRecord] = []
@@ -168,12 +169,12 @@ public final class ChatOrchestrator: @unchecked Sendable {
             // Forward Content
             if let delta = result.choices.first?.delta.content {
                 fullResponse += delta
-                continuation.yield(ChatDelta(content: delta))
+                continuation.yield(MonadCore.ChatDelta(content: delta))
             }
             
             // Accumulate Tool Calls
             if let calls = result.choices.first?.delta.toolCalls {
-                var toolDeltas: [ToolCallDelta] = []
+                var toolDeltas: [MonadCore.ToolCallDelta] = []
                 for call in calls {
                     guard let index = call.index else { continue }
                     var acc = toolCallAccumulators[index] ?? ("", "", "")
@@ -182,7 +183,7 @@ public final class ChatOrchestrator: @unchecked Sendable {
                     if let args = call.function?.arguments { acc.args += args }
                     toolCallAccumulators[index] = acc
                     
-                    toolDeltas.append(ToolCallDelta(
+                    toolDeltas.append(MonadCore.ToolCallDelta(
                         index: index,
                         id: call.id,
                         name: call.function?.name,
@@ -191,7 +192,7 @@ public final class ChatOrchestrator: @unchecked Sendable {
                 }
                 
                 if !toolDeltas.isEmpty {
-                    continuation.yield(ChatDelta(toolCalls: toolDeltas))
+                    continuation.yield(MonadCore.ChatDelta(toolCalls: toolDeltas))
                 }
             }
         }
@@ -210,9 +211,9 @@ public final class ChatOrchestrator: @unchecked Sendable {
                 }
                 
                 let toolDeltas = finalToolCalls.sorted(by: { $0.key < $1.key }).map { index, value in
-                    ToolCallDelta(index: index, id: value.id, name: value.name, arguments: value.args)
+                    MonadCore.ToolCallDelta(index: index, id: value.id, name: value.name, arguments: value.args)
                 }
-                continuation.yield(ChatDelta(toolCalls: toolDeltas))
+                continuation.yield(MonadCore.ChatDelta(toolCalls: toolDeltas))
             }
         }
         
@@ -249,7 +250,7 @@ public final class ChatOrchestrator: @unchecked Sendable {
                 let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
                 await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
                 
-                continuation.yield(ChatDelta(isDone: true))
+                continuation.yield(MonadCore.ChatDelta(isDone: true))
                 return .finish
             }
             
@@ -269,7 +270,7 @@ public final class ChatOrchestrator: @unchecked Sendable {
             let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
             await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
             
-            continuation.yield(ChatDelta(isDone: true))
+            continuation.yield(MonadCore.ChatDelta(isDone: true))
             return .finish
         }
     }
@@ -284,7 +285,7 @@ public final class ChatOrchestrator: @unchecked Sendable {
     private func saveConversationSteps(
         sessionId: UUID,
         message: String,
-        toolOutputs: [ToolOutputSubmission]?,
+        toolOutputs: [MonadCore.ToolOutputSubmission]?,
         persistence: any PersistenceServiceProtocol
     ) async throws {
         if let toolOutputs = toolOutputs {

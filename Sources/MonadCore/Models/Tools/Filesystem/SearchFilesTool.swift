@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Enhanced tool to search text content in files (search_files)

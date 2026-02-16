@@ -1,3 +1,4 @@
+import MonadShared
 import Testing
 import Hummingbird
 import HummingbirdTesting
@@ -49,14 +50,14 @@ import NIOCore
                     let app = Application(router: router)
             
                     // Test Request
-                    let chatRequest = ChatRequest(message: "Hello")
+                    let chatRequest = MonadShared.ChatRequest(message: "Hello")
             
                     try await app.test(.router) { client in
                         let buffer = ByteBuffer(bytes: try JSONEncoder().encode(chatRequest))
                         try await client.execute(uri: "/sessions/\(session.id)/chat", method: .post, body: buffer) { response in
                             #expect(response.status == .ok)
             
-                            let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: response.body)
+                            let chatResponse = try JSONDecoder().decode(MonadShared.ChatResponse.self, from: response.body)
                             #expect(chatResponse.response == "Hello from AI")
                         }
                     }
@@ -105,7 +106,7 @@ import NIOCore
                     let app = Application(router: router)
             
                     // Test Request
-                    let chatRequest = ChatRequest(message: "Hello")
+                    let chatRequest = MonadShared.ChatRequest(message: "Hello")
             
                     try await app.test(.router) { client in
                         let buffer = ByteBuffer(bytes: try JSONEncoder().encode(chatRequest))

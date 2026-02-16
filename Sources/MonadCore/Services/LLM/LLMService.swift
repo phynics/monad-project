@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import Logging
 import Observation
@@ -38,22 +39,18 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
 
     // MARK: - HealthCheckable
 
-    public var healthStatus: HealthStatus {
-        get async {
-            return isConfigured ? .ok : .degraded
-        }
+    public func getHealthStatus() async -> MonadCore.HealthStatus {
+        return isConfigured ? .ok : .degraded
     }
 
-    public var healthDetails: [String: String]? {
-        get async {
-            return [
-                "model": configuration.modelName,
-                "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom")
-            ]
-        }
+    public func getHealthDetails() async -> [String: String]? {
+        return [
+            "model": configuration.modelName,
+            "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom")
+        ]
     }
 
-    public func checkHealth() async -> HealthStatus {
+    public func checkHealth() async -> MonadCore.HealthStatus {
         // Basic check: is configured
         guard isConfigured else { return .degraded }
         

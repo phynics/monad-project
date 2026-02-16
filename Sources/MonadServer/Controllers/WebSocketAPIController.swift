@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import Hummingbird
 import HummingbirdWebSocket

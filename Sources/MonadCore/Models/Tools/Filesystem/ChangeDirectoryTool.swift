@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Tool to change the current working directory of the session

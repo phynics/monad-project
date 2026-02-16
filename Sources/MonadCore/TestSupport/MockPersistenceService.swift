@@ -1,15 +1,16 @@
+import MonadShared
 import Foundation
 import GRDB
 
 
 public final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Sendable, HealthCheckable {
-    public var mockHealthStatus: HealthStatus = .ok
+    public var mockHealthStatus: MonadCore.HealthStatus = .ok
     public var mockHealthDetails: [String: String]? = ["mock": "true"]
 
-    public var healthStatus: HealthStatus { get async { mockHealthStatus } }
-    public var healthDetails: [String: String]? { get async { mockHealthDetails } }
+    public func getHealthStatus() async -> MonadCore.HealthStatus { mockHealthStatus }
+    public func getHealthDetails() async -> [String: String]? { mockHealthDetails }
 
-    public func checkHealth() async -> HealthStatus {
+    public func checkHealth() async -> MonadCore.HealthStatus {
         return mockHealthStatus
     }
     

@@ -1,3 +1,4 @@
+import MonadShared
 import XCTest
 
 @testable import MonadCore

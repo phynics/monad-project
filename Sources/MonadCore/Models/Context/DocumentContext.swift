@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Represents a document chunk used as context for a message

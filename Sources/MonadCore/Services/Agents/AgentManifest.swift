@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Structured metadata for an agent

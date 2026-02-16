@@ -1,3 +1,4 @@
+import MonadShared
 import Testing
 import Hummingbird
 import HummingbirdTesting
@@ -26,7 +27,7 @@ import NIOCore
             try await client.execute(uri: "/status", method: .get) { response in
                 #expect(response.status == .ok)
                 
-                let statusResponse = try JSONDecoder().decode(StatusResponse.self, from: response.body)
+                let statusResponse = try JSONDecoder().decode(MonadShared.StatusResponse.self, from: response.body)
                 #expect(statusResponse.status == .ok)
                 #expect(statusResponse.components["database"]?.status == .ok)
                 #expect(statusResponse.components["ai_provider"]?.status == .ok)
