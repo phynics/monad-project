@@ -2,7 +2,7 @@ import MonadShared
 import Foundation
 import Logging
 
-/// A tool wrapper that allows an Agent to be called as a tool by another agent or chat session.
+/// A tool wrapper that allows an Agent definition to be called as a tool by another agent or chat session.
 /// Executing this tool results in a background Job being queued for the target agent.
 public struct AgentAsTool: Tool, Sendable {
     public let id: String
@@ -10,11 +10,13 @@ public struct AgentAsTool: Tool, Sendable {
     public let description: String
     public let requiresPermission: Bool
     
-    private let agentManifest: AgentManifest
+    private let agentId: String
+    private let agentName: String
     private let jobQueueContext: JobQueueContext
 
-    public init(agent: any AgentProtocol, jobQueueContext: JobQueueContext) {
-        self.agentManifest = agent.manifest
+    public init(agent: Agent, jobQueueContext: JobQueueContext) {
+        self.agentId = agent.id
+        self.agentName = agent.name
         self.jobQueueContext = jobQueueContext
         
         // Tool ID is the agent ID
@@ -68,12 +70,12 @@ public struct AgentAsTool: Tool, Sendable {
             title: title,
             description: taskDescription,
             priority: priority,
-            agentId: agentManifest.id
+            agentId: agentId
         )
 
         do {
             let job = try await jobQueueContext.launchSubagent(request: request)
-            return .success("Task delegated to '\(agentManifest.name)'. Background Job ID: \(job.id.uuidString.prefix(8))")
+            return .success("Task delegated to '\(agentName)'. Background Job ID: \(job.id.uuidString.prefix(8))")
         } catch {
             return .failure("Failed to delegate task: \(error.localizedDescription)")
         }

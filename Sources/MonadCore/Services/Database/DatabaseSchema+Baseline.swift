@@ -104,4 +104,19 @@ extension DatabaseSchema {
             t.column("embedding", .text).notNull().defaults(to: "[]")
         }
     }
+
+    // MARK: - Agent Table
+
+    internal static func createAgentTable(in db: Database) throws {
+        try db.create(table: "agent") { t in
+            t.column("id", .text).primaryKey()
+            t.column("name", .text).notNull()
+            t.column("description", .text).notNull()
+            t.column("systemPrompt", .text).notNull()
+            t.column("personaPrompt", .text)
+            t.column("guardrailsPrompt", .text)
+            t.column("createdAt", .datetime).notNull()
+            t.column("updatedAt", .datetime).notNull()
+        }
+    }
 }

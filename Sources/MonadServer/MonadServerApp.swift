@@ -114,20 +114,6 @@ struct MonadServer: AsyncParsableCommand {
             $0.toolRouter = toolRouter
             $0.chatOrchestrator = chatOrchestrator
         } operation: {
-            // Register default agents
-            let defaultAgent = AutonomousAgent(
-                manifest: AgentManifest(
-                    id: "default",
-                    name: "Default Agent",
-                    description: "The default general-purpose agent.",
-                    capabilities: ["general", "tool-use"]
-                )
-            )
-            await agentRegistry.register(defaultAgent)
-            
-            let coordinatorAgent = AgentCoordinator()
-            await agentRegistry.register(coordinatorAgent)
-            
             // Public routes
             router.get("/health") { _, _ -> String in
                 return "OK"

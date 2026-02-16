@@ -3,50 +3,36 @@ import Foundation
 import Logging
 import Dependencies
 
-/// A base class for agents that provides common functionality and reduces boilerplate
-open class BaseAgent: AgentProtocol, @unchecked Sendable {
-    public let manifest: AgentManifest
+/// Service responsible for executing autonomous agents and managing their reasoning loops.
+public struct AgentExecutor: Sendable {
+    @Dependency(\.persistenceService) private var persistenceService
+    @Dependency(\.reasoningEngine) private var reasoningEngine
     
-    @Dependency(\.llmService) public var llmService
-    @Dependency(\.persistenceService) public var persistenceService
-    @Dependency(\.reasoningEngine) public var reasoningEngine
+    private let logger = Logger(label: "com.monad.agent-executor")
     
-    public let logger: Logger
-
-    public init(manifest: AgentManifest) {
-        self.manifest = manifest
-        self.logger = Logger(label: "com.monad.agent.\(manifest.id)")
-    }
-
-    /// The system instructions for this specific agent. Override in subclasses.
-    open var systemInstructions: String {
-        "You are an autonomous agent named \(manifest.name). \(manifest.description)"
-    }
-
-    /// Primary execution entry point
-    open func execute(
+    public init() {}
+    
+    /// Execute an agent for a specific job
+    public func execute(
         job: Job,
+        agent: Agent,
         session: ConversationSession,
         toolExecutor: ToolExecutor,
         contextManager: ContextManager?
     ) async {
-        logger.info("Starting execution of job: \(job.id)")
+        logger.info("Starting execution of job: \(job.id) with agent \(agent.id)")
 
         // 1. Update status to in_progress
         var currentJob = job
         if currentJob.status != .inProgress {
             currentJob.status = .inProgress
             currentJob.updatedAt = Date()
-            currentJob.logs.append("Agent \(manifest.id) started execution at \(Date())")
+            currentJob.logs.append("Agent \(agent.id) started execution at \(Date())")
             try? await persistenceService.saveJob(currentJob)
         }
 
-        // 2. Initial Setup
-        guard (try? await persistenceService.fetchMessages(for: session.id)) != nil else {
-            await failJob(currentJob, reason: "Failed to load session history")
-            return
-        }
-
+        // 2. Ensure Session is Hydrated (Handled by JobRunner)
+        
         // 3. Construct Initial Trigger Message if this is the start of the job
         if currentJob.logs.count <= 2 { // Rough check for fresh job
             let jobPrompt = """
@@ -74,7 +60,7 @@ open class BaseAgent: AgentProtocol, @unchecked Sendable {
                 session: session,
                 toolExecutor: toolExecutor,
                 contextManager: contextManager,
-                systemInstructions: self.systemInstructions
+                systemInstructions: agent.composedInstructions
             )
             
             switch result {
@@ -97,7 +83,7 @@ open class BaseAgent: AgentProtocol, @unchecked Sendable {
         }
     }
 
-    /// Shared failure logic
+    /// Shared failure logic with retry mechanism
     public func failJob(_ job: Job, reason: String) async {
         logger.error("Job \(job.id) failed: \(reason)")
         

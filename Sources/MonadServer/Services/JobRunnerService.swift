@@ -1,4 +1,5 @@
 import MonadShared
+import MonadCore
 import Foundation
 import Logging
 import ServiceLifecycle
@@ -9,6 +10,7 @@ public final class JobRunnerService: Service, @unchecked Sendable {
     @Dependency(\.sessionManager) private var sessionManager
     @Dependency(\.llmService) private var llmService
     @Dependency(\.agentRegistry) private var agentRegistry
+    @Dependency(\.agentExecutor) private var agentExecutor
     
     private let logger = Logger(label: "com.monad.job-runner")
     
@@ -109,8 +111,9 @@ public final class JobRunnerService: Service, @unchecked Sendable {
         }
 
         // 6. Execute
-        await agent.execute(
+        await agentExecutor.execute(
             job: job,
+            agent: agent,
             session: session,
             toolExecutor: toolExecutor,
             contextManager: contextManager

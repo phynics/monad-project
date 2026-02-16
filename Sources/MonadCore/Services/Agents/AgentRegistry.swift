@@ -1,40 +1,51 @@
 import MonadShared
 import Foundation
 import Logging
+import Dependencies
 
-/// Registry for managing available agents in the system
+/// Registry for managing available agents in the system.
+/// Now backed by the Persistence Layer (Database).
 public actor AgentRegistry {
-    private var agents: [String: any AgentProtocol] = [:]
+    @Dependency(\.persistenceService) private var persistence
     private let logger = Logger(label: "com.monad.agent-registry")
     
     public init() {}
     
-    /// Register a new agent
-    /// - Parameter agent: The agent to register
-    public func register(_ agent: any AgentProtocol) {
-        if agents[agent.id] != nil {
-            logger.warning("Overwriting existing agent with id: \(agent.id)")
-        }
-        agents[agent.id] = agent
-        logger.info("Registered agent: \(agent.id) (\(agent.name))")
-    }
-    
-    /// Get an agent by ID
+    /// Get an agent definition by ID from the database
     /// - Parameter id: The agent ID
     /// - Returns: The agent if found, nil otherwise
-    public func getAgent(id: String) -> (any AgentProtocol)? {
-        return agents[id]
+    public func getAgent(id: String) async -> Agent? {
+        do {
+            return try await persistence.databaseWriter.read { db in
+                try Agent.fetchOne(db, key: id)
+            }
+        } catch {
+            logger.error("Failed to fetch agent \(id): \(error)")
+            return nil
+        }
     }
     
-    /// List all registered agents
-    /// - Returns: Array of agent manifests
-    public func listAgents() -> [AgentManifest] {
-        return agents.values.map { $0.manifest }
-            .sorted { $0.id < $1.id }
+    /// List all agents defined in the database
+    /// - Returns: Array of agents
+    public func listAgents() async -> [Agent] {
+        do {
+            return try await persistence.databaseWriter.read { db in
+                try Agent.fetchAll(db)
+            }
+        } catch {
+            logger.error("Failed to list agents: \(error)")
+            return []
+        }
     }
     
-    /// Check if an agent exists
-    public func hasAgent(id: String) -> Bool {
-        return agents[id] != nil
+    /// Check if an agent exists in the database
+    public func hasAgent(id: String) async -> Bool {
+        do {
+            return try await persistence.databaseWriter.read { db in
+                try Agent.exists(db, key: id)
+            }
+        } catch {
+            return false
+        }
     }
 }

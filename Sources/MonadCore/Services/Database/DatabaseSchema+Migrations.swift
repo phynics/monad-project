@@ -404,5 +404,34 @@ extension DatabaseSchema {
             }
             try db.create(index: "idx_job_parent", on: "job", columns: ["parentId"])
         }
+
+        // v27: Add agent table for simplified, data-driven agents
+        migrator.registerMigration("v27") { db in
+            try createAgentTable(in: db)
+
+            // Seed with default agent
+            let defaultAgent = Agent(
+                id: "default",
+                name: "Default Assistant",
+                description: "A general purpose assistant focused on helpfulness and accuracy.",
+                systemPrompt: """
+                You are a helpful, intelligent, and efficient AI assistant named Monad.
+                Your goal is to assist the user with their tasks while being concise and professional.
+                """
+            )
+            try defaultAgent.insert(db)
+            
+            // Seed with coordinator agent
+            let coordinatorAgent = Agent(
+                id: "coordinator",
+                name: "Agent Coordinator",
+                description: "Coordinates multiple agents and complex workflows.",
+                systemPrompt: """
+                You are the Monad Coordinator. Your role is to break down complex tasks into smaller sub-tasks 
+                and delegate them to specialized agents.
+                """
+            )
+            try coordinatorAgent.insert(db)
+        }
     }
 }

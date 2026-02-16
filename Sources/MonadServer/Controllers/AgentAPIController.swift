@@ -34,7 +34,7 @@ public struct AgentAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound)
         }
         
-        let data = try SerializationUtils.jsonEncoder.encode(agent.manifest)
+        let data = try SerializationUtils.jsonEncoder.encode(agent)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
         return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))

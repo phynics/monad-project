@@ -30,6 +30,10 @@ public enum ReasoningEngineKey: DependencyKey {
     public static let liveValue = ReasoningEngine()
 }
 
+public enum AgentExecutorKey: DependencyKey {
+    public static let liveValue = AgentExecutor()
+}
+
 // MARK: - Dependency Values
 
 extension DependencyValues {
@@ -56,5 +60,10 @@ extension DependencyValues {
     public var reasoningEngine: ReasoningEngine {
         get { self[ReasoningEngineKey.self] }
         set { self[ReasoningEngineKey.self] = newValue }
+    }
+
+    public var agentExecutor: AgentExecutor {
+        get { self[AgentExecutorKey.self] }
+        set { self[AgentExecutorKey.self] = newValue }
     }
 }
