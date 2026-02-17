@@ -20,6 +20,15 @@ A headless AI assistant built for deep context integration, focusing on how data
     *   **AI:** [OpenAI Swift](https://github.com/MacPaw/OpenAI)
     *   **CLI:** [Swift Argument Parser](https://github.com/apple/swift-argument-parser)
 
+## Documentation
+
+Detailed documentation is available in the `docs/` directory:
+
+- [**Architecture Overview**](docs/ARCHITECTURE.md): Deep dive into system modules and data flow.
+- [**MonadCore Guide**](docs/MonadCoreGuide.md): Comprehensive guide to agents, jobs, and orchestration.
+- [**API Reference**](docs/API_REFERENCE.md): Endpoints and data models for MonadServer.
+- [**Workspaces Feature**](docs/workspaces_feature_overview.md): Explanation of the virtual document workspace system.
+
 ## Building and Running
 
 ### Swift Package Manager (Standard)
@@ -181,5 +190,39 @@ struct MyController<Context: RequestContext>: Sendable {
         return "Hello from MyController!"
     }
 }
+```
+
+### 4. Custom Prompts (MonadPrompt)
+
+Use the `@ContextBuilder` DSL to construct type-safe, optimized prompts.
+
+```swift
+import MonadPrompt
+import MonadCore
+
+let prompt = await ContextBuilder {
+    SystemInstructions(DefaultInstructions.system)
+    
+    // Prioritize critical context
+    ContextNotes(notes)
+        .priority(100)
+        .strategy(.summarize) // Summarize if too large
+        
+    // Include relevant memories
+    Memories(memories)
+        .priority(50)
+        
+    // Dynamic tool inclusion
+    if allowTools {
+        Tools(tools)
+    }
+    
+    // Conversation history (truncated automatically)
+    ChatHistory(history)
+    
+    UserQuery(queryString)
+}
+
+let messages = await prompt.toMessages()
 ```
 
