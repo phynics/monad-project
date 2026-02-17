@@ -33,14 +33,14 @@ Monad follows a modular architecture designed to separate core logic, server inf
 - **Tool Execution Environment**: Hosts the actual execution environment for tools, including file system access (sandboxed), shell command execution, and other side effects requested by the agent.
 - **Network Discovery**: Uses `BonjourAdvertiser` to broadcast its presence on the local network, allowing clients to auto-discover the server without manual IP configuration.
 
-### 3. MonadClient (Client Library)
+### 5. MonadClient (Client Library)
 **Responsibility**: A networking library that abstracts the complexity of communicating with the Monad Server. It provides a clean, Swift-native API for any client application.
 
 - **Networking Abstraction**: Encapsulates HTTP requests, authenticates with the server, and handles connection errors.
 - **SSE Parsing**: Includes `SSEStreamReader` to parse the raw event stream from the server into structured Swift objects (e.g., `ChatDelta`, `ToolCall`, `Usage`), simplifying real-time UI updates.
 - **Server Discovery**: Implements the client-side logic for Bonjour discovery to find running Monad Servers.
 
-### 4. MonadCLI (Command-Line Interface)
+### 6. MonadCLI (Command-Line Interface)
 **Responsibility**: The primary user interface for interacting with Monad. It is a "thin client" that relies entirely on `MonadClient` and `MonadServer` for intelligence.
 
 - **Interactive REPL**: Provides a rich terminal user interface using `ChatREPL` and `LineReader`. It supports input history, line editing, and tab-completion for a developer-friendly experience.

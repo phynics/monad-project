@@ -7,10 +7,9 @@ MonadCore is a modular, high-performance Swift framework for building and orches
 ## 1. Core Concepts
 
 ### Agents
-An **Agent** is an autonomous entity that can perceive its environment (history, RAG context) and take actions (tool calls).
-- **`AgentProtocol`**: The fundamental interface for all agents.
-- **`AgentManifest`**: Structured metadata (ID, name, capabilities) for discovery.
-- **`BaseAgent`**: A convenient base class that handles the ReAct loop and common boilerplate.
+An **Agent** is a persistent entity defined by its instructions and persona, stored in the database.
+- **`Agent` Model**: A `Codable` struct defining the agent's identity and prompt.
+- **`AgentExecutor`**: The service that runs the agent's autonomous loop.
 
 ### Jobs (Tasks)
 Execution is managed via **Jobs**.
@@ -19,7 +18,7 @@ Execution is managed via **Jobs**.
 - **Status Tracking**: Pending, In-Progress, Completed, Failed, Cancelled.
 
 ### Orchestration
-- **`ReasoningEngine`**: Implements the core multi-turn loop (ReAct) used by agents.
+- **`ChatEngine`**: The unified engine for both interactive chat and autonomous agent loops.
 - **`ContextBuilder`**: A declarative DSL for constructing prompts from history, memories, and tools.
 - **`JobRunnerService`**: A background service that monitors the database and executes pending jobs.
 - **`SessionManager`**: Manages the lifecycle of conversation sessions and their components.
@@ -28,56 +27,50 @@ Execution is managed via **Jobs**.
 
 ## 2. Defining an Agent
 
-To create a new agent, inherit from `BaseAgent`.
+Agents are defined as records in the database. You can create them programmatically or via CLI/API.
 
 ```swift
 import MonadCore
 import Foundation
 
-public class ResearchAgent: BaseAgent {
-    public init() {
-        let manifest = AgentManifest(
-            id: "researcher",
-            name: "Research Agent",
-            description: "Specializes in searching and summarizing information.",
-            capabilities: ["search", "summarization"]
-        )
-        super.init(manifest: manifest)
-    }
+let researcher = Agent(
+    id: UUID(),
+    name: "Research Agent",
+    description: "Specializes in searching and summarizing information.",
+    systemPrompt: """
+    You are a Researcher. Your goal is to provide deep insights on any topic.
+    Use the search tools extensively.
+    """
+)
 
-    // Override the system instructions to define behavior
-    open override var systemInstructions: String {
-        """
-        You are a Researcher. Your goal is to provide deep insights on any topic.
-        Use the search tools extensively.
-        """
-    }
-}
+// Persist the agent
+try await persistenceService.saveAgent(researcher)
 ```
 
 ---
 
-## 3. Dependency Injection
+## 3. Customizing Execution
 
-MonadCore uses `swift-dependencies`. This allows agents to access core services without manual passing.
-
-### Accessing Services in Agents
-Inside a `BaseAgent` subclass, you have access to:
-- `llmService`
-- `persistenceService`
-- `reasoningEngine`
-
-### Registering Dependencies
-In your application entry point (e.g., `MonadServerApp`), inject the services:
+### ChatEngine
+The `ChatEngine` drives the interaction. It uses `ContextBuilder` internally to construct prompts.
 
 ```swift
-try await withDependencies {
-    $0.persistenceService = persistenceService
-    $0.llmService = llmService
-    $0.agentRegistry = agentRegistry
-    $0.sessionManager = sessionManager
-} operation: {
-    // Run your app here
+let stream = try await chatEngine.chatStream(
+    sessionId: session.id,
+    message: "Research this topic",
+    tools: availableTools,
+    systemInstructions: agent.composedInstructions
+)
+```
+
+### ContextBuilder (Advanced)
+If you are building a custom loop outside of `ChatEngine`, you can use `ContextBuilder` directly:
+
+```swift
+let prompt = await ContextBuilder {
+    SystemInstructions("You are a custom agent")
+    ChatHistory(messages)
+    UserQuery("Hello")
 }
 ```
 
@@ -99,7 +92,7 @@ The `AgentCoordinator` is a specialized agent designed to break down high-level 
 You can expose any agent as a tool in a chat session using `AgentAsTool`:
 
 ```swift
-let researcher = ResearchAgent()
+let researcher = try await Agent.fetchOne(db, key: "researcher")
 let tool = AgentAsTool(agent: researcher, jobQueueContext: jobQueue)
 // Now the LLM can "call" the researcher as if it were a function.
 ```
@@ -113,7 +106,7 @@ Initialize your core services individually:
 
 ```swift
 let persistence = try PersistenceService.create()
-let llm = ServerLLMService()
+let llm = LLMService(client: OpenAIClient(...)) // or other provider
 let agentRegistry = AgentRegistry()
 let sessionManager = SessionManager(workspaceRoot: rootURL)
 ```
