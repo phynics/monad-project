@@ -10,6 +10,8 @@ Built with **Swift 6.0**, it features a modular architecture designed for high p
 ## Architecture
 
 - **MonadCore**: Pure logic framework with session management, context engine, persistence (GRDB/SQLite), and tool execution
+- **MonadPrompt**: Context-aware prompt construction DSL
+- **MonadShared**: Common types and protocols (Message, Memory, ToolCall)
 - **MonadServer**: REST API server with streaming chat support
 - **MonadClient**: HTTP client library for server communication
 - **MonadCLI**: Command-line interface for interacting with the server

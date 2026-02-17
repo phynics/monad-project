@@ -20,6 +20,7 @@ Execution is managed via **Jobs**.
 
 ### Orchestration
 - **`ReasoningEngine`**: Implements the core multi-turn loop (ReAct) used by agents.
+- **`ContextBuilder`**: A declarative DSL for constructing prompts from history, memories, and tools.
 - **`JobRunnerService`**: A background service that monitors the database and executes pending jobs.
 - **`SessionManager`**: Manages the lifecycle of conversation sessions and their components.
 

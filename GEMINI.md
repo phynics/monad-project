@@ -9,6 +9,7 @@ A headless AI assistant built for deep context integration, focusing on how data
 *   **Architecture:**
     *   **MonadCore:** Pure logic framework. Handles session management, context engine, persistence (GRDB/SQLite), and tool execution.
     *   **MonadPrompt:** A standalone, type-safe DSL for constructing LLM prompts using Swift result builders.
+    *   **MonadShared:** Common types and protocols shared across all modules (Message, Memory, ToolCall).
     *   **MonadServer:** REST API server built with Hummingbird, supporting streaming chat.
     *   **MonadClient:** HTTP client library for communicating with the server.
     *   **MonadCLI:** Command-line interface for interacting with the server.

@@ -14,7 +14,17 @@ Monad follows a modular architecture designed to separate core logic, server inf
 - **Session Management**: `SessionManager` maintains the state of active conversations, ensuring context is preserved and updated across requests.
 - **Tool Logic**: Defines the `Tool` protocol and the `ToolExecutor` which orchestrates the execution of tools, although the specific implementations may vary or be injected.
 
-### 2. MonadServer (Executable Application)
+### 2. MonadShared (Common Types)
+**Responsibility**: Contains the fundamental data structures and protocols shared by all other targets. Prevents circular dependencies.
+- **Core Models**: `Message`, `Memory`, `ToolCall`, `ChatDelta`.
+- **Protocols**: `Tool`, `LLMClientProtocol`.
+
+### 3. MonadPrompt (Context DSL)
+**Responsibility**: A domain-specific language (DSL) for constructing LLM prompts in a declarative, type-safe manner.
+- **@ContextBuilder**: A Swift result builder that allows composing prompts from sections like `SystemInstructions`, `ChatHistory`, and `ContextNotes`.
+- **Compression**: Logic for token budgeting and history truncation.
+
+### 4. MonadServer (Executable Application)
 **Responsibility**: The backend server that hosts the agent. It acts as the "brain," running as a background process to manage state, orchestrate AI interactions, and expose an API for clients.
 
 - **API Layer**: Built on [Hummingbird](https://github.com/hummingbird-project/hummingbird), it exposes REST endpoints (e.g., `/chat`, `/session`) and handles HTTP request/response lifecycles.
