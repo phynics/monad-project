@@ -64,7 +64,7 @@ public actor ToolExecutor {
     }
 
     /// Get all available tools
-    public func getAvailableTools() async -> [any Tool] {
+    public func getAvailableTools() async -> [AnyTool] {
         return await toolManager.getEnabledTools()
     }
 

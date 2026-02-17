@@ -3,6 +3,7 @@ import Foundation
 import Logging
 import MonadCore
 import OpenAI
+import MonadPrompt
 
 public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
     public private(set) var configuration: LLMConfiguration = .openAI
@@ -39,15 +40,13 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
     private var fastClient: (any LLMClientProtocol)?
 
     private let storage: ConfigurationStorage
-    public let promptBuilder: PromptBuilder
+
     private let logger = Logger.server
 
     public init(
-        storage: ConfigurationStorage = ConfigurationStorage(),
-        promptBuilder: PromptBuilder = PromptBuilder()
+        storage: ConfigurationStorage = ConfigurationStorage()
     ) {
         self.storage = storage
-        self.promptBuilder = promptBuilder
     }
 
     public func loadConfiguration() async {
@@ -239,7 +238,7 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
         contextNotes: [ContextFile],
         memories: [Memory],
         chatHistory: [Message],
-        tools: [any MonadCore.Tool],
+        tools: [AnyTool],
         systemInstructions: String?,
         responseFormat: ChatQuery.ResponseFormat?,
         useFastModel: Bool
@@ -258,14 +257,18 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
         }
 
         // Build prompt with all components
-        let (messages, rawPrompt, structuredContext) = await promptBuilder.buildPrompt(
-            systemInstructions: systemInstructions,
+        let prompt = await buildContext(
+            userQuery: userQuery,
             contextNotes: contextNotes,
             memories: memories,
-            tools: tools,
             chatHistory: chatHistory,
-            userQuery: userQuery
+            tools: tools,
+            systemInstructions: systemInstructions
         )
+        
+        let messages = await prompt.toMessages()
+        let rawPrompt = await prompt.render()
+        let structuredContext = await prompt.structuredContext()
 
         // Delegate to client for streaming
         let toolParams = tools.isEmpty ? nil : tools.map { $0.toToolParam() }
@@ -280,21 +283,47 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
         contextNotes: [ContextFile],
         memories: [Memory],
         chatHistory: [Message],
-        tools: [any MonadCore.Tool],
+        tools: [AnyTool],
         systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
         rawPrompt: String,
         structuredContext: [String: String]
     ) {
-        await promptBuilder.buildPrompt(
-            systemInstructions: systemInstructions,
+        let prompt = await buildContext(
+            userQuery: userQuery,
             contextNotes: contextNotes,
             memories: memories,
-            tools: tools,
             chatHistory: chatHistory,
-            userQuery: userQuery
+            tools: tools,
+            systemInstructions: systemInstructions
         )
+        
+        // Convert to OpenAI format
+        let messages = await prompt.toMessages()
+        let raw = await prompt.render()
+        let ctx = await prompt.structuredContext()
+        
+        return (messages, raw, ctx)
+    }
+
+    public func buildContext(
+        userQuery: String,
+        contextNotes: [ContextFile],
+        memories: [Memory],
+        chatHistory: [Message],
+        tools: [AnyTool],
+        systemInstructions: String?
+    ) async -> Prompt {
+        let instructions = systemInstructions ?? DefaultInstructions.system
+        return Prompt {
+            SystemInstructions(instructions)
+            ContextNotes(contextNotes)
+            Memories(memories)
+            Tools(tools)
+            ChatHistory(chatHistory)
+            UserQuery(userQuery)
+        }
     }
 
     public func generateTags(for text: String) async throws -> [String] {

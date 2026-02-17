@@ -110,7 +110,7 @@ public actor ToolContextSession {
     }
 
     /// Get context tools if a context is active
-    public func getContextTools() async -> [any Tool] {
+    public func getContextTools() async -> [AnyTool] {
         await activeContext?.contextTools ?? []
     }
 

@@ -40,11 +40,11 @@ import NIOCore
                 try await withDependencies {
                     $0.toolRouter = toolRouter
                 } operation: {
-                    let orchestrator = ChatOrchestrator()
+                    let engine = ChatEngine()
             
                     // Setup App
                     let router = Router()
-                    let controller = ChatAPIController<BasicRequestContext>(sessionManager: sessionManager, chatOrchestrator: orchestrator)
+                    let controller = ChatAPIController<BasicRequestContext>(sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter)
                     controller.addRoutes(to: router.group("/sessions"))
             
                     let app = Application(router: router)
@@ -96,11 +96,11 @@ import NIOCore
                 try await withDependencies {
                     $0.toolRouter = toolRouter
                 } operation: {
-                    let orchestrator = ChatOrchestrator()
+                    let engine = ChatEngine()
             
                     // Setup App
                     let router = Router()
-                    let controller = ChatAPIController<BasicRequestContext>(sessionManager: sessionManager, chatOrchestrator: orchestrator)
+                    let controller = ChatAPIController<BasicRequestContext>(sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter)
                     controller.addRoutes(to: router.group("/sessions"))
             
                     let app = Application(router: router)

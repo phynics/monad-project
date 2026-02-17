@@ -1,6 +1,7 @@
 import MonadShared
 import OpenAI
 import MonadCore
+import MonadPrompt
 import Testing
 
 @Suite @MainActor
@@ -27,7 +28,6 @@ struct LLMServiceTests {
 
     @Test("Test prompt building logic and structure")
     func promptBuilding() async throws {
-        let promptBuilder = PromptBuilder()
         let contextFiles = [
             ContextFile(name: "Test Note", content: "Note Content", source: "note")
         ]
@@ -36,19 +36,26 @@ struct LLMServiceTests {
             Message(content: "Previous assistant message", role: .assistant)
         ]
 
-        let (messages, rawPrompt, _) = await promptBuilder.buildPrompt(
-            systemInstructions: "System rules",
+        let prompt = await llmService.buildContext(
+            userQuery: "Current question",
             contextNotes: contextFiles,
-            tools: [],
+            memories: [],
             chatHistory: history,
-            userQuery: "Current question"
+            tools: [],
+            systemInstructions: "System rules"
         )
+        
+        // Render content to check presence
+        let rawPrompt = await prompt.render()
 
         // Validate basic content presence
         #expect(rawPrompt.contains("System rules"))
         #expect(rawPrompt.contains("Note Content"))
-        #expect(rawPrompt.contains("Previous user message"))
-        #expect(rawPrompt.contains("Current question"))
+        // History isn't rendered in raw prompt usually unless debug, but let's check structured context
+        // Actually ContextBuilder sections render returns String?
+        // ChatHistory section returns nil by default for render().
+        
+        let messages = await prompt.toMessages()
 
         // Validate message ordering and roles
         #expect(!messages.isEmpty)
@@ -61,9 +68,7 @@ struct LLMServiceTests {
         }
 
         // 2. Chat history should follow
-        // We look for the messages from history. Note that system prompts might be consolidated.
-        // The messages array passed to LLM usually is [System, ...History, UserQuery]
-
+        // specific check for history messages
         let historyStart = messages.dropFirst() // Drop system
 
         // Find "Previous user message"
@@ -105,13 +110,15 @@ struct LLMServiceTests {
 
     @Test("Test prompt building with empty context")
     func promptBuildingEmptyContext() async throws {
-        let promptBuilder = PromptBuilder()
-        let (messages, _, _) = await promptBuilder.buildPrompt(
-            systemInstructions: "System Only",
+        let prompt = await llmService.buildContext(
+            userQuery: "Hello",
             contextNotes: [],
+            memories: [],
             chatHistory: [],
-            userQuery: "Hello"
+            tools: [],
+            systemInstructions: "System Only"
         )
+        let messages = await prompt.toMessages()
 
         #expect(messages.count >= 2) // System + User
 
@@ -128,28 +135,33 @@ struct LLMServiceTests {
         }
     }
 
-    @Test("Test PromptBuilder truncation with large history")
+    @Test("Test history optimization (truncation)")
     func promptTruncation() async throws {
-        let promptBuilder = PromptBuilder(maxContextTokens: 100)
-
         // Create a large history that should be truncated
+        // make sure it exceeds the limit we pass
+        let limit = 100
+        
         let largeHistory = (1...10).map { i in
             Message(
                 content:
-                    "Message \(i) with some significant length to trigger early truncation logic in the builder.",
+                    "Message \(i) with significant length to trigger early truncation logic. ....................................................................",
                 role: .user)
         }
 
-        let (messages, _, _) = await promptBuilder.buildPrompt(
-            contextNotes: [],
-            chatHistory: largeHistory,
-            userQuery: "Trigger truncation"
-        )
+        // Call optimizeHistory directly
+        let optimized = await llmService.optimizeHistory(largeHistory, availableTokens: limit)
 
-        // Should have fewer messages than total history + user query
-        // Original history is 10 messages. Plus 1 user query = 11.
-        #expect(messages.count < largeHistory.count + 1)
-        #expect(messages.last?.role == .user)  // User query always included
+        // Should have fewer messages than total history
+        #expect(optimized.count < largeHistory.count)
+        
+        // Should contain a summary message at the start
+        if let first = optimized.first {
+            #expect(first.role == .system)
+            #expect(first.isSummary == true)
+            #expect(first.content.contains("History truncated"))
+        } else {
+            #expect(Bool(false), "Optimized history should not be empty")
+        }
     }
 
     @Test("Test LLMService error when not configured")
@@ -167,7 +179,7 @@ struct LLMServiceTests {
         let mockClient = MockLLMClient()
         mockClient.nextResponse = "SwiftUI Basics"
 
-        let service = LLMService(utilityClient: mockClient)
+        let service = LLMService(client: mockClient) // Use client directly if possible or utilityClient
 
         let messages = [
             Message(content: "How do I use SwiftUI?", role: .user),

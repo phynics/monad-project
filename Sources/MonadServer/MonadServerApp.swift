@@ -100,7 +100,7 @@ struct MonadServer: AsyncParsableCommand {
             connectionManager: connectionManager
         )
         let toolRouter = ToolRouter()
-        let chatOrchestrator = ChatOrchestrator()
+        let chatEngine = ChatEngine()
         let jobRunner = JobRunnerService()
         let orphanCleanup = OrphanCleanupService(workspaceRoot: workspaceRoot)
 
@@ -112,7 +112,7 @@ struct MonadServer: AsyncParsableCommand {
             $0.agentRegistry = agentRegistry
             $0.sessionManager = sessionManager
             $0.toolRouter = toolRouter
-            $0.chatOrchestrator = chatOrchestrator
+            $0.chatEngine = chatEngine
         } operation: {
             // Public routes
             router.get("/health") { _, _ -> String in
@@ -149,7 +149,8 @@ struct MonadServer: AsyncParsableCommand {
 
             let chatController = ChatAPIController<AppRequestContext>(
                 sessionManager: sessionManager,
-                chatOrchestrator: chatOrchestrator,
+                chatEngine: chatEngine,
+                toolRouter: toolRouter,
                 verbose: verbose
             )
             chatController.addRoutes(to: protected.group("/sessions"))

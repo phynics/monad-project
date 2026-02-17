@@ -28,7 +28,7 @@ import Testing
     @Test("Test executing a single successful tool")
     func executeSuccess() async throws {
         let mockTool = MockTool(id: "test_tool", name: "Test", description: "Test", shouldFail: false)
-        let manager = SessionToolManager(availableTools: [mockTool])
+        let manager = SessionToolManager(availableTools: [AnyTool(mockTool)])
         let executor = ToolExecutor(toolManager: manager)
 
         let toolCall = ToolCall(name: "test_tool", arguments: [:])
@@ -41,7 +41,7 @@ import Testing
     @Test("Test executing a failing tool")
     func executeFailure() async throws {
         let mockTool = MockTool(id: "fail_tool", name: "Fail", description: "Fail", shouldFail: true)
-        let manager = SessionToolManager(availableTools: [mockTool])
+        let manager = SessionToolManager(availableTools: [AnyTool(mockTool)])
         let executor = ToolExecutor(toolManager: manager)
 
         let toolCall = ToolCall(name: "fail_tool", arguments: [:])
@@ -67,7 +67,7 @@ import Testing
     func executeAll() async throws {
         let tool1 = MockTool(id: "tool_1", name: "T1", description: "T1", shouldFail: false)
         let tool2 = MockTool(id: "tool_2", name: "T2", description: "T2", shouldFail: false)
-        let manager = SessionToolManager(availableTools: [tool1, tool2])
+        let manager = SessionToolManager(availableTools: [AnyTool(tool1), AnyTool(tool2)])
         let executor = ToolExecutor(toolManager: manager)
 
         let calls = [

@@ -8,6 +8,7 @@ let package = Package(
     ],
     products: [
         .library(name: "MonadCore", targets: ["MonadCore"]),
+        .library(name: "MonadPrompt", targets: ["MonadPrompt"]),
         .library(name: "MonadClient", targets: ["MonadClient"]),
         .executable(name: "MonadServer", targets: ["MonadServer"]),
         .executable(name: "MonadCLI", targets: ["MonadCLI"]),
@@ -31,8 +32,14 @@ let package = Package(
             path: "Sources/MonadShared"
         ),
         .target(
+            name: "MonadPrompt",
+            dependencies: [],
+            path: "Sources/MonadPrompt"
+        ),
+        .target(
             name: "MonadCore",
             dependencies: [
+                "MonadPrompt",
                 .product(name: "OpenAI", package: "OpenAI"),
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "Logging", package: "swift-log"),
@@ -45,6 +52,7 @@ let package = Package(
             name: "MonadServer",
             dependencies: [
                 "MonadCore",
+                "MonadPrompt",
                 "MonadClient",
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "HummingbirdWebSocket", package: "hummingbird-websocket"),
@@ -76,6 +84,11 @@ let package = Package(
             name: "MonadCoreTests",
             dependencies: ["MonadCore"],
             path: "Tests/MonadCoreTests"
+        ),
+        .testTarget(
+            name: "MonadPromptTests",
+            dependencies: ["MonadPrompt"],
+            path: "Tests/MonadPromptTests"
         ),
         .testTarget(
             name: "MonadServerTests",

@@ -14,30 +14,30 @@ extension SessionManager {
     ) async -> SessionToolManager {
         let currentWD = session.workingDirectory ?? jailRoot
 
-        let availableTools: [any MonadCore.Tool] = [
+        let availableTools: [AnyTool] = [
             // Filesystem Tools
-            ChangeDirectoryTool(
+            AnyTool(ChangeDirectoryTool(
                 currentPath: currentWD,
                 root: jailRoot,
                 onChange: { newPath in
                     // Update working directory logic
-                }),
-            ListDirectoryTool(currentDirectory: currentWD, jailRoot: jailRoot),
-            FindFileTool(currentDirectory: currentWD, jailRoot: jailRoot),
-            SearchFileContentTool(currentDirectory: currentWD, jailRoot: jailRoot),
-            SearchFilesTool(currentDirectory: currentWD, jailRoot: jailRoot),
-            ReadFileTool(currentDirectory: currentWD, jailRoot: jailRoot),
+                })),
+            AnyTool(ListDirectoryTool(currentDirectory: currentWD, jailRoot: jailRoot)),
+            AnyTool(FindFileTool(currentDirectory: currentWD, jailRoot: jailRoot)),
+            AnyTool(SearchFileContentTool(currentDirectory: currentWD, jailRoot: jailRoot)),
+            AnyTool(SearchFilesTool(currentDirectory: currentWD, jailRoot: jailRoot)),
+            AnyTool(ReadFileTool(currentDirectory: currentWD, jailRoot: jailRoot)),
             
             // Agent Coordination
-            LaunchSubagentTool(
+            AnyTool(LaunchSubagentTool(
                 persistenceService: persistenceService,
                 sessionId: session.id,
                 parentId: parentId,
                 agentRegistry: agentRegistry
-            ),
+            )),
             
             // Job Queue Gateway
-            JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession),
+            AnyTool(JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession)),
         ]
 
         return SessionToolManager(

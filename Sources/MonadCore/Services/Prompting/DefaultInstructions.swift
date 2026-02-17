@@ -2,8 +2,8 @@ import MonadShared
 import Foundation
 
 /// Default system instructions for the LLM
-enum DefaultInstructions {
-  static let system = """
+public enum DefaultInstructions {
+  public static let system = """
     You are Monad, an intelligent developer assistant.
 
     ## Core Directives

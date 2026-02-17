@@ -19,16 +19,19 @@ extension ChatResponse: ResponseGenerator {
 
 public struct ChatAPIController<Context: RequestContext>: Sendable {
     public let sessionManager: SessionManager
-    public let chatOrchestrator: ChatOrchestrator
+    public let chatEngine: ChatEngine
+    public let toolRouter: ToolRouter
     public let verbose: Bool
 
     public init(
         sessionManager: SessionManager,
-        chatOrchestrator: ChatOrchestrator,
+        chatEngine: ChatEngine,
+        toolRouter: ToolRouter,
         verbose: Bool = false
     ) {
         self.sessionManager = sessionManager
-        self.chatOrchestrator = chatOrchestrator
+        self.chatEngine = chatEngine
+        self.toolRouter = toolRouter
         self.verbose = verbose
     }
 
@@ -46,17 +49,26 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         let chatRequest = try await request.decode(as: MonadShared.ChatRequest.self, context: context)
 
-        let stream = try await chatOrchestrator.chatStream(
+        // Hydrate session and resolve tools at the server layer
+        try await sessionManager.hydrateSession(id: id)
+        let availableTools = await resolveTools(sessionId: id, clientId: chatRequest.clientId)
+
+        let stream = try await chatEngine.chatStream(
             sessionId: id,
             message: chatRequest.message,
-            clientId: chatRequest.clientId,
+            tools: availableTools,
             toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) }
         )
 
         var fullResponse = ""
-        for try await delta in stream {
-            if let content = delta.content {
+        for try await event in stream {
+            switch event {
+            case .delta(let content):
                 fullResponse += content
+            case .completion(let content):
+                fullResponse = content
+            default:
+                break
             }
         }
 
@@ -72,18 +84,40 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         let chatRequest = try await request.decode(as: MonadShared.ChatRequest.self, context: context)
 
-        let chatOrchestratorStream = try await chatOrchestrator.chatStream(
+        // Hydrate session and resolve tools at the server layer
+        try await sessionManager.hydrateSession(id: id)
+        let availableTools = await resolveTools(sessionId: id, clientId: chatRequest.clientId)
+
+        let chatEngineStream = try await chatEngine.chatStream(
             sessionId: id,
             message: chatRequest.message,
-            clientId: chatRequest.clientId,
+            tools: availableTools,
             toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) }
         )
 
         let sseStream = AsyncStream<ByteBuffer> { continuation in
             Task {
                 do {
-                    for try await coreDelta in chatOrchestratorStream {
-                        let apiDelta = MonadShared.ChatDelta(fromCore: coreDelta)
+                    for try await event in chatEngineStream {
+                        let apiDelta: MonadShared.ChatDelta
+                        switch event {
+                        case .delta(let content):
+                            apiDelta = MonadShared.ChatDelta(content: content)
+                        case .thought(let content):
+                            apiDelta = MonadShared.ChatDelta(thought: content)
+                        case .toolCall(let tc):
+                            apiDelta = MonadShared.ChatDelta(toolCalls: [
+                                MonadShared.ToolCallDelta(index: tc.index, id: tc.id, name: tc.name, arguments: tc.arguments)
+                            ])
+                        case .metadata(let m):
+                            apiDelta = MonadShared.ChatDelta(metadata: MonadShared.ChatMetadata(memories: m.memories, files: m.files))
+                        case .completion:
+                            apiDelta = MonadShared.ChatDelta(isDone: true)
+                        case .error(let e):
+                            apiDelta = MonadShared.ChatDelta(error: e)
+                        case .toolResult:
+                            continue  // Not sent to client
+                        }
                         if let data = try? SerializationUtils.jsonEncoder.encode(apiDelta) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))
@@ -123,37 +157,32 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         return Response(
             status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
     }
-}
 
-extension MonadShared.ChatDelta {
-    init(fromCore delta: MonadCore.ChatDelta) {
-        self.init(
-            content: delta.content,
-            thought: delta.thought,
-            toolCalls: delta.toolCalls?.map { .init(fromCore: $0) },
-            metadata: delta.metadata.map { .init(fromCore: $0) },
-            error: delta.error,
-            isDone: delta.isDone
-        )
+    // MARK: - Tool Resolution (Server-Layer Concern)
+
+    private func resolveTools(sessionId: UUID, clientId: UUID?) async -> [AnyTool] {
+        var availableTools: [AnyTool] = []
+        do {
+            let references = try await sessionManager.getAllToolReferences(sessionId: sessionId, clientId: clientId)
+            
+            availableTools = references.compactMap { (ref: ToolReference) -> AnyTool? in
+                var def: WorkspaceToolDefinition?
+                switch ref {
+                case .known(let id): def = SystemToolRegistry.shared.getDefinition(for: id)
+                case .custom(let definition): def = definition
+                }
+                guard let d = def else { return nil }
+                return AnyTool(DelegatingTool(
+                    ref: ref,
+                    router: toolRouter,
+                    sessionId: sessionId,
+                    resolvedDefinition: d
+                ))
+            }
+        } catch {
+            Logger.chat.warning("Failed to fetch tools: \(error)")
+        }
+        return availableTools
     }
 }
 
-extension MonadShared.ToolCallDelta {
-    init(fromCore delta: MonadCore.ToolCallDelta) {
-        self.init(
-            index: delta.index,
-            id: delta.id,
-            name: delta.name,
-            arguments: delta.arguments
-        )
-    }
-}
-
-extension MonadShared.ChatMetadata {
-    init(fromCore metadata: MonadCore.ChatMetadata) {
-        self.init(
-            memories: metadata.memories,
-            files: metadata.files
-        )
-    }
-}

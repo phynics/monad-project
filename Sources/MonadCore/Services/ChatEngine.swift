@@ -3,82 +3,89 @@ import Foundation
 import Logging
 import OpenAI
 import Dependencies
+import MonadPrompt
 
-/// Orchestrates a single chat conversation turn, including context gathering, tool use, and streaming.
-public final class ChatOrchestrator: @unchecked Sendable {
+/// Unified chat engine that handles both interactive chat and autonomous agent execution.
+/// Returns `AsyncThrowingStream<ChatEvent>` for all use cases — callers decide how to consume.
+///
+/// - Interactive chat (MonadServer): streams deltas to the client via SSE.
+/// - Autonomous agents (AgentExecutor): consumes the stream internally for state tracking.
+///
+/// Tool resolution is the caller's responsibility. The engine accepts pre-resolved tools.
+/// Session hydration is also the caller's responsibility for autonomous use cases.
+public final class ChatEngine: @unchecked Sendable {
     @Dependency(\.sessionManager) private var sessionManager
     @Dependency(\.persistenceService) private var persistenceService
     @Dependency(\.llmService) private var llmService
-    @Dependency(\.agentRegistry) private var agentRegistry
-    @Dependency(\.toolRouter) private var toolRouter
     
-    private let logger = Logger(label: "com.monad.core.chat-orchestrator")
+    private let logger = Logger(label: "com.monad.chat-engine")
     
     public init() {}
     
-    /// Execute a chat request and return a stream of deltas.
+    /// Execute a chat turn and return a stream of deltas.
     /// - Parameters:
     ///   - sessionId: The unique identifier for the chat session.
     ///   - message: The user's input message.
-    ///   - clientId: Optional client identifier for scoping tools and context.
+    ///   - tools: Pre-resolved tools available for this turn.
     ///   - toolOutputs: Optional list of tool outputs to be processed from a previous turn.
-    /// - Returns: An asynchronous stream of chat deltas.
+    ///   - contextManager: Optional context manager for RAG. If nil, no context is gathered.
+    ///   - systemInstructions: Optional system instructions to override the default.
+    ///   - maxTurns: Maximum number of LLM turns before stopping. Defaults to 5.
+    /// - Returns: An asynchronous stream of chat events.
     public func chatStream(
         sessionId: UUID,
         message: String,
-        clientId: UUID? = nil,
-        toolOutputs: [MonadCore.ToolOutputSubmission]? = nil
-    ) async throws -> AsyncThrowingStream<MonadCore.ChatDelta, Error> {
+        tools: [AnyTool],
+        toolOutputs: [MonadCore.ToolOutputSubmission]? = nil,
+        contextManager: ContextManager? = nil,
+        systemInstructions: String? = nil,
+        maxTurns: Int = 5
+    ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
         
-        // 3. Ensure Session is Hydrated
-        try await sessionManager.hydrateSession(id: sessionId)
+        // Save conversation steps (user message + any tool outputs from previous turn)
+        try await saveConversationSteps(sessionId: sessionId, message: message, toolOutputs: toolOutputs)
         
-        guard let session = await sessionManager.getSession(id: sessionId) else {
-            throw ToolError.toolNotFound("Session \(sessionId)")
-        }
-
-        // 4. Save Conversation Steps
-        try await saveConversationSteps(sessionId: sessionId, message: message, toolOutputs: toolOutputs, persistence: persistenceService)
-        
-        // 4. Fetch History & Context
+        // Fetch history
         let history = try await sessionManager.getHistory(for: sessionId)
         
-        // 5. Fetch History & Context
-        let contextData = await fetchContext(sessionId: sessionId, message: message, history: history)
+        // Gather context (RAG)
+        let contextData = await fetchContext(contextManager: contextManager, message: message, history: history)
         
         guard await llmService.isConfigured else { throw ToolError.executionFailed("LLM Service not configured") }
         
-        // 5. Resolve Tools
-        let availableTools = await resolveTools(sessionId: sessionId, clientId: clientId)
+        let toolParams = tools.map { $0.toToolParam() }
         
-        let toolParams = availableTools.map { $0.toToolParam() }
-        
-        // 6. Build Prompt
+        // Build prompt
+        let session = await sessionManager.getSession(id: sessionId)
         let (initialMessages, structuredContext) = await buildPrompt(
             session: session,
             message: message,
             contextData: contextData,
             history: history,
-            availableTools: availableTools
+            availableTools: tools,
+            systemInstructions: systemInstructions
         )
         
         let modelName = await llmService.configuration.modelName
         
-        return AsyncThrowingStream<MonadCore.ChatDelta, Error> { continuation in
+        return AsyncThrowingStream<ChatEvent, Error> { continuation in
             Task {
                 await self.runChatLoop(
                     continuation: continuation,
                     sessionId: sessionId,
                     initialMessages: initialMessages,
                     toolParams: toolParams,
-                    availableTools: availableTools,
+                    availableTools: tools,
                     contextData: contextData,
                     structuredContext: structuredContext,
-                    modelName: modelName
+                    modelName: modelName,
+                    maxTurns: maxTurns
                 )
             }
         }
     }
+
+    // MARK: - Core Loop
 
     private enum TurnResult {
         case `continue`(newMessages: [ChatQuery.ChatCompletionMessageParam])
@@ -86,25 +93,25 @@ public final class ChatOrchestrator: @unchecked Sendable {
     }
 
     private func runChatLoop(
-        continuation: AsyncThrowingStream<MonadCore.ChatDelta, Error>.Continuation,
+        continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation,
         sessionId: UUID,
         initialMessages: [ChatQuery.ChatCompletionMessageParam],
         toolParams: [ChatQuery.ChatCompletionToolParam],
-        availableTools: [any MonadCore.Tool],
+        availableTools: [AnyTool],
         contextData: ContextData,
         structuredContext: [String: String],
-        modelName: String
+        modelName: String,
+        maxTurns: Int
     ) async {
         var currentMessages = initialMessages
         var turnCount = 0
-        let maxTurns = 5
         
-        // A. Emit Metadata Event
-        let metadata = MonadCore.ChatMetadata(
+        // Emit Metadata Event
+        let metadata = ChatMetadata(
             memories: contextData.memories.map { $0.memory.id },
             files: contextData.notes.map { $0.name }
         )
-        continuation.yield(MonadCore.ChatDelta(metadata: metadata))
+        continuation.yield(.metadata(metadata))
         
         while turnCount < maxTurns {
             turnCount += 1
@@ -143,13 +150,13 @@ public final class ChatOrchestrator: @unchecked Sendable {
     private func processTurn(
         currentMessages: [ChatQuery.ChatCompletionMessageParam],
         toolParams: [ChatQuery.ChatCompletionToolParam],
-        availableTools: [any MonadCore.Tool],
+        availableTools: [AnyTool],
         contextData: ContextData,
         structuredContext: [String: String],
         modelName: String,
         turnCount: Int,
         sessionId: UUID,
-        continuation: AsyncThrowingStream<MonadCore.ChatDelta, Error>.Continuation
+        continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
     ) async throws -> TurnResult {
         var debugToolCalls: [ToolCallRecord] = []
         var debugToolResults: [ToolResultRecord] = []
@@ -169,12 +176,11 @@ public final class ChatOrchestrator: @unchecked Sendable {
             // Forward Content
             if let delta = result.choices.first?.delta.content {
                 fullResponse += delta
-                continuation.yield(MonadCore.ChatDelta(content: delta))
+                continuation.yield(.delta(delta))
             }
             
             // Accumulate Tool Calls
             if let calls = result.choices.first?.delta.toolCalls {
-                var toolDeltas: [MonadCore.ToolCallDelta] = []
                 for call in calls {
                     guard let index = call.index else { continue }
                     var acc = toolCallAccumulators[index] ?? ("", "", "")
@@ -183,16 +189,12 @@ public final class ChatOrchestrator: @unchecked Sendable {
                     if let args = call.function?.arguments { acc.args += args }
                     toolCallAccumulators[index] = acc
                     
-                    toolDeltas.append(MonadCore.ToolCallDelta(
+                    continuation.yield(.toolCall(ToolCallDelta(
                         index: index,
                         id: call.id,
                         name: call.function?.name,
                         arguments: call.function?.arguments
-                    ))
-                }
-                
-                if !toolDeltas.isEmpty {
-                    continuation.yield(MonadCore.ChatDelta(toolCalls: toolDeltas))
+                    )))
                 }
             }
         }
@@ -210,10 +212,9 @@ public final class ChatOrchestrator: @unchecked Sendable {
                     finalToolCalls[index] = (id: UUID().uuidString, name: call.name, args: argsJson)
                 }
                 
-                let toolDeltas = finalToolCalls.sorted(by: { $0.key < $1.key }).map { index, value in
-                    MonadCore.ToolCallDelta(index: index, id: value.id, name: value.name, arguments: value.args)
+                for (index, value) in finalToolCalls.sorted(by: { $0.key < $1.key }) {
+                    continuation.yield(.toolCall(ToolCallDelta(index: index, id: value.id, name: value.name, arguments: value.args)))
                 }
-                continuation.yield(MonadCore.ChatDelta(toolCalls: toolDeltas))
             }
         }
         
@@ -232,7 +233,8 @@ public final class ChatOrchestrator: @unchecked Sendable {
             let (executionResults, requiresClientExecution, newDebugRecords) = await executeTools(
                 calls: toolCallsParam,
                 availableTools: availableTools,
-                turnCount: turnCount
+                turnCount: turnCount,
+                continuation: continuation
             )
             debugToolResults.append(contentsOf: newDebugRecords)
             
@@ -250,7 +252,7 @@ public final class ChatOrchestrator: @unchecked Sendable {
                 let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
                 await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
                 
-                continuation.yield(MonadCore.ChatDelta(isDone: true))
+                continuation.yield(.completion(fullResponse))
                 return .finish
             }
             
@@ -270,23 +272,17 @@ public final class ChatOrchestrator: @unchecked Sendable {
             let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
             await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
             
-            continuation.yield(MonadCore.ChatDelta(isDone: true))
+            continuation.yield(.completion(fullResponse))
             return .finish
         }
     }
-    
-    /// Executes the provided tool calls by matching them against available tools.
-    /// - Parameters:
-    ///   - calls: The collection of tool calls to process.
-    ///   - availableTools: The list of registered tools.
-    ///   - turnCount: The current turn count for logging.
+
     // MARK: - Helper Methods
 
     private func saveConversationSteps(
         sessionId: UUID,
         message: String,
-        toolOutputs: [MonadCore.ToolOutputSubmission]?,
-        persistence: any PersistenceServiceProtocol
+        toolOutputs: [MonadCore.ToolOutputSubmission]?
     ) async throws {
         if let toolOutputs = toolOutputs {
             for output in toolOutputs {
@@ -296,25 +292,25 @@ public final class ChatOrchestrator: @unchecked Sendable {
                     content: output.output,
                     toolCallId: output.toolCallId
                 )
-                try await persistence.saveMessage(msg)
+                try await persistenceService.saveMessage(msg)
             }
         }
         
         if !message.isEmpty {
             let userMsg = ConversationMessage(
                 sessionId: sessionId, role: .user, content: message)
-            try await persistence.saveMessage(userMsg)
+            try await persistenceService.saveMessage(userMsg)
         } else if toolOutputs?.isEmpty ?? true {
             throw ToolError.invalidArgument("Message and tool outputs cannot both be empty")
         }
     }
 
     private func fetchContext(
-        sessionId: UUID,
+        contextManager: ContextManager?,
         message: String,
         history: [Message]
     ) async -> ContextData {
-        guard let contextManager = await sessionManager.getContextManager(for: sessionId) else { return ContextData() }
+        guard let contextManager = contextManager else { return ContextData() }
         
         do {
             let stream = await contextManager.gatherContext(
@@ -334,41 +330,15 @@ public final class ChatOrchestrator: @unchecked Sendable {
         return ContextData()
     }
 
-    private func resolveTools(sessionId: UUID, clientId: UUID?) async -> [any MonadCore.Tool] {
-        var availableTools: [any MonadCore.Tool] = []
-        do {
-            let references = try await sessionManager.getAllToolReferences(sessionId: sessionId, clientId: clientId)
-            
-            availableTools = references.compactMap { (ref: ToolReference) -> (any MonadCore.Tool)? in
-                var def: WorkspaceToolDefinition?
-                switch ref {
-                case .known(let id): def = SystemToolRegistry.shared.getDefinition(for: id)
-                case .custom(let definition): def = definition
-                }
-                guard let d = def else { return nil }
-                return DelegatingTool(
-                    ref: ref,
-                    router: toolRouter,
-                    sessionId: sessionId,
-                    resolvedDefinition: d
-                )
-            }
-        } catch {
-            logger.warning("Failed to fetch tools: \(error)")
-        }
-        return availableTools
-    }
-
     private func buildPrompt(
-        session: ConversationSession,
+        session: ConversationSession?,
         message: String,
         contextData: ContextData,
         history: [Message],
-        availableTools: [any MonadCore.Tool]
+        availableTools: [AnyTool],
+        systemInstructions: String?
     ) async -> (messages: [ChatQuery.ChatCompletionMessageParam], structuredContext: [String: String]) {
-        let systemInstructions: String? = nil
-        
-        let (initialMessages, _, structuredContext) = await llmService.buildPrompt(
+        let prompt = await llmService.buildContext(
             userQuery: message,
             contextNotes: contextData.notes,
             memories: contextData.memories.map { $0.memory },
@@ -376,13 +346,19 @@ public final class ChatOrchestrator: @unchecked Sendable {
             tools: availableTools,
             systemInstructions: systemInstructions
         )
-        return (initialMessages, structuredContext)
+        
+        // Convert to OpenAI format
+        let messages = await prompt.toMessages()
+        let structuredContext = await prompt.structuredContext()
+        
+        return (messages, structuredContext)
     }
 
     private func executeTools(
         calls: [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam],
-        availableTools: [any MonadCore.Tool],
-        turnCount: Int
+        availableTools: [AnyTool],
+        turnCount: Int,
+        continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
     ) async -> (results: [ChatQuery.ChatCompletionMessageParam], requiresClientExecution: Bool, debugRecords: [ToolResultRecord]) {
         var executionResults: [ChatQuery.ChatCompletionMessageParam] = []
         var requiresClientExecution = false
@@ -400,6 +376,7 @@ public final class ChatOrchestrator: @unchecked Sendable {
             do {
                 let result = try await tool.execute(parameters: argsDict)
                 debugRecords.append(ToolResultRecord(toolCallId: call.id, name: call.function.name, output: result.output, turn: turnCount))
+                continuation.yield(.toolResult(name: call.function.name, output: result.output))
                 executionResults.append(.tool(.init(content: .textContent(.init(result.output)), toolCallId: call.id)))
             } catch let error as ToolError {
                 if case .clientExecutionRequired = error {

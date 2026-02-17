@@ -106,7 +106,7 @@ extension Tool {
 // MARK: - Array Extension (for concrete types and protocols)
 
 /// Format multiple tools for prompt inclusion
-public func formatToolsForPrompt(_ tools: [any Tool]) async -> String {
+public func formatToolsForPrompt(_ tools: [AnyTool]) async -> String {
     guard !tools.isEmpty else { return "" }
 
     var toolSpecs: [String] = []
@@ -158,5 +158,46 @@ public struct ToolConfiguration: Codable, Identifiable, Sendable {
     public init(toolId: String, isEnabled: Bool = true) {
         self.id = toolId
         self.isEnabled = isEnabled
+    }
+}
+
+// MARK: - Type-Erased Tool
+
+/// A type-erased wrapper around any `Tool` conformance.
+///
+/// Use `AnyTool` when you need to store tools in a concrete type context
+/// (e.g., arrays, dictionaries) without `any Tool` existential boxing.
+///
+///     let tool: AnyTool = AnyTool(myReadFileTool)
+///     let result = try await tool.execute(parameters: ["path": "/tmp/file.txt"])
+///
+public struct AnyTool: Tool {
+    private let wrapped: any Tool
+
+    public init(_ tool: any Tool) {
+        self.wrapped = tool
+    }
+
+    public var id: String { wrapped.id }
+    public var name: String { wrapped.name }
+    public var description: String { wrapped.description }
+    public var requiresPermission: Bool { wrapped.requiresPermission }
+    public var usageExample: String? { wrapped.usageExample }
+    public var parametersSchema: [String: Any] { wrapped.parametersSchema }
+
+    public func canExecute() async -> Bool {
+        await wrapped.canExecute()
+    }
+
+    public func execute(parameters: [String: Any]) async throws -> ToolResult {
+        try await wrapped.execute(parameters: parameters)
+    }
+
+    public func summarize(parameters: [String: Any], result: ToolResult) -> String {
+        wrapped.summarize(parameters: parameters, result: result)
+    }
+
+    public func toToolParam() -> ChatQuery.ChatCompletionToolParam {
+        wrapped.toToolParam()
     }
 }

@@ -1,7 +1,7 @@
 import MonadShared
 import Foundation
-
 import OpenAI
+import MonadPrompt
 
 public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     public var nextResponse: String = ""
@@ -122,7 +122,7 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         contextNotes: [ContextFile],
         memories: [Memory],
         chatHistory: [Message],
-        tools: [any MonadCore.Tool],
+        tools: [AnyTool],
         systemInstructions: String?,
         responseFormat: ChatQuery.ResponseFormat?,
         useFastModel: Bool
@@ -151,7 +151,7 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         contextNotes: [ContextFile],
         memories: [Memory],
         chatHistory: [Message],
-        tools: [any MonadCore.Tool],
+        tools: [AnyTool],
         systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
@@ -159,6 +159,17 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         structuredContext: [String: String]
     ) {
         return ([], "mock prompt", [:])
+    }
+    
+    public func buildContext(
+        userQuery: String,
+        contextNotes: [ContextFile],
+        memories: [Memory],
+        chatHistory: [Message],
+        tools: [AnyTool],
+        systemInstructions: String?
+    ) async -> Prompt {
+        return Prompt(sections: [])
     }
 
     public func generateTags(for text: String) async throws -> [String] {

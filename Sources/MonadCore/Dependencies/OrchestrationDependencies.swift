@@ -20,14 +20,10 @@ public enum ToolRouterKey: DependencyKey {
     }()
 }
 
-public enum ChatOrchestratorKey: DependencyKey {
-    public static let liveValue: ChatOrchestrator = {
-        fatalError("ChatOrchestrator must be configured before use.")
+public enum ChatEngineKey: DependencyKey {
+    public static let liveValue: ChatEngine = {
+        fatalError("ChatEngine must be configured before use.")
     }()
-}
-
-public enum ReasoningEngineKey: DependencyKey {
-    public static let liveValue = ReasoningEngine()
 }
 
 public enum AgentExecutorKey: DependencyKey {
@@ -52,14 +48,9 @@ extension DependencyValues {
         set { self[ToolRouterKey.self] = newValue }
     }
 
-    public var chatOrchestrator: ChatOrchestrator {
-        get { self[ChatOrchestratorKey.self] }
-        set { self[ChatOrchestratorKey.self] = newValue }
-    }
-
-    public var reasoningEngine: ReasoningEngine {
-        get { self[ReasoningEngineKey.self] }
-        set { self[ReasoningEngineKey.self] = newValue }
+    public var chatEngine: ChatEngine {
+        get { self[ChatEngineKey.self] }
+        set { self[ChatEngineKey.self] = newValue }
     }
 
     public var agentExecutor: AgentExecutor {

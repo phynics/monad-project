@@ -7,7 +7,7 @@ public actor SessionToolManager {
     public private(set) var enabledTools: Set<String> = []
 
     /// available tools in the system
-    public private(set) var availableTools: [any Tool]
+    public private(set) var availableTools: [AnyTool]
     
     /// Context session for dynamic tool injection
     public let contextSession: ToolContextSession?
@@ -18,7 +18,7 @@ public actor SessionToolManager {
     /// Cached workspace tools
     private var workspaceTools: [String: WorkspaceToolWrapper] = [:]
 
-    public init(availableTools: [any Tool], contextSession: ToolContextSession? = nil) {
+    public init(availableTools: [AnyTool], contextSession: ToolContextSession? = nil) {
         self.availableTools = availableTools
         self.contextSession = contextSession
         // Enable all tools by default
@@ -26,7 +26,7 @@ public actor SessionToolManager {
     }
 
     /// Update available tools
-    public func updateAvailableTools(_ tools: [any Tool]) {
+    public func updateAvailableTools(_ tools: [AnyTool]) {
         self.availableTools = tools
         // Keep enabledTools set in sync with available tools (don't remove enabled status if tool still exists)
         let newIds = Set(tools.map { $0.id })
@@ -79,7 +79,7 @@ public actor SessionToolManager {
     }
 
     /// Get tools that are currently enabled, including context tools if a context is active
-    public func getEnabledTools() async -> [any Tool] {
+    public func getEnabledTools() async -> [AnyTool] {
         var tools = availableTools.filter { enabledTools.contains($0.id) }
 
         // Include context tools if a context is active
@@ -88,14 +88,14 @@ public actor SessionToolManager {
         }
         
         // Include workspace tools
-        tools.append(contentsOf: workspaceTools.values.map { $0 as any Tool })
+        tools.append(contentsOf: workspaceTools.values.map { AnyTool($0) })
 
         return tools
     }
     
-    public func getAvailableTools() -> [any Tool] {
+    public func getAvailableTools() -> [AnyTool] {
         var tools = availableTools
-        tools.append(contentsOf: workspaceTools.values.map { $0 as any Tool })
+        tools.append(contentsOf: workspaceTools.values.map { AnyTool($0) })
         return tools
     }
 
@@ -123,7 +123,7 @@ public actor SessionToolManager {
     }
 
     /// Get tool by ID (checks system, context, and workspace tools)
-    public func getTool(id: String) async -> (any Tool)? {
+    public func getTool(id: String) async -> AnyTool? {
         // First check regular system tools
         if let tool = availableTools.first(where: { $0.id == id }) {
             return tool
@@ -138,7 +138,7 @@ public actor SessionToolManager {
         
         // Then check workspace tools
         if let tool = workspaceTools[id] {
-            return tool
+            return AnyTool(tool)
         }
 
         return nil

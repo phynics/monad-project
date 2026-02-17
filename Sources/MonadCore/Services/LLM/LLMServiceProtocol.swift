@@ -1,6 +1,7 @@
 import MonadShared
 import Foundation
 import OpenAI
+import MonadPrompt
 
 /// Protocol for LLM Service to enable mocking and isolation
 public protocol LLMServiceProtocol: HealthCheckable {
@@ -26,7 +27,7 @@ public protocol LLMServiceProtocol: HealthCheckable {
         contextNotes: [ContextFile],
         memories: [Memory],
         chatHistory: [Message],
-        tools: [any Tool],
+        tools: [AnyTool],
         systemInstructions: String?,
         responseFormat: ChatQuery.ResponseFormat?,
         useFastModel: Bool
@@ -48,13 +49,23 @@ public protocol LLMServiceProtocol: HealthCheckable {
         contextNotes: [ContextFile],
         memories: [Memory],
         chatHistory: [Message],
-        tools: [any Tool],
+        tools: [AnyTool],
         systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
         rawPrompt: String,
         structuredContext: [String: String]
     )
+    
+    /// Build a prompt object using the new ContextBuilder system
+    func buildContext(
+        userQuery: String,
+        contextNotes: [ContextFile],
+        memories: [Memory],
+        chatHistory: [Message],
+        tools: [AnyTool],
+        systemInstructions: String?
+    ) async -> Prompt
 
     // Utilities
     func generateTags(for text: String) async throws -> [String]

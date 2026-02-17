@@ -35,22 +35,22 @@ import Dependencies
             // Create Session
             let session = try await sessionManager.createSession()
     
-            // We need to inject sessionManager into the context for ToolRouter and ChatOrchestrator
+            // We need to inject sessionManager into the context for ToolRouter and ChatEngine
             // Since we created sessionManager explicitly, we should override it in dependencies for subsequent calls
             try await withDependencies {
                 $0.sessionManager = sessionManager
             } operation: {
                 let toolRouter = ToolRouter()
-                // Also override toolRouter for ChatOrchestrator
+                // Also override toolRouter for ChatEngine
                 try await withDependencies {
                     $0.toolRouter = toolRouter
                 } operation: {
-                    let orchestrator = ChatOrchestrator()
+                    let engine = ChatEngine()
             
                     // Setup App
                     let router = Router()
                     let controller = ChatAPIController<BasicRequestContext>(
-                        sessionManager: sessionManager, chatOrchestrator: orchestrator)
+                        sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter)
                     controller.addRoutes(to: router.group("/sessions"))
             
                     let app = Application(router: router)
@@ -109,12 +109,12 @@ import Dependencies
                  try await withDependencies {
                     $0.toolRouter = toolRouter
                 } operation: {
-                    let orchestrator = ChatOrchestrator()
+                    let engine = ChatEngine()
             
                     // Setup App
                     let router = Router()
                     let controller = ChatAPIController<BasicRequestContext>(
-                        sessionManager: sessionManager, chatOrchestrator: orchestrator)
+                        sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter)
                     controller.addRoutes(to: router.group("/sessions"))
             
                     let app = Application(router: router)

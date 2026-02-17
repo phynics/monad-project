@@ -114,7 +114,7 @@ struct ToolCallRegressionTests {
     func testToolExecutorUnwrapping() async throws {
         // Setup tool manager with mock tool
         let mockTool = MockComplexTool()
-        let toolManager = SessionToolManager(availableTools: [mockTool])
+        let toolManager = SessionToolManager(availableTools: [AnyTool(mockTool)])
         let executor = ToolExecutor(toolManager: toolManager)
 
         // Create ToolCall with AnyCodable arguments

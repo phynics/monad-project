@@ -411,7 +411,7 @@ extension DatabaseSchema {
 
             // Seed with default agent
             let defaultAgent = Agent(
-                id: "default",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
                 name: "Default Assistant",
                 description: "A general purpose assistant focused on helpfulness and accuracy.",
                 systemPrompt: """
@@ -423,7 +423,7 @@ extension DatabaseSchema {
             
             // Seed with coordinator agent
             let coordinatorAgent = Agent(
-                id: "coordinator",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
                 name: "Agent Coordinator",
                 description: "Coordinates multiple agents and complex workflows.",
                 systemPrompt: """

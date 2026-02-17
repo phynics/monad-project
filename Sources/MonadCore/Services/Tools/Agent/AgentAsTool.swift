@@ -15,12 +15,12 @@ public struct AgentAsTool: Tool, Sendable {
     private let jobQueueContext: JobQueueContext
 
     public init(agent: Agent, jobQueueContext: JobQueueContext) {
-        self.agentId = agent.id
+        self.agentId = agent.id.uuidString
         self.agentName = agent.name
         self.jobQueueContext = jobQueueContext
         
         // Tool ID is the agent ID
-        self.id = agent.id
+        self.id = agent.id.uuidString
         self.name = agent.name
         
         // Tool description uses the agent's description but emphasizes background execution

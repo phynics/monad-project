@@ -5,7 +5,7 @@ import GRDB
 /// Represents an agent definition in the system, consisting of instructions and prompts.
 public struct Agent: Codable, Sendable, Identifiable, Equatable {
     /// Unique identifier for the agent (e.g. "default", "coder")
-    public let id: String
+    public let id: UUID 
     
     /// Display name of the agent
     public var name: String
@@ -29,7 +29,7 @@ public struct Agent: Codable, Sendable, Identifiable, Equatable {
     public var updatedAt: Date
 
     public init(
-        id: String,
+        id: UUID,
         name: String,
         description: String,
         systemPrompt: String,

@@ -4,6 +4,7 @@ import Logging
 import Observation
 import OpenAI
 import Dependencies
+import MonadPrompt
 
 /// Protocol for LLM Clients
 public protocol LLMClientProtocol: Sendable {
@@ -82,7 +83,8 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     private var fastClient: (any LLMClientProtocol)?
 
     private let storage: ConfigurationStorage
-    public let promptBuilder: PromptBuilder
+
+
     internal let logger = Logger.llm
 
     private let contextCompressor = ContextCompressor()
@@ -114,14 +116,12 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
 
     public init(
         storage: ConfigurationStorage = ConfigurationStorage(),
-        promptBuilder: PromptBuilder = PromptBuilder(),
         embeddingService: (any EmbeddingServiceProtocol)? = nil,
         client: (any LLMClientProtocol)? = nil,
         utilityClient: (any LLMClientProtocol)? = nil,
         fastClient: (any LLMClientProtocol)? = nil
     ) {
         self.storage = storage
-        self.promptBuilder = promptBuilder
         self.explicitEmbeddingService = embeddingService
         self.client = client
         self.utilityClient = utilityClient
@@ -231,36 +231,92 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         return try await client.sendMessage(content, responseFormat: responseFormat)
     }
 
+    public func buildContext(
+        userQuery: String,
+        contextNotes: [ContextFile],
+        memories: [Memory],
+        chatHistory: [Message],
+        tools: [AnyTool],
+        systemInstructions: String?
+    ) async -> Prompt {
+        let instructions = systemInstructions ?? DefaultInstructions.system
+        
+        return Prompt {
+            SystemInstructions(instructions)
+            
+            // Context & Memories
+            ContextNotes(contextNotes)
+            Memories(memories)
+            
+            // Tools
+            Tools(tools)
+            
+            // Conversation
+            ChatHistory(optimizeHistory(chatHistory, availableTokens: 120000 - 4000)) // Reserve ~4k for other sections
+            
+            // User Query
+            UserQuery(userQuery)
+        }
+    }
+    
+    internal func optimizeHistory(
+        _ messages: [Message],
+        availableTokens: Int
+    ) -> [Message] {
+        var result: [Message] = []
+        var usedTokens = 0
+        
+        // Keep most recent messages
+        for message in messages.reversed() {
+            let tokens = TokenEstimator.estimate(text: message.content)
+            if usedTokens + tokens <= availableTokens {
+                result.insert(message, at: 0)
+                usedTokens += tokens
+            } else {
+                // Add summary if we truncated
+                if result.count < messages.count {
+                    let skippedCount = messages.count - result.count
+                    let summary = Message(
+                        content: "[System: History truncated. \(skippedCount) earlier messages hidden. Use `view_chat_history` tool to retrieve them.]",
+                        role: .system,
+                        isSummary: true
+                    )
+                    result.insert(summary, at: 0)
+                }
+                break
+            }
+        }
+        return result
+    }
+
     public func buildPrompt(
         userQuery: String,
         contextNotes: [ContextFile],
-        memories: [Memory] = [],
+        memories: [Memory],
         chatHistory: [Message],
-        tools: [any Tool] = [],
-        systemInstructions: String? = nil
+        tools: [AnyTool],
+        systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
         rawPrompt: String,
         structuredContext: [String: String]
     ) {
-        let historyCompressor: @Sendable ([Message], Int) async -> [Message] = { [contextCompressor, self] messages, limit in
-            return await contextCompressor.recursiveSummarize(messages: messages, targetTokens: limit, llmService: self)
-        }
-
-        let memoryCompressor: @Sendable ([Memory], Int) async -> String = { [contextCompressor, self] memories, limit in
-             return await contextCompressor.summarizeMemories(memories, targetTokens: limit, llmService: self)
-        }
-
-        return await promptBuilder.buildPrompt(
-            systemInstructions: systemInstructions,
+        // Use the new builder locally
+        let prompt = await buildContext(
+            userQuery: userQuery,
             contextNotes: contextNotes,
             memories: memories,
-            tools: tools,
             chatHistory: chatHistory,
-            userQuery: userQuery,
-            historyCompressor: historyCompressor,
-            memoryCompressor: memoryCompressor
+            tools: tools,
+            systemInstructions: systemInstructions
         )
+        
+        // Convert using the extension
+        let messages = await prompt.toMessages()
+        let raw = await prompt.render()
+        let ctx = await prompt.structuredContext()
+        
+        return (messages, raw, ctx)
     }
 }
 

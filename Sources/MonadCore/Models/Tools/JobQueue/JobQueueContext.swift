@@ -18,14 +18,14 @@ public actor JobQueueContext: ToolContext {
     private let persistenceService: any PersistenceServiceProtocol
     private let sessionId: UUID
 
-    public var contextTools: [any Tool] {
+    public var contextTools: [AnyTool] {
         [
-            AddJobTool(context: self),
-            RemoveJobTool(context: self),
-            ChangePriorityTool(context: self),
-            ListJobsTool(context: self),
-            UpdateJobStatusTool(context: self),
-            ClearQueueTool(context: self),
+            AnyTool(AddJobTool(context: self)),
+            AnyTool(RemoveJobTool(context: self)),
+            AnyTool(ChangePriorityTool(context: self)),
+            AnyTool(ListJobsTool(context: self)),
+            AnyTool(UpdateJobStatusTool(context: self)),
+            AnyTool(ClearQueueTool(context: self)),
         ]
     }
 

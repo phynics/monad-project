@@ -2,6 +2,7 @@ import MonadShared
 import XCTest
 @testable import MonadCore
 import OpenAI
+import MonadPrompt
 
 // Mock for LLMServiceProtocol
 actor MockLLMService: LLMServiceProtocol {
@@ -26,7 +27,7 @@ actor MockLLMService: LLMServiceProtocol {
         return summaryResponse
     }
 
-    func chatStreamWithContext(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [any MonadCore.Tool], systemInstructions: String?, responseFormat: ChatQuery.ResponseFormat?, useFastModel: Bool) async -> (stream: AsyncThrowingStream<ChatStreamResult, Error>, rawPrompt: String, structuredContext: [String: String]) {
+    func chatStreamWithContext(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [AnyTool], systemInstructions: String?, responseFormat: ChatQuery.ResponseFormat?, useFastModel: Bool) async -> (stream: AsyncThrowingStream<ChatStreamResult, Error>, rawPrompt: String, structuredContext: [String: String]) {
         fatalError("Not implemented")
     }
 
@@ -34,8 +35,12 @@ actor MockLLMService: LLMServiceProtocol {
         fatalError("Not implemented")
     }
 
-    func buildPrompt(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [any MonadCore.Tool], systemInstructions: String?) async -> (messages: [ChatQuery.ChatCompletionMessageParam], rawPrompt: String, structuredContext: [String : String]) {
+    func buildPrompt(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [AnyTool], systemInstructions: String?) async -> (messages: [ChatQuery.ChatCompletionMessageParam], rawPrompt: String, structuredContext: [String : String]) {
         fatalError("Not implemented")
+    }
+
+    func buildContext(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [AnyTool], systemInstructions: String?) async -> Prompt {
+        return Prompt(sections: [])
     }
 
     func generateTags(for text: String) async throws -> [String] { return [] }

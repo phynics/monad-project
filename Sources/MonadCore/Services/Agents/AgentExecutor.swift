@@ -6,7 +6,7 @@ import Dependencies
 /// Service responsible for executing autonomous agents and managing their reasoning loops.
 public struct AgentExecutor: Sendable {
     @Dependency(\.persistenceService) private var persistenceService
-    @Dependency(\.reasoningEngine) private var reasoningEngine
+    @Dependency(\.chatEngine) private var chatEngine
     
     private let logger = Logger(label: "com.monad.agent-executor")
     
@@ -31,9 +31,7 @@ public struct AgentExecutor: Sendable {
             try? await persistenceService.saveJob(currentJob)
         }
 
-        // 2. Ensure Session is Hydrated (Handled by JobRunner)
-        
-        // 3. Construct Initial Trigger Message if this is the start of the job
+        // 2. Construct Initial Trigger Message if this is the start of the job
         if currentJob.logs.count <= 2 { // Rough check for fresh job
             let jobPrompt = """
                 [TASK EXECUTION]
@@ -53,30 +51,34 @@ public struct AgentExecutor: Sendable {
             try? await persistenceService.saveMessage(triggerMessage)
         }
         
-        // 4. Run Reasoning Loop
+        // 3. Run Chat Engine — consume stream internally for state tracking
         do {
-            let result = try await reasoningEngine.runLoop(
-                job: job,
-                session: session,
-                toolExecutor: toolExecutor,
+            let availableTools = await toolExecutor.getAvailableTools()
+            let stream = try await chatEngine.chatStream(
+                sessionId: session.id,
+                message: "Continue execution",
+                tools: availableTools,
                 contextManager: contextManager,
-                systemInstructions: agent.composedInstructions
+                systemInstructions: agent.composedInstructions,
+                maxTurns: 10
             )
             
-            switch result {
-            case .complete(let content):
-                currentJob.status = .completed
-                currentJob.updatedAt = Date()
-                currentJob.logs.append("Task completed: \(content.prefix(100))...")
-            case .needInformation(let content):
-                currentJob.status = .completed // Synthetic completion
-                currentJob.logs.append("Task paused: Need information: \(content.prefix(100))")
-            case .error(let reason):
-                await failJob(currentJob, reason: reason)
-                return
-            case .continueLoop:
-                break
+            var fullContent = ""
+            for try await event in stream {
+                switch event {
+                case .delta(let content):
+                    fullContent += content
+                case .completion(let content):
+                    fullContent = content
+                default:
+                    break
+                }
             }
+            
+            // Stream finished naturally — mark job complete
+            currentJob.status = .completed
+            currentJob.updatedAt = Date()
+            currentJob.logs.append("Task completed: \(fullContent.prefix(100))...")
             try? await persistenceService.saveJob(currentJob)
         } catch {
             await failJob(currentJob, reason: error.localizedDescription)

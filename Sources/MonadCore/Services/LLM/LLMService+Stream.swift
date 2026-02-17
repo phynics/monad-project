@@ -10,7 +10,7 @@ extension LLMService {
         contextNotes: [ContextFile],
         memories: [Memory] = [],
         chatHistory: [Message],
-        tools: [any Tool],
+        tools: [AnyTool],
         systemInstructions: String? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil,
         useFastModel: Bool = false
@@ -29,14 +29,19 @@ extension LLMService {
         }
 
         // Build prompt with all components
-        let (messages, rawPrompt, structuredContext) = await promptBuilder.buildPrompt(
-            systemInstructions: systemInstructions,
+        let prompt = await buildContext(
+            userQuery: userQuery,
             contextNotes: contextNotes,
             memories: memories,
-            tools: tools,
             chatHistory: chatHistory,
-            userQuery: userQuery
+            tools: tools,
+            systemInstructions: systemInstructions
         )
+        
+        // Convert to OpenAI format
+        let messages = await prompt.toMessages()
+        let rawPrompt = await prompt.render()
+        let structuredContext = await prompt.structuredContext()
 
         // Delegate to client for streaming
         let toolParams = tools.isEmpty ? nil : tools.map { $0.toToolParam() }

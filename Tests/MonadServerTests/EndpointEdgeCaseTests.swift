@@ -29,7 +29,7 @@ import Dependencies
                 workspaceRoot: workspaceRoot
             )
             
-            // We need to inject sessionManager into the context for ToolRouter and ChatOrchestrator
+            // We need to inject sessionManager into the context for ToolRouter and ChatEngine
             try await withDependencies {
                 $0.sessionManager = sessionManager
             } operation: {
@@ -37,13 +37,13 @@ import Dependencies
                 try await withDependencies {
                     $0.toolRouter = toolRouter
                 } operation: {
-                    let orchestrator = ChatOrchestrator()
+                    let engine = ChatEngine()
             
                     let router = Router()
                     router.add(middleware: ErrorMiddleware())
                     let protected = router.group("/api").add(middleware: AuthMiddleware())
                     ChatAPIController<BasicRequestContext>(
-                        sessionManager: sessionManager, chatOrchestrator: orchestrator
+                        sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter
                     ).addRoutes(to: protected.group("/sessions"))
             
                     let app = Application(router: router)
@@ -90,13 +90,13 @@ import Dependencies
                 try await withDependencies {
                     $0.toolRouter = toolRouter
                 } operation: {
-                    let orchestrator = ChatOrchestrator()
+                    let engine = ChatEngine()
             
                     let router = Router()
                     router.add(middleware: ErrorMiddleware())
                     let protected = router.group("/api").add(middleware: AuthMiddleware())
                     ChatAPIController<BasicRequestContext>(
-                        sessionManager: sessionManager, chatOrchestrator: orchestrator
+                        sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter
                     ).addRoutes(to: protected.group("/sessions"))
             
                     let app = Application(router: router)

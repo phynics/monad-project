@@ -42,7 +42,7 @@ public protocol ToolContext: AnyObject, Sendable {
     var isPinned: Bool { get }
 
     /// Tools available only within this context
-    var contextTools: [any Tool] { get async }
+    var contextTools: [AnyTool] { get async }
 
     /// Called when context is activated
     func activate() async
