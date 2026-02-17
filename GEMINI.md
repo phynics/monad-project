@@ -8,12 +8,14 @@ A headless AI assistant built for deep context integration, focusing on how data
 *   **Platform:** macOS 15+
 *   **Architecture:**
     *   **MonadCore:** Pure logic framework. Handles session management, context engine, persistence (GRDB/SQLite), and tool execution.
+    *   **MonadPrompt:** A standalone, type-safe DSL for constructing LLM prompts using Swift result builders.
     *   **MonadServer:** REST API server built with Hummingbird, supporting streaming chat.
     *   **MonadClient:** HTTP client library for communicating with the server.
     *   **MonadCLI:** Command-line interface for interacting with the server.
 *   **Key Technologies:**
     *   **Server Framework:** [Hummingbird](https://github.com/hummingbird-project/hummingbird)
     *   **Database:** [GRDB.swift](https://github.com/groue/GRDB.swift) (SQLite)
+    *   **Prompting:** Custom `@ContextBuilder` DSL
     *   **AI:** [OpenAI Swift](https://github.com/MacPaw/OpenAI)
     *   **CLI:** [Swift Argument Parser](https://github.com/apple/swift-argument-parser)
 
