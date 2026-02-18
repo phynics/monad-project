@@ -3,6 +3,7 @@ import Foundation
 import GRDB
 import MonadCore
 import Testing
+import MonadServer
 
 @Suite(.serialized)
 struct JobPersistenceTests {

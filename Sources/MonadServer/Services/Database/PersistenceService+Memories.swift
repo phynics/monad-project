@@ -1,12 +1,9 @@
 import MonadShared
+import MonadCore
 import Foundation
 import GRDB
 
-public enum MemorySavePolicy: Sendable {
-    case immediate
-    case deferred
-    case preventSimilar(threshold: Double)
-}
+
 // ...
 
 extension PersistenceService {

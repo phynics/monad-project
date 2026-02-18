@@ -1,7 +1,5 @@
 import MonadShared
 import Foundation
-import GRDB
-
 
 public final class MockPersistenceService: PersistenceServiceProtocol, @unchecked Sendable, HealthCheckable {
     public var mockHealthStatus: MonadCore.HealthStatus = .ok
@@ -14,34 +12,54 @@ public final class MockPersistenceService: PersistenceServiceProtocol, @unchecke
         return mockHealthStatus
     }
     
-    public var databaseWriter: DatabaseWriter
     public var memories: [Memory] = []
     public var searchResults: [(memory: Memory, similarity: Double)] = []
     public var messages: [ConversationMessage] = []
     public var sessions: [ConversationSession] = []
     public var jobs: [Job] = []
+    public var workspaces: [WorkspaceReference] = []
+    public var agents: [Agent] = []
 
-    public init(databaseWriter: DatabaseWriter? = nil) {
-        if let writer = databaseWriter {
-            self.databaseWriter = writer
+    public init() {}
+    
+    // Agents
+    public func saveAgent(_ agent: Agent) async throws {
+        if let index = agents.firstIndex(where: { $0.id == agent.id }) {
+            agents[index] = agent
         } else {
-            let queue = try! DatabaseQueue()
-            var migrator = DatabaseMigrator()
-            // Ensure we are using the correct schema from MonadCore
-            DatabaseSchema.registerMigrations(in: &migrator)
-            do {
-                try migrator.migrate(queue)
-                // Verify workspace table exists
-                try queue.read { db in
-                    if try !db.tableExists("workspace") {
-                        fatalError("Migration failed: workspace table missing")
-                    }
-                }
-            } catch {
-                fatalError("Migration failed: \(error)")
-            }
-            self.databaseWriter = queue
+            agents.append(agent)
         }
+    }
+    
+    public func fetchAgent(id: UUID) async throws -> Agent? {
+        return agents.first(where: { $0.id == id })
+    }
+    
+    public func fetchAgent(key: String) async throws -> Agent? {
+        // Mock implementation assuming key is checked against ID or name?
+        // Real implementation uses a "key" column. Here we might assume key==id.uuidString or a specific field?
+        // But Agent struct has ID (UUID). Maybe key maps to ID string?
+        // Or if key="default", we look for an agent named or ID'd "default"?
+        // Agent struct (Step 1514) has ID (UUID).
+        // Let's assume key is UUID string for now, or "default" matches a special agent.
+        if key == "default" {
+            return agents.first // Return first found as default?
+        }
+        if let uuid = UUID(uuidString: key) {
+            return agents.first(where: { $0.id == uuid })
+        }
+        return nil
+    }
+    
+    public func fetchAllAgents() async throws -> [Agent] {
+        return agents
+    }
+    
+    public func hasAgent(id: String) async -> Bool {
+        if let uuid = UUID(uuidString: id) {
+             return agents.contains(where: { $0.id == uuid })
+        }
+        return false
     }
 
     // Memories
@@ -87,6 +105,7 @@ public final class MockPersistenceService: PersistenceServiceProtocol, @unchecke
     public func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws {
         if let index = memories.firstIndex(where: { $0.id == id }) {
             var memory = memories[index]
+            // Mock: Convert embedding to JSON string to simulate storage update
             if let data = try? JSONEncoder().encode(newEmbedding) {
                 memory.embedding = String(data: data, encoding: .utf8) ?? ""
                 memories[index] = memory
@@ -113,7 +132,11 @@ public final class MockPersistenceService: PersistenceServiceProtocol, @unchecke
 
     // Sessions
     public func saveSession(_ session: ConversationSession) async throws {
-        sessions.append(session)
+        if let index = sessions.firstIndex(where: { $0.id == session.id }) {
+            sessions[index] = session
+        } else {
+            sessions.append(session)
+        }
     }
 
     public func fetchSession(id: UUID) async throws -> ConversationSession? {
@@ -197,53 +220,72 @@ public final class MockPersistenceService: PersistenceServiceProtocol, @unchecke
         return AsyncStream { _ in }
     }
 
-    // MARK: - Prune
-    public func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int {
-        if dryRun {
-            return memories.filter { $0.title.contains(query) || $0.content.contains(query) }.count
+    // Workspaces
+    public func saveWorkspace(_ workspace: WorkspaceReference) async throws {
+        if let index = workspaces.firstIndex(where: { $0.id == workspace.id }) {
+            workspaces[index] = workspace
+        } else {
+            workspaces.append(workspace)
         }
-        let countBefore = memories.count
-        memories.removeAll { $0.title.contains(query) || $0.content.contains(query) }
-        return countBefore - memories.count
+    }
+    
+    public func fetchWorkspace(id: UUID) async throws -> WorkspaceReference? {
+        return workspaces.first(where: { $0.id == id })
+    }
+    
+    public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? {
+        // In mock, tools are already in the workspace object
+        return workspaces.first(where: { $0.id == id })
+    }
+    
+    public func fetchAllWorkspaces() async throws -> [WorkspaceReference] {
+        return workspaces
+    }
+    
+    public func deleteWorkspace(id: UUID) async throws {
+        workspaces.removeAll(where: { $0.id == id })
     }
 
-    public func pruneSessions(
-        olderThan timeInterval: TimeInterval, excluding: [UUID] = [], dryRun: Bool
-    ) async throws -> Int {
-        let cutoffDate = Date().addingTimeInterval(-timeInterval)
-        if dryRun {
-            return sessions.filter { session in
-                !session.isArchived && session.updatedAt < cutoffDate
-                    && !excluding.contains(session.id)
-            }.count
-        }
-        let countBefore = sessions.count
-        sessions.removeAll { session in
-            !session.isArchived && session.updatedAt < cutoffDate && !excluding.contains(session.id)
-        }
-        return countBefore - sessions.count
+    // Tools
+    public func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] {
+        let targetWorkspaces = workspaces.filter { workspaceIds.contains($0.id) }
+        return targetWorkspaces.flatMap { $0.tools }
     }
-
-    public func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int {
-        let cutoffDate = Date().addingTimeInterval(-timeInterval)
-        if dryRun {
-            return messages.filter { $0.timestamp < cutoffDate }.count
+    
+    public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] {
+        let targetWorkspaces = workspaces.filter { $0.ownerId == clientId }
+        return targetWorkspaces.flatMap { $0.tools }
+    }
+    
+    public func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID? {
+        for ws in workspaces where workspaceIds.contains(ws.id) {
+            if ws.tools.contains(where: { $0.toolId == toolId }) {
+                return ws.id
+            }
         }
-        let countBefore = messages.count
-        messages.removeAll { $0.timestamp < cutoffDate }
-        return countBefore - messages.count
+        return nil
     }
-
-    // RAW SQL Support
-    public func executeRaw(sql: String, arguments: [DatabaseValue]) async throws -> [[String: AnyCodable]] {
-        return []
+    
+    public func fetchToolSource(toolId: String, workspaceIds: [UUID], primaryWorkspaceId: UUID?) async throws -> String? {
+        guard let wsId = try await findWorkspaceId(forToolId: toolId, in: workspaceIds),
+              let ws = workspaces.first(where: { $0.id == wsId })
+        else { return nil }
+        
+        if ws.hostType == .client {
+            return "Client Workspace" // Simplified mock response
+        } else if ws.id == primaryWorkspaceId {
+            return "Primary Workspace"
+        } else {
+            return "Workspace: \(ws.uri.description)"
+        }
     }
-
+    
     // Database Management
     public func resetDatabase() async throws {
         memories.removeAll()
         messages.removeAll()
         sessions.removeAll()
         jobs.removeAll()
+        workspaces.removeAll()
     }
 }

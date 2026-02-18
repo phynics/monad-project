@@ -12,12 +12,12 @@ public enum MemoryVacuumPolicy: Sendable {
 
 /// Service to archive conversations and index them for semantic recall
 public actor ConversationArchiver {
-    private let persistence: PersistenceService
+    private let persistence: PersistenceServiceProtocol
     private let llmService: LLMService
     private let contextManager: ContextManager
     private let logger = Logger(label: "com.monad.ConversationArchiver")
     
-    public init(persistence: PersistenceService, llmService: LLMService, contextManager: ContextManager) {
+    public init(persistence: PersistenceServiceProtocol, llmService: LLMService, contextManager: ContextManager) {
         self.persistence = persistence
         self.llmService = llmService
         self.contextManager = contextManager

@@ -1,10 +1,7 @@
 import MonadShared
 import Foundation
-import GRDB
-
 /// A conversation session with messages
-public struct ConversationSession: Codable, Identifiable, FetchableRecord, PersistableRecord,
-    Sendable
+public struct ConversationSession: Codable, Identifiable, Sendable
 {
     public var id: UUID
     public var title: String

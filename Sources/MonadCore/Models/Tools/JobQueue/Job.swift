@@ -1,11 +1,10 @@
 import MonadShared
 import Foundation
-import GRDB
 
 // MARK: - Job Model
 
 /// Represents a single job in the queue
-public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, PersistableRecord {
+public struct Job: Identifiable, Codable, Sendable, Equatable {
     public let id: UUID
     public let sessionId: UUID
     public var parentId: UUID?
@@ -60,14 +59,6 @@ public struct Job: Identifiable, Codable, Sendable, Equatable, FetchableRecord, 
         self.lastRetryAt = lastRetryAt
         self.nextRunAt = nextRunAt
     }
-}
-
-
-
-// MARK: - Persistence
-
-extension Job {
-    public static let databaseTableName = "job"
 }
 
 // MARK: - Formatting

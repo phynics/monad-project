@@ -312,10 +312,16 @@ public enum AnyCodable: Codable, Sendable, Equatable, Hashable, CustomStringConv
     }
 }
 
+// MARK: - JSON Utilities
+
+public func toJsonString(_ dict: [String: AnyCodable]) throws -> String {
+    let anyDict = dict.mapValues { $0.value }
+    let data = try JSONSerialization.data(withJSONObject: anyDict, options: [.sortedKeys])
+    return String(decoding: data, as: UTF8.self)
+}
+
 extension Dictionary where Key == String, Value == AnyCodable {
     public func toJsonString() throws -> String {
-        let anyDict = self.mapValues { $0.value }
-        let data = try JSONSerialization.data(withJSONObject: anyDict, options: [.sortedKeys])
-        return String(decoding: data, as: UTF8.self)
+        return try MonadShared.toJsonString(self)
     }
 }

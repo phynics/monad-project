@@ -224,7 +224,7 @@ public actor OllamaClient {
                 "type": "function",
                 "function": [
                     "name": tc.function.name,
-                    "arguments": (try? tc.function.arguments.toJsonString()) ?? "{}"
+                    "arguments": (try? toJsonString(tc.function.arguments)) ?? "{}"
                 ]
             ]
         }

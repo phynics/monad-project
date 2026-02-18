@@ -1,6 +1,5 @@
 import MonadShared
 import Foundation
-import GRDB
 import Logging
 import Dependencies
 
@@ -156,9 +155,7 @@ public actor SessionManager {
             trustLevel: .full
         )
 
-        try await persistenceService.databaseWriter.write { db in
-            try workspace.insert(db)
-        }
+        try await persistenceService.saveWorkspace(workspace)
 
         var session = ConversationSession(
             id: sessionId,

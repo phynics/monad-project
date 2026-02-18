@@ -1,31 +1,24 @@
 import MonadShared
 import Foundation
-import GRDB
 import MonadCore
 import Testing
 
 @Suite(.serialized)
 @MainActor
 struct JobQueueTests {
-    private let persistence: PersistenceService
+    private let persistence: MockPersistenceService
     private let context: JobQueueContext
     private let sessionId: UUID
 
     init() async throws {
-        let queue = try DatabaseQueue()
-        var migrator = DatabaseMigrator()
-        DatabaseSchema.registerMigrations(in: &migrator)
-        try migrator.migrate(queue)
-
+        let mock = MockPersistenceService()
         let sid = UUID()
         self.sessionId = sid
-        let persistenceService = PersistenceService(dbQueue: queue)
-        self.persistence = persistenceService
-        self.context = JobQueueContext(persistenceService: persistenceService, sessionId: sid)
+        self.persistence = mock
+        self.context = JobQueueContext(persistenceService: mock, sessionId: sid)
 
-        try await queue.write { db in
-            try db.execute(sql: "INSERT INTO conversationSession (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)", arguments: [sid, "Test Session", Date(), Date()])
-        }
+        let session = ConversationSession(id: sid, title: "Test Session")
+        try await mock.saveSession(session)
     }
 
     @Test("Add job via tool")

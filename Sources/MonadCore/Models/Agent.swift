@@ -1,6 +1,5 @@
 import Foundation
 import MonadShared
-import GRDB
 
 /// Represents an agent definition in the system, consisting of instructions and prompts.
 public struct Agent: Codable, Sendable, Identifiable, Equatable {
@@ -63,18 +62,5 @@ extension Agent {
         }
         
         return parts.joined(separator: "\n\n")
-    }
-}
-
-// MARK: - Persistence Extensions for Agent
-
-extension Agent: FetchableRecord, PersistableRecord {
-    public static var databaseTableName: String { "agent" }
-}
-
-extension Agent {
-    /// Helper to fetch the default agent from the database
-    public static func fetchDefault(in db: Database) throws -> Agent? {
-        try Agent.fetchOne(db, key: "default")
     }
 }

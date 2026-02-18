@@ -1,6 +1,6 @@
 import MonadShared
 import Foundation
-import GRDB
+
 
 extension SessionManager {
     // MARK: - Tool Management
@@ -47,16 +47,7 @@ extension SessionManager {
     public func findWorkspaceForTool(_ tool: ToolReference, in workspaceIds: [UUID]) async throws
         -> UUID?
     {
-        return try await persistenceService.databaseWriter.read { db in
-            let toolId = tool.toolId
-            let exists =
-                try WorkspaceTool
-                .filter(Column("toolId") == toolId)
-                .filter(workspaceIds.contains(Column("workspaceId")))
-                .fetchOne(db)
-
-            return exists?.workspaceId
-        }
+        return try await persistenceService.findWorkspaceId(forToolId: tool.toolId, in: workspaceIds)
     }
 
     public func getAggregatedTools(for sessionId: UUID) async throws -> [ToolReference] {
@@ -69,31 +60,11 @@ extension SessionManager {
         let workspaceIds = ids
         guard !workspaceIds.isEmpty else { return [] }
 
-        return try await persistenceService.databaseWriter.read { db in
-            let tools =
-                try WorkspaceTool
-                .filter(workspaceIds.contains(Column("workspaceId")))
-                .fetchAll(db)
-
-            return try tools.map { try $0.toToolReference() }
-        }
+        return try await persistenceService.fetchTools(forWorkspaces: workspaceIds)
     }
 
     public func getClientTools(clientId: UUID) async throws -> [ToolReference] {
-        return try await persistenceService.databaseWriter.read { db in
-            let workspaces = try WorkspaceReference
-                .filter(Column("ownerId") == clientId)
-                .fetchAll(db)
-            
-            let workspaceIds = workspaces.map { $0.id }
-            guard !workspaceIds.isEmpty else { return [] }
-
-            let tools = try WorkspaceTool
-                .filter(workspaceIds.contains(Column("workspaceId")))
-                .fetchAll(db)
-
-            return try tools.map { try $0.toToolReference() }
-        }
+        return try await persistenceService.fetchClientTools(clientId: clientId)
     }
 
     /// Aggregates all available tool references for a session, including those from the client.
@@ -128,31 +99,10 @@ extension SessionManager {
         if let p = session.primaryWorkspaceId { ids.append(p) }
         ids.append(contentsOf: session.attachedWorkspaces)
 
-        let workspaceIds = ids
-        if workspaceIds.isEmpty { return nil }
-
-        return try? await persistenceService.databaseWriter.read { db -> String? in
-            if let toolRecord =
-                try WorkspaceTool
-                .filter(Column("toolId") == toolId)
-                .filter(workspaceIds.contains(Column("workspaceId")))
-                .fetchOne(db),
-                let ws = try WorkspaceReference.fetchOne(db, key: toolRecord.workspaceId)
-            {
-                if ws.hostType == .client {
-                    if let owner = ws.ownerId,
-                        let client = try? ClientIdentity.fetchOne(db, key: owner)
-                    {
-                        return "Client: \(client.hostname)"
-                    }
-                    return "Client Workspace"
-                } else if session.primaryWorkspaceId == ws.id {
-                    return "Primary Workspace"
-                } else {
-                    return "Workspace: \(ws.uri.description)"
-                }
-            }
-            return nil
-        }
+        return try? await persistenceService.fetchToolSource(
+            toolId: toolId,
+            workspaceIds: ids,
+            primaryWorkspaceId: session.primaryWorkspaceId
+        )
     }
 }

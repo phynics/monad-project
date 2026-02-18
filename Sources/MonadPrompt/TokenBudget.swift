@@ -24,62 +24,94 @@ public struct TokenBudget: Sendable {
             return sections
         }
         
-        // Sort by priority (ascending) to process low priority first
-        let sortedSections = sections.sorted(by: { $0.priority < $1.priority })
-        var processedSections: [String: ContextSection] = [:]
+        // We need to cut tokens.
+        // Allocation strategy:
+        // 1. Sort sections by priority (Highest first).
+        // 2. Allocate budget to high priority sections.
+        // 3. If a section doesn't fit:
+        //    - If .keep: Allocate anyway (blow budget? or consume remaining?)
+        //      -> We'll assume .keep MUST be kept. If it exceeds budget, we just go over.
+        //    - If .truncate: Give it remaining budget.
+        //    - If .drop: Drop it.
+        //    - If .summarize: Treat as drop for now (unless we have async summary size est, which we don't efficiently).
         
-        // We calculate how many tokens we need to cut
-        var tokensSaved = 0
-        let tokensNeeded = currentTotal - available
+        // Map original index to section for stability
+        let indexedSections = sections.enumerated().map { (index: $0.offset, section: $0.element) }
+        let sortedByPriority = indexedSections.sorted { $0.section.priority > $1.section.priority }
         
-        // First pass: Drop or Compress
-        for section in sortedSections {
-            if tokensSaved >= tokensNeeded {
-                // We've saved enough, keep the rest as is
-                processedSections[section.id] = section
-                continue
-            }
+        var decisions: [Int: SectionDecision] = [:]
+        var remainingBudget = available
+        
+        // First pass: Allocate .keep sections regardless of budget (they are mandatory-ish)
+        // Wait, if we have 8000 tokens, and System (Keep, 1000) + User (Keep, 100) -> 1100.
+        // If we prioritize strict budget, we might need to error out if Keep exceeds budget?
+        // Let's assume .keep sections consume budget first.
+        
+        // Revised Allocation:
+        // Iterate Priority High -> Low.
+        
+        for (index, section) in sortedByPriority {
+            let size = section.estimatedTokens
             
-            switch section.strategy {
-            case .drop:
-                tokensSaved += section.estimatedTokens
-                // Dropped
-                
-            case .summarize:
-                if let compressor = compressor, let content = await section.render() {
-                    // Try to compress
-                    if let _ = try? await compressor.summarize(content) {
-                        // We successfully summarized. 
-                        // Note: In this generic layer we can't easily construct a new SummarizedSection 
-                        // because we don't know the concrete types.
-                        // However, we can track that we saved tokens. 
-                        // For this implementation, we will treat successful summarization as 
-                        // "keeping the section but counting it as reduced".
-                        // BUT since we can't mutate the section to *hold* the summary without a wrapper,
-                        // we must assume the caller/renderer handles it OR we drop it if we can't wrap.
-                        
-                        // Strict implementation: If we can't wrap, we drop.
-                        tokensSaved += section.estimatedTokens
+            if size <= remainingBudget {
+                // It fits
+                decisions[index] = .keepOriginal
+                remainingBudget -= size
+            } else {
+                // Doesn't fit completely
+                switch section.strategy {
+                case .keep:
+                    // Must keep. We go into debt if needed (or consume all remaining)
+                    // We'll consume all remaining and technically go over budget, 
+                    // as we can't truncate .keep
+                    decisions[index] = .keepOriginal
+                    remainingBudget -= size
+                    
+                case .truncate:
+                    if remainingBudget > 0 {
+                        // Squeeze it in
+                        decisions[index] = .constrain(limit: remainingBudget)
+                        remainingBudget = 0
                     } else {
-                        // Failed to summarize, treat as drop
-                         tokensSaved += section.estimatedTokens
+                        // No budget left
+                        decisions[index] = .drop
                     }
-                } else {
-                    // No compressor or no content, drop
-                    tokensSaved += section.estimatedTokens
+                    
+                case .summarize:
+                    // If we had a compressor and logic to "summarize to X", we'd use it.
+                    // For now, if full content doesn't fit, we drop.
+                    decisions[index] = .drop
+                    
+                case .drop:
+                    decisions[index] = .drop
                 }
-                
-            case .truncate:
-                 // Generic truncation implies we accept partial content. 
-                 // Without a wrapper, we count it as dropped for safety in this pass.
-                 tokensSaved += section.estimatedTokens
-                 
-            case .keep:
-                processedSections[section.id] = section
             }
         }
         
-        // Reconstruct order from original list
-        return sections.compactMap { processedSections[$0.id] }
+        // Second pass: Reconstruct in original order
+        var result: [ContextSection] = []
+        for (index, section) in indexedSections {
+            guard let decision = decisions[index] else {
+                // Should not happen, but default to drop if missing
+                continue
+            }
+            
+            switch decision {
+            case .keepOriginal:
+                result.append(section)
+            case .constrain(let limit):
+                result.append(section.constrained(to: limit))
+            case .drop:
+                break // Skip
+            }
+        }
+        
+        return result
+    }
+    
+    private enum SectionDecision {
+        case keepOriginal
+        case constrain(limit: Int)
+        case drop
     }
 }

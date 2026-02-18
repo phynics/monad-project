@@ -36,7 +36,7 @@ public actor RemoteWorkspace: WorkspaceProtocol {
         
         let response = try await connectionManager.send(
             method: "workspace/executeTool",
-            params: AnyCodable(request),
+            params: try toAnyCodable(request),
             expecting: ToolExecutionResponse.self,
             to: clientId
         )
@@ -52,7 +52,7 @@ public actor RemoteWorkspace: WorkspaceProtocol {
         let request = ReadFileRequest(path: path)
         let response = try await connectionManager.send(
             method: "workspace/readFile",
-            params: AnyCodable(request),
+            params: try toAnyCodable(request),
             expecting: String.self,
             to: clientId
         )
@@ -63,7 +63,7 @@ public actor RemoteWorkspace: WorkspaceProtocol {
         let request = WriteFileRequest(path: path, content: content)
         _ = try await connectionManager.send(
             method: "workspace/writeFile",
-            params: AnyCodable(request),
+            params: try toAnyCodable(request),
             expecting: Bool.self, // Expecting simple ack
             to: clientId
         )
@@ -88,11 +88,17 @@ public actor RemoteWorkspace: WorkspaceProtocol {
         let request = ListFilesRequest(path: path)
         let response = try await connectionManager.send(
             method: "workspace/listFiles",
-            params: AnyCodable(request),
+            params: try toAnyCodable(request),
             expecting: [String].self,
             to: clientId
         )
         return response
+    }
+    
+    private func toAnyCodable<T: Encodable>(_ value: T) throws -> AnyCodable {
+        let data = try JSONEncoder().encode(value)
+        let json = try JSONSerialization.jsonObject(with: data)
+        return AnyCodable(json)
     }
     
     public func healthCheck() async -> Bool {

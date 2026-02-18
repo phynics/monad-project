@@ -1,10 +1,7 @@
 import MonadShared
 import Foundation
-import GRDB
-
 /// Protocol for Persistence Service to enable mocking and isolation
 public protocol PersistenceServiceProtocol: HealthCheckable {
-    var databaseWriter: DatabaseWriter { get }
 
     // Memories
     func saveMemory(_ memory: Memory, policy: MemorySavePolicy) async throws -> UUID
@@ -43,6 +40,31 @@ public protocol PersistenceServiceProtocol: HealthCheckable {
     func deleteJob(id: UUID) async throws
     func monitorJobs() async -> AsyncStream<JobEvent>
 
+    // Agents
+    func saveAgent(_ agent: Agent) async throws
+    func fetchAgent(id: UUID) async throws -> Agent?
+    func fetchAgent(key: String) async throws -> Agent? // Support fetching by string key (e.g. "default")
+    func fetchAllAgents() async throws -> [Agent]
+    func hasAgent(id: String) async -> Bool
+    
+    // Workspaces
+    func saveWorkspace(_ workspace: WorkspaceReference) async throws
+    func fetchWorkspace(id: UUID) async throws -> WorkspaceReference?
+    /// Fetch workspace with optionally populated tools from the join table
+    func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference?
+    func fetchAllWorkspaces() async throws -> [WorkspaceReference]
+    func deleteWorkspace(id: UUID) async throws
+
+    // Tools
+    /// Fetch tools for a list of workspaces
+    func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference]
+    /// Fetch tools owned by a specific client
+    func fetchClientTools(clientId: UUID) async throws -> [ToolReference]
+    /// Find which workspace a tool belongs to
+    func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID?
+    /// Get a display string for the source of a tool (e.g. "Client: Macbook")
+    func fetchToolSource(toolId: String, workspaceIds: [UUID], primaryWorkspaceId: UUID?) async throws -> String?
+    
     // Database Management
     func resetDatabase() async throws
 }

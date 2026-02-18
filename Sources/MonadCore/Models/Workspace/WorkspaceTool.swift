@@ -1,9 +1,7 @@
 import MonadShared
 import Foundation
-import GRDB
-
 /// Database model for a tool available in a workspace
-public struct WorkspaceTool: Codable, FetchableRecord, PersistableRecord, Sendable, Identifiable {
+public struct WorkspaceTool: Codable, Sendable, Identifiable {
     public let id: UUID
     public let workspaceId: UUID
     public let toolId: String

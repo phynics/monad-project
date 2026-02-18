@@ -16,9 +16,8 @@ public actor AgentRegistry {
     /// - Returns: The agent if found, nil otherwise
     public func getAgent(id: String) async -> Agent? {
         do {
-            return try await persistence.databaseWriter.read { db in
-                try Agent.fetchOne(db, key: id)
-            }
+            // Try fetching by key string (which might handle UUID parsing internally in implementation)
+            return try await persistence.fetchAgent(key: id)
         } catch {
             logger.error("Failed to fetch agent \(id): \(error)")
             return nil
@@ -29,9 +28,7 @@ public actor AgentRegistry {
     /// - Returns: Array of agents
     public func listAgents() async -> [Agent] {
         do {
-            return try await persistence.databaseWriter.read { db in
-                try Agent.fetchAll(db)
-            }
+            return try await persistence.fetchAllAgents()
         } catch {
             logger.error("Failed to list agents: \(error)")
             return []
@@ -40,12 +37,6 @@ public actor AgentRegistry {
     
     /// Check if an agent exists in the database
     public func hasAgent(id: String) async -> Bool {
-        do {
-            return try await persistence.databaseWriter.read { db in
-                try Agent.exists(db, key: id)
-            }
-        } catch {
-            return false
-        }
+        return await persistence.hasAgent(id: id)
     }
 }

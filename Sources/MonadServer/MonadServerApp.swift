@@ -185,7 +185,7 @@ struct MonadServer: AsyncParsableCommand {
                 dbWriter: dbWriter, logger: logger)
             workspaceAPIController.addRoutes(to: workspacesGroup)
 
-            let workspaceStore = try await WorkspaceStore(dbWriter: dbWriter)
+            let workspaceStore = try await WorkspaceStore(persistenceService: persistenceService)
             let filesController = FilesAPIController<AppRequestContext>(
                 workspaceStore: workspaceStore)
             filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))

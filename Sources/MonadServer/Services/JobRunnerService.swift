@@ -31,7 +31,7 @@ public final class JobRunnerService: Service, @unchecked Sendable {
                 for await event in await persistence.monitorJobs() {
                     if Task.isCancelled { break }
                     switch event {
-                    case .jobUpdated(let job):
+                    case .jobAdded(let job), .jobUpdated(let job):
                          if job.status == .pending {
                              // Immediate processing if ready and no schedule delay
                              if let nextRun = job.nextRunAt, nextRun > Date() {

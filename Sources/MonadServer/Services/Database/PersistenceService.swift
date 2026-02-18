@@ -1,12 +1,10 @@
 import MonadShared
+import MonadCore
 import Foundation
 import GRDB
 import Logging
 
-public enum JobEvent: Sendable {
-    case jobUpdated(Job)
-    case jobDeleted(UUID)
-}
+
 
 /// Thread-safe persistence service using GRDB
 public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
@@ -183,6 +181,170 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
             }
         }
     }
+    // MARK: - Agents
+    
+    public func saveAgent(_ agent: Agent) async throws {
+        try await dbQueue.write { db in
+            try agent.save(db)
+        }
+    }
+    
+    public func fetchAgent(id: UUID) async throws -> Agent? {
+        try await dbQueue.read { db in
+            try Agent.fetchOne(db, key: id)
+        }
+    }
+    
+    public func fetchAgent(key: String) async throws -> Agent? {
+         try await dbQueue.read { db in
+             // Try to parse UUID first, if fails assume it's a key lookup if widely supported, 
+             // but Agent primary key is UUID. 
+             // If 'key' is meant to be 'id' string:
+             if let uuid = UUID(uuidString: key) {
+                 return try Agent.fetchOne(db, key: uuid)
+             }
+             // Fallback: maybe we want to search by name? Or if we had a string ID.
+             // For now, return nil if not UUID, as Agent.id is UUID.
+             return nil
+         }
+    }
+    
+    public func fetchAllAgents() async throws -> [Agent] {
+        try await dbQueue.read { db in
+            try Agent.fetchAll(db)
+        }
+    }
+    
+    public func hasAgent(id: String) async -> Bool {
+        guard let uuid = UUID(uuidString: id) else { return false }
+        return await (try? dbQueue.read { db in
+            try Agent.exists(db, key: uuid)
+        }) ?? false
+    }
+
+    // MARK: - Workspaces
+    
+    public func saveWorkspace(_ workspace: WorkspaceReference) async throws {
+        try await dbQueue.write { db in
+            try workspace.save(db)
+        }
+    }
+    
+    public func fetchWorkspace(id: UUID) async throws -> WorkspaceReference? {
+        try await dbQueue.read { db in
+            try WorkspaceReference.fetchOne(db, key: id)
+        }
+    }
+    
+    public func fetchAllWorkspaces() async throws -> [WorkspaceReference] {
+        try await dbQueue.read { db in
+            try WorkspaceReference.fetchAll(db)
+        }
+    }
+    
+    public func deleteWorkspace(id: UUID) async throws {
+        _ = try await dbQueue.write { db in
+             try WorkspaceReference.deleteOne(db, key: id)
+        }
+    }
+    
+    // MARK: - Advanced Tool Queries
+    
+    public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? {
+        try await dbQueue.read { db in
+            guard let workspace = try WorkspaceReference.fetchOne(db, key: id) else {
+                return nil
+            }
+            
+            if includeTools {
+                // Load associated tools from WorkspaceTool table (Join)
+                let workspaceTools = try WorkspaceTool
+                    .filter(Column("workspaceId") == id)
+                    .fetchAll(db)
+                
+                let toolRefs = workspaceTools.compactMap { try? $0.toToolReference() }
+                
+                // Create a new workspace with the tools populated
+                return WorkspaceReference(
+                    id: workspace.id,
+                    uri: workspace.uri,
+                    hostType: workspace.hostType,
+                    ownerId: workspace.ownerId,
+                    tools: toolRefs,
+                    rootPath: workspace.rootPath,
+                    trustLevel: workspace.trustLevel,
+                    lastModifiedBy: workspace.lastModifiedBy,
+                    status: workspace.status,
+                    createdAt: workspace.createdAt
+                )
+            }
+            return workspace
+        }
+    }
+
+    public func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] {
+         guard !workspaceIds.isEmpty else { return [] }
+         return try await dbQueue.read { db in
+            let tools = try WorkspaceTool
+                .filter(workspaceIds.contains(Column("workspaceId")))
+                .fetchAll(db)
+            return try tools.map { try $0.toToolReference() }
+         }
+    }
+    
+    public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] {
+        return try await dbQueue.read { db in
+            let workspaces = try WorkspaceReference
+                .filter(Column("ownerId") == clientId)
+                .fetchAll(db)
+            
+            let workspaceIds = workspaces.map { $0.id }
+            guard !workspaceIds.isEmpty else { return [] }
+
+            let tools = try WorkspaceTool
+                .filter(workspaceIds.contains(Column("workspaceId")))
+                .fetchAll(db)
+
+            return try tools.map { try $0.toToolReference() }
+        }
+    }
+
+    public func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID? {
+        try await dbQueue.read { db in
+            let exists = try WorkspaceTool
+                .filter(Column("toolId") == toolId)
+                .filter(workspaceIds.contains(Column("workspaceId")))
+                .fetchOne(db)
+            return exists?.workspaceId
+        }
+    }
+
+    public func fetchToolSource(toolId: String, workspaceIds: [UUID], primaryWorkspaceId: UUID?) async throws -> String? {
+        if workspaceIds.isEmpty { return nil }
+        return try await dbQueue.read { db -> String? in
+            if let toolRecord = try WorkspaceTool
+                .filter(Column("toolId") == toolId)
+                .filter(workspaceIds.contains(Column("workspaceId")))
+                .fetchOne(db),
+                let ws = try WorkspaceReference.fetchOne(db, key: toolRecord.workspaceId)
+            {
+                if ws.hostType == .client {
+                    if let owner = ws.ownerId,
+                        let client = try? ClientIdentity.fetchOne(db, key: owner)
+                    {
+                        return "Client: \(client.hostname)"
+                    }
+                    return "Client Workspace"
+                } else if primaryWorkspaceId == ws.id {
+                    return "Primary Workspace"
+                } else {
+                    return "Workspace: \(ws.uri.description)"
+                }
+            }
+            return nil
+        }
+    }
+
     // Prune methods moved to MonadServerCore
 }
 

@@ -1,9 +1,8 @@
 import MonadShared
 import Foundation
-import GRDB
 
 /// Searchable memory item for storing knowledge
-public struct Memory: Codable, Identifiable, FetchableRecord, PersistableRecord, Sendable, Equatable {
+public struct Memory: Codable, Identifiable, Sendable, Equatable {
     public var id: UUID
     public var title: String
     public var content: String
@@ -48,6 +47,26 @@ public struct Memory: Codable, Identifiable, FetchableRecord, PersistableRecord,
         }
     }
 
+    public init(
+        id: UUID,
+        title: String,
+        content: String,
+        createdAt: Date,
+        updatedAt: Date,
+        tags: String,
+        metadata: String,
+        embedding: String
+    ) {
+        self.id = id
+        self.title = title
+        self.content = content
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.tags = tags
+        self.metadata = metadata
+        self.embedding = embedding
+    }
+
     public var tagArray: [String] {
         guard let data = tags.data(using: .utf8),
             let array = try? JSONDecoder().decode([String].self, from: data)
@@ -73,57 +92,6 @@ public struct Memory: Codable, Identifiable, FetchableRecord, PersistableRecord,
             return [:]
         }
         return dict
-    }
-    
-    // MARK: - FetchableRecord
-    
-    public init(row: Row) throws {
-        // Handle ID decoding with fallback for non-hyphenated UUID strings
-        if let uuid = row["id"] as? UUID {
-            self.id = uuid
-        } else if let uuidString = row["id"] as? String {
-            if let uuid = UUID(uuidString: uuidString) {
-                self.id = uuid
-            } else {
-                // Try inserting hyphens for raw hex string (8-4-4-4-12)
-                let pattern = "([0-9a-fA-F]{8})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{12})"
-                let regex = try NSRegularExpression(pattern: pattern)
-                let range = NSRange(uuidString.startIndex..., in: uuidString)
-                if let match = regex.firstMatch(in: uuidString, range: range) {
-                    let nsString = uuidString as NSString
-                    let formatted = "\(nsString.substring(with: match.range(at: 1)))-\(nsString.substring(with: match.range(at: 2)))-\(nsString.substring(with: match.range(at: 3)))-\(nsString.substring(with: match.range(at: 4)))-\(nsString.substring(with: match.range(at: 5)))"
-                    if let uuid = UUID(uuidString: formatted) {
-                        self.id = uuid
-                    } else {
-                        throw PersistenceError.invalidUUIDFormat(uuidString)
-                    }
-                } else {
-                    throw PersistenceError.invalidUUIDFormat(uuidString)
-                }
-            }
-        } else {
-            // Try standard decoding which handles data blobs
-            self.id = row["id"]
-        }
-        
-        self.title = row["title"]
-        self.content = row["content"]
-        self.createdAt = row["createdAt"]
-        self.updatedAt = row["updatedAt"]
-        self.tags = row["tags"]
-        self.metadata = row["metadata"]
-        self.embedding = row["embedding"]
-    }
-}
-
-public enum PersistenceError: LocalizedError {
-    case invalidUUIDFormat(String)
-    
-    public var errorDescription: String? {
-        switch self {
-        case .invalidUUIDFormat(let value):
-            return "Invalid UUID format: \(value)"
-        }
     }
 }
 

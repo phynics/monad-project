@@ -41,7 +41,6 @@ let package = Package(
             dependencies: [
                 "MonadPrompt",
                 .product(name: "OpenAI", package: "OpenAI"),
-                .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "USearch", package: "USearch"),
                 .product(name: "Dependencies", package: "swift-dependencies"),
@@ -54,6 +53,7 @@ let package = Package(
                 "MonadCore",
                 "MonadPrompt",
                 "MonadClient",
+                .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "HummingbirdWebSocket", package: "hummingbird-websocket"),
                 .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
@@ -67,7 +67,7 @@ let package = Package(
             dependencies: [
                 "MonadCore",
                 "MonadShared",
-                .product(name: "GRDB", package: "GRDB.swift"),
+
                 .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MonadClient"

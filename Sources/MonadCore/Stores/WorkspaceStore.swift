@@ -1,30 +1,26 @@
 import MonadShared
-import MonadShared
 import Foundation
-import GRDB
+import Logging
 
 public actor WorkspaceStore: Sendable {
-    private let dbWriter: DatabaseWriter
+    private let persistenceService: any PersistenceServiceProtocol
     private var loadedWorkspaces: [UUID: any WorkspaceProtocol] = [:]
+    private let logger = Logger(label: "monad.workspace.store")
     
-    public init(dbWriter: DatabaseWriter) async throws {
-        self.dbWriter = dbWriter
+    public init(persistenceService: any PersistenceServiceProtocol) async throws {
+        self.persistenceService = persistenceService
         try await loadWorkspaces()
     }
     
     private func loadWorkspaces() async throws {
-        let references = try await dbWriter.read { db in
-            try WorkspaceReference.fetchAll(db)
-        }
+        let references = try await persistenceService.fetchAllWorkspaces()
         
         for reference in references {
             do {
                 let workspace = try WorkspaceFactory.create(from: reference)
                 loadedWorkspaces[reference.id] = workspace
             } catch {
-                // We don't have a logger here yet, but in a real app we should log this.
-                // For now, we just skip it so one bad workspace doesn't prevent startup.
-                print("Failed to load workspace \(reference.id): \(error)")
+                logger.error("Failed to load workspace \(reference.id): \(error)")
             }
         }
     }
@@ -34,11 +30,7 @@ public actor WorkspaceStore: Sendable {
     }
     
     public func reloadWorkspace(id: UUID) async throws {
-        let reference = try await dbWriter.read { db in
-            try WorkspaceReference.fetchOne(db, key: id)
-        }
-        
-        guard let reference = reference else {
+        guard let reference = try await persistenceService.fetchWorkspace(id: id) else {
             loadedWorkspaces.removeValue(forKey: id)
             return
         }
@@ -65,9 +57,7 @@ public actor WorkspaceStore: Sendable {
             rootPath: rootPath
         )
         
-        try await dbWriter.write { db in
-            try reference.insert(db)
-        }
+        try await persistenceService.saveWorkspace(reference)
         
         let workspace = try WorkspaceFactory.create(from: reference)
         loadedWorkspaces[reference.id] = workspace

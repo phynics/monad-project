@@ -1,11 +1,12 @@
 import MonadShared
+import MonadCore
 import Foundation
 import Logging
 
 // MARK: - Configuration Storage
 
 /// Thread-safe configuration storage using AppStorage (UserDefaults)
-public actor ConfigurationStorage {
+public actor ConfigurationStorage: ConfigurationServiceProtocol {
     private let userDefaults: UserDefaults
     private let configKey = "llm_configuration_v2"  // Bumped key
     private let backupKey = "llm_configuration_backup_v2"

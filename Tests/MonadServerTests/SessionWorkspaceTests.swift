@@ -6,7 +6,7 @@ import GRDB
 import Dependencies
 
 final class SessionWorkspaceTests: XCTestCase {
-    var persistenceService: MockPersistenceService!
+    var persistenceService: PersistenceService!
     var embeddingService: MockEmbeddingService!
     var llmService: MockLLMService!
     var workspaceRoot: URL!
@@ -18,7 +18,7 @@ final class SessionWorkspaceTests: XCTestCase {
         DatabaseSchema.registerMigrations(in: &migrator)
         try migrator.migrate(dbQueue)
 
-        persistenceService = MockPersistenceService(databaseWriter: dbQueue)
+        persistenceService = PersistenceService(dbQueue: dbQueue)
         embeddingService = MockEmbeddingService()
         llmService = MockLLMService()
 

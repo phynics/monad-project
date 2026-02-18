@@ -60,8 +60,7 @@ final class RemoteWorkspaceTests: XCTestCase {
         
         let result = try await workspace.executeTool(id: "test_tool", parameters: ["arg": MonadShared.AnyCodable("value")])
         
-        // Use await to access actor properties if needed, but actor isolation prevents direct access from XCTestCase?
-        // Wait, MockConnectionManager is an actor.
+        // Use await to access actor properties
         let method = await mockConnection.lastMethod
         let params = await mockConnection.lastParams
         let cid = await mockConnection.lastClientId
@@ -69,24 +68,26 @@ final class RemoteWorkspaceTests: XCTestCase {
         XCTAssertEqual(method, "workspace/executeTool")
         XCTAssertEqual(cid, clientId)
         
-        // Expected params value is ToolExecutionRequest
-        guard let requestObj = params?.value as? ToolExecutionRequest else {
+        // Expected params value is a Dictionary because RemoteWorkspace converts struct to AnyCodable(dict)
+        guard let requestDict = params?.value as? [String: Any] else {
              XCTFail("Invalid parameters type: \(type(of: params?.value))")
              return
         }
         
-        XCTAssertEqual(requestObj.toolId, "test_tool")
+        XCTAssertEqual(requestDict["toolId"] as? String, "test_tool")
         
-        // requestObj.parameters is [String: MonadShared.AnyCodable]
-        XCTAssertEqual(requestObj.parameters["arg"]?.value as? String, "value")
+        // parameters is [String: Any] (from AnyCodable.value)
+        guard let parametersDict = requestDict["parameters"] as? [String: Any] else {
+            XCTFail("Missing parameters dictionary")
+            return
+        }
+        XCTAssertEqual(parametersDict["arg"] as? String, "value")
         
-        // Check result
-        // Check result
         // Check result
         if result.success {
             XCTAssertEqual(result.output, "Tool executed")
         } else {
-            XCTFail("Expected success but got error: \(result.error ?? "unknown")")
+            XCTFail("Expected success but got error: \(result)")
         }
     }
     
@@ -103,10 +104,10 @@ final class RemoteWorkspaceTests: XCTestCase {
         
         XCTAssertEqual(method, "workspace/readFile")
         
-        guard let requestObj = params?.value as? ReadFileRequest else {
+        guard let requestDict = params?.value as? [String: Any] else {
             XCTFail("Invalid parameters type: \(type(of: params?.value))")
             return
         }
-        XCTAssertEqual(requestObj.path, "test.txt")
+        XCTAssertEqual(requestDict["path"] as? String, "test.txt")
     }
 }

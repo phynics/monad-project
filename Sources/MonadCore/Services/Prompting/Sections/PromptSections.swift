@@ -28,43 +28,7 @@ public struct SystemInstructions: ContextSection {
     }
 }
 
-/// Context notes wrapper
-public struct ContextNotes: ContextSection {
-    public let id = "context_notes"
-    public let priority = 90
-    public let strategy: CompressionStrategy = .truncate(tail: true)
-    public let type: ContextSectionType = .list(items: []) // Simplified for now
-    public let notes: [ContextFile]
-    
-    public init(_ notes: [ContextFile]) {
-        self.notes = notes
-    }
-    
-    public func render() async -> String? {
-        guard !notes.isEmpty else { return nil }
-        
-        let notesText = notes.map { note in
-            """
-            [File: \(note.name) (\(note.source))]
-            \(note.content)
-            """
-        }.joined(separator: "\n\n")
-        
-        return """
-            The following context files contain important information about the user, the project, and your persona. Use them to provide accurate and personalized responses.
-            
-            You can edit or create new files in the `Notes/` directory to store long-term information.
-            Examples:
-            You can edit or create new files in the `Notes/` directory to store long-term information.
-            
-            \(notesText)
-            """
-    }
-    
-    public var estimatedTokens: Int {
-        TokenEstimator.estimate(parts: notes.map(\.content))
-    }
-}
+
 
 /// Memories wrapper
 public struct Memories: ContextSection {
@@ -148,6 +112,83 @@ public struct ChatHistory: ContextSection {
     
     public var estimatedTokens: Int {
         TokenEstimator.estimate(parts: messages.map(\.content))
+    }
+    
+    public func constrained(to tokens: Int) -> ContextSection {
+        guard estimatedTokens > tokens else { return self }
+        
+        var accumulated = 0
+        var keepCount = 0
+        
+        // Keep newest messages first (iterate backwards)
+        for message in messages.reversed() {
+            // Rough estimate per message including overhead
+            let count = TokenEstimator.estimate(text: message.content) + 10 
+            if accumulated + count > tokens {
+                break
+            }
+            accumulated += count
+            keepCount += 1
+        }
+        
+        // If we can't keep any messages but limit is > 0, keep at least the very last one if possible?
+        // Or just return empty. 
+        // Strict adherence to budget means return what fits.
+        // If query is huge, history might be 0.
+        
+        let subset = Array(messages.suffix(keepCount))
+        return ChatHistory(subset)
+    }
+}
+
+public struct ContextNotes: ContextSection {
+    public let id = "context_notes"
+    public let priority = 90
+    public let strategy: CompressionStrategy = .truncate(tail: true)
+    public let type: ContextSectionType = .list(items: []) 
+    public let notes: [ContextFile]
+    
+    public init(_ notes: [ContextFile]) {
+        self.notes = notes
+    }
+    
+    public func render() async -> String? {
+        guard !notes.isEmpty else { return nil }
+        
+        let notesText = notes.map { note in
+            """
+            [File: \(note.name) (\(note.source))]
+            \(note.content)
+            """
+        }.joined(separator: "\n\n")
+        
+        return """
+            The following context files contain important information about the user, the project, and your persona. Use them to provide accurate and personalized responses.
+            
+            You can edit or create new files in the `Notes/` directory to store long-term information.
+            
+            \(notesText)
+            """
+    }
+    
+    public func render(constrainedTo tokens: Int?) async -> String? {
+        guard let tokens = tokens else { return await render() }
+        guard var fullText = await render() else { return nil }
+        
+        let estimated = TokenEstimator.estimate(text: fullText)
+        if estimated <= tokens { return fullText }
+        
+        // Truncate
+        // Simple char approximation: tokens * 4
+        let charLimit = tokens * 4
+        if fullText.count > charLimit {
+            fullText = String(fullText.prefix(charLimit)) + "\n... [Truncated]"
+        }
+        return fullText
+    }
+    
+    public var estimatedTokens: Int {
+        TokenEstimator.estimate(parts: notes.map(\.content))
     }
 }
 

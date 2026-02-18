@@ -46,7 +46,7 @@ extension Prompt {
                             .init(
                                 id: call.id.uuidString,
                                 function: .init(
-                                    arguments: (try? call.arguments.toJsonString()) ?? "{}",
+                                    arguments: (try? toJsonString(call.arguments)) ?? "{}",
                                     name: call.name
                                 )
                             )

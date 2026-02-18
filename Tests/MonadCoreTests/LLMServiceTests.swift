@@ -1,6 +1,6 @@
 import MonadShared
 import OpenAI
-import MonadCore
+@testable import MonadCore
 import MonadPrompt
 import Testing
 
@@ -9,7 +9,7 @@ struct LLMServiceTests {
     private let llmService: LLMService
 
     init() {
-        llmService = LLMService()
+        llmService = LLMService(storage: MockConfigurationService())
     }
 
     @Test("Test updating LLM configuration")
@@ -166,7 +166,7 @@ struct LLMServiceTests {
 
     @Test("Test LLMService error when not configured")
     func unconfiguredServiceError() async throws {
-        let service = LLMService()
+        let service = LLMService(storage: MockConfigurationService())
         // No configuration provided
 
         await #expect(throws: LLMServiceError.notConfigured) {
@@ -179,7 +179,7 @@ struct LLMServiceTests {
         let mockClient = MockLLMClient()
         mockClient.nextResponse = "SwiftUI Basics"
 
-        let service = LLMService(client: mockClient) // Use client directly if possible or utilityClient
+        let service = LLMService(storage: MockConfigurationService(), client: mockClient) // Use client directly if possible or utilityClient
 
         let messages = [
             Message(content: "How do I use SwiftUI?", role: .user),

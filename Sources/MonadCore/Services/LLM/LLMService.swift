@@ -82,7 +82,8 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     private var utilityClient: (any LLMClientProtocol)?
     private var fastClient: (any LLMClientProtocol)?
 
-    private let storage: ConfigurationStorage
+    private let storage: any ConfigurationServiceProtocol
+
 
 
     internal let logger = Logger.llm
@@ -115,7 +116,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     // MARK: - Initialization
 
     public init(
-        storage: ConfigurationStorage = ConfigurationStorage(),
+        storage: any ConfigurationServiceProtocol,
         embeddingService: (any EmbeddingServiceProtocol)? = nil,
         client: (any LLMClientProtocol)? = nil,
         utilityClient: (any LLMClientProtocol)? = nil,

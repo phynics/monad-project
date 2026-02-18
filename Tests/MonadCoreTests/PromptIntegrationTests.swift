@@ -10,7 +10,7 @@ struct PromptIntegrationTests {
 
     @Test("testEmptyUserQueryDoesNotAppendMessage")
     func testEmptyUserQueryDoesNotAppendMessage() async throws {
-        let service = LLMService()
+        let service = LLMService(storage: MockConfigurationService())
         let history = [Message(content: "Hello", role: .user)]
 
         let prompt = await service.buildContext(
@@ -39,7 +39,7 @@ struct PromptIntegrationTests {
 
     @Test("testNonEmptyUserQueryAppendsMessage")
     func testNonEmptyUserQueryAppendsMessage() async throws {
-        let service = LLMService()
+        let service = LLMService(storage: MockConfigurationService())
         let history = [Message(content: "Hello", role: .user)]
 
         let prompt = await service.buildContext(
@@ -62,7 +62,7 @@ struct PromptIntegrationTests {
 
     @Test("testUserQueryPreventsLeakageIntoSystem")
     func testUserQueryPreventsLeakageIntoSystem() async throws {
-        let service = LLMService()
+        let service = LLMService(storage: MockConfigurationService())
         let history = [Message(content: "Hi", role: .user)]
         let query = "UNIQUE_QUERY_STRING"
 
