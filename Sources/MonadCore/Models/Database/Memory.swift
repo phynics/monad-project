@@ -69,7 +69,7 @@ public struct Memory: Codable, Identifiable, Sendable, Equatable {
 
     public var tagArray: [String] {
         guard let data = tags.data(using: .utf8),
-            let array = try? JSONDecoder().decode([String].self, from: data)
+              let array = try? JSONSerialization.jsonObject(with: data) as? [String]
         else {
             return []
         }
@@ -78,7 +78,7 @@ public struct Memory: Codable, Identifiable, Sendable, Equatable {
     
     public var embeddingVector: [Double] {
         guard let data = embedding.data(using: .utf8),
-              let vector = try? JSONDecoder().decode([Double].self, from: data)
+              let vector = try? JSONSerialization.jsonObject(with: data) as? [Double]
         else {
             return []
         }
@@ -87,7 +87,7 @@ public struct Memory: Codable, Identifiable, Sendable, Equatable {
 
     public var metadataDict: [String: String] {
         guard let data = metadata.data(using: .utf8),
-            let dict = try? JSONDecoder().decode([String: String].self, from: data)
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String]
         else {
             return [:]
         }
