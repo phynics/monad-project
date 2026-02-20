@@ -4,6 +4,16 @@ import Accelerate
 
 /// Shared math utilities for vector operations using Apple's Accelerate framework
 public enum VectorMath {
+    /// Calculate magnitude (Euclidean norm) of a vector
+    /// - Parameter v: Vector to calculate magnitude for
+    /// - Returns: Magnitude of the vector
+    public static func magnitude(_ v: [Double]) -> Double {
+        guard !v.isEmpty else { return 0.0 }
+        var sumSq: Double = 0.0
+        vDSP_svesqD(v, 1, &sumSq, vDSP_Length(v.count))
+        return sqrt(sumSq)
+    }
+
     /// Calculate cosine similarity between two vectors
     /// - Parameters:
     ///   - a: First vector
@@ -24,6 +34,28 @@ public enum VectorMath {
         let magnitudes = sqrt(sumSqA) * sqrt(sumSqB)
         guard magnitudes > 0 else { return 0.0 }
         
+        return dotProduct / magnitudes
+    }
+
+    /// Calculate cosine similarity with a pre-calculated magnitude for the first vector
+    /// - Parameters:
+    ///   - a: First vector
+    ///   - b: Second vector
+    ///   - magnitudeA: Pre-calculated magnitude of the first vector
+    /// - Returns: Similarity score from -1.0 to 1.0 (0.0 if invalid)
+    public static func cosineSimilarity(_ a: [Double], _ b: [Double], magnitudeA: Double) -> Double {
+        guard a.count == b.count, !a.isEmpty else { return 0.0 }
+
+        var dotProduct: Double = 0.0
+        vDSP_dotprD(a, 1, b, 1, &dotProduct, vDSP_Length(a.count))
+
+        var sumSqB: Double = 0.0
+        vDSP_svesqD(b, 1, &sumSqB, vDSP_Length(b.count))
+        let magnitudeB = sqrt(sumSqB)
+
+        let magnitudes = magnitudeA * magnitudeB
+        guard magnitudes > 0 else { return 0.0 }
+
         return dotProduct / magnitudes
     }
 
