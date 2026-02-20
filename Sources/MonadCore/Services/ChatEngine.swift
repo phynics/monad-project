@@ -36,7 +36,7 @@ public final class ChatEngine: @unchecked Sendable {
         sessionId: UUID,
         message: String,
         tools: [AnyTool],
-        toolOutputs: [MonadCore.ToolOutputSubmission]? = nil,
+        toolOutputs: [ToolOutputSubmission]? = nil,
         contextManager: ContextManager? = nil,
         systemInstructions: String? = nil,
         maxTurns: Int = 5
@@ -111,7 +111,7 @@ public final class ChatEngine: @unchecked Sendable {
             memories: contextData.memories.map { $0.memory.id },
             files: contextData.notes.map { $0.name }
         )
-        continuation.yield(.metadata(metadata))
+        continuation.yield(.generationContext(metadata))
         
         while turnCount < maxTurns {
             turnCount += 1
@@ -168,19 +168,46 @@ public final class ChatEngine: @unchecked Sendable {
         )
         
         var fullResponse = ""
+        var fullThinking = ""
         var toolCallAccumulators: [Int: (id: String, name: String, args: String)] = [:]
+        
+        let parser = StreamingParser()
+        var hasEmittedThought = false
         
         for try await result in streamData {
             if Task.isCancelled { break }
             
-            // Forward Content
+            // Forward Content and Thinking
             if let delta = result.choices.first?.delta.content {
-                fullResponse += delta
-                continuation.yield(.delta(delta))
+                let parseResult = parser.process(delta)
+                
+                if let thinkingChunk = parseResult.thinking, !thinkingChunk.isEmpty {
+                    fullThinking += thinkingChunk
+                    hasEmittedThought = true
+                    continuation.yield(.thought(thinkingChunk))
+                }
+                
+                if let contentChunk = parseResult.content, !contentChunk.isEmpty {
+                    if hasEmittedThought {
+                        continuation.yield(.thoughtCompleted)
+                        hasEmittedThought = false
+                    }
+                    fullResponse += contentChunk
+                    continuation.yield(.delta(contentChunk))
+                }
             }
+            
+            // Forward separate reasoning_content if model supports it out of band
+            // OpenAI type doesn't officially wrap reasoning_content locally yet unless we mapped it, 
+            // but for now StreamingParser handles standard <think> tags locally.
             
             // Accumulate Tool Calls
             if let calls = result.choices.first?.delta.toolCalls {
+                if hasEmittedThought {
+                    continuation.yield(.thoughtCompleted)
+                    hasEmittedThought = false
+                }
+                
                 for call in calls {
                     guard let index = call.index else { continue }
                     var acc = toolCallAccumulators[index] ?? ("", "", "")
@@ -197,6 +224,22 @@ public final class ChatEngine: @unchecked Sendable {
                     )))
                 }
             }
+        }
+        
+        // Flush Any Pending Text
+        let pending = parser.flush()
+        if let thinkingChunk = pending.thinking, !thinkingChunk.isEmpty {
+            fullThinking += thinkingChunk
+            hasEmittedThought = true
+            continuation.yield(.thought(thinkingChunk))
+        }
+        if hasEmittedThought {
+            continuation.yield(.thoughtCompleted)
+            hasEmittedThought = false
+        }
+        if let contentChunk = pending.content, !contentChunk.isEmpty {
+            fullResponse += contentChunk
+            continuation.yield(.delta(contentChunk))
         }
         
         if Task.isCancelled { return .finish }
@@ -246,13 +289,13 @@ public final class ChatEngine: @unchecked Sendable {
                 }
                 let callsJSON = (try? SerializationUtils.jsonEncoder.encode(callsForDB)).flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
                 
-                let assistantMsg = ConversationMessage(sessionId: sessionId, role: .assistant, content: fullResponse, toolCalls: callsJSON)
+                let assistantMsg = ConversationMessage(sessionId: sessionId, role: .assistant, content: fullResponse, think: fullThinking.isEmpty ? nil : fullThinking, toolCalls: callsJSON)
                 try? await persistenceService.saveMessage(assistantMsg)
                 
                 let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
                 await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
                 
-                continuation.yield(.completion(fullResponse))
+                continuation.yield(.generationCompleted(message: assistantMsg.toMessage(), metadata: APIResponseMetadata(model: modelName)))
                 return .finish
             }
             
@@ -265,14 +308,15 @@ public final class ChatEngine: @unchecked Sendable {
                 sessionId: sessionId,
                 role: .assistant,
                 content: fullResponse,
-                recalledMemories: String(decoding: (try? SerializationUtils.jsonEncoder.encode(contextData.memories.map { $0.memory })) ?? Data(), as: UTF8.self)
+                recalledMemories: String(decoding: (try? SerializationUtils.jsonEncoder.encode(contextData.memories.map { $0.memory })) ?? Data(), as: UTF8.self),
+                think: fullThinking.isEmpty ? nil : fullThinking
             )
             try? await persistenceService.saveMessage(assistantMsg)
             
             let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
             await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
             
-            continuation.yield(.completion(fullResponse))
+            continuation.yield(.generationCompleted(message: assistantMsg.toMessage(), metadata: APIResponseMetadata(model: modelName)))
             return .finish
         }
     }
@@ -282,7 +326,7 @@ public final class ChatEngine: @unchecked Sendable {
     private func saveConversationSteps(
         sessionId: UUID,
         message: String,
-        toolOutputs: [MonadCore.ToolOutputSubmission]?
+        toolOutputs: [ToolOutputSubmission]?
     ) async throws {
         if let toolOutputs = toolOutputs {
             for output in toolOutputs {
@@ -297,8 +341,7 @@ public final class ChatEngine: @unchecked Sendable {
         }
         
         if !message.isEmpty {
-            let userMsg = ConversationMessage(
-                sessionId: sessionId, role: .user, content: message)
+            let userMsg = ConversationMessage(sessionId: sessionId, role: .user, content: message)
             try await persistenceService.saveMessage(userMsg)
         } else if toolOutputs?.isEmpty ?? true {
             throw ToolError.invalidArgument("Message and tool outputs cannot both be empty")
@@ -372,11 +415,11 @@ public final class ChatEngine: @unchecked Sendable {
             
             let argsData = call.function.arguments.data(using: .utf8) ?? Data()
             let argsDict = (try? JSONSerialization.jsonObject(with: argsData) as? [String: Any]) ?? [:]
-            
+
             do {
                 let result = try await tool.execute(parameters: argsDict)
                 debugRecords.append(ToolResultRecord(toolCallId: call.id, name: call.function.name, output: result.output, turn: turnCount))
-                continuation.yield(.toolResult(name: call.function.name, output: result.output))
+                continuation.yield(.toolExecution(toolCallId: call.id, status: .success(result)))
                 executionResults.append(.tool(.init(content: .textContent(.init(result.output)), toolCallId: call.id)))
             } catch let error as ToolError {
                 if case .clientExecutionRequired = error {

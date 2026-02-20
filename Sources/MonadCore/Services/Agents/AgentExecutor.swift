@@ -68,8 +68,8 @@ public struct AgentExecutor: Sendable {
                 switch event {
                 case .delta(let content):
                     fullContent += content
-                case .completion(let content):
-                    fullContent = content
+                case .generationCompleted(let message, _):
+                    fullContent = message.content
                 default:
                     break
                 }

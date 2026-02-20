@@ -7,8 +7,8 @@ public struct ToolCall: Identifiable, Equatable, Codable, Sendable, Hashable {
     public let name: String
     public let arguments: [String: AnyCodable]
 
-    public init(name: String, arguments: [String: AnyCodable]) {
-        self.id = UUID()
+    public init(id: UUID? = nil, name: String, arguments: [String: AnyCodable]) {
+        self.id = id ?? UUID()
         self.name = name
         self.arguments = arguments
     }

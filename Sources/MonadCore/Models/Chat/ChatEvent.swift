@@ -1,92 +1,84 @@
 import MonadShared
 import Foundation
 
-/// A submission of a tool output
-public struct ToolOutputSubmission: Codable, Sendable {
-    public let toolCallId: String
-    public let output: String
-
-    public init(toolCallId: String, output: String) {
-        self.toolCallId = toolCallId
-        self.output = output
-    }
+public enum ToolExecutionStatus: Sendable {
+    case attempting(name: String, reference: ToolReference)
+    case success(ToolResult)
+    case failure(Error)
 }
 
 /// Events emitted by ChatEngine during a chat turn.
-/// Reuses existing types: ToolCallDelta, ChatMetadata.
 public enum ChatEvent: Sendable {
+    /// RAG context metadata — emitted once at the start of the loop
+    case generationContext(ChatMetadata)
+    
     /// Incremental content chunk from the LLM
     case delta(String)
     
     /// Chain-of-thought reasoning chunk
     case thought(String)
     
+    /// Chain-of-thought reasoning block finished
+    case thoughtCompleted
+    
     /// Tool call being assembled (streaming deltas)
     case toolCall(ToolCallDelta)
     
-    /// Tool finished executing
-    case toolResult(name: String, output: String)
+    /// Asynchronous tool execution status Updates
+    case toolExecution(toolCallId: String, status: ToolExecutionStatus)
     
-    /// RAG context metadata — emitted once at the start of the loop
-    case metadata(ChatMetadata)
-    
-    /// Stream completed with final accumulated content
-    case completion(String)
+    /// Stream completed with final accumulated message and token metadata
+    case generationCompleted(message: Message, metadata: APIResponseMetadata)
     
     /// Error occurred
-    case error(String)
+    case error(Error)
 }
 
 // MARK: - Convenience Properties
 
 extension ChatEvent {
-    /// Extract content from a `.delta` event
-    public var content: String? {
-        if case .delta(let c) = self { return c }
+    public var generationContext: ChatMetadata? {
+        if case .generationContext(let m) = self { return m }
         return nil
     }
     
-    /// Extract content from a `.completion` event
-    public var completionContent: String? {
-        if case .completion(let c) = self { return c }
+    public var delta: String? {
+        if case .delta(let s) = self { return s }
         return nil
     }
     
-    /// Whether this is a `.completion` event
-    public var isCompletion: Bool {
-        if case .completion = self { return true }
+    public var thought: String? {
+        if case .thought(let s) = self { return s }
+        return nil
+    }
+    
+    public var isThoughtCompleted: Bool {
+        if case .thoughtCompleted = self { return true }
         return false
     }
     
-    /// Whether this is an `.error` event
+    public var toolCall: ToolCallDelta? {
+        if case .toolCall(let tc) = self { return tc }
+        return nil
+    }
+    
+    public var toolExecution: (toolCallId: String, status: ToolExecutionStatus)? {
+        if case .toolExecution(let id, let status) = self { return (id, status) }
+        return nil
+    }
+    
+    public var generationCompleted: (message: Message, metadata: APIResponseMetadata)? {
+        if case .generationCompleted(let msg, let meta) = self { return (msg, meta) }
+        return nil
+    }
+    
+    public var error: Error? {
+        if case .error(let e) = self { return e }
+        return nil
+    }
+    
     public var isError: Bool {
         if case .error = self { return true }
         return false
-    }
-}
-
-/// A delta for a tool call in a streaming response
-public struct ToolCallDelta: Sendable, Codable {
-    public let index: Int
-    public let id: String?
-    public let name: String?
-    public let arguments: String?
-
-    public init(index: Int, id: String? = nil, name: String? = nil, arguments: String? = nil) {
-        self.index = index
-        self.id = id
-        self.name = name
-        self.arguments = arguments
-    }
-}
-
-/// Metadata about the context used for a chat response
-public struct ChatMetadata: Sendable, Codable {
-    public let memories: [UUID]
-    public let files: [String]
-
-    public init(memories: [UUID] = [], files: [String] = []) {
-        self.memories = memories
-        self.files = files
     }
 }

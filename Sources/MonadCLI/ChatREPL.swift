@@ -320,61 +320,91 @@ actor ChatREPL: ChatREPLController {
             let stream = try await client.chatStream(sessionId: session.id, message: message)
 
             var toolCallState: [Int: (name: String, args: String)] = [:]
-            var currentToolIndex: Int? = nil
             var assistantStartPrinted = false
 
             for try await delta in stream {
-                // 1. Metadata (printed before "Assistant:" prompt)
-                if let metadata = delta.metadata {
-                    if !metadata.memories.isEmpty || !metadata.files.isEmpty {
-                        let memories = metadata.memories.count
-                        let files = metadata.files.count
-                        print(TerminalUI.dim("Using \(memories) memories and \(files) files"))
-                    }
-                }
-
-                // 2. Error
-                if let error = delta.error {
-                    print("\n")
-                    TerminalUI.printError("Stream Error: \(error)")
-                    return
-                }
-
-                // 3. Tool Calls
-                if let toolCalls = delta.toolCalls {
-                    for call in toolCalls {
-                        let index = call.index
-                        var state = toolCallState[index] ?? ("", "")
-                        if let name = call.name { state.name += name }
-                        if let args = call.arguments { state.args += args }
-                        toolCallState[index] = state
-
-                        if currentToolIndex != index {
-                            if currentToolIndex != nil { print("") }
-                            TerminalUI.printToolCall(name: state.name, args: state.args)
-                            currentToolIndex = index
+                switch delta.type {
+                case .generationContext:
+                    if let metadata = delta.metadata {
+                        if !metadata.memories.isEmpty || !metadata.files.isEmpty {
+                            let memories = metadata.memories.count
+                            let files = metadata.files.count
+                            print(TerminalUI.dim("Using \(memories) memories and \(files) files"))
                         }
                     }
-                    fflush(stdout)
-                }
-
-                // 4. Content
-                if let content = delta.content {
-                    if currentToolIndex != nil {
+                    
+                case .thought:
+                    if let thought = delta.thought {
+                        if !assistantStartPrinted {
+                            // Indicate reasoning phase
+                            print(TerminalUI.dim("🤔 Thinking..."))
+                            assistantStartPrinted = true
+                        }
+                        // Optionally print thinking chunk-by-chunk if verbose, or just keep it silent/dim
+                        print(TerminalUI.dim(thought), terminator: "")
+                        fflush(stdout)
+                    }
+                    
+                case .thoughtCompleted:
+                    print("\n")
+                    
+                case .toolCall:
+                    // Legacy or internal buffering
+                    if let toolCalls = delta.toolCalls {
+                        for call in toolCalls {
+                            let index = call.index
+                            var state = toolCallState[index] ?? ("", "")
+                            if let name = call.name { state.name += name }
+                            if let args = call.arguments { state.args += args }
+                            toolCallState[index] = state
+                        }
+                    }
+                    
+                case .toolExecution:
+                    if let execution = delta.toolExecution {
+                        switch execution.status {
+                        case "attempting":
+                            let targetInfo = execution.target != nil ? " on \(execution.target!)" : ""
+                            print(TerminalUI.yellow("🔄 Running \(execution.name ?? "tool")\(targetInfo)..."))
+                        case "success":
+                            print(TerminalUI.green("✅ Tool completed"))
+                        case "failure":
+                            print(TerminalUI.red("❌ Tool failed: \(execution.result ?? "Unknown error")"))
+                        default:
+                            break
+                        }
+                    }
+                    
+                case .delta:
+                    if let content = delta.content {
+                        if !assistantStartPrinted {
+                            TerminalUI.printAssistantStart()
+                            assistantStartPrinted = true
+                        }
+                        print(content, terminator: "")
+                        fflush(stdout)
+                    }
+                    
+                case .generationCompleted:
+                    if let meta = delta.responseMetadata {
+                        let tokens = meta.totalTokens ?? 0
+                        let dur = String(format: "%.1fs", meta.duration ?? 0)
+                        print(TerminalUI.dim("\n[Generated in \(dur), \(tokens) tokens]"))
+                    } else {
                         print("\n")
-                        TerminalUI.printAssistantStart()
-                        assistantStartPrinted = true
-                        currentToolIndex = nil
                     }
-                    if !assistantStartPrinted {
-                        TerminalUI.printAssistantStart()
-                        assistantStartPrinted = true
+                    
+                case .error:
+                    if let error = delta.error {
+                        print("\n")
+                        TerminalUI.printError("Stream Error: \(error)")
+                        return
                     }
-                    print(content, terminator: "")
-                    fflush(stdout)
+                    
+                case .streamCompleted:
+                    break
                 }
             }
-            print("\n")
 
         } catch {
             print("")

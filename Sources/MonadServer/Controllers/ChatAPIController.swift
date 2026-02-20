@@ -65,8 +65,8 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             switch event {
             case .delta(let content):
                 fullResponse += content
-            case .completion(let content):
-                fullResponse = content
+            case .generationCompleted(let message, _):
+                fullResponse = message.content
             default:
                 break
             }
@@ -101,32 +101,83 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                     for try await event in chatEngineStream {
                         let apiDelta: MonadShared.ChatDelta
                         switch event {
+                        case .generationContext(let m):
+                            apiDelta = MonadShared.ChatDelta(type: .generationContext, metadata: m)
                         case .delta(let content):
-                            apiDelta = MonadShared.ChatDelta(content: content)
+                            apiDelta = MonadShared.ChatDelta(type: .delta, content: content)
                         case .thought(let content):
-                            apiDelta = MonadShared.ChatDelta(thought: content)
+                            apiDelta = MonadShared.ChatDelta(type: .thought, thought: content)
+                        case .thoughtCompleted:
+                            apiDelta = MonadShared.ChatDelta(type: .thoughtCompleted)
                         case .toolCall(let tc):
-                            apiDelta = MonadShared.ChatDelta(toolCalls: [
-                                MonadShared.ToolCallDelta(index: tc.index, id: tc.id, name: tc.name, arguments: tc.arguments)
-                            ])
-                        case .metadata(let m):
-                            apiDelta = MonadShared.ChatDelta(metadata: MonadShared.ChatMetadata(memories: m.memories, files: m.files))
-                        case .completion:
-                            apiDelta = MonadShared.ChatDelta(isDone: true)
+                            apiDelta = MonadShared.ChatDelta(type: .toolCall, toolCalls: [tc])
+                        case .toolExecution(let id, let status):
+                            let statusStr: String
+                            var name: String?
+                            var target: String?
+                            var resultStr: String?
+                            
+                            switch status {
+                            case .attempting(let n, let ref):
+                                statusStr = "attempting"
+                                name = n
+                                switch ref {
+                                case .known:
+                                    target = "server"
+                                case .custom:
+                                    target = "client"
+                                }
+                            case .success(let res):
+                                statusStr = "success"
+                                resultStr = res.output
+                            case .failure(let err):
+                                statusStr = "failure"
+                                resultStr = err.localizedDescription
+                            }
+                            
+                            apiDelta = MonadShared.ChatDelta(
+                                type: .toolExecution,
+                                toolExecution: MonadShared.ToolExecutionDelta(
+                                    toolCallId: id,
+                                    status: statusStr,
+                                    name: name,
+                                    target: target,
+                                    result: resultStr
+                                )
+                            )
+                        case .generationCompleted(_, let meta):
+                            let apiMeta = MonadShared.APIMetadataDelta(
+                                model: meta.model,
+                                promptTokens: meta.promptTokens,
+                                completionTokens: meta.completionTokens,
+                                totalTokens: meta.totalTokens,
+                                finishReason: meta.finishReason,
+                                systemFingerprint: meta.systemFingerprint,
+                                duration: meta.duration,
+                                tokensPerSecond: meta.tokensPerSecond
+                            )
+                            apiDelta = MonadShared.ChatDelta(type: .generationCompleted, responseMetadata: apiMeta)
                         case .error(let e):
-                            apiDelta = MonadShared.ChatDelta(error: e)
-                        case .toolResult:
-                            continue  // Not sent to client
+                            apiDelta = MonadShared.ChatDelta(type: .error, error: e.localizedDescription)
                         }
+                        
                         if let data = try? SerializationUtils.jsonEncoder.encode(apiDelta) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))
                         }
                     }
+                    
+                    // Signal end of stream
+                    let doneDelta = MonadShared.ChatDelta(type: .streamCompleted)
+                    if let data = try? SerializationUtils.jsonEncoder.encode(doneDelta) {
+                        let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                        continuation.yield(ByteBuffer(string: sseString))
+                    }
+                    
                     continuation.finish()
                 } catch {
                     Logger.chat.error("Stream error: \(error)")
-                    let errorDelta = MonadShared.ChatDelta(error: error.localizedDescription)
+                    let errorDelta = MonadShared.ChatDelta(type: .error, error: error.localizedDescription)
                     if let data = try? SerializationUtils.jsonEncoder.encode(errorDelta) {
                         let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                         continuation.yield(ByteBuffer(string: sseString))

@@ -26,7 +26,7 @@ public struct SSEStreamReader: Sendable {
                             buffer = String(buffer[range.upperBound...])
 
                             if let delta = parseSSEMessage(message) {
-                                if delta.isDone {
+                                if delta.type == .streamCompleted {
                                     logger.debug("Stream done")
                                     continuation.finish()
                                     return
@@ -57,7 +57,7 @@ public struct SSEStreamReader: Sendable {
 
                 // Check for done marker
                 if data == "[DONE]" {
-                    return MonadShared.ChatDelta(isDone: true)
+                    return MonadShared.ChatDelta(type: .streamCompleted)
                 }
 
                 // Try to parse JSON
@@ -91,11 +91,11 @@ public struct SSEStreamReader: Sendable {
                                 }
                             }
 
-                            return MonadShared.ChatDelta(content: content, toolCalls: toolCallDeltas)
+                            return MonadShared.ChatDelta(type: .delta, content: content, toolCalls: toolCallDeltas)
                         }
                     } catch {
                         // If JSON parsing fails, treat as plain text
-                        return MonadShared.ChatDelta(content: data)
+                        return MonadShared.ChatDelta(type: .delta, content: data)
                     }
                 }
             }

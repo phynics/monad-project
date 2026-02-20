@@ -71,7 +71,7 @@ import Dependencies
                             let body = try await String(buffer: await response.body)
                             // SSE format check
                             #expect(body.contains("data:"))
-                            #expect(body.contains("\"isDone\":true"))
+                            #expect(body.contains("\"type\":\"streamCompleted\""))
                         }
                     }
                 }

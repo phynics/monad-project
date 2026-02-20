@@ -64,20 +64,27 @@ public class StreamingParser {
 
     /// Finalize parsing and return complete buffers
     public func finalize() -> (thinking: String?, content: String) {
-        // Flush remaining buffer
+        _ = flush()
+        let finalThinking = thinkingBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalContent = contentBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (finalThinking.isEmpty ? nil : finalThinking, finalContent)
+    }
+    
+    /// Flushes any pending text in the buffer and returns just the newly flushed segments
+    public func flush() -> (thinking: String?, content: String?) {
+        var newThinking: String?
+        var newContent: String?
         if !buffer.isEmpty {
             if insideThinkTag {
                 thinkingBuffer += buffer
+                newThinking = buffer
             } else {
                 contentBuffer += buffer
+                newContent = buffer
             }
             buffer = ""
         }
-
-        let finalThinking = thinkingBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
-        let finalContent = contentBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        return (finalThinking.isEmpty ? nil : finalThinking, finalContent)
+        return (newThinking, newContent)
     }
 
     /// Reset parser state
