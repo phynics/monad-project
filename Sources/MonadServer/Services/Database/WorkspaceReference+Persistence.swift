@@ -44,8 +44,13 @@ extension WorkspaceReference {
         
         let ownerId: UUID? = row["ownerId"]
         
-        let toolsString: String = row["tools"]
-        let tools = (try? JSONDecoder().decode([ToolReference].self, from: toolsString.data(using: .utf8) ?? Data())) ?? []
+        let toolsString: String? = row.hasColumn("tools") ? row["tools"] : nil
+        let tools: [ToolReference]
+        if let ts = toolsString, !ts.isEmpty {
+            tools = (try? JSONDecoder().decode([ToolReference].self, from: ts.data(using: .utf8) ?? Data())) ?? []
+        } else {
+            tools = []
+        }
         
         let rootPath: String? = row["rootPath"]
         

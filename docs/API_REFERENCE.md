@@ -103,6 +103,32 @@ Returns detailed health status of all system components.
 ```
 **Response:** Server-Sent Events (SSE) stream of `ChatDelta` objects.
 
+Each event in the SSE stream parses into a `ChatDelta` object with a specific `type` indicating the phase of generation:
+
+```json
+{
+  "type": "thought", 
+  "content": null,
+  "thought": "I should call a tool here...",
+  "toolCalls": null,
+  "error": null,
+  "message": null,
+  "responseMetadata": null,
+  "toolExecution": null
+}
+```
+
+**Known Event Types:**
+- `generationContext`: Sent once at the start. Contains `ChatMetadata`.
+- `thought`: The model's raw internal reasoning process.
+- `thoughtCompleted`: Signals the reasoning phase has concluded. 
+- `delta`: The model's content output intended for the user.
+- `toolCall`: JSON tool call signature delta.
+- `toolExecution`: Asynchronous status update of a tool executing (status: `attempting`, `success`, `failure`). Includes `toolExecution` block with `toolCallId`, `name`, `status`, `target`, and `result`.
+- `generationCompleted`: Sent when the turn is structurally complete. Includes the finalized `Message` object and token `responseMetadata`.
+- `streamCompleted`: The very last event. Closes the connection.
+- `error`: Indicates a failure. Includes an `error` string.
+
 ---
 
 ## Memories

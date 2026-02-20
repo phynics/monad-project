@@ -434,5 +434,14 @@ extension DatabaseSchema {
             )
             try coordinatorAgent.insert(db)
         }
+
+        // v28: Ensure tools column exists on workspace table
+        migrator.registerMigration("v28") { db in
+            if try db.tableExists("workspace") && !db.columns(in: "workspace").contains(where: { $0.name == "tools" }) {
+                try db.alter(table: "workspace") { t in
+                    t.add(column: "tools", .text).notNull().defaults(to: "[]")
+                }
+            }
+        }
     }
 }
