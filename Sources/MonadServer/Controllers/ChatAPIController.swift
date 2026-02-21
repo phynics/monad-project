@@ -96,7 +96,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         )
 
         let sseStream = AsyncStream<ByteBuffer> { continuation in
-            Task {
+            let task = Task {
                 do {
                     for try await event in chatEngineStream {
                         let apiDelta: MonadShared.ChatDelta
@@ -154,7 +154,8 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                                 finishReason: meta.finishReason,
                                 systemFingerprint: meta.systemFingerprint,
                                 duration: meta.duration,
-                                tokensPerSecond: meta.tokensPerSecond
+                                tokensPerSecond: meta.tokensPerSecond,
+                                debugSnapshotData: meta.debugSnapshotData
                             )
                             apiDelta = MonadShared.ChatDelta(type: .generationCompleted, responseMetadata: apiMeta)
                         case .error(let e):
@@ -176,14 +177,20 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                     
                     continuation.finish()
                 } catch {
-                    Logger.chat.error("Stream error: \(error)")
-                    let errorDelta = MonadShared.ChatDelta(type: .error, error: error.localizedDescription)
-                    if let data = try? SerializationUtils.jsonEncoder.encode(errorDelta) {
-                        let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
-                        continuation.yield(ByteBuffer(string: sseString))
+                    if !(error is CancellationError) {
+                        Logger.chat.error("Stream error: \(error)")
+                        let errorDelta = MonadShared.ChatDelta(type: .error, error: error.localizedDescription)
+                        if let data = try? SerializationUtils.jsonEncoder.encode(errorDelta) {
+                            let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                            continuation.yield(ByteBuffer(string: sseString))
+                        }
                     }
                     continuation.finish()
                 }
+            }
+            
+            continuation.onTermination = { @Sendable _ in
+                task.cancel()
             }
         }
 

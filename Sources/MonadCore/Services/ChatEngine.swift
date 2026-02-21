@@ -69,7 +69,7 @@ public final class ChatEngine: @unchecked Sendable {
         let modelName = await llmService.configuration.modelName
         
         return AsyncThrowingStream<ChatEvent, Error> { continuation in
-            Task {
+            let task = Task {
                 await self.runChatLoop(
                     continuation: continuation,
                     sessionId: sessionId,
@@ -81,6 +81,10 @@ public final class ChatEngine: @unchecked Sendable {
                     modelName: modelName,
                     maxTurns: maxTurns
                 )
+            }
+            
+            continuation.onTermination = { @Sendable _ in
+                task.cancel()
             }
         }
     }

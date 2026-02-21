@@ -1,6 +1,6 @@
-import MonadShared
 import Foundation
 import MonadClient
+import MonadCore
 
 /// Protocol for a slash command in the chat REPL
 protocol SlashCommand: Sendable {
@@ -34,6 +34,7 @@ protocol ChatREPLController: Sendable {
     func setSelectedWorkspace(_ id: UUID?) async
     func getSelectedWorkspace() async -> UUID?
     func refreshContext() async
+    func getLastDebugSnapshot() async -> DebugSnapshot?
 }
 
 /// Registry for slash commands

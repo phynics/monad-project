@@ -21,17 +21,19 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
         // Run initial cleanup
         await cleanup()
         
-        // Then run periodically (every 24 hours)
-        while !Task.isCancelled {
-            do {
-                try await Task.sleep(nanoseconds: 86400 * 1_000_000_000) // 24 hours
-                await cleanup()
-            } catch {
-                if error is CancellationError {
-                    logger.info("OrphanCleanupService shutting down gracefully")
-                    break
+        await cancelWhenGracefulShutdown {
+            // Then run periodically (every 24 hours)
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(nanoseconds: 86400 * 1_000_000_000) // 24 hours
+                    await self.cleanup()
+                } catch {
+                    if error is CancellationError {
+                        self.logger.info("OrphanCleanupService shutting down gracefully")
+                        break
+                    }
+                    self.logger.error("Error in OrphanCleanupService loop: \(error)")
                 }
-                logger.error("Error in OrphanCleanupService loop: \(error)")
             }
         }
         logger.info("OrphanCleanupService stopped")

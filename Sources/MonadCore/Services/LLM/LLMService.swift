@@ -70,9 +70,6 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         }
     }
 
-    /// External tool providers (e.g. MCP) injected from the platform targets
-    private var toolProviders: [any ToolProvider] = []
-
     /// Service for generating text embeddings
     @Dependency(\.embeddingService) private var defaultEmbeddingService
     private let explicitEmbeddingService: (any EmbeddingServiceProtocol)?
@@ -140,10 +137,6 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     }
 
     // MARK: - Public API
-
-    public func registerToolProvider(_ provider: any ToolProvider) {
-        toolProviders.append(provider)
-    }
 
     public func loadConfiguration() async {
         let config = await storage.load()

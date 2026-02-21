@@ -75,6 +75,8 @@ make open
 
 *   **Concurrency:** use `AsyncThrowingStream` for processes that emit progress updates, rather than closure callbacks. This allows for cleaner `for try await` loops at the call site.
 
+*   **Graceful Shutdown:** Any `Service` registered with `ServiceGroup` **must** wrap its long-running work in `cancelWhenGracefulShutdown { ... }` (from `ServiceLifecycle`). Do NOT rely on `Task.isCancelled` alone—it is only set *after* all services have returned from `run()`, which will deadlock if services are waiting for it. See `BonjourAdvertiser` for a reference implementation.
+
 *   **Code Structure:**
     *   `Sources/`: Application source code.
     *   `Tests/`: Unit and integration tests.

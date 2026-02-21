@@ -1,4 +1,3 @@
-
 import Foundation
 
 /// OpenAI API response metadata
@@ -11,11 +10,13 @@ public struct APIResponseMetadata: Equatable, Sendable, Codable {
     public var systemFingerprint: String?
     public var duration: TimeInterval?
     public var tokensPerSecond: Double?
+    public var debugSnapshotData: Data?
 
     public init(
         model: String? = nil, promptTokens: Int? = nil, completionTokens: Int? = nil,
         totalTokens: Int? = nil, finishReason: String? = nil, systemFingerprint: String? = nil,
-        duration: TimeInterval? = nil, tokensPerSecond: Double? = nil
+        duration: TimeInterval? = nil, tokensPerSecond: Double? = nil,
+        debugSnapshotData: Data? = nil
     ) {
         self.model = model
         self.promptTokens = promptTokens
@@ -25,5 +26,6 @@ public struct APIResponseMetadata: Equatable, Sendable, Codable {
         self.systemFingerprint = systemFingerprint
         self.duration = duration
         self.tokensPerSecond = tokensPerSecond
+        self.debugSnapshotData = debugSnapshotData
     }
 }

@@ -11,8 +11,10 @@ struct DebugCommand: SlashCommand {
     let category: String? = "Utilities"
 
     func run(args: [String], context: ChatContext) async throws {
-        do {
-            let snapshot = try await context.client.getDebugSnapshot(sessionId: context.session.id)
+            guard let snapshot = await context.repl.getLastDebugSnapshot() else {
+                TerminalUI.printInfo("No debug data available yet. Please run a chat prompt first.")
+                return
+            }
 
             let dateFormatter = DateFormatter()
             dateFormatter.dateStyle = .medium
@@ -81,9 +83,5 @@ struct DebugCommand: SlashCommand {
             }
 
             print(TerminalUI.bold("═══════════════════"))
-
-        } catch {
-            TerminalUI.printInfo("No debug data available for this session.")
-        }
     }
 }

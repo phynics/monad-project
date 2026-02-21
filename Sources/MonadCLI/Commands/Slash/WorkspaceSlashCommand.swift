@@ -8,7 +8,7 @@ struct WorkspaceSlashCommand: SlashCommand {
     let aliases = ["workspaces"]
     let description = "Manage workspaces"
     let category: String? = "Tools & Environment"
-    let usage = "/workspace [all|select|attach|detach] <args>"
+    let usage = "/workspace [all|select|attach|attach-pwd|detach] <args>"
 
     func run(args: [String], context: ChatContext) async throws {
         let subcommand = args.first
@@ -48,6 +48,8 @@ struct WorkspaceSlashCommand: SlashCommand {
             } else {
                 TerminalUI.printError("Usage: /workspace detach <id>")
             }
+        case "attach-pwd", "pwd":
+            try await attachCurrentDirectory(context: context)
         default:
             try await showSessionWorkspaces(context: context)
         }
@@ -169,6 +171,49 @@ struct WorkspaceSlashCommand: SlashCommand {
             TerminalUI.printSuccess("Attached \(selected.uri.description)")
         } else {
             print("Aborted.")
+        }
+    }
+
+    private func attachCurrentDirectory(context: ChatContext) async throws {
+        let pwd = FileManager.default.currentDirectoryPath
+        let hostname = ProcessInfo.processInfo.hostName
+        let uriString = "file://\(hostname)\(pwd)"
+        
+        guard let myId = RegistrationManager.shared.getIdentity()?.clientId else {
+            TerminalUI.printError("Could not determine local client identity.")
+            return
+        }
+
+        // Check if workspace already exists
+        let allWorkspaces = try await context.client.listWorkspaces()
+        var targetWorkspaceId: UUID? = nil
+        
+        if let existing = allWorkspaces.first(where: { $0.uri.description == uriString }) {
+            targetWorkspaceId = existing.id
+        } else {
+            // Create the workspace on the server for the local directory
+            guard let uri = WorkspaceURI(parsing: uriString) else {
+                TerminalUI.printError("Failed to parse URI for local directory.")
+                return
+            }
+            
+            let newWs = try await context.client.createWorkspace(
+                uri: uri,
+                hostType: .client,
+                ownerId: myId,
+                rootPath: pwd,
+                trustLevel: .full
+            )
+            targetWorkspaceId = newWs.id
+        }
+        
+        if let wsId = targetWorkspaceId {
+            try await context.client.attachWorkspace(wsId, to: context.session.id, isPrimary: false)
+            
+            // Persist the local reference
+            LocalConfigManager.shared.saveClientWorkspace(uri: uriString, id: wsId.uuidString)
+            
+            TerminalUI.printSuccess("Attached local directory '\(pwd)' as workspace.")
         }
     }
 }

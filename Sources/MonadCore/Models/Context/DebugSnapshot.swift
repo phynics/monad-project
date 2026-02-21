@@ -1,8 +1,7 @@
-import MonadShared
 import Foundation
 
 /// A snapshot of what was sent to the LLM for debuggging purposes
-public struct DebugSnapshot: Codable, Sendable {
+public struct DebugSnapshot: Codable, Sendable, Equatable {
     /// When this exchange happened
     public let timestamp: Date
 
@@ -40,7 +39,7 @@ public struct DebugSnapshot: Codable, Sendable {
 }
 
 /// Record of a tool call made during a chat exchange
-public struct ToolCallRecord: Codable, Sendable {
+public struct ToolCallRecord: Codable, Sendable, Equatable {
     public let name: String
     public let arguments: String  // raw JSON string
     public let turn: Int
@@ -53,7 +52,7 @@ public struct ToolCallRecord: Codable, Sendable {
 }
 
 /// Record of a tool execution result
-public struct ToolResultRecord: Codable, Sendable {
+public struct ToolResultRecord: Codable, Sendable, Equatable {
     public let toolCallId: String
     public let name: String
     public let output: String  // truncated if very large

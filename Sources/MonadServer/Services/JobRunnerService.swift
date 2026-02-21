@@ -25,40 +25,38 @@ public final class JobRunnerService: Service, @unchecked Sendable {
         // Initial scan
         try? await self.processPendingJobs(persistence)
         
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            // 1. Event Stream Listener
-            group.addTask {
-                for await event in await persistence.monitorJobs() {
-                    if Task.isCancelled { break }
-                    switch event {
-                    case .jobAdded(let job), .jobUpdated(let job):
-                         if job.status == .pending {
-                             // Immediate processing if ready and no schedule delay
-                             if let nextRun = job.nextRunAt, nextRun > Date() {
-                                 continue
+        try? await cancelWhenGracefulShutdown {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                // 1. Event Stream Listener
+                group.addTask {
+                    for await event in await persistence.monitorJobs() {
+                        if Task.isCancelled { break }
+                        switch event {
+                        case .jobAdded(let job), .jobUpdated(let job):
+                             if job.status == .pending {
+                                 // Immediate processing if ready and no schedule delay
+                                 if let nextRun = job.nextRunAt, nextRun > Date() {
+                                     continue
+                                 }
+                                 try? await self.processJob(job, persistence: persistence)
                              }
-                             try? await self.processJob(job, persistence: persistence)
-                         }
-                    case .jobDeleted:
-                         break
+                        case .jobDeleted:
+                             break
+                        }
                     }
                 }
-            }
-            
-            // 2. Periodic Scanner (for scheduled jobs and fail-safety)
-            group.addTask {
-                while !Task.isCancelled {
-                    try? await Task.sleep(nanoseconds: 10 * 1_000_000_000) // Check every 10s
-                    try? await self.processPendingJobs(persistence)
+                
+                // 2. Periodic Scanner (for scheduled jobs and fail-safety)
+                group.addTask {
+                    while !Task.isCancelled {
+                        try? await Task.sleep(nanoseconds: 10 * 1_000_000_000) // Check every 10s
+                        try? await self.processPendingJobs(persistence)
+                    }
                 }
+                
+                // Wait for all tasks to complete/cancel
+                try await group.waitForAll()
             }
-            
-            // Wait for cancellation or tasks to finish
-            while !Task.isCancelled {
-                try await Task.sleep(nanoseconds: 1_000_000_000)
-            }
-            
-            group.cancelAll()
         }
         
         logger.info("Job Runner Service stopped")

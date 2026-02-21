@@ -16,6 +16,7 @@ actor ChatREPL: ChatREPLController {
     private var session: Session
     private var running = true
     private var selectedWorkspaceId: UUID?
+    private var lastDebugSnapshot: DebugSnapshot?
 
     // Slash Command Registry
     private let registry = SlashCommandRegistry()
@@ -115,8 +116,12 @@ actor ChatREPL: ChatREPLController {
         self.selectedWorkspaceId = id
     }
 
-    func getSelectedWorkspace() async -> UUID? {
+    public func getSelectedWorkspace() -> UUID? {
         return selectedWorkspaceId
+    }
+
+    public func getLastDebugSnapshot() -> DebugSnapshot? {
+        return lastDebugSnapshot
     }
 
     func refreshContext() async {
@@ -144,6 +149,9 @@ actor ChatREPL: ChatREPLController {
                              let path = url.path
                              if !FileManager.default.fileExists(atPath: path) {
                                  workspacesToRestore.append(ws)
+                             } else {
+                                 // Add active ones to local tracking if they exist
+                                 LocalConfigManager.shared.saveClientWorkspace(uri: ws.uri.description, id: ws.id.uuidString)
                              }
                          }
                     }
@@ -387,6 +395,10 @@ actor ChatREPL: ChatREPLController {
                     
                 case .generationCompleted:
                     if let meta = delta.responseMetadata {
+                        if let snapshotData = meta.debugSnapshotData {
+                            self.lastDebugSnapshot = try? SerializationUtils.jsonDecoder.decode(DebugSnapshot.self, from: snapshotData)
+                        }
+
                         let tokens = meta.totalTokens ?? 0
                         let dur = String(format: "%.1fs", meta.duration ?? 0)
                         print(TerminalUI.dim("\n[Generated in \(dur), \(tokens) tokens]"))
