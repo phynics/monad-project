@@ -38,6 +38,9 @@ public protocol Tool: Sendable, PromptFormattable {
 
     /// Convert to OpenAI tool parameter
     func toToolParam() -> ChatQuery.ChatCompletionToolParam
+    
+    /// Type-erase to AnyTool
+    func toAnyTool() -> AnyTool
 }
 
 // MARK: - Default Implementation
@@ -91,6 +94,11 @@ extension Tool {
                 parameters: schema
             )
         )
+    }
+    
+    /// Type-erase to AnyTool
+    public func toAnyTool() -> AnyTool {
+        AnyTool(self)
     }
 }
 

@@ -148,6 +148,14 @@ public final class ChatEngine: @unchecked Sendable {
                 return
             }
         }
+        
+        // If we hit maxTurns, we still yield a completion event for the last turn's state
+        // but without a new message (since we didn't get a final text response).
+        continuation.yield(.generationCompleted(
+            message: Message(timestamp: Date(), content: "", role: .assistant, isSummary: true),
+            metadata: APIResponseMetadata(model: modelName, duration: 0, tokensPerSecond: 0)
+        ))
+        
         continuation.finish()
     }
     
@@ -480,7 +488,11 @@ public final class ChatEngine: @unchecked Sendable {
             do {
                 let result = try await tool.execute(parameters: argsDict)
                 debugRecords.append(ToolResultRecord(toolCallId: call.id, name: call.function.name, output: result.output, turn: turnCount))
-                continuation.yield(.toolExecution(toolCallId: call.id, status: .success(result)))
+                if result.success {
+                    continuation.yield(.toolExecution(toolCallId: call.id, status: .success(result)))
+                } else {
+                    continuation.yield(.toolExecution(toolCallId: call.id, status: .failure(ToolError.executionFailed(result.error ?? "Unknown error"))))
+                }
                 executionResults.append(.tool(.init(content: .textContent(.init(result.output)), toolCallId: call.id)))
             } catch let error as ToolError {
                 if case .clientExecutionRequired = error {

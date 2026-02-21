@@ -5,7 +5,7 @@ import OpenAI
 import MonadPrompt
 
 // Mock for LLMServiceProtocol
-actor MockLLMService: LLMServiceProtocol {
+actor RaptorMockLLMService: LLMServiceProtocol {
     var isConfigured: Bool = true
     var configuration: LLMConfiguration = .openAI
 
@@ -56,11 +56,11 @@ actor MockLLMService: LLMServiceProtocol {
 @MainActor
 final class RaptorCompressionTests: XCTestCase {
     var compressor: ContextCompressor!
-    var mockLLM: MockLLMService!
+    var mockLLM: RaptorMockLLMService!
 
     override func setUp() async throws {
         compressor = ContextCompressor()
-        mockLLM = MockLLMService()
+        mockLLM = RaptorMockLLMService()
     }
 
     func testSummarizeToolInteractions() async {
