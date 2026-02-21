@@ -109,6 +109,7 @@ public final class ChatEngine: @unchecked Sendable {
     ) async {
         var currentMessages = initialMessages
         var turnCount = 0
+        var accumulatedRawOutput = ""
         
         // Emit Metadata Event
         let metadata = ChatMetadata(
@@ -132,7 +133,8 @@ public final class ChatEngine: @unchecked Sendable {
                     modelName: modelName,
                     turnCount: turnCount,
                     sessionId: sessionId,
-                    continuation: continuation
+                    continuation: continuation,
+                    accumulatedRawOutput: &accumulatedRawOutput
                 )
                 
                 switch result {
@@ -168,7 +170,8 @@ public final class ChatEngine: @unchecked Sendable {
         modelName: String,
         turnCount: Int,
         sessionId: UUID,
-        continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
+        continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation,
+        accumulatedRawOutput: inout String
     ) async throws -> TurnResult {
         var debugToolCalls: [ToolCallRecord] = []
         var debugToolResults: [ToolResultRecord] = []
@@ -260,6 +263,12 @@ public final class ChatEngine: @unchecked Sendable {
             fullResponse += contentChunk
             continuation.yield(.delta(contentChunk))
         }
+        
+        // Accumulate raw output for debug
+        accumulatedRawOutput += fullThinking
+        accumulatedRawOutput += fullResponse
+        
+        let renderedPrompt = renderMessages(currentMessages)
         
         if Task.isCancelled { return .finish }
         
@@ -365,7 +374,15 @@ public final class ChatEngine: @unchecked Sendable {
             )
             try? await persistenceService.saveMessage(assistantMsg)
             
-            let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
+            let snapshot = DebugSnapshot(
+                structuredContext: structuredContext,
+                toolCalls: debugToolCalls,
+                toolResults: debugToolResults,
+                renderedPrompt: renderedPrompt,
+                rawOutput: accumulatedRawOutput,
+                model: modelName,
+                turnCount: turnCount
+            )
             await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
             
             let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
@@ -505,5 +522,36 @@ public final class ChatEngine: @unchecked Sendable {
             }
         }
         return (executionResults, requiresClientExecution, debugRecords)
+    }
+
+    private func renderMessages(_ messages: [ChatQuery.ChatCompletionMessageParam]) -> String {
+        var output = ""
+        for message in messages {
+            switch message {
+            case .system(let param):
+                output += "─── [SYSTEM] ───\n\(param.content)\n\n"
+            case .user(let param):
+                output += "─── [USER] ───\n\(param.content)\n\n"
+            case .assistant(let param):
+                var content = ""
+                if let c = param.content {
+                    content = "\(c)"
+                }
+                output += "─── [ASSISTANT] ───\n\(content)\n"
+                if let toolCalls = param.toolCalls {
+                    for call in toolCalls {
+                        output += "Call: \(call.function.name)(\(call.function.arguments))\n"
+                    }
+                }
+                output += "\n"
+            case .tool(let param):
+                output += "─── [TOOL: \(param.toolCallId)] ───\n\(param.content)\n\n"
+            case .developer(let param):
+                output += "─── [DEVELOPER] ───\n\(param.content)\n\n"
+            @unknown default:
+                output += "─── [UNKNOWN] ───\n\(message)\n\n"
+            }
+        }
+        return output
     }
 }

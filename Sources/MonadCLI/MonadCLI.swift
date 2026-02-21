@@ -19,11 +19,19 @@ struct MonadCLI: AsyncParsableCommand {
               /help                         Show available commands
               /status                       Show server status
               /config                       View/edit configuration
-              /quit                         Exit
+              /debug                        Show rendered prompt & raw output
+              /quit                         Exit (or :q)
               
-            ENVIRONMENT VARIABLES:
-              MONAD_API_KEY                 API key for authentication
-              MONAD_SERVER_URL              Server URL (default: http://127.0.0.1:8080)
+              SESSION & WORKSPACE:
+              /new                          Start a new session
+              /session info/list/switch     Manage chat sessions
+              /workspace all/list/attach    Manage workspaces
+              /workspace attach-pwd         Attach current local directory
+              
+              FILES & CONTEXT:
+              /ls, /cat, /write, /edit      Explore & modify workspace files
+              /memory list/add/search       Manage session memories
+              /job list/add                 Track tasks for the assistant
             """,
         version: "1.0.0",
         subcommands: [Chat.self, Status.self, Query.self, Command.self],

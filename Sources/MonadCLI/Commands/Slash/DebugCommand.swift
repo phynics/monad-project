@@ -6,7 +6,7 @@ import MonadClient
 struct DebugCommand: SlashCommand {
     let name = "debug"
     let aliases: [String] = []
-    let description = "Show the raw context delivered to the LLM for the last exchange"
+    let description = "Show the rendered prompt and raw LLM output for the last exchange"
     let usage = "/debug"
     let category: String? = "Utilities"
 
@@ -26,6 +26,18 @@ struct DebugCommand: SlashCommand {
             print(TerminalUI.dim("Model: \(snapshot.model)"))
             print(TerminalUI.dim("Turns: \(snapshot.turnCount)"))
             print("")
+
+            if let rendered = snapshot.renderedPrompt {
+                print(TerminalUI.bold("─── Rendered Prompt ───"))
+                print(TerminalUI.dim(rendered))
+                print("")
+            }
+
+            if let rawOutput = snapshot.rawOutput, !rawOutput.isEmpty {
+                print(TerminalUI.bold("─── Raw Output (Full Stream) ───"))
+                print(rawOutput)
+                print("")
+            }
 
             // Display structured context sections
             // Sort keys for consistent ordering

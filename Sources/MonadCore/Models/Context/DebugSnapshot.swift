@@ -21,11 +21,19 @@ public struct DebugSnapshot: Codable, Sendable, Equatable {
     /// Number of ReAct turns (1 = no tool calls, >1 = tool loop)
     public let turnCount: Int
 
+    /// The rendered prompt sent to the LLM
+    public let renderedPrompt: String?
+
+    /// The raw response text received from the LLM (concatenated chunks)
+    public let rawOutput: String?
+
     public init(
         timestamp: Date = Date(),
         structuredContext: [String: String],
         toolCalls: [ToolCallRecord] = [],
         toolResults: [ToolResultRecord] = [],
+        renderedPrompt: String? = nil,
+        rawOutput: String? = nil,
         model: String,
         turnCount: Int
     ) {
@@ -33,6 +41,8 @@ public struct DebugSnapshot: Codable, Sendable, Equatable {
         self.structuredContext = structuredContext
         self.toolCalls = toolCalls
         self.toolResults = toolResults
+        self.renderedPrompt = renderedPrompt
+        self.rawOutput = rawOutput
         self.model = model
         self.turnCount = turnCount
     }
