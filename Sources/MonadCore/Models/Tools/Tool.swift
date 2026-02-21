@@ -200,4 +200,13 @@ public struct AnyTool: Tool {
     public func toToolParam() -> ChatQuery.ChatCompletionToolParam {
         wrapped.toToolParam()
     }
+    
+    /// Returns the ToolReference for this tool, used when emitting .toolExecution(.attempting) events.
+    /// Downcasts to DelegatingTool to get the real reference; falls back to .known(id:) for other tools.
+    public var toolReference: ToolReference {
+        if let delegating = wrapped as? DelegatingTool {
+            return delegating.ref
+        }
+        return .known(id: id)
+    }
 }

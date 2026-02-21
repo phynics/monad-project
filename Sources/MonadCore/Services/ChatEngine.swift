@@ -174,8 +174,15 @@ public final class ChatEngine: @unchecked Sendable {
         let parser = StreamingParser()
         var hasEmittedThought = false
         
+        // Bug 1: Track timing and token usage
+        let turnStartTime = Date()
+        var streamUsage: ChatResult.CompletionUsage? = nil
+        
         for try await result in streamData {
             if Task.isCancelled { break }
+            
+            // Capture usage stats (sent in final chunk when includeUsage: true)
+            if let usage = result.usage { streamUsage = usage }
             
             // Forward Content and Thinking
             if let delta = result.choices.first?.delta.content {
@@ -261,6 +268,13 @@ public final class ChatEngine: @unchecked Sendable {
             }
         }
         
+        // Bug 1: Compute timing and token metadata after the stream loop
+        let turnDuration = Date().timeIntervalSince(turnStartTime)
+        let completionTokens = streamUsage?.completionTokens
+            ?? TokenEstimator.estimate(text: fullResponse + fullThinking)
+        let tokensPerSecond: Double? = turnDuration > 0
+            ? Double(completionTokens) / turnDuration : nil
+        
         if !finalToolCalls.isEmpty {
             let sortedCalls = finalToolCalls.sorted(by: { $0.key < $1.key })
             let toolCallsParam: [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam] = sortedCalls.map { _, value in
@@ -295,7 +309,19 @@ public final class ChatEngine: @unchecked Sendable {
                 let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
                 await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
                 
-                continuation.yield(.generationCompleted(message: assistantMsg.toMessage(), metadata: APIResponseMetadata(model: modelName)))
+                let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
+                continuation.yield(.generationCompleted(
+                    message: assistantMsg.toMessage(),
+                    metadata: APIResponseMetadata(
+                        model: modelName,
+                        promptTokens: streamUsage?.promptTokens,
+                        completionTokens: streamUsage?.completionTokens,
+                        totalTokens: streamUsage?.totalTokens,
+                        duration: turnDuration,
+                        tokensPerSecond: tokensPerSecond,
+                        debugSnapshotData: snapshotData
+                    )
+                ))
                 return .finish
             }
             
@@ -316,7 +342,19 @@ public final class ChatEngine: @unchecked Sendable {
             let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
             await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
             
-            continuation.yield(.generationCompleted(message: assistantMsg.toMessage(), metadata: APIResponseMetadata(model: modelName)))
+            let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
+            continuation.yield(.generationCompleted(
+                message: assistantMsg.toMessage(),
+                metadata: APIResponseMetadata(
+                    model: modelName,
+                    promptTokens: streamUsage?.promptTokens,
+                    completionTokens: streamUsage?.completionTokens,
+                    totalTokens: streamUsage?.totalTokens,
+                    duration: turnDuration,
+                    tokensPerSecond: tokensPerSecond,
+                    debugSnapshotData: snapshotData
+                )
+            ))
             return .finish
         }
     }
@@ -410,8 +448,13 @@ public final class ChatEngine: @unchecked Sendable {
         for call in calls {
             guard let tool = availableTools.first(where: { $0.name == call.function.name }) else {
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: Tool not found")), toolCallId: call.id)))
+                continuation.yield(.toolExecution(toolCallId: call.id, status: .failure(ToolError.executionFailed("Tool not found: \(call.function.name)"))))
                 continue
             }
+            
+            // Bug 2: Emit attempting event so the CLI can show tool progress
+            let toolRef = tool.toolReference
+            continuation.yield(.toolExecution(toolCallId: call.id, status: .attempting(name: tool.name, reference: toolRef)))
             
             let argsData = call.function.arguments.data(using: .utf8) ?? Data()
             let argsDict = (try? JSONSerialization.jsonObject(with: argsData) as? [String: Any]) ?? [:]
