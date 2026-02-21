@@ -272,6 +272,20 @@ public final class ChatEngine: @unchecked Sendable {
             }
         }
         
+        // Filter out malformed/sentinel tool call names. Some models emit artifacts like
+        // name="tool_call" as a formatting token, or names not in the available tool set.
+        // We silently discard these rather than propagating a "Tool not found" error.
+        let knownToolNames = Set(availableTools.map { $0.name })
+        let validToolCalls = finalToolCalls.filter { _, value in
+            !value.name.isEmpty && value.name != "tool_call" && knownToolNames.contains(value.name)
+        }
+        
+        // If filter removed all calls, treat the response as a plain text reply.
+        if !finalToolCalls.isEmpty && validToolCalls.isEmpty {
+            logger.warning("Discarding \(finalToolCalls.count) tool call(s) with unrecognised names: \(finalToolCalls.values.map { $0.name })")
+        }
+        finalToolCalls = validToolCalls
+        
         // Bug 1: Compute timing and token metadata after the stream loop
         let turnDuration = Date().timeIntervalSince(turnStartTime)
         let completionTokens = streamUsage?.completionTokens
