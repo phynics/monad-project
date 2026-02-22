@@ -247,8 +247,47 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
              try WorkspaceReference.deleteOne(db, key: id)
         }
     }
+
+    // MARK: - Clients
+
+    public func saveClient(_ client: ClientIdentity) async throws {
+        try await dbQueue.write { db in
+            try client.save(db)
+        }
+    }
+
+    public func fetchClient(id: UUID) async throws -> ClientIdentity? {
+        try await dbQueue.read { db in
+            try ClientIdentity.fetchOne(db, key: id)
+        }
+    }
+
+    public func fetchAllClients() async throws -> [ClientIdentity] {
+        try await dbQueue.read { db in
+            try ClientIdentity.fetchAll(db)
+        }
+    }
+
+    public func deleteClient(id: UUID) async throws -> Bool {
+        try await dbQueue.write { db in
+            try ClientIdentity.deleteOne(db, key: id)
+        }
+    }
     
     // MARK: - Advanced Tool Queries
+
+    public func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws {
+        try await dbQueue.write { db in
+            // Verify workspace exists
+            guard try WorkspaceReference.exists(db, key: workspaceId) else {
+                throw MonadCore.ToolError.workspaceNotFound(workspaceId)
+            }
+
+            // Create and insert tool
+            let workspaceTool = try WorkspaceTool(workspaceId: workspaceId, toolReference: tool)
+            try workspaceTool.insert(db)
+        }
+    }
     
     public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? {
         try await dbQueue.read { db in

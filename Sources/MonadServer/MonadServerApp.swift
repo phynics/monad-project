@@ -186,13 +186,10 @@ struct MonadServer: AsyncParsableCommand {
             )
             agentController.addRoutes(to: protected.group("/agents"))
 
-            // Create database writer accessor
-            let dbWriter = persistenceService.databaseWriter
-
             let workspacesGroup = protected.group("/workspaces")
             
             let workspaceAPIController = WorkspaceAPIController<AppRequestContext>(
-                dbWriter: dbWriter, logger: logger)
+                persistenceService: persistenceService, logger: logger)
             workspaceAPIController.addRoutes(to: workspacesGroup)
 
             let workspaceStore = try await WorkspaceStore(persistenceService: persistenceService)
@@ -201,7 +198,7 @@ struct MonadServer: AsyncParsableCommand {
             filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
 
             let clientController = ClientAPIController<AppRequestContext>(
-                dbWriter: dbWriter, logger: logger)
+                persistenceService: persistenceService, logger: logger)
             clientController.addRoutes(to: protected.group("/clients"))
 
             let configController = ConfigurationAPIController<AppRequestContext>(llmService: llmService)

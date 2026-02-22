@@ -7,11 +7,11 @@ import MonadCore
 
 /// Controller for managing client identities
 public struct ClientAPIController<Context: RequestContext>: Sendable {
-    let dbWriter: DatabaseWriter
+    let persistenceService: any PersistenceServiceProtocol
     let logger: Logger
 
-    public init(dbWriter: DatabaseWriter, logger: Logger) {
-        self.dbWriter = dbWriter
+    public init(persistenceService: any PersistenceServiceProtocol, logger: Logger) {
+        self.persistenceService = persistenceService
         self.logger = logger
     }
 
@@ -49,16 +49,12 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
             trustLevel: .full
         )
 
-        try await dbWriter.write { db in
-            try client.insert(db)
-            try defaultWorkspace.insert(db)
+        try await persistenceService.saveClient(client)
+        try await persistenceService.saveWorkspace(defaultWorkspace)
 
-            // Save tools
-            for toolRef in input.tools {
-                let tool = try WorkspaceTool(
-                    workspaceId: defaultWorkspace.id, toolReference: toolRef)
-                try tool.insert(db)
-            }
+        // Save tools
+        for toolRef in input.tools {
+            try await persistenceService.addToolToWorkspace(workspaceId: defaultWorkspace.id, tool: toolRef)
         }
 
         let response = ClientRegistrationResponse(
@@ -73,9 +69,7 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
     /// GET /clients/:id
     @Sendable func get(request: Request, context: Context) async throws -> Response {
         let id = try context.parameters.require("id", as: UUID.self)
-        let client = try await dbWriter.read { db in
-            try ClientIdentity.fetchOne(db, key: id)
-        }
+        let client = try await persistenceService.fetchClient(id: id)
 
         guard let client = client else {
             throw HTTPError(.notFound)
@@ -90,9 +84,7 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
 
     /// GET /clients
     @Sendable func list(request: Request, context: Context) async throws -> Response {
-        let clients = try await dbWriter.read { db in
-            try ClientIdentity.fetchAll(db)
-        }
+        let clients = try await persistenceService.fetchAllClients()
 
         let data = try SerializationUtils.jsonEncoder.encode(clients)
         var headers = HTTPFields()
@@ -104,9 +96,7 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
     /// DELETE /clients/:id
     @Sendable func delete(request: Request, context: Context) async throws -> Response {
         let id = try context.parameters.require("id", as: UUID.self)
-        let deleted = try await dbWriter.write { db in
-            try ClientIdentity.deleteOne(db, key: id)
-        }
+        let deleted = try await persistenceService.deleteClient(id: id)
 
         guard deleted else {
             throw HTTPError(.notFound)

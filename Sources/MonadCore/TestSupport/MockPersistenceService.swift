@@ -19,6 +19,7 @@ public final class MockPersistenceService: PersistenceServiceProtocol, @unchecke
     public var jobs: [Job] = []
     public var workspaces: [WorkspaceReference] = []
     public var agents: [Agent] = []
+    public var clients: [ClientIdentity] = []
 
     public init() {}
     
@@ -246,7 +247,55 @@ public final class MockPersistenceService: PersistenceServiceProtocol, @unchecke
         workspaces.removeAll(where: { $0.id == id })
     }
 
+    // Clients
+    public func saveClient(_ client: ClientIdentity) async throws {
+        if let index = clients.firstIndex(where: { $0.id == client.id }) {
+            clients[index] = client
+        } else {
+            clients.append(client)
+        }
+    }
+
+    public func fetchClient(id: UUID) async throws -> ClientIdentity? {
+        return clients.first(where: { $0.id == id })
+    }
+
+    public func fetchAllClients() async throws -> [ClientIdentity] {
+        return clients
+    }
+
+    public func deleteClient(id: UUID) async throws -> Bool {
+        let countBefore = clients.count
+        clients.removeAll(where: { $0.id == id })
+        return countBefore > clients.count
+    }
+
     // Tools
+    public func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws {
+        if let index = workspaces.firstIndex(where: { $0.id == workspaceId }) {
+            let ws = workspaces[index]
+            var newTools = ws.tools
+            newTools.append(tool)
+            
+            // Re-create workspace because tools is a let property
+            let updatedWS = WorkspaceReference(
+                id: ws.id,
+                uri: ws.uri,
+                hostType: ws.hostType,
+                ownerId: ws.ownerId,
+                tools: newTools,
+                rootPath: ws.rootPath,
+                trustLevel: ws.trustLevel,
+                lastModifiedBy: ws.lastModifiedBy,
+                status: ws.status,
+                createdAt: ws.createdAt
+            )
+            workspaces[index] = updatedWS
+        } else {
+            throw MonadCore.ToolError.workspaceNotFound(workspaceId)
+        }
+    }
+
     public func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] {
         let targetWorkspaces = workspaces.filter { workspaceIds.contains($0.id) }
         return targetWorkspaces.flatMap { $0.tools }

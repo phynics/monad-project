@@ -9,11 +9,11 @@ import NIOCore
 
 /// Controller for managing workspaces
 public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
-    let dbWriter: DatabaseWriter
+    let persistenceService: any PersistenceServiceProtocol
     let logger: Logger
 
-    public init(dbWriter: DatabaseWriter, logger: Logger) {
-        self.dbWriter = dbWriter
+    public init(persistenceService: any PersistenceServiceProtocol, logger: Logger) {
+        self.persistenceService = persistenceService
         self.logger = logger
     }
 
@@ -49,9 +49,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
             createdAt: now
         )
 
-        try await dbWriter.write { db in
-            try workspace.insert(db)
-        }
+        try await persistenceService.saveWorkspace(workspace)
 
         let data = try SerializationUtils.jsonEncoder.encode(workspace)
         var headers = HTTPFields()
@@ -67,9 +65,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         let page = components?.queryItems?.first(where: { $0.name == "page" })?.value.flatMap(Int.init) ?? 1
         let perPage = components?.queryItems?.first(where: { $0.name == "perPage" })?.value.flatMap(Int.init) ?? 20
         
-        let workspaces = try await dbWriter.read { db in
-            try WorkspaceReference.fetchAll(db)
-        }
+        let workspaces = try await persistenceService.fetchAllWorkspaces()
         
         // In-memory pagination
         let total = workspaces.count
@@ -93,9 +89,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     }
 
     public func getWorkspace(id: UUID) async throws -> WorkspaceReference? {
-        return try await dbWriter.read { db in
-            try WorkspaceReference.fetchOne(db, key: id)
-        }
+        return try await persistenceService.fetchWorkspace(id: id)
     }
 
     /// GET /workspaces/:id
@@ -119,20 +113,18 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         let input = try await request.decode(as: UpdateWorkspaceRequest.self, context: context)
         
-        try await dbWriter.write { db in
-            guard var workspace = try WorkspaceReference.fetchOne(db, key: id) else {
-                throw HTTPError(.notFound)
-            }
-            
-            if let rootPath = input.rootPath {
-                workspace.rootPath = rootPath
-            }
-            if let trustLevel = input.trustLevel {
-                workspace.trustLevel = trustLevel
-            }
-            
-            try workspace.update(db)
+        guard var workspace = try await persistenceService.fetchWorkspace(id: id) else {
+            throw HTTPError(.notFound)
         }
+        
+        if let rootPath = input.rootPath {
+            workspace.rootPath = rootPath
+        }
+        if let trustLevel = input.trustLevel {
+            workspace.trustLevel = trustLevel
+        }
+        
+        try await persistenceService.saveWorkspace(workspace)
         
         return try await get(request: request, context: context)
     }
@@ -140,9 +132,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     /// DELETE /workspaces/:id
     @Sendable func delete(request: Request, context: Context) async throws -> Response {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
-        try await dbWriter.write { db in
-            _ = try WorkspaceReference.deleteOne(db, key: id)
-        }
+        try await persistenceService.deleteWorkspace(id: id)
         return Response(status: .noContent)
     }
 
@@ -151,16 +141,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         let input = try await request.decode(as: RegisterToolRequest.self, context: context)
 
-        try await dbWriter.write { db in
-            // Verify workspace exists
-            guard try WorkspaceReference.exists(db, key: id) else {
-                throw HTTPError(.notFound)
-            }
-
-            // Create and insert tool
-            let tool = try WorkspaceTool(workspaceId: id, toolReference: input.tool)
-            try tool.insert(db)
-        }
+        try await persistenceService.addToolToWorkspace(workspaceId: id, tool: input.tool)
 
         return Response(status: .created)
     }
@@ -169,18 +150,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     @Sendable func listTools(request: Request, context: Context) async throws -> Response {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
 
-        let tools = try await dbWriter.read { db -> [ToolReference] in
-            guard try WorkspaceReference.exists(db, key: id) else {
-                throw HTTPError(.notFound)
-            }
-
-            let tools =
-                try WorkspaceTool
-                .filter(Column("workspaceId") == id)
-                .fetchAll(db)
-
-            return try tools.map { try $0.toToolReference() }
-        }
+        let tools = try await persistenceService.fetchTools(forWorkspaces: [id])
 
         let data = try SerializationUtils.jsonEncoder.encode(tools)
         var headers = HTTPFields()

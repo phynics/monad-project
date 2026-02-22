@@ -55,7 +55,15 @@ public protocol PersistenceServiceProtocol: HealthCheckable {
     func fetchAllWorkspaces() async throws -> [WorkspaceReference]
     func deleteWorkspace(id: UUID) async throws
 
+    // Clients
+    func saveClient(_ client: ClientIdentity) async throws
+    func fetchClient(id: UUID) async throws -> ClientIdentity?
+    func fetchAllClients() async throws -> [ClientIdentity]
+    func deleteClient(id: UUID) async throws -> Bool
+
     // Tools
+    /// Add a tool reference to a workspace
+    func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws
     /// Fetch tools for a list of workspaces
     func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference]
     /// Fetch tools owned by a specific client
