@@ -55,13 +55,17 @@ struct MonadServer: AsyncParsableCommand {
     func run() async throws {
         let logger = Logger.server
         
-        let serviceGroup = try await MonadServerFactory.createServiceGroup(
+        let context = try await MonadServerFactory.createServerContext(
             hostname: hostname,
             port: port,
             verbose: verbose,
             logger: logger
         )
 
-        try await serviceGroup.run()
+        try await withDependencies {
+            $0 = context.dependencies
+        } operation: {
+            try await context.serviceGroup.run()
+        }
     }
 }

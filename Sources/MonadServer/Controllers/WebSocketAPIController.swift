@@ -6,6 +6,7 @@ import MonadCore
 import Logging
 import NIOCore
 import HTTPTypes
+import ServiceLifecycle
 
 struct WebSocketAPIController<Context>: Sendable where Context: WebSocketRequestContext, Context: RequestContext {
     let connectionManager: WebSocketConnectionManager
@@ -35,30 +36,32 @@ struct WebSocketAPIController<Context>: Sendable where Context: WebSocketRequest
         await connectionManager.addConnection(clientId: clientId, writer: outbound)
         
         do {
-            // Read loop
-            for try await frame in inbound {
-                switch frame.opcode {
-                case .text:
-                     let text = String(buffer: frame.data)
-                    // Handle incoming message (RPC Response)
-                    if let data = text.data(using: .utf8) {
-                        do {
-                            let response = try JSONDecoder().decode(RPCResponse.self, from: data)
-                            await connectionManager.handleResponse(response: response)
-                        } catch {
-                            // If it's not a response, maybe it's a request?
-                            // For now, log and ignore.
+            try await cancelWhenGracefulShutdown {
+                // Read loop
+                for try await frame in inbound {
+                    switch frame.opcode {
+                    case .text:
+                         let text = String(buffer: frame.data)
+                        // Handle incoming message (RPC Response)
+                        if let data = text.data(using: .utf8) {
+                            do {
+                                let response = try JSONDecoder().decode(RPCResponse.self, from: data)
+                                await connectionManager.handleResponse(response: response)
+                            } catch {
+                                // If it's not a response, maybe it's a request?
+                                // For now, log and ignore.
+                            }
                         }
+                    case .binary:
+                        break
+                    default:
+                        // Ignore other frames (ping/pong/close are handled by protocol/stream)
+                        break
                     }
-                case .binary:
-                    break
-                default:
-                    // Ignore other frames (ping/pong/close are handled by protocol/stream)
-                    break
                 }
             }
         } catch {
-            // socket error
+            // socket error or cancellation
         }
         
         await connectionManager.removeConnection(clientId: clientId)

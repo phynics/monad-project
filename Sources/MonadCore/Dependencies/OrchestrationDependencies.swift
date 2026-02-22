@@ -27,7 +27,9 @@ public enum ChatEngineKey: DependencyKey {
 }
 
 public enum AgentExecutorKey: DependencyKey {
-    public static let liveValue = AgentExecutor()
+    public static let liveValue: AgentExecutor = {
+        fatalError("AgentExecutor must be configured before use.")
+    }()
 }
 
 // MARK: - Dependency Values

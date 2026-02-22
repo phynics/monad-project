@@ -12,12 +12,17 @@ import Dependencies
 public struct MonadServerFactory {
     public typealias AppRequestContext = BasicWebSocketRequestContext
 
-    public static func createServiceGroup(
+    public struct ServerContext {
+        public let serviceGroup: ServiceGroup
+        public let dependencies: DependencyValues
+    }
+
+    public static func createServerContext(
         hostname: String = "127.0.0.1",
         port: Int = 8080,
         verbose: Bool = false,
         logger: Logger = Logger.server
-    ) async throws -> ServiceGroup {
+    ) async throws -> ServerContext {
         // Initialize Persistence
         let persistenceService: PersistenceService
         do {
@@ -75,8 +80,19 @@ public struct MonadServerFactory {
         )
         let toolRouter = ToolRouter()
         let chatEngine = ChatEngine()
-        let jobRunner = JobRunnerService()
-        let orphanCleanup = OrphanCleanupService(workspaceRoot: workspaceRoot)
+        let agentExecutor = AgentExecutor(
+            persistenceService: persistenceService,
+            chatEngine: chatEngine
+        )
+        let jobRunner = JobRunnerService(
+            sessionManager: sessionManager,
+            agentRegistry: agentRegistry,
+            agentExecutor: agentExecutor
+        )
+        let orphanCleanup = OrphanCleanupService(
+            workspaceRoot: workspaceRoot,
+            persistenceService: persistenceService
+        )
 
         return try await withDependencies {
             $0.persistenceService = persistenceService
@@ -87,6 +103,7 @@ public struct MonadServerFactory {
             $0.sessionManager = sessionManager
             $0.toolRouter = toolRouter
             $0.chatEngine = chatEngine
+            $0.agentExecutor = agentExecutor
         } operation: {
             // Public routes
             router.get("/health") { _, _ -> String in
@@ -181,7 +198,7 @@ public struct MonadServerFactory {
 
             let bonjourAdvertiser = BonjourAdvertiser(port: port)
 
-            return ServiceGroup(
+            let serviceGroup = ServiceGroup(
                 configuration: ServiceGroupConfiguration(
                     services: [
                         .init(service: app),
@@ -192,6 +209,11 @@ public struct MonadServerFactory {
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                     logger: logger
                 )
+            )
+            
+            return ServerContext(
+                serviceGroup: serviceGroup,
+                dependencies: DependencyValues._current
             )
         }
     }
