@@ -80,9 +80,16 @@ struct MonadServer: AsyncParsableCommand {
             logger.info("Using Local Embedding Service (OpenAI API Key not found)")
         }
         
-        // Initialize Vector Store (Mocked for now)
-        let vectorStore = MockVectorStore()
-        try? await vectorStore.initialize() // Best effort init
+        // Initialize Vector Store
+        var vectorStore: any VectorStoreProtocol
+        do {
+            vectorStore = try VectorStore()
+            try await vectorStore.initialize()
+            logger.info("Vector Store initialized.")
+        } catch {
+            logger.error("Failed to initialize Vector Store: \(error). Falling back to mock.")
+            vectorStore = MockVectorStore()
+        }
         
         // Initialize LLM Service
         let llmService = ServerLLMService()
