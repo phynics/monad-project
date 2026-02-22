@@ -119,7 +119,7 @@ import Dependencies
         }
     }
 
-    @Test("Auth Failure: Missing Header (Permissive -> 200 OK)")
+    @Test("Auth Failure: Missing Header (Strict -> 401 Unauthorized)")
     func testAuthMissingHeader() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
@@ -146,14 +146,14 @@ import Dependencies
     
             try await app.test(.router) { client in
                 try await client.execute(uri: "/api/memories", method: .get) { response in
-                    // With permissive auth, request proceeds to controller
-                    #expect(response.status == .ok)
+                    // With strict auth, request is blocked
+                    #expect(response.status == .unauthorized)
                 }
             }
         }
     }
 
-    @Test("Auth Failure: Invalid Token (Permissive -> 200 OK)")
+    @Test("Auth Failure: Invalid Token (Strict -> 401 Unauthorized)")
     func testAuthInvalidToken() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
@@ -183,8 +183,8 @@ import Dependencies
                 headers[.authorization] = "Bearer wrong"
                 try await client.execute(uri: "/api/memories", method: .get, headers: headers) {
                     response in
-                    // With permissive auth, request proceeds to controller
-                    #expect(response.status == .ok)
+                    // With strict auth, request is blocked
+                    #expect(response.status == .unauthorized)
                 }
             }
         }

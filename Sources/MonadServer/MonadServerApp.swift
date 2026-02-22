@@ -131,13 +131,16 @@ struct MonadServer: AsyncParsableCommand {
                 return "Monad Server is running."
             }
             
-            // WebSocket Route
-            let wsController = WebSocketAPIController<AppRequestContext>(connectionManager: connectionManager)
-            wsController.addRoutes(to: router.group("/api"))
+            // API Key from environment or default
+            let apiKey = ProcessInfo.processInfo.environment["MONAD_API_KEY"] ?? "monad-secret"
 
             // Protected routes
             let protected = router.group("/api")
-                .add(middleware: AuthMiddleware())
+                .add(middleware: AuthMiddleware(token: apiKey))
+
+            // WebSocket Route (Protected)
+            let wsController = WebSocketAPIController<AppRequestContext>(connectionManager: connectionManager)
+            wsController.addRoutes(to: protected)
 
             protected.get("/test") { _, _ -> String in
                 return "Authenticated!"

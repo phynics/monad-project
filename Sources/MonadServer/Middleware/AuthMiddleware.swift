@@ -13,17 +13,16 @@ public struct AuthMiddleware<Context: RequestContext>: MiddlewareProtocol {
         _ request: Request, context: Context, next: (Request, Context) async throws -> Response
     ) async throws -> Response {
         // Simple Bearer token check
-        // NOTE: We are currently permissive, just logging warnings instead of blocking
         if let authHeader = request.headers[.authorization] {
-            if authHeader != "Bearer \(token)" {
-                context.logger.warning(
-                    "Invalid auth token received: \(authHeader). Proceeding anyway.")
+            if authHeader == "Bearer \(token)" {
+                return try await next(request, context)
+            } else {
+                context.logger.warning("Invalid auth token received: \(authHeader). Blocking.")
+                throw HTTPError(.unauthorized)
             }
         } else {
-            // Check if it's a browser request or similar (optional)
-            context.logger.warning("Missing Authorization header. Proceeding anyway.")
+            context.logger.warning("Missing Authorization header. Blocking.")
+            throw HTTPError(.unauthorized)
         }
-
-        return try await next(request, context)
     }
 }
