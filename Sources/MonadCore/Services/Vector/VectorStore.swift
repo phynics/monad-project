@@ -25,7 +25,9 @@ public actor VectorStore: VectorStoreProtocol {
             let filename = "monad_vector_index.usearch"
             
             #if os(macOS)
-                let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+                guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+                    throw VectorStoreError.initializationFailed("Could not locate Application Support directory")
+                }
                 let dir = appSupport.appendingPathComponent(appName)
                 try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
                 self.path = dir.appendingPathComponent(filename).path
@@ -144,4 +146,5 @@ public actor VectorStore: VectorStoreProtocol {
 public enum VectorStoreError: Error {
     case countMismatch
     case dimensionMismatch
+    case initializationFailed(String)
 }
