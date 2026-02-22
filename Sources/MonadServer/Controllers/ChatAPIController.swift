@@ -280,7 +280,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                 ))
             }
         } catch {
-            Logger.chat.warning("Failed to fetch tools: \(error)")
+            Logger.chat.error("Failed to resolve tools for session \(sessionId): \(error)")
         }
         return availableTools
     }
