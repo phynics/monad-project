@@ -233,7 +233,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         tools: [AnyTool],
         systemInstructions: String?
     ) async -> Prompt {
-        let instructions = systemInstructions ?? DefaultInstructions.system
+        let instructions = systemInstructions ?? DefaultInstructions.system()
         
         return Prompt {
             SystemInstructions(instructions)

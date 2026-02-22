@@ -315,7 +315,7 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
         tools: [AnyTool],
         systemInstructions: String?
     ) async -> Prompt {
-        let instructions = systemInstructions ?? DefaultInstructions.system
+        let instructions = systemInstructions ?? DefaultInstructions.system()
         return Prompt {
             SystemInstructions(instructions)
             ContextNotes(contextNotes)
