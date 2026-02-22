@@ -3,7 +3,7 @@ import Foundation
 import GRDB
 import MonadCore
 import Testing
-import MonadServer
+@testable import MonadServer
 
 @Suite(.serialized)
 struct JobPersistenceTests {
@@ -131,7 +131,7 @@ struct PersistenceServiceJobTests {
     @Test("Test listing jobs for session via PersistenceService")
     func listJobsForSession() async throws {
         let otherSessionId = UUID()
-        try await persistence.databaseWriter.write { db in
+        try await persistence.dbQueue.write { db in
              try db.execute(sql: "INSERT INTO conversationSession (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)", arguments: [otherSessionId, "Other Session", Date(), Date()])
         }
 

@@ -8,7 +8,7 @@ import Logging
 
 /// Thread-safe persistence service using GRDB
 public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
-    public nonisolated let dbQueue: DatabaseQueue
+    internal let dbQueue: DatabaseQueue
     internal let logger = Logger.database
     
     // Job Event Stream
@@ -54,10 +54,6 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
 
     internal func emit(_ event: JobEvent) {
         jobContinuation.yield(event)
-    }
-
-    public nonisolated var databaseWriter: DatabaseWriter {
-        return dbQueue
     }
 
     public static func create(path: String? = nil) throws -> PersistenceService {

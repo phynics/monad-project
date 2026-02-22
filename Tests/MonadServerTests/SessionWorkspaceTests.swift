@@ -44,7 +44,7 @@ final class SessionWorkspaceTests: XCTestCase {
             XCTAssertNotNil(session.primaryWorkspaceId, "Session should have a primary workspace ID")
     
             // Verify workspace exists in DB
-            let workspace = try await persistenceService.databaseWriter.read { db in
+            let workspace = try await persistenceService.dbQueue.read { db in
                 try MonadShared.WorkspaceReference.fetchOne(db, key: session.primaryWorkspaceId)
             }
     
