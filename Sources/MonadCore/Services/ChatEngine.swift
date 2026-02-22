@@ -341,7 +341,11 @@ public final class ChatEngine: @unchecked Sendable {
                 let callsJSON = (try? SerializationUtils.jsonEncoder.encode(callsForDB)).flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
                 
                 let assistantMsg = ConversationMessage(sessionId: sessionId, role: .assistant, content: fullResponse, think: fullThinking.isEmpty ? nil : fullThinking, toolCalls: callsJSON)
-                try? await persistenceService.saveMessage(assistantMsg)
+                do {
+                    try await persistenceService.saveMessage(assistantMsg)
+                } catch {
+                    logger.error("Failed to save assistant message: \(error)")
+                }
                 
                 let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
                 await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
@@ -374,7 +378,11 @@ public final class ChatEngine: @unchecked Sendable {
                 recalledMemories: String(decoding: (try? SerializationUtils.jsonEncoder.encode(contextData.memories.map { $0.memory })) ?? Data(), as: UTF8.self),
                 think: fullThinking.isEmpty ? nil : fullThinking
             )
-            try? await persistenceService.saveMessage(assistantMsg)
+            do {
+                try await persistenceService.saveMessage(assistantMsg)
+            } catch {
+                logger.error("Failed to save assistant message: \(error)")
+            }
             
             let snapshot = DebugSnapshot(
                 structuredContext: structuredContext,
