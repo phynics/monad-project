@@ -88,3 +88,4 @@ conductor/
 
 # Testing
 .test_workspaces/
+implementation-plan.md
