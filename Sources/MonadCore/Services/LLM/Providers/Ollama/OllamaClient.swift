@@ -25,7 +25,13 @@ public actor OllamaClient {
             cleanEndpoint.removeLast(4)
         }
         
-        self.endpoint = URL(string: cleanEndpoint) ?? URL(string: "http://localhost:11434")!
+        if let url = URL(string: cleanEndpoint) {
+            self.endpoint = url
+        } else {
+            logger.warning("Invalid Ollama endpoint '\(cleanEndpoint)', falling back to http://localhost:11434")
+            self.endpoint = URL(string: "http://localhost:11434")!
+        }
+        
         self.modelName = modelName
         self.timeoutInterval = timeoutInterval
         self.maxRetries = maxRetries
