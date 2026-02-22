@@ -115,6 +115,7 @@ public enum StreamEventType: String, Sendable, Codable {
     case thought
     case thoughtCompleted
     case toolCall
+    case toolCallError
     case toolExecution
     case generationCompleted
     case streamCompleted
@@ -130,6 +131,7 @@ public struct ChatDelta: Sendable, Codable {
     public let thought: String?
     public let toolCalls: [ToolCallDelta]?
     public let toolExecution: ToolExecutionDelta?
+    public let toolCallError: ToolCallErrorDelta?
     public let metadata: ChatMetadata?
     public let responseMetadata: APIMetadataDelta?
     public let error: String?
@@ -140,6 +142,7 @@ public struct ChatDelta: Sendable, Codable {
         thought: String? = nil,
         toolCalls: [ToolCallDelta]? = nil,
         toolExecution: ToolExecutionDelta? = nil,
+        toolCallError: ToolCallErrorDelta? = nil,
         metadata: ChatMetadata? = nil,
         responseMetadata: APIMetadataDelta? = nil,
         error: String? = nil
@@ -149,8 +152,21 @@ public struct ChatDelta: Sendable, Codable {
         self.thought = thought
         self.toolCalls = toolCalls
         self.toolExecution = toolExecution
+        self.toolCallError = toolCallError
         self.metadata = metadata
         self.responseMetadata = responseMetadata
+        self.error = error
+    }
+}
+
+public struct ToolCallErrorDelta: Sendable, Codable {
+    public let toolCallId: String
+    public let name: String
+    public let error: String
+
+    public init(toolCallId: String, name: String, error: String) {
+        self.toolCallId = toolCallId
+        self.name = name
         self.error = error
     }
 }

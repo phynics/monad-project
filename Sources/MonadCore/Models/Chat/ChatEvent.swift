@@ -24,6 +24,9 @@ public enum ChatEvent: Sendable {
     /// Tool call being assembled (streaming deltas)
     case toolCall(ToolCallDelta)
     
+    /// Tool call failed before execution (e.g. not found, invalid arguments)
+    case toolCallError(toolCallId: String, name: String, error: String)
+    
     /// Asynchronous tool execution status Updates
     case toolExecution(toolCallId: String, status: ToolExecutionStatus)
     
@@ -59,6 +62,11 @@ extension ChatEvent {
     
     public var toolCall: ToolCallDelta? {
         if case .toolCall(let tc) = self { return tc }
+        return nil
+    }
+    
+    public var toolCallError: (toolCallId: String, name: String, error: String)? {
+        if case .toolCallError(let id, let name, let error) = self { return (id, name, error) }
         return nil
     }
     

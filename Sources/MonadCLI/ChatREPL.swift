@@ -368,6 +368,11 @@ actor ChatREPL: ChatREPLController {
                         }
                     }
                     
+                case .toolCallError:
+                    if let err = delta.toolCallError {
+                        print(TerminalUI.red("❌ Tool Error (\(err.name)): \(err.error)"))
+                    }
+                    
                 case .toolExecution:
                     if let execution = delta.toolExecution {
                         switch execution.status {

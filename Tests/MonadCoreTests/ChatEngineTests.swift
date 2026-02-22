@@ -216,11 +216,11 @@ struct ChatEngineTests {
         }
     }
     
-    @Test("Unknown tool name is discarded")
-    func unknownToolNameDiscarded() async throws {
+    @Test("Unknown tool name emits toolCallError")
+    func unknownToolNameEmitsError() async throws {
         try await withChatEngineDependencies { engine, mockLLM, _ in
             mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "unknown_tool", "arguments": "{}"]]]]
-            mockLLM.mockClient.nextResponses = ["Unknown tool call"]
+            mockLLM.mockClient.nextResponses = ["", "Unknown tool call"]
             
             let stream = try await engine.chatStream(
                 sessionId: sessionId,
@@ -230,8 +230,15 @@ struct ChatEngineTests {
             
             let events = try await collect(stream)
             
+            // Should see toolCall delta
+            #expect(events.contains(where: { if case .toolCall(let delta) = $0 { return delta.name == "unknown_tool" }; return false }))
+            
+            // Should have toolCallError event
+            #expect(events.contains(where: { if case .toolCallError(let id, let name, _) = $0 { return id == "call_1" && name == "unknown_tool" }; return false }))
+            
             // Should NOT have toolExecution events
             #expect(!events.contains(where: { if case .toolExecution = $0 { return true }; return false }))
+            
             #expect(events.contains(where: { if case .delta(let text) = $0 { return text == "Unknown tool call" }; return false }))
         }
     }

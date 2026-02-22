@@ -111,6 +111,15 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                             apiDelta = MonadShared.ChatDelta(type: .thoughtCompleted)
                         case .toolCall(let tc):
                             apiDelta = MonadShared.ChatDelta(type: .toolCall, toolCalls: [tc])
+                        case .toolCallError(let id, let name, let error):
+                            apiDelta = MonadShared.ChatDelta(
+                                type: .toolCallError,
+                                toolCallError: MonadShared.ToolCallErrorDelta(
+                                    toolCallId: id,
+                                    name: name,
+                                    error: error
+                                )
+                            )
                         case .toolExecution(let id, let status):
                             let statusStr: String
                             var name: String?

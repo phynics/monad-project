@@ -289,18 +289,12 @@ public final class ChatEngine: @unchecked Sendable {
             }
         }
         
-        // Filter out malformed/sentinel tool call names. Some models emit artifacts like
-        // name="tool_call" as a formatting token, or names not in the available tool set.
-        // We silently discard these rather than propagating a "Tool not found" error.
-        let knownToolNames = Set(availableTools.map { $0.name })
+        // Filter out sentinel tool call names. Some models emit artifacts like
+        // name="tool_call" as a formatting token.
         let validToolCalls = finalToolCalls.filter { _, value in
-            !value.name.isEmpty && value.name != "tool_call" && knownToolNames.contains(value.name)
+            !value.name.isEmpty && value.name != "tool_call"
         }
         
-        // If filter removed all calls, treat the response as a plain text reply.
-        if !finalToolCalls.isEmpty && validToolCalls.isEmpty {
-            logger.warning("Discarding \(finalToolCalls.count) tool call(s) with unrecognised names: \(finalToolCalls.values.map { $0.name })")
-        }
         finalToolCalls = validToolCalls
         
         // Bug 1: Compute timing and token metadata after the stream loop
@@ -491,7 +485,7 @@ public final class ChatEngine: @unchecked Sendable {
         for call in calls {
             guard let tool = availableTools.first(where: { $0.name == call.function.name }) else {
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: Tool not found")), toolCallId: call.id)))
-                continuation.yield(.toolExecution(toolCallId: call.id, status: .failure(ToolError.executionFailed("Tool not found: \(call.function.name)"))))
+                continuation.yield(.toolCallError(toolCallId: call.id, name: call.function.name, error: "Tool not found: \(call.function.name)"))
                 continue
             }
             
@@ -517,8 +511,10 @@ public final class ChatEngine: @unchecked Sendable {
                     break
                 }
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: \(error.localizedDescription)")), toolCallId: call.id)))
+                continuation.yield(.toolExecution(toolCallId: call.id, status: .failure(error)))
             } catch {
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: \(error.localizedDescription)")), toolCallId: call.id)))
+                continuation.yield(.toolExecution(toolCallId: call.id, status: .failure(error)))
             }
         }
         return (executionResults, requiresClientExecution, debugRecords)
