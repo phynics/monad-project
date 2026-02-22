@@ -11,21 +11,25 @@ public final class JobRunnerService: Service, @unchecked Sendable {
     @Dependency(\.llmService) private var llmService
     @Dependency(\.agentRegistry) private var agentRegistry
     @Dependency(\.agentExecutor) private var agentExecutor
-    
+
     private let logger = Logger(label: "com.monad.job-runner")
-    
+
     public init() {}
     
     /// Run the job execution loop
     public func run() async throws {
         logger.info("Job Runner Service started (Event Driven)")
-        
+
         let persistence = await self.sessionManager.getPersistenceService()
         
         // Initial scan
-        try? await self.processPendingJobs(persistence)
+        do {
+            try await self.processPendingJobs(persistence)
+        } catch {
+            logger.error("Initial job scan failed: \(error)")
+        }
         
-        try? await cancelWhenGracefulShutdown {
+        try await cancelWhenGracefulShutdown {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 // 1. Event Stream Listener
                 group.addTask {
@@ -38,7 +42,11 @@ public final class JobRunnerService: Service, @unchecked Sendable {
                                  if let nextRun = job.nextRunAt, nextRun > Date() {
                                      continue
                                  }
-                                 try? await self.processJob(job, persistence: persistence)
+                                 do {
+                                     try await self.processJob(job, persistence: persistence)
+                                 } catch {
+                                     self.logger.error("Failed to process event-driven job \(job.id): \(error)")
+                                 }
                              }
                         case .jobDeleted:
                              break
@@ -49,8 +57,14 @@ public final class JobRunnerService: Service, @unchecked Sendable {
                 // 2. Periodic Scanner (for scheduled jobs and fail-safety)
                 group.addTask {
                     while !Task.isCancelled {
-                        try? await Task.sleep(nanoseconds: 10 * 1_000_000_000) // Check every 10s
-                        try? await self.processPendingJobs(persistence)
+                        do {
+                            try await Task.sleep(nanoseconds: 10 * 1_000_000_000) // Check every 10s
+                            try await self.processPendingJobs(persistence)
+                        } catch is CancellationError {
+                            break
+                        } catch {
+                            self.logger.error("Periodic job scan failed: \(error)")
+                        }
                     }
                 }
                 
@@ -74,12 +88,9 @@ public final class JobRunnerService: Service, @unchecked Sendable {
     private func processJob(_ job: Job, persistence: any PersistenceServiceProtocol) async throws {
         // 1. Identify Session
         guard let session = await sessionManager.getSession(id: job.sessionId) else {
-            logger.warning("Found pending job \(job.id) but session \(job.sessionId) not found. Marking as failed.")
-            var failedJob = job
-            failedJob.status = .cancelled
-            failedJob.updatedAt = Date()
-            failedJob.logs.append("Session not found")
-            try await persistence.saveJob(failedJob)
+            let reason = "Session \(job.sessionId) not found"
+            logger.warning("Found pending job \(job.id) but \(reason). Marking as failed.")
+            await agentExecutor.failJob(job, reason: reason)
             return
         }
         
@@ -87,23 +98,13 @@ public final class JobRunnerService: Service, @unchecked Sendable {
         do {
             try await sessionManager.hydrateSession(id: session.id, parentId: job.id)
         } catch {
-            logger.error("Failed to hydrate session \(session.id): \(error)")
-            var failedJob = job
-            failedJob.status = .cancelled
-            failedJob.updatedAt = Date()
-            failedJob.logs.append("Failed to hydrate session: \(error.localizedDescription)")
-            try await persistence.saveJob(failedJob)
+            await agentExecutor.failJob(job, reason: "Failed to hydrate session: \(error.localizedDescription)")
             return
         }
 
         // 3. Get ToolExecutor
         guard let toolExecutor = await sessionManager.getToolExecutor(for: session.id) else {
-            logger.warning("ToolExecutor for session \(session.id) not found even after hydration.")
-            var failedJob = job
-            failedJob.status = .cancelled
-            failedJob.updatedAt = Date()
-            failedJob.logs.append("ToolExecutor not found after hydration")
-            try await persistence.saveJob(failedJob)
+            await agentExecutor.failJob(job, reason: "ToolExecutor not found after hydration")
             return
         }
         
@@ -113,12 +114,7 @@ public final class JobRunnerService: Service, @unchecked Sendable {
         // 5. Resolve Agent
         let agentId = job.agentId
         guard let agent = await agentRegistry.getAgent(id: agentId) else {
-            logger.error("Agent with ID '\(agentId)' not found for job \(job.id)")
-            var failedJob = job
-            failedJob.status = .cancelled
-            failedJob.updatedAt = Date()
-            failedJob.logs.append("Agent '\(agentId)' not found")
-            try await persistence.saveJob(failedJob)
+            await agentExecutor.failJob(job, reason: "Agent '\(agentId)' not found")
             return
         }
 
