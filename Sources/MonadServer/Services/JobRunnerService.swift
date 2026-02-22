@@ -87,13 +87,23 @@ public final class JobRunnerService: Service, @unchecked Sendable {
         do {
             try await sessionManager.hydrateSession(id: session.id, parentId: job.id)
         } catch {
-             logger.error("Failed to hydrate session \(session.id): \(error)")
-             return
+            logger.error("Failed to hydrate session \(session.id): \(error)")
+            var failedJob = job
+            failedJob.status = .cancelled
+            failedJob.updatedAt = Date()
+            failedJob.logs.append("Failed to hydrate session: \(error.localizedDescription)")
+            try await persistence.saveJob(failedJob)
+            return
         }
 
         // 3. Get ToolExecutor
         guard let toolExecutor = await sessionManager.getToolExecutor(for: session.id) else {
             logger.warning("ToolExecutor for session \(session.id) not found even after hydration.")
+            var failedJob = job
+            failedJob.status = .cancelled
+            failedJob.updatedAt = Date()
+            failedJob.logs.append("ToolExecutor not found after hydration")
+            try await persistence.saveJob(failedJob)
             return
         }
         
@@ -104,7 +114,11 @@ public final class JobRunnerService: Service, @unchecked Sendable {
         let agentId = job.agentId
         guard let agent = await agentRegistry.getAgent(id: agentId) else {
             logger.error("Agent with ID '\(agentId)' not found for job \(job.id)")
-            // Optionally mark job as failed here
+            var failedJob = job
+            failedJob.status = .cancelled
+            failedJob.updatedAt = Date()
+            failedJob.logs.append("Agent '\(agentId)' not found")
+            try await persistence.saveJob(failedJob)
             return
         }
 

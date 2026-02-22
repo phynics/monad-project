@@ -21,7 +21,7 @@ public struct PruneAPIController<Context: RequestContext>: Sendable {
 
     // MARK: - Handlers
 
-    @Sendable func pruneMemories(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func pruneMemories(_ request: Request, context: Context) async throws -> PruneResponse {
         let input = try await request.decode(as: PruneMemoriesRequest.self, context: context)
         let dryRun = input.dryRun
         let count: Int
@@ -37,15 +37,10 @@ public struct PruneAPIController<Context: RequestContext>: Sendable {
             count = 0
         }
 
-        let response = PruneResponse(count: count, dryRun: dryRun)
-        let data = try SerializationUtils.jsonEncoder.encode(response)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return PruneResponse(count: count, dryRun: dryRun)
     }
 
-    @Sendable func pruneSessions(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func pruneSessions(_ request: Request, context: Context) async throws -> PruneResponse {
         let input = try await request.decode(as: PruneSessionRequest.self, context: context)
         // Convert days to seconds
         let timeInterval = Double(input.days) * 24 * 60 * 60
@@ -60,27 +55,17 @@ public struct PruneAPIController<Context: RequestContext>: Sendable {
             throw error
         }
 
-        let response = PruneResponse(count: count, dryRun: dryRun)
-        let data = try SerializationUtils.jsonEncoder.encode(response)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return PruneResponse(count: count, dryRun: dryRun)
     }
 
-    @Sendable func pruneMessages(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func pruneMessages(_ request: Request, context: Context) async throws -> PruneResponse {
         let input = try await request.decode(as: PruneMessagesRequest.self, context: context)
         let timeInterval = Double(input.days) * 24 * 60 * 60
         let dryRun = input.dryRun
         let count = try await persistenceService.pruneMessages(
             olderThan: timeInterval, dryRun: dryRun)
 
-        let response = PruneResponse(count: count, dryRun: dryRun)
-        let data = try SerializationUtils.jsonEncoder.encode(response)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return PruneResponse(count: count, dryRun: dryRun)
     }
 }
 

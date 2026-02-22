@@ -22,7 +22,7 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
 
     // MARK: - Handlers
 
-    @Sendable func listFiles(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func listFiles(_ request: Request, context: Context) async throws -> [String] {
         let workspaceId = try context.parameters.require("workspaceId", as: UUID.self)
         
         guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
@@ -30,13 +30,7 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
         }
         
         // Use an empty path to list from root, or implement recursive list in the workspace
-        let files = try await workspace.listFiles(path: ".")
-
-        let data = try SerializationUtils.jsonEncoder.encode(files)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return try await workspace.listFiles(path: ".")
     }
 
     @Sendable func getFileContent(_ request: Request, context: Context) async throws -> Response {
