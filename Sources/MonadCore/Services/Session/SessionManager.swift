@@ -142,10 +142,33 @@ public actor SessionManager {
         let notesDir = sessionWorkspaceURL.appendingPathComponent("Notes", isDirectory: true)
         try FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true)
         
-        let welcomeNote = "# Welcome to Monad Notes\n\nI should use this space to store long-term memories..."
+        let welcomeNote = """
+        # Welcome to Your Monad Session
+        
+        This session is your private workspace. You can use the `Notes/` directory in the Primary Workspace to store information that should persist and influence your behavior across turns.
+        
+        ## System Orientation
+        - Primary Workspace: Your server-side sandbox.
+        - Attached Workspaces: Directories mapped during this session.
+        - Context Depth: Use `create_memory` for long-term facts and `Notes/` for project-specific guidance.
+        """
         try welcomeNote.write(to: notesDir.appendingPathComponent("Welcome.md"), atomically: true, encoding: .utf8)
 
-        let projectNote = "# Project Notes\n\nI should use this file to track the goals and progress..."
+        let projectNote = """
+        # Project Goals & Progress
+        
+        Use this note to track the active objective and your current progress.
+        
+        ## Active Objective
+        [Describe what the user wants to achieve here]
+        
+        ## Key Milestones
+        - [ ] Milestone 1
+        - [ ] Milestone 2
+        
+        ## Decisions & Context
+        Record any critical decisions made during the session here.
+        """
         try projectNote.write(to: notesDir.appendingPathComponent("Project.md"), atomically: true, encoding: .utf8)
 
         let workspace = WorkspaceReference(

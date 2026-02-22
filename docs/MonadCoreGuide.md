@@ -101,14 +101,20 @@ let tool = AgentAsTool(agent: researcher, jobQueueContext: jobQueue)
 
 ## 5. Running the Framework
 
-### Initialization
-Initialize your core services individually:
+### Initializing the SessionManager
+The `SessionManager` is the primary entry point for managing sessions and their tools.
 
 ```swift
-let persistence = try PersistenceService.create()
-let llm = LLMService(client: OpenAIClient(...)) // or other provider
-let agentRegistry = AgentRegistry()
-let sessionManager = SessionManager(workspaceRoot: rootURL)
+import MonadCore
+import Dependencies
+
+// SessionManager uses @Dependency for shared services
+let manager = SessionManager(
+    workspaceRoot: URL(fileURLWithPath: "/path/to/workspaces")
+)
+
+// Create a new session
+let session = try await manager.createSession(title: "My Session")
 ```
 
 ### Starting the Job Runner

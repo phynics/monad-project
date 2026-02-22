@@ -102,12 +102,17 @@ extension Tool {
     }
 }
 
-// MARK: - Prompt Formatting
-
 extension Tool {
-    /// Formatted content for inclusion in LLM prompt
+    /// The formatted string representation of this object for a prompt.
+    /// Conformance to PromptFormattable.
     public var promptString: String {
-        "- `\(id)`: \(description)"
+        promptString(provenance: nil)
+    }
+    
+    /// Formatted content for inclusion in LLM prompt with optional provenance.
+    public func promptString(provenance: String?) -> String {
+        let label = provenance.map { " [\($0)]" } ?? ""
+        return "- `\(id)`\(label): \(description)"
     }
 }
 
@@ -121,7 +126,7 @@ public func formatToolsForPrompt(_ tools: [AnyTool]) async -> String {
 
     for tool in tools {
         guard await tool.canExecute() else { continue }
-        toolSpecs.append(tool.promptString)
+        toolSpecs.append(tool.promptString(provenance: tool.provenance))
     }
 
     guard !toolSpecs.isEmpty else { return "" }
@@ -134,6 +139,8 @@ public func formatToolsForPrompt(_ tools: [AnyTool]) async -> String {
         - Use tools only for missing context.
         - Create memories frequently via `create_memory`.
         - `launch_subagent` for isolated tasks.
+        - Path Resolution: If a tool provenance indicates a specific workspace (e.g. `[Workspace: project-x]`), all file paths passed to it MUST be relative to that workspace root.
+        - System Tools: Tools labeled `[System]` have global scope or session-specific sandbox scope.
         - Summarize the result if it is excessively long.
         - If a tool call fails, you can attempt to recover by correcting the parameters and trying again.
         - Be specific.
@@ -181,9 +188,11 @@ public struct ToolConfiguration: Codable, Identifiable, Sendable {
 ///
 public struct AnyTool: Tool {
     private let wrapped: any Tool
+    public var provenance: String?
 
-    public init(_ tool: any Tool) {
+    public init(_ tool: any Tool, provenance: String? = nil) {
         self.wrapped = tool
+        self.provenance = provenance
     }
 
     public var id: String { wrapped.id }

@@ -10,16 +10,20 @@ A **Workspace** is a defined environment with a specific root path, trust level,
 
 | Feature | Description |
 | :--- | :--- |
-| **URI** | Unique identifier (e.g., `macbook-pro:~/dev/monad`, `server:/sessions/a1b2`). |
-| **Root Path** | The filesystem directory that confines all file operations. |
-| **Host Type** | `Server` (managed by MonadServer) or `Client` (managed by MonadCLI/Client). |
-| **Trust Level** | `Full` (trusted, auto-execute) or `Restricted` (requires user approval). |
+| **Workspace** | A named entity representing a URI and its available tools/files. |
+| **URI** | Unique identifier (e.g., `file:///path/to/project` or `monad://session/UUID`). |
+| **Host Type** | `Server` (local disk), `Client` (remote RPC), or `ServerSession` (ephemeral session disk). |
+| **Trust Level** | `full` (all tools) or `restricted` (read-only/selected tools). |
+| **Status** | `active` (available) or `missing` (client disconnected or path moved). |
 
 ### 2. The Session
 A **Session** (`ConversationSession`) represents a continuous thread of interaction between the User and the AI. It orchestrates context, memory, and tool execution.
 
-*   **Primary Workspace (Server)**: Every session has a dedicated, server-side workspace. This is where the AI stores conversation notes, generated artifacts, and "long-term" thinking. It is always trusted.
-*   **Attached Workspaces (Client/Remote)**: Users can "attach" their local development folders to a session. These workspaces reside on the user's machine but are accessible to the AI via the Monad Client.
+### Sessions
+A session can have one **Primary Workspace** (usually a `ServerSession` type providing a private sandbox) and multiple **Attached Workspaces**. 
+
+- **Primary Workspace**: Created automatically with the session. Contains the `Notes/` directory for long-term context.
+- **Attached Workspaces**: Shared project directories or client-hosted environments attached via slash commands.
 
 ```mermaid
 graph TD
@@ -91,3 +95,26 @@ flowchart TD
     *   **Full Trust**: Operations execute immediately. Used for the Primary Workspace and explicitly trusted local folders.
     *   **Restricted**: Operations require per-action user approval. Used for sensitive or new directories.
 *   **State Isolation**: Each session has its own `ContextManager` and `ToolExecutor`, preventing cross-talk between concurrent conversations.
+
+---
+
+## Workflows
+
+### Attaching a Project Directory (`attach-pwd`)
+The `/workspace attach-pwd` command in `MonadCLI` is the primary way to integrate a local development environment:
+
+1. **Discovery**: CLI gets the current working directory.
+2. **Registration**: CLI requests `MonadServer` to register this directory as a `Server` workspace.
+3. **Attachment**: `MonadServer` attaches the new workspace to the current active session.
+4. **Tool Discovery**: `WorkspaceFactory` scans the directory for tool definitions (e.g., `.monad/tools.json`) and registers them with the session's `ToolManager`.
+
+### Client-Managed Workspaces
+For IDE integrations or remote environments:
+1. **Connection**: Client registers its identity.
+2. **Declaration**: Client declares a `Client` host workspace via the API.
+3. **Routing**: When the LLM calls a tool in this workspace, `ToolRouter` initiates an RPC call back to the client.
+
+## Implementation Notes
+
+### WorkspaceFactory
+The `WorkspaceFactory` service is responsible for creating concrete `WorkspaceProtocol` implementations based on the `WorkspaceReference.hostType`. It handles the initialization of `LocalWorkspace` (for `Server` and `ServerSession` types) and `RemoteWorkspace` (for `Client` types).

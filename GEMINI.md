@@ -88,89 +88,33 @@ make open
 ## Developing New Features
 
 ### 1. Creating a New Tool (MonadCore)
+Add new capabilities by implementing the `Tool` protocol.
 
-Tools enable the LLM to interact with the outside world. To create a new tool, implement the `Tool` protocol in `Sources/MonadCore`.
+**Available System Tools:**
+- `memory_search`: Semantic search over long-term memory.
+- `create_memory`: Persist observations and facts.
+- `web_search`: Access online information.
+- `launch_subagent`: Delegate tasks to a new agent session.
+- `add_job`: Queue long-running tasks asynchronously.
+- `list_directory`, `read_file`, `write_to_file`: Filesystem operations within workspace sandboxes.
 
-```swift
-import Foundation
+### 2. Using the CLI (MonadCLI)
+The CLI provides a rich REPL with slash commands for administration and interaction.
 
-public struct MyNewTool: Tool, Sendable {
-    public let id = "my_new_tool"
-    public let name = "My New Tool"
-    public let description = "Performs a specific task useful to the user."
-    public let requiresPermission = false
+**Common Slash Commands:**
+- `/session list|switch|new`: Manage conversation sessions.
+- `/workspace list|attach|detach`: Manage project contexts.
+- `/memory search|all`: Explore the knowledge base.
+- `/job list|add|delete`: Monitor background work.
+- `/ls`, `/cat`, `/write`, `/edit`: Quick file operations.
+- `/debug`: View the last prompt and LLM metadata.
+- `/config`: Edit server settings interactively.
 
-    // Define parameters using JSON Schema structure
-    public var parametersSchema: [String: Any] {
-        [
-            "type": "object",
-            "properties": [
-                "query": [
-                    "type": "string",
-                    "description": "The search query"
-                ],
-                "limit": [
-                    "type": "integer",
-                    "description": "Max results to return"
-                ]
-            ],
-            "required": ["query"]
-        ]
-    }
-
-    public func canExecute() async -> Bool {
-        return true
-    }
-
-    public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let query = parameters["query"] as? String else {
-            return .failure("Missing 'query' parameter")
-        }
-        
-        // ... Perform logic ...
-        let result = "Executed query: \(query)"
-        
-        return .success(result)
-    }
-
-    // Optional: Custom summarization for context compression
-    public func summarize(parameters: [String: Any], result: ToolResult) -> String {
-        return "[\(id)] → \(result.success ? "Success" : "Failed")"
-    }
-}
-```
-
-### 2. Adding a CLI Command (MonadCLI)
-
-To add a new command to the CLI, create a struct conforming to `AsyncParsableCommand` in `Sources/MonadCLI/Commands`.
-
-```swift
-import ArgumentParser
-import MonadClient
-
-struct MyCommand: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
-        commandName: "my-command",
-        abstract: "Does something awesome"
-    )
-
-    @Argument(help: "Input value")
-    var input: String
-
-    @Flag(name: .shortAndLong, help: "Enable verbose output")
-    var verbose: Bool = false
-
-    func run() async throws {
-        // Use MonadClient if you need to talk to the server
-        let client = try MonadClient.autoDetect() 
-        
-        print("Running with input: \(input)")
-        
-        // ... implementation ...
-    }
-}
-```
-*Note: Remember to register the new command in `MonadCLI.swift`.*
+### 3. Workspace Management
+Monad uses a multi-workspace system for scoping tools and files:
+- **Primary Workspace**: Private session sandbox (contains `Notes/` directory).
+- **Attached Workspaces**: Shared project directories attached via `/workspace attach` or `attach-pwd`.
+- **Tool Provenance**: Tools are surfaced as `[System]`, `[Workspace: Name]`, or `[Session]` to indicate their scope.
 
 ### 3. Adding an API Endpoint (MonadServer)
 
