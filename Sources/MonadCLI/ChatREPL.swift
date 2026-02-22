@@ -21,6 +21,9 @@ actor ChatREPL: ChatREPLController {
     // Slash Command Registry
     private let registry = SlashCommandRegistry()
     private let lineReader = LineReader()
+    
+    /// The currently active generation task
+    private var currentGenerationTask: Task<Void, Never>?
 
     init(client: MonadClient, session: Session) {
         self.client = client
@@ -35,6 +38,7 @@ actor ChatREPL: ChatREPLController {
         await registry.register(NewSessionCommand())
         await registry.register(SessionCommand())
         await registry.register(ConfigCommand())
+        await registry.register(CancelCommand())
 
         // File System
         await registry.register(LsCommand())
@@ -57,6 +61,9 @@ actor ChatREPL: ChatREPLController {
     }
 
     func run() async throws {
+        // Set up signal handler for Ctrl+C
+        setupSignalHandler()
+
         // Register commands first
         await registerCommands()
 
@@ -95,6 +102,151 @@ actor ChatREPL: ChatREPLController {
             // Send message
             await sendMessage(trimmed)
         }
+    }
+
+    private func setupSignalHandler() {
+        let source = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
+        source.setEventHandler { [weak self] in
+            Task { [weak self] in
+                await self?.cancelCurrentGeneration()
+            }
+        }
+        source.resume()
+        // Ignore SIGINT in the main process to prevent it from killing us
+        signal(SIGINT, SIG_IGN)
+    }
+
+    public func cancelCurrentGeneration() async {
+        if let task = currentGenerationTask {
+            task.cancel()
+            currentGenerationTask = nil
+            TerminalUI.printWarning("\n[Cancelling generation...]")
+            try? await client.cancelChat(sessionId: session.id)
+        }
+    }
+
+    private func sendMessage(_ message: String) async {
+        let sessionId = session.id
+        currentGenerationTask = Task {
+            do {
+                print("")
+
+                let stream = try await client.chatStream(sessionId: sessionId, message: message)
+
+                var toolCallState: [Int: (name: String, args: String)] = [:]
+                var assistantStartPrinted = false
+
+                for try await delta in stream {
+                    if Task.isCancelled { break }
+
+                    switch delta.type {
+                    case .generationContext:
+                        if let metadata = delta.metadata {
+                            if !metadata.memories.isEmpty || !metadata.files.isEmpty {
+                                let memories = metadata.memories.count
+                                let files = metadata.files.count
+                                print(TerminalUI.dim("Using \(memories) memories and \(files) files"))
+                            }
+                        }
+                        
+                    case .thought:
+                        if let thought = delta.thought {
+                            if !assistantStartPrinted {
+                                // Indicate reasoning phase
+                                print(TerminalUI.dim("🤔 Thinking..."))
+                                assistantStartPrinted = true
+                            }
+                            // Optionally print thinking chunk-by-chunk if verbose, or just keep it silent/dim
+                            print(TerminalUI.dim(thought), terminator: "")
+                            fflush(stdout)
+                        }
+                        
+                    case .thoughtCompleted:
+                        print("\n")
+                        
+                    case .toolCall:
+                        // Legacy or internal buffering
+                        if let toolCalls = delta.toolCalls {
+                            for call in toolCalls {
+                                let index = call.index
+                                var state = toolCallState[index] ?? ("", "")
+                                if let name = call.name { state.name += name }
+                                if let args = call.arguments { state.args += args }
+                                toolCallState[index] = state
+                            }
+                        }
+                        
+                    case .toolCallError:
+                        if let err = delta.toolCallError {
+                            print(TerminalUI.red("❌ Tool Error (\(err.name)): \(err.error)"))
+                        }
+                        
+                    case .toolExecution:
+                        if let execution = delta.toolExecution {
+                            switch execution.status {
+                            case "attempting":
+                                let targetInfo = execution.target != nil ? " on \(execution.target!)" : ""
+                                print(TerminalUI.yellow("🔄 Running \(execution.name ?? "tool")\(targetInfo)..."))
+                            case "success":
+                                print(TerminalUI.green("✅ Tool completed"))
+                            case "failure":
+                                print(TerminalUI.red("❌ Tool failed: \(execution.result ?? "Unknown error")"))
+                            default:
+                                break
+                            }
+                        }
+                        
+                    case .delta:
+                        if let content = delta.content {
+                            if !assistantStartPrinted {
+                                TerminalUI.printAssistantStart()
+                                assistantStartPrinted = true
+                            }
+                            print(content, terminator: "")
+                            fflush(stdout)
+                        }
+                        
+                    case .generationCompleted:
+                        if let meta = delta.responseMetadata {
+                            if let snapshotData = meta.debugSnapshotData {
+                                await updateDebugSnapshot(snapshotData)
+                            }
+
+                            let tokens = meta.totalTokens ?? 0
+                            let dur = String(format: "%.1fs", meta.duration ?? 0)
+                            print(TerminalUI.dim("\n[Generated in \(dur), \(tokens) tokens]"))
+                        } else {
+                            print("\n")
+                        }
+                        
+                    case .generationCancelled:
+                        print(TerminalUI.yellow("\n[Generation cancelled]"))
+
+                    case .error:
+                        if let error = delta.error {
+                            print("\n")
+                            TerminalUI.printError("Stream Error: \(error)")
+                            return
+                        }
+                        
+                    case .streamCompleted:
+                        break
+                    }
+                }
+
+            } catch {
+                if !(error is CancellationError) {
+                    print("")
+                    await handleError(error)
+                }
+            }
+        }
+        await currentGenerationTask?.value
+        currentGenerationTask = nil
+    }
+
+    private func updateDebugSnapshot(_ data: Data) {
+        self.lastDebugSnapshot = try? SerializationUtils.jsonDecoder.decode(DebugSnapshot.self, from: data)
     }
 
     // MARK: - ChatREPLController Protocol
@@ -318,114 +470,6 @@ actor ChatREPL: ChatREPLController {
             }
         } else {
             TerminalUI.printError("Unknown command: \(cmdName). Type /help for available commands.")
-        }
-    }
-
-    private func sendMessage(_ message: String) async {
-        do {
-            print("")
-
-            let stream = try await client.chatStream(sessionId: session.id, message: message)
-
-            var toolCallState: [Int: (name: String, args: String)] = [:]
-            var assistantStartPrinted = false
-
-            for try await delta in stream {
-                switch delta.type {
-                case .generationContext:
-                    if let metadata = delta.metadata {
-                        if !metadata.memories.isEmpty || !metadata.files.isEmpty {
-                            let memories = metadata.memories.count
-                            let files = metadata.files.count
-                            print(TerminalUI.dim("Using \(memories) memories and \(files) files"))
-                        }
-                    }
-                    
-                case .thought:
-                    if let thought = delta.thought {
-                        if !assistantStartPrinted {
-                            // Indicate reasoning phase
-                            print(TerminalUI.dim("🤔 Thinking..."))
-                            assistantStartPrinted = true
-                        }
-                        // Optionally print thinking chunk-by-chunk if verbose, or just keep it silent/dim
-                        print(TerminalUI.dim(thought), terminator: "")
-                        fflush(stdout)
-                    }
-                    
-                case .thoughtCompleted:
-                    print("\n")
-                    
-                case .toolCall:
-                    // Legacy or internal buffering
-                    if let toolCalls = delta.toolCalls {
-                        for call in toolCalls {
-                            let index = call.index
-                            var state = toolCallState[index] ?? ("", "")
-                            if let name = call.name { state.name += name }
-                            if let args = call.arguments { state.args += args }
-                            toolCallState[index] = state
-                        }
-                    }
-                    
-                case .toolCallError:
-                    if let err = delta.toolCallError {
-                        print(TerminalUI.red("❌ Tool Error (\(err.name)): \(err.error)"))
-                    }
-                    
-                case .toolExecution:
-                    if let execution = delta.toolExecution {
-                        switch execution.status {
-                        case "attempting":
-                            let targetInfo = execution.target != nil ? " on \(execution.target!)" : ""
-                            print(TerminalUI.yellow("🔄 Running \(execution.name ?? "tool")\(targetInfo)..."))
-                        case "success":
-                            print(TerminalUI.green("✅ Tool completed"))
-                        case "failure":
-                            print(TerminalUI.red("❌ Tool failed: \(execution.result ?? "Unknown error")"))
-                        default:
-                            break
-                        }
-                    }
-                    
-                case .delta:
-                    if let content = delta.content {
-                        if !assistantStartPrinted {
-                            TerminalUI.printAssistantStart()
-                            assistantStartPrinted = true
-                        }
-                        print(content, terminator: "")
-                        fflush(stdout)
-                    }
-                    
-                case .generationCompleted:
-                    if let meta = delta.responseMetadata {
-                        if let snapshotData = meta.debugSnapshotData {
-                            self.lastDebugSnapshot = try? SerializationUtils.jsonDecoder.decode(DebugSnapshot.self, from: snapshotData)
-                        }
-
-                        let tokens = meta.totalTokens ?? 0
-                        let dur = String(format: "%.1fs", meta.duration ?? 0)
-                        print(TerminalUI.dim("\n[Generated in \(dur), \(tokens) tokens]"))
-                    } else {
-                        print("\n")
-                    }
-                    
-                case .error:
-                    if let error = delta.error {
-                        print("\n")
-                        TerminalUI.printError("Stream Error: \(error)")
-                        return
-                    }
-                    
-                case .streamCompleted:
-                    break
-                }
-            }
-
-        } catch {
-            print("")
-            await handleError(error)
         }
     }
 

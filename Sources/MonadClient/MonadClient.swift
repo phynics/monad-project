@@ -85,6 +85,13 @@ public actor MonadClient {
         return try await perform(request)
     }
 
+    /// Cancel an ongoing chat generation
+    public func cancelChat(sessionId: UUID) async throws {
+        let request = try buildRequest(
+            path: "/api/sessions/\(sessionId.uuidString)/chat/cancel", method: "POST")
+        _ = try await performRaw(request)
+    }
+
     /// Send a chat message with streaming response
     public func chatStream(sessionId: UUID, message: String) async throws -> AsyncThrowingStream<
         MonadShared.ChatDelta, Error

@@ -15,6 +15,9 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     /// Support for multi-chunk streaming. If not empty, this takes precedence over nextResponse.
     public var nextChunks: [[String]] = []
 
+    /// Optional delay between chunks for testing cancellation
+    public var nextStreamWait: TimeInterval? = nil
+
     public init() {}
 
     public func chatStream(
@@ -32,51 +35,80 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
 
         let responses = nextChunks.isEmpty ? [nextResponses.isEmpty ? nextResponse : nextResponses.removeFirst()] : nextChunks.removeFirst()
         let toolCalls = nextToolCalls.isEmpty ? nil : nextToolCalls.removeFirst()
+        let wait = nextStreamWait
+
+        struct StreamContext: @unchecked Sendable {
+            let responses: [String]
+            let toolCalls: [[String: Any]]?
+            let wait: TimeInterval?
+        }
+        let ctx = StreamContext(responses: responses, toolCalls: toolCalls, wait: wait)
 
         return AsyncThrowingStream { continuation in
-            for (index, chunk) in responses.enumerated() {
-                var delta: [String: Any] = [
-                    "role": "assistant",
-                    "content": chunk
-                ]
-
-                // If we have tool calls, add them to the first chunk or all chunks? 
-                // Usually they appear in their own chunks or first chunk with content.
-                // For simplicity, we add them to the last chunk of the text if they exist.
-                if let tc = toolCalls, index == responses.count - 1 {
-                    // OpenAI stream tool calls MUST have an index
-                    let indexedTC = tc.enumerated().map { (idx, dict) in
-                        var newDict = dict
-                        newDict["index"] = idx
-                        return newDict
+            let task = Task {
+                for (index, chunk) in ctx.responses.enumerated() {
+                    if Task.isCancelled { 
+                        continuation.finish(throwing: CancellationError())
+                        return 
                     }
-                    delta["tool_calls"] = indexedTC
-                }
+                    
+                    if let wait = ctx.wait {
+                        do {
+                            try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+                        } catch {
+                            continuation.finish(throwing: error)
+                            return
+                        }
+                    }
+                    
+                    if Task.isCancelled { 
+                        continuation.finish(throwing: CancellationError())
+                        return 
+                    }
 
-                let jsonDict: [String: Any] = [
-                    "id": "mock",
-                    "object": "chat.completion.chunk",
-                    "created": Date().timeIntervalSince1970,
-                    "model": "mock-model",
-                    "choices": [
-                        [
-                            "index": 0,
-                            "delta": delta,
-                            "finish_reason": (index == responses.count - 1 && toolCalls != nil) ? "tool_calls" : (index == responses.count - 1 ? "stop" : nil)
+                    var delta: [String: Any] = [
+                        "role": "assistant",
+                        "content": chunk
+                    ]
+
+                    if let tc = ctx.toolCalls, index == ctx.responses.count - 1 {
+                        let indexedTC = tc.enumerated().map { (idx, dict) in
+                            var newDict = dict
+                            newDict["index"] = idx
+                            return newDict
+                        }
+                        delta["tool_calls"] = indexedTC
+                    }
+
+                    let jsonDict: [String: Any] = [
+                        "id": "mock",
+                        "object": "chat.completion.chunk",
+                        "created": Date().timeIntervalSince1970,
+                        "model": "mock-model",
+                        "choices": [
+                            [
+                                "index": 0,
+                                "delta": delta,
+                                "finish_reason": (index == ctx.responses.count - 1 && ctx.toolCalls != nil) ? "tool_calls" : (index == ctx.responses.count - 1 ? "stop" : nil)
+                            ]
                         ]
                     ]
-                ]
 
-                do {
-                    let data = try JSONSerialization.data(withJSONObject: jsonDict)
-                    let result = try JSONDecoder().decode(ChatStreamResult.self, from: data)
-                    continuation.yield(result)
-                } catch {
-                    continuation.finish(throwing: error)
-                    return
+                    do {
+                        let data = try JSONSerialization.data(withJSONObject: jsonDict)
+                        let result = try JSONDecoder().decode(ChatStreamResult.self, from: data)
+                        continuation.yield(result)
+                    } catch {
+                        continuation.finish(throwing: error)
+                        return
+                    }
                 }
+                continuation.finish()
             }
-            continuation.finish()
+            
+            continuation.onTermination = { @Sendable _ in
+                task.cancel()
+            }
         }
     }
 

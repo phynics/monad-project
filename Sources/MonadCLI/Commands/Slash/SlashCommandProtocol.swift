@@ -35,6 +35,7 @@ protocol ChatREPLController: Sendable {
     func getSelectedWorkspace() async -> UUID?
     func refreshContext() async
     func getLastDebugSnapshot() async -> DebugSnapshot?
+    func cancelCurrentGeneration() async
 }
 
 /// Registry for slash commands
@@ -76,6 +77,7 @@ protocol TerminalOutput: Sendable {
     func printError(_ text: String)
     func printSuccess(_ text: String)
     func printInfo(_ text: String)
+    func printWarning(_ text: String)
 }
 
 struct StandardOutput: TerminalOutput {
@@ -83,4 +85,5 @@ struct StandardOutput: TerminalOutput {
     func printError(_ text: String) { TerminalUI.printError(text) }
     func printSuccess(_ text: String) { TerminalUI.printSuccess(text) }
     func printInfo(_ text: String) { TerminalUI.printInfo(text) }
+    func printWarning(_ text: String) { TerminalUI.printWarning(text) }
 }

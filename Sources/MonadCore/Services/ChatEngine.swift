@@ -121,7 +121,11 @@ public final class ChatEngine: @unchecked Sendable {
         while turnCount < maxTurns {
             turnCount += 1
             
-            if Task.isCancelled { break }
+            if Task.isCancelled {
+                continuation.yield(.error(CancellationError()))
+                continuation.finish()
+                return
+            }
             
             do {
                 let result = try await processTurn(
@@ -145,8 +149,12 @@ public final class ChatEngine: @unchecked Sendable {
                     return
                 }
             } catch {
-                logger.error("Error in chat loop turn \(turnCount): \(error)")
-                continuation.finish(throwing: error)
+                if error is CancellationError {
+                    continuation.finish(throwing: error)
+                } else {
+                    logger.error("Error in chat loop turn \(turnCount): \(error)")
+                    continuation.finish(throwing: error)
+                }
                 return
             }
         }
@@ -270,7 +278,7 @@ public final class ChatEngine: @unchecked Sendable {
         
         let renderedPrompt = renderMessages(currentMessages)
         
-        if Task.isCancelled { return .finish }
+        if Task.isCancelled { throw CancellationError() }
         
         var finalToolCalls = toolCallAccumulators
         

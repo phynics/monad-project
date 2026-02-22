@@ -26,6 +26,9 @@ public actor SessionManager {
     
     /// Snapshots of tool and context state used for debugging chat turns.
     internal var debugSnapshots: [UUID: DebugSnapshot] = [:]
+    
+    /// Ongoing generation tasks for each session.
+    internal var activeTasks: [UUID: Task<Void, Never>] = [:]
 
     @Dependency(\.persistenceService) private var _persistenceService
     @Dependency(\.embeddingService) private var _embeddingService
@@ -289,6 +292,20 @@ public actor SessionManager {
     /// Returns the underlying persistence service.
     public func getPersistenceService() -> any PersistenceServiceProtocol {
         return persistenceService
+    }
+
+    // MARK: - Task Management
+
+    /// Registers a generation task for a session, cancelling any previous active task.
+    public func registerTask(_ task: Task<Void, Never>, for sessionId: UUID) {
+        activeTasks[sessionId]?.cancel()
+        activeTasks[sessionId] = task
+    }
+
+    /// Explicitly cancels an ongoing generation task for a session.
+    public func cancelGeneration(for sessionId: UUID) {
+        activeTasks[sessionId]?.cancel()
+        activeTasks.removeValue(forKey: sessionId)
     }
 
     /// Lists all active (non-archived) sessions from persistence.

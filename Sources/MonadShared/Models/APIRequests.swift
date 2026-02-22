@@ -118,6 +118,7 @@ public enum StreamEventType: String, Sendable, Codable {
     case toolCallError
     case toolExecution
     case generationCompleted
+    case generationCancelled
     case streamCompleted
     case error
 }

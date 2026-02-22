@@ -38,6 +38,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("/{id}/chat", use: chat)
         group.post("/{id}/chat/stream", use: chatStream)
+        group.post("/{id}/chat/cancel", use: cancel)
         group.get("/{id}/chat/debug", use: getDebug)
     }
 
@@ -99,6 +100,10 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             let task = Task {
                 do {
                     for try await event in chatEngineStream {
+                        if Task.isCancelled {
+                            throw CancellationError() 
+                        }
+                        
                         let apiDelta: MonadShared.ChatDelta
                         switch event {
                         case .generationContext(let m):
@@ -168,13 +173,21 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                             )
                             apiDelta = MonadShared.ChatDelta(type: .generationCompleted, responseMetadata: apiMeta)
                         case .error(let e):
-                            apiDelta = MonadShared.ChatDelta(type: .error, error: e.localizedDescription)
+                            if e is CancellationError {
+                                apiDelta = MonadShared.ChatDelta(type: .generationCancelled)
+                            } else {
+                                apiDelta = MonadShared.ChatDelta(type: .error, error: e.localizedDescription)
+                            }
                         }
                         
                         if let data = try? SerializationUtils.jsonEncoder.encode(apiDelta) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))
                         }
+                    }
+                    
+                    if Task.isCancelled {
+                        throw CancellationError()
                     }
                     
                     // Signal end of stream
@@ -186,7 +199,13 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                     
                     continuation.finish()
                 } catch {
-                    if !(error is CancellationError) {
+                    if error is CancellationError {
+                        let cancelDelta = MonadShared.ChatDelta(type: .generationCancelled)
+                        if let data = try? SerializationUtils.jsonEncoder.encode(cancelDelta) {
+                            let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
+                            continuation.yield(ByteBuffer(string: sseString))
+                        }
+                    } else {
                         Logger.chat.error("Stream error: \(error)")
                         let errorDelta = MonadShared.ChatDelta(type: .error, error: error.localizedDescription)
                         if let data = try? SerializationUtils.jsonEncoder.encode(errorDelta) {
@@ -196,6 +215,11 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                     }
                     continuation.finish()
                 }
+            }
+            
+            let registrationTask = task
+            Task {
+                await sessionManager.registerTask(registrationTask, for: id)
             }
             
             continuation.onTermination = { @Sendable _ in
@@ -208,6 +232,15 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         headers[.cacheControl] = "no-cache"
         headers[.connection] = "keep-alive"
         return Response(status: .ok, headers: headers, body: .init(asyncSequence: sseStream))
+    }
+
+    @Sendable func cancel(_ request: Request, context: Context) async throws -> Response {
+        let idString = try context.parameters.require("id")
+        guard let id = UUID(uuidString: idString) else {
+            throw HTTPError(.badRequest)
+        }
+        await sessionManager.cancelGeneration(for: id)
+        return Response(status: .ok)
     }
 
     @Sendable func getDebug(_ request: Request, context: Context) async throws -> Response {
