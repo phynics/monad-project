@@ -41,7 +41,12 @@ public actor OpenRouterClient: Sendable {
             urlString += "/api"
         }
         
-        self.endpoint = URL(string: urlString)!
+        if let url = URL(string: urlString) {
+            self.endpoint = url
+        } else {
+            logger.warning("Invalid OpenRouter URL '\(urlString)', falling back to default")
+            self.endpoint = URL(string: "https://openrouter.ai/api")!
+        }
         
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = timeoutInterval
