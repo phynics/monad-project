@@ -55,12 +55,9 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func list(_ request: Request, context: Context) async throws -> Response {
-        // Parse pagination query params manually until we have a proper binder
-        let uri = request.uri
-        // Basic query parsing
-        let components = URLComponents(string: uri.description)
-        let page = components?.queryItems?.first(where: { $0.name == "page" })?.value.flatMap(Int.init) ?? 1
-        let perPage = components?.queryItems?.first(where: { $0.name == "perPage" })?.value.flatMap(Int.init) ?? 20
+        let pagination = request.getPagination()
+        let page = pagination.page
+        let perPage = pagination.perPage
 
         let sessions = try await sessionManager.listSessions()
         
@@ -176,10 +173,9 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
         
-        let uri = request.uri
-        let components = URLComponents(string: uri.description)
-        let page = components?.queryItems?.first(where: { $0.name == "page" })?.value.flatMap(Int.init) ?? 1
-        let perPage = components?.queryItems?.first(where: { $0.name == "perPage" })?.value.flatMap(Int.init) ?? 50 // Higher default for messages
+        let pagination = request.getPagination(defaultPerPage: 50)
+        let page = pagination.page
+        let perPage = pagination.perPage
 
         let messages = try await sessionManager.getHistory(for: id)
         

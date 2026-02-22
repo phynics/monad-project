@@ -60,10 +60,9 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
 
     /// GET /workspaces
     @Sendable func list(request: Request, context: Context) async throws -> Response {
-        let uri = request.uri
-        let components = URLComponents(string: uri.description)
-        let page = components?.queryItems?.first(where: { $0.name == "page" })?.value.flatMap(Int.init) ?? 1
-        let perPage = components?.queryItems?.first(where: { $0.name == "perPage" })?.value.flatMap(Int.init) ?? 20
+        let pagination = request.getPagination()
+        let page = pagination.page
+        let perPage = pagination.perPage
         
         let workspaces = try await persistenceService.fetchAllWorkspaces()
         
