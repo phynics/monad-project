@@ -205,14 +205,15 @@ struct MonadServer: AsyncParsableCommand {
 
             logger.info("Server starting on \(hostname):\(port)")
 
-            _ = BonjourAdvertiser(port: port)
+            let bonjourAdvertiser = BonjourAdvertiser(port: port)
 
             let serviceGroup = ServiceGroup(
                 configuration: ServiceGroupConfiguration(
                     services: [
                         .init(service: app),
                         .init(service: jobRunner),
-                        .init(service: orphanCleanup)
+                        .init(service: orphanCleanup),
+                        .init(service: bonjourAdvertiser)
                     ],
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                     logger: logger
