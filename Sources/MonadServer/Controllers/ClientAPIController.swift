@@ -59,15 +59,11 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
 
         let response = ClientRegistrationResponse(
             client: client, defaultWorkspace: defaultWorkspace)
-        let data = try SerializationUtils.jsonEncoder.encode(response)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .created, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return try response.response(status: .created, from: request, context: context)
     }
 
     /// GET /clients/:id
-    @Sendable func get(request: Request, context: Context) async throws -> Response {
+    @Sendable func get(request: Request, context: Context) async throws -> ClientIdentity {
         let id = try context.parameters.require("id", as: UUID.self)
         let client = try await persistenceService.fetchClient(id: id)
 
@@ -75,26 +71,16 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound)
         }
 
-        let data = try SerializationUtils.jsonEncoder.encode(client)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return client
     }
 
     /// GET /clients
-    @Sendable func list(request: Request, context: Context) async throws -> Response {
-        let clients = try await persistenceService.fetchAllClients()
-
-        let data = try SerializationUtils.jsonEncoder.encode(clients)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+    @Sendable func list(request: Request, context: Context) async throws -> [ClientIdentity] {
+        return try await persistenceService.fetchAllClients()
     }
 
     /// DELETE /clients/:id
-    @Sendable func delete(request: Request, context: Context) async throws -> Response {
+    @Sendable func delete(request: Request, context: Context) async throws -> HTTPResponse.Status {
         let id = try context.parameters.require("id", as: UUID.self)
         let deleted = try await persistenceService.deleteClient(id: id)
 
@@ -102,7 +88,7 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound)
         }
 
-        return Response(status: .noContent)
+        return .noContent
     }
 }
 

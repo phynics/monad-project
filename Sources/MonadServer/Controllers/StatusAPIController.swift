@@ -52,19 +52,6 @@ public struct StatusAPIController<Context: RequestContext>: Sendable {
     }
 }
 
-extension MonadShared.StatusResponse: ResponseGenerator {
-    public func response(from request: Request, context: some RequestContext) throws -> Response {
-        let data = try JSONEncoder().encode(self)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok,
-            headers: headers,
-            body: .init(byteBuffer: ByteBuffer(bytes: data))
-        )
-    }
-}
-
 extension MonadShared.HealthStatus {
     init(fromCore status: MonadCore.HealthStatus) {
         switch status {

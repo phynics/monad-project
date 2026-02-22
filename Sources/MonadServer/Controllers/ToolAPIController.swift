@@ -158,13 +158,3 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         }
     }
 }
-
-extension Message: ResponseGenerator {
-    public func response(from request: Request, context: some RequestContext) throws -> Response {
-        let data = try SerializationUtils.jsonEncoder.encode(self)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
-    }
-}

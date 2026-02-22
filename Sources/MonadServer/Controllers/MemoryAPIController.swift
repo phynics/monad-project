@@ -42,14 +42,10 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.internalServerError)
         }
 
-        let data = try SerializationUtils.jsonEncoder.encode(savedMemory)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .created, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return try savedMemory.response(status: .created, from: request, context: context)
     }
 
-    @Sendable func list(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func list(_ request: Request, context: Context) async throws -> some ResponseGenerator {
         let pagination = request.getPagination()
         let page = pagination.page
         let perPage = pagination.perPage
@@ -69,16 +65,10 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
         }
         
         let metadata = PaginationMetadata(page: page, perPage: perPage, totalItems: total)
-        let response = PaginatedResponse(items: paginatedMemories, metadata: metadata)
-
-        let data = try SerializationUtils.jsonEncoder.encode(response)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return PaginatedResponse(items: paginatedMemories, metadata: metadata)
     }
 
-    @Sendable func get(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func get(_ request: Request, context: Context) async throws -> Memory {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
         
@@ -87,13 +77,10 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound)
         }
         
-        let data = try SerializationUtils.jsonEncoder.encode(memory)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return memory
     }
     
-    @Sendable func update(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func update(_ request: Request, context: Context) async throws -> Memory {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
         
@@ -115,40 +102,26 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
             }
         }
         
-
-        
-
-
-        
         _ = try await persistence.saveMemory(memory, policy: .immediate)
         
-        let data = try SerializationUtils.jsonEncoder.encode(memory)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return memory
     }
 
-    @Sendable func search(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func search(_ request: Request, context: Context) async throws -> [Memory] {
         let input = try await request.decode(as: MemorySearchRequest.self, context: context)
         let persistence = await sessionManager.getPersistenceService()
         
         let memories = try await persistence.searchMemories(query: input.query)
-        let results = (input.limit != nil) ? Array(memories.prefix(input.limit!)) : memories
-        
-        let data = try SerializationUtils.jsonEncoder.encode(results)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return (input.limit != nil) ? Array(memories.prefix(input.limit!)) : memories
     }
 
-    @Sendable func delete(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func delete(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
         
         let persistence = await sessionManager.getPersistenceService()
         try await persistence.deleteMemory(id: id)
         
-        return Response(status: .noContent)
+        return .noContent
     }
 }

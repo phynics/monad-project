@@ -38,26 +38,18 @@ public struct JobAPIController<Context: RequestContext>: Sendable {
         
         try await persistence.saveJob(job)
         
-        let data = try SerializationUtils.jsonEncoder.encode(job)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(status: .created, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return try job.response(status: .created, from: request, context: context)
     }
 
-    @Sendable func list(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func list(_ request: Request, context: Context) async throws -> [Job] {
         let idString = try context.parameters.require("id")
         guard let sessionId = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
         
         let persistence = await sessionManager.getPersistenceService()
-        let jobs = try await persistence.fetchJobs(for: sessionId)
-        
-        let data = try SerializationUtils.jsonEncoder.encode(jobs)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return try await persistence.fetchJobs(for: sessionId)
     }
 
-    @Sendable func get(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func get(_ request: Request, context: Context) async throws -> Job {
         let jobIdString = try context.parameters.require("jobId")
         guard let jobId = UUID(uuidString: jobIdString) else { throw HTTPError(.badRequest) }
         
@@ -66,19 +58,16 @@ public struct JobAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound)
         }
         
-        let data = try SerializationUtils.jsonEncoder.encode(job)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return job
     }
 
-    @Sendable func delete(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func delete(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let jobIdString = try context.parameters.require("jobId")
         guard let jobId = UUID(uuidString: jobIdString) else { throw HTTPError(.badRequest) }
         
         let persistence = await sessionManager.getPersistenceService()
         try await persistence.deleteJob(id: jobId)
         
-        return Response(status: .noContent)
+        return .noContent
     }
 }

@@ -6,17 +6,6 @@ import MonadCore
 import Logging
 import NIOCore
 
-extension APIErrorResponse: ResponseGenerator {
-    public func response(from request: Request, context: some RequestContext) throws -> Response {
-        let data = try SerializationUtils.jsonEncoder.encode(self)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        // Note: The status code should be set by the caller if it's not .ok
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
-    }
-}
-
 public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
     public init() {}
     

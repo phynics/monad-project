@@ -33,12 +33,3 @@ public struct ConfigurationAPIController<Context: RequestContext>: Sendable {
         return .noContent
     }
 }
-
-extension LLMConfiguration: ResponseGenerator {
-    public func response(from request: Request, context: some RequestContext) throws -> Response {
-        let data = try SerializationUtils.jsonEncoder.encode(self)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
-    }
-}

@@ -7,16 +7,6 @@ import MonadShared
 import NIOCore
 import OpenAI
 
-extension ChatResponse: ResponseGenerator {
-    public func response(from request: Request, context: some RequestContext) throws -> Response {
-        let data = try SerializationUtils.jsonEncoder.encode(self)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
-    }
-}
-
 public struct ChatAPIController<Context: RequestContext>: Sendable {
     public let sessionManager: SessionManager
     public let chatEngine: ChatEngine

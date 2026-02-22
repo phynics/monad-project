@@ -47,14 +47,10 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
             primaryWorkspaceId: session.primaryWorkspaceId,
             attachedWorkspaceIds: session.attachedWorkspaces
         )
-        let data = try SerializationUtils.jsonEncoder.encode(response)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .created, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return try response.response(status: .created, from: request, context: context)
     }
 
-    @Sendable func list(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func list(_ request: Request, context: Context) async throws -> some ResponseGenerator {
         let pagination = request.getPagination()
         let page = pagination.page
         let perPage = pagination.perPage
@@ -87,16 +83,10 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         }
         
         let metadata = PaginationMetadata(page: page, perPage: perPage, totalItems: total)
-        let response = PaginatedResponse(items: sessionResponses, metadata: metadata)
-
-        let data = try SerializationUtils.jsonEncoder.encode(response)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return PaginatedResponse(items: sessionResponses, metadata: metadata)
     }
     
-    @Sendable func get(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func get(_ request: Request, context: Context) async throws -> SessionResponse {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
         
@@ -104,7 +94,7 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
              // Fallback to DB if not in memory
              let persistence = await sessionManager.getPersistenceService()
              if let dbSession = try? await persistence.fetchSession(id: id) {
-                 let response = SessionResponse(
+                 return SessionResponse(
                      id: dbSession.id,
                      title: dbSession.title,
                      createdAt: dbSession.createdAt,
@@ -115,15 +105,11 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
                      primaryWorkspaceId: dbSession.primaryWorkspaceId,
                      attachedWorkspaceIds: dbSession.attachedWorkspaces
                  )
-                 let data = try SerializationUtils.jsonEncoder.encode(response)
-                 var headers = HTTPFields()
-                 headers[.contentType] = "application/json"
-                 return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
              }
              throw HTTPError(.notFound)
         }
 
-        let response = SessionResponse(
+        return SessionResponse(
             id: session.id,
             title: session.title,
             createdAt: session.createdAt,
@@ -134,14 +120,9 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
             primaryWorkspaceId: session.primaryWorkspaceId,
             attachedWorkspaceIds: session.attachedWorkspaces
         )
-        let data = try SerializationUtils.jsonEncoder.encode(response)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
     }
     
-    @Sendable func update(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func update(_ request: Request, context: Context) async throws -> SessionResponse {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
         
@@ -154,7 +135,7 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         return try await get(request, context: context)
     }
     
-    @Sendable func delete(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func delete(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
         
@@ -165,11 +146,11 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         let persistence = await sessionManager.getPersistenceService()
         try await persistence.deleteSession(id: id)
         
-        return Response(status: .noContent)
+        return .noContent
     }
 
 
-    @Sendable func getMessages(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func getMessages(_ request: Request, context: Context) async throws -> some ResponseGenerator {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
         
@@ -191,18 +172,12 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         }
         
         let metadata = PaginationMetadata(page: page, perPage: perPage, totalItems: total)
-        let response = PaginatedResponse(items: paginatedMessages, metadata: metadata)
-        
-        let data = try SerializationUtils.jsonEncoder.encode(response)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return PaginatedResponse(items: paginatedMessages, metadata: metadata)
     }
 
     // MARK: - Workspace Endpoints
 
-    @Sendable func attachWorkspace(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func attachWorkspace(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
@@ -212,12 +187,10 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         try await sessionManager.attachWorkspace(
             input.workspaceId, to: id, isPrimary: input.isPrimary)
 
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(status: .ok, headers: headers)
+        return .ok
     }
 
-    @Sendable func detachWorkspace(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func detachWorkspace(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         let wsIdString = try context.parameters.require("wsId")
 
@@ -226,10 +199,10 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         }
 
         try await sessionManager.detachWorkspace(wsId, from: id)
-        return Response(status: .noContent)
+        return .noContent
     }
 
-    @Sendable func listWorkspaces(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func listWorkspaces(_ request: Request, context: Context) async throws -> SessionWorkspacesResponse {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
@@ -237,19 +210,13 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound)
         }
 
-        let response = SessionWorkspacesResponse(
+        return SessionWorkspacesResponse(
             primaryWorkspace: workspaces.primary,
             attachedWorkspaces: workspaces.attached
         )
-
-        let data = try SerializationUtils.jsonEncoder.encode(response)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
     }
 
-    @Sendable func restoreWorkspace(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func restoreWorkspace(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         let wsIdString = try context.parameters.require("wsId")
         
@@ -259,6 +226,6 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         
         try await sessionManager.restoreWorkspace(wsId)
         
-        return Response(status: .ok)
+        return .ok
     }
 }

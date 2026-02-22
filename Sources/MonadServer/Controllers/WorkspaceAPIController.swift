@@ -51,15 +51,11 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
 
         try await persistenceService.saveWorkspace(workspace)
 
-        let data = try SerializationUtils.jsonEncoder.encode(workspace)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .created, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return try workspace.response(status: .created, from: request, context: context)
     }
 
     /// GET /workspaces
-    @Sendable func list(request: Request, context: Context) async throws -> Response {
+    @Sendable func list(request: Request, context: Context) async throws -> some ResponseGenerator {
         let pagination = request.getPagination()
         let page = pagination.page
         let perPage = pagination.perPage
@@ -78,13 +74,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         }
         
         let metadata = PaginationMetadata(page: page, perPage: perPage, totalItems: total)
-        let response = PaginatedResponse(items: paginatedWorkspaces, metadata: metadata)
-        
-        let data = try SerializationUtils.jsonEncoder.encode(response)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return PaginatedResponse(items: paginatedWorkspaces, metadata: metadata)
     }
 
     public func getWorkspace(id: UUID) async throws -> WorkspaceReference? {
@@ -92,7 +82,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     }
 
     /// GET /workspaces/:id
-    @Sendable func get(request: Request, context: Context) async throws -> Response {
+    @Sendable func get(request: Request, context: Context) async throws -> WorkspaceReference {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         let workspace = try await getWorkspace(id: id)
 
@@ -100,15 +90,11 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound)
         }
 
-        let data = try SerializationUtils.jsonEncoder.encode(workspace)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return workspace
     }
     
     /// PATCH /workspaces/:id
-    @Sendable func update(request: Request, context: Context) async throws -> Response {
+    @Sendable func update(request: Request, context: Context) async throws -> WorkspaceReference {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         let input = try await request.decode(as: UpdateWorkspaceRequest.self, context: context)
         
@@ -125,36 +111,30 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         
         try await persistenceService.saveWorkspace(workspace)
         
-        return try await get(request: request, context: context)
+        return workspace
     }
 
     /// DELETE /workspaces/:id
-    @Sendable func delete(request: Request, context: Context) async throws -> Response {
+    @Sendable func delete(request: Request, context: Context) async throws -> HTTPResponse.Status {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         try await persistenceService.deleteWorkspace(id: id)
-        return Response(status: .noContent)
+        return .noContent
     }
 
     /// POST /workspaces/:id/tools
-    @Sendable func addTool(request: Request, context: Context) async throws -> Response {
+    @Sendable func addTool(request: Request, context: Context) async throws -> HTTPResponse.Status {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         let input = try await request.decode(as: RegisterToolRequest.self, context: context)
 
         try await persistenceService.addToolToWorkspace(workspaceId: id, tool: input.tool)
 
-        return Response(status: .created)
+        return .created
     }
 
     /// GET /workspaces/:id/tools
-    @Sendable func listTools(request: Request, context: Context) async throws -> Response {
+    @Sendable func listTools(request: Request, context: Context) async throws -> [ToolReference] {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
 
-        let tools = try await persistenceService.fetchTools(forWorkspaces: [id])
-
-        let data = try SerializationUtils.jsonEncoder.encode(tools)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+        return try await persistenceService.fetchTools(forWorkspaces: [id])
     }
 }
