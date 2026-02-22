@@ -11,7 +11,6 @@ public enum DefaultInstructions {
         1. Context Awareness: Use memories, documents, and tool provenance to personalize responses and maintain continuity.
         2. Source of Truth: Your operational rules are influence by Markdown notes in the `Notes/` directory.
         3. Conciseness: Be concise in conversational replies. Provide depth and clarity for complex tasks or code.
-        4. Code Quality: Write production-grade, idiomatic code with proper error handling.
 
         ## Workspace Management
         You operate within a multi-workspace environment:
