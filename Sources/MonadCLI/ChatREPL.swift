@@ -24,6 +24,7 @@ actor ChatREPL: ChatREPLController {
     
     /// The currently active generation task
     private var currentGenerationTask: Task<Void, Never>?
+    private var signalSource: DispatchSourceSignal?
 
     init(client: MonadClient, session: Session) {
         self.client = client
@@ -112,6 +113,7 @@ actor ChatREPL: ChatREPLController {
             }
         }
         source.resume()
+        self.signalSource = source
         // Ignore SIGINT in the main process to prevent it from killing us
         signal(SIGINT, SIG_IGN)
     }
