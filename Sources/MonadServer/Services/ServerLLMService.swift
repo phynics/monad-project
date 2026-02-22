@@ -44,7 +44,7 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
     private let logger = Logger.server
 
     public init(
-        storage: ConfigurationStorage = ConfigurationStorage()
+        storage: ConfigurationStorage
     ) {
         self.storage = storage
     }

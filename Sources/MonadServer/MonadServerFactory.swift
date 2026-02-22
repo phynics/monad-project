@@ -56,7 +56,10 @@ public struct MonadServerFactory {
         }
         
         // Initialize LLM Service
-        let llmService = ServerLLMService()
+        let appSupportDir = try defaultWorkspacePath().deletingLastPathComponent()
+        let configURL = appSupportDir.appendingPathComponent("config.json")
+        let storage = ConfigurationStorage(configURL: configURL)
+        let llmService = ServerLLMService(storage: storage)
         await llmService.loadConfiguration()
 
         let workspaceRoot = try defaultWorkspacePath()

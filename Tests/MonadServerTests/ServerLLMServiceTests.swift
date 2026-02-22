@@ -2,6 +2,7 @@ import MonadShared
 import Foundation
 import MonadCore
 import Testing
+import OpenAI
 
 @testable import MonadServer
 
@@ -12,7 +13,8 @@ import Testing
         let defaults = UserDefaults(suiteName: "TestServerLLMService")!
         defaults.removePersistentDomain(forName: "TestServerLLMService")
 
-        let storage = ConfigurationStorage(userDefaults: defaults)
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storage = ConfigurationStorage(configURL: tempURL, userDefaults: defaults)
         let service = ServerLLMService(storage: storage)
 
         await service.loadConfiguration()
@@ -34,11 +36,14 @@ import Testing
 
         let newClient = await service.getClient()
         #expect(newClient != nil, "Client should be initialized after valid config")
+        
+        try? FileManager.default.removeItem(at: tempURL)
     }
 
     @Test("Test generateTags")
     func testGenerateTags() async throws {
-        let storage = ConfigurationStorage(userDefaults: UserDefaults(suiteName: "TestTags")!)
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storage = ConfigurationStorage(configURL: tempURL, userDefaults: UserDefaults(suiteName: "TestTags")!)
         let service = ServerLLMService(storage: storage)
 
         // Setup mock config
@@ -67,11 +72,14 @@ import Testing
         let tags = try await service.generateTags(for: "This is a post about Swift testing.")
         #expect(tags == ["swift", "testing", "llm"])
         #expect(mockClient.lastMessages.count > 0)
+        
+        try? FileManager.default.removeItem(at: tempURL)
     }
 
     @Test("Test generateTitle")
     func testGenerateTitle() async throws {
-        let storage = ConfigurationStorage(userDefaults: UserDefaults(suiteName: "TestTitle")!)
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storage = ConfigurationStorage(configURL: tempURL, userDefaults: UserDefaults(suiteName: "TestTitle")!)
         let service = ServerLLMService(storage: storage)
 
         let mockClient = MockLLMClient()
@@ -86,11 +94,14 @@ import Testing
 
         let title = try await service.generateTitle(for: messages)
         #expect(title == "Test Conversation")
+        
+        try? FileManager.default.removeItem(at: tempURL)
     }
 
     @Test("Test evaluateRecallPerformance")
     func testEvaluateRecallPerformance() async throws {
-        let storage = ConfigurationStorage(userDefaults: UserDefaults(suiteName: "TestRecall")!)
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storage = ConfigurationStorage(configURL: tempURL, userDefaults: UserDefaults(suiteName: "TestRecall")!)
         let service = ServerLLMService(storage: storage)
 
         let mockClient = MockLLMClient()
@@ -114,11 +125,14 @@ import Testing
         // The mock response keys "uuid-1" won't match memory1.id, but the function returns the map as-is.
         #expect(scores["uuid-1"] == 1.0)
         #expect(scores["uuid-2"] == -0.5)
+        
+        try? FileManager.default.removeItem(at: tempURL)
     }
 
     @Test("Test chatStreamWithContext")
     func testChatStreamWithContext() async throws {
-        let storage = ConfigurationStorage(userDefaults: UserDefaults(suiteName: "TestStream")!)
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storage = ConfigurationStorage(configURL: tempURL, userDefaults: UserDefaults(suiteName: "TestStream")!)
         let service = ServerLLMService(storage: storage)
 
         let mockClient = MockLLMClient()
@@ -132,8 +146,8 @@ import Testing
             memories: [],
             chatHistory: [],
             tools: [],
-            systemInstructions: nil,
-            responseFormat: nil,
+            systemInstructions: nil as String?,
+            responseFormat: nil as ChatQuery.ResponseFormat?,
             useFastModel: false
         )
 
@@ -148,11 +162,14 @@ import Testing
             }
         }
         #expect(received == "Hello")
+        
+        try? FileManager.default.removeItem(at: tempURL)
     }
 
     @Test("Test Provider Configuration (OpenRouter)")
     func testProviderConfiguration() async throws {
-        let storage = ConfigurationStorage(userDefaults: UserDefaults(suiteName: "TestConfig")!)
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storage = ConfigurationStorage(configURL: tempURL, userDefaults: UserDefaults(suiteName: "TestConfig")!)
         let service = ServerLLMService(storage: storage)
 
         var config = LLMConfiguration.openAI
@@ -167,5 +184,6 @@ import Testing
 
         // Verify internal state if possible, or just trust getClient() != nil
         // Ideally we check if it is indeed an OpenRouterClient, but type eraser hides it.
+        try? FileManager.default.removeItem(at: tempURL)
     }
 }
