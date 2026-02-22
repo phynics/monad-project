@@ -159,11 +159,10 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
                     """)
 
             // Remove tables that no longer exist
+            let placeholders = currentTables.map { _ in "?" }.joined(separator: ",")
             try db.execute(
-                sql: """
-                        DELETE FROM table_directory 
-                        WHERE name NOT IN (\(currentTables.map { "'\($0)'" }.joined(separator: ",")))
-                    """)
+                sql: "DELETE FROM table_directory WHERE name NOT IN (\(placeholders))",
+                arguments: StatementArguments(currentTables))
 
             // Add new tables
             let now = Date()
