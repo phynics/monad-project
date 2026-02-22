@@ -26,13 +26,15 @@ import Foundation
             // 404 Case
             try await client.execute(uri: "/error/404", method: .get) { response in
                 #expect(response.status == .notFound)
-                #expect(response.body.readableBytes == 0, "Error response should have empty body per specification")
+                let error = try JSONDecoder().decode(APIErrorResponse.self, from: response.body)
+                #expect(error.error.code == "http_error")
             }
 
             // 500 Case
             try await client.execute(uri: "/error/500", method: .get) { response in
                 #expect(response.status == .internalServerError)
-                #expect(response.body.readableBytes == 0, "Error response should have empty body per specification")
+                let error = try JSONDecoder().decode(APIErrorResponse.self, from: response.body)
+                #expect(error.error.code == "internal_server_error")
             }
         }
     }
