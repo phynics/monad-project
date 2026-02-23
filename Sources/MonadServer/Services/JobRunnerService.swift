@@ -7,14 +7,21 @@ import Dependencies
 
 /// Service that monitors and executes background jobs
 public final class JobRunnerService: Service, @unchecked Sendable {
-    @Dependency(\.sessionManager) private var sessionManager
-    @Dependency(\.llmService) private var llmService
-    @Dependency(\.agentRegistry) private var agentRegistry
-    @Dependency(\.agentExecutor) private var agentExecutor
+    private let sessionManager: SessionManager
+    private let agentRegistry: AgentRegistry
+    private let agentExecutor: AgentExecutor
 
     private let logger = Logger(label: "com.monad.job-runner")
 
-    public init() {}
+    public init(
+        sessionManager: SessionManager,
+        agentRegistry: AgentRegistry,
+        agentExecutor: AgentExecutor
+    ) {
+        self.sessionManager = sessionManager
+        self.agentRegistry = agentRegistry
+        self.agentExecutor = agentExecutor
+    }
     
     /// Run the job execution loop
     public func run() async throws {

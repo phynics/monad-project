@@ -1,4 +1,5 @@
 import MonadShared
+import MonadCore
 import Foundation
 import Logging
 import ServiceLifecycle
@@ -6,13 +7,13 @@ import Dependencies
 
 /// Service that cleans up orphaned workspaces
 public final class OrphanCleanupService: Service, @unchecked Sendable {
-    @Dependency(\.persistenceService) private var persistenceService
-    
+    private let persistenceService: any PersistenceServiceProtocol
     private let workspaceRoot: URL
     private let logger = Logger(label: "com.monad.orphan-cleanup")
 
-    public init(workspaceRoot: URL) {
+    public init(workspaceRoot: URL, persistenceService: any PersistenceServiceProtocol) {
         self.workspaceRoot = workspaceRoot
+        self.persistenceService = persistenceService
     }
 
     /// Run the cleanup loop

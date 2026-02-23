@@ -5,12 +5,15 @@ import Dependencies
 
 /// Service responsible for executing autonomous agents and managing their reasoning loops.
 public struct AgentExecutor: Sendable {
-    @Dependency(\.persistenceService) private var persistenceService
-    @Dependency(\.chatEngine) private var chatEngine
+    private let persistenceService: any PersistenceServiceProtocol
+    private let chatEngine: ChatEngine
     
     private let logger = Logger(label: "com.monad.agent-executor")
     
-    public init() {}
+    public init(persistenceService: any PersistenceServiceProtocol, chatEngine: ChatEngine) {
+        self.persistenceService = persistenceService
+        self.chatEngine = chatEngine
+    }
     
     /// Execute an agent for a specific job
     public func execute(
