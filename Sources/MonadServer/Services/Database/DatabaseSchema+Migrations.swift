@@ -458,5 +458,14 @@ extension DatabaseSchema {
                 }
             }
         }
+
+        // v30: Add metadata to workspace table
+        migrator.registerMigration("v30") { db in
+            if try !db.columns(in: "workspace").contains(where: { $0.name == "metadata" }) {
+                try db.alter(table: "workspace") { t in
+                    t.add(column: "metadata", .text).notNull().defaults(to: "{}")
+                }
+            }
+        }
     }
 }

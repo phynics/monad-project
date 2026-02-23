@@ -69,6 +69,7 @@ public struct WorkspaceReference: Codable, Sendable, Identifiable {
     public var trustLevel: WorkspaceTrustLevel
     public var lastModifiedBy: UUID?  // Session ID that last modified
     public var status: WorkspaceStatus
+    public var metadata: [String: AnyCodable]
     public let createdAt: Date
 
     public enum WorkspaceHostType: String, Codable, Sendable {
@@ -93,6 +94,7 @@ public struct WorkspaceReference: Codable, Sendable, Identifiable {
         trustLevel: WorkspaceTrustLevel = .full,
         lastModifiedBy: UUID? = nil,
         status: WorkspaceStatus = .active,
+        metadata: [String: AnyCodable] = [:],
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -104,19 +106,22 @@ public struct WorkspaceReference: Codable, Sendable, Identifiable {
         self.trustLevel = trustLevel
         self.lastModifiedBy = lastModifiedBy
         self.status = status
+        self.metadata = metadata
         self.createdAt = createdAt
     }
 
     /// Create a primary workspace for a session
     public static func primaryForSession(
         _ sessionId: UUID,
-        rootPath: String
+        rootPath: String,
+        metadata: [String: AnyCodable] = [:]
     ) -> WorkspaceReference {
         WorkspaceReference(
             uri: .serverSession(sessionId),
             hostType: .server,
             rootPath: rootPath,
-            trustLevel: .full
+            trustLevel: .full,
+            metadata: metadata
         )
     }
 }

@@ -28,6 +28,7 @@ extension DatabaseSchema {
             t.column("trustLevel", .text).notNull().defaults(to: "full")
             t.column("lastModifiedBy", .blob)
             t.column("status", .text).notNull().defaults(to: "active")
+            t.column("metadata", .text).notNull().defaults(to: "{}")
             t.column("createdAt", .datetime).notNull()
         }
 

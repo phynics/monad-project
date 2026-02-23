@@ -288,6 +288,7 @@ public final class MockPersistenceService: PersistenceServiceProtocol, @unchecke
                 trustLevel: ws.trustLevel,
                 lastModifiedBy: ws.lastModifiedBy,
                 status: ws.status,
+                metadata: ws.metadata,
                 createdAt: ws.createdAt
             )
             workspaces[index] = updatedWS

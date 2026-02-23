@@ -1,7 +1,7 @@
 # Implementation Plan: Workspace Management System
 
 ## Phase 1: Core Data Models & Storage
-- [ ] Task: Define `Workspace` model and database schema
+- [~] Task: Define `Workspace` model and database schema
     - [ ] Write unit tests for `Workspace` initialization and database mapping
     - [ ] Implement `Workspace` struct and GRDB migrations
 - [ ] Task: Implement `WorkspaceRepository` for CRUD operations
