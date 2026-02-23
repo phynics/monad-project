@@ -38,6 +38,14 @@ struct MemoryCommand: SlashCommand {
             } else {
                 TerminalUI.printError("Usage: /memory view <id>")
             }
+        case "olderthan":
+            if args.count > 1, let days = Int(args[1]) {
+                TerminalUI.printWarning("To delete old memories, please use the /prune command:")
+                print("  /prune memories olderThan \(days)")
+                print("")
+            } else {
+                TerminalUI.printError("Usage: /memory olderThan <days>")
+            }
         default:
             // Fallback to active list
             try await listActive(context: context)

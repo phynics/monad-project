@@ -143,7 +143,6 @@ extension PersistenceService {
             let request =
                 Memory
                 .filter(Column("createdAt") < cutoffDate)
-                .filter(!ConversationMessage.select(Column("memoryId")).contains(Column("id")))
 
             if dryRun {
                 return try request.fetchCount(db)

@@ -23,14 +23,20 @@ actor PruneSlashCommand: SlashCommand {
         switch subcommand {
         case "memories":
             if args.count > 1 {
-                let arg = args.dropFirst().joined(separator: " ")
-                if let days = Int(arg) {
+                // Support:
+                // /prune memories 30
+                // /prune memories olderThan 30
+                // /prune memories some query
+                if let days = Int(args[1]) {
+                    try await planPruneMemories(days: days, context: context)
+                } else if args[1].lowercased() == "olderthan", args.count > 2, let days = Int(args[2]) {
                     try await planPruneMemories(days: days, context: context)
                 } else {
-                    try await planPruneMemories(query: arg, context: context)
+                    let query = args.dropFirst().joined(separator: " ")
+                    try await planPruneMemories(query: query, context: context)
                 }
             } else {
-                TerminalUI.printError("Usage: /prune memories <query|days>")
+                TerminalUI.printError("Usage: /prune memories <query|days|olderThan N>")
             }
         case "memory":
             if args.count > 1 {
@@ -73,7 +79,7 @@ actor PruneSlashCommand: SlashCommand {
 
     private func printUsage() {
         print(TerminalUI.bold("Prune Commands:"))
-        print("  /prune memories <query>        Plan deletion of memories matching query")
+        print("  /prune memories <query|days>   Plan deletion of memories (by query or age)")
         print("  /prune memory <id>             Plan deletion of a specific memory")
         print("  /prune memory olderThan <days> Plan deletion of memories older than N days")
         print("  /prune sessions <days|all>     Plan deletion of sessions older than N days")

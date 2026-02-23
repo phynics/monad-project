@@ -9,7 +9,6 @@ public struct ConversationMessage: Codable, Identifiable, Sendable
     public var content: String
     public var timestamp: Date
     public var recalledMemories: String
-    public var memoryId: UUID?
     public var parentId: UUID?
     public var think: String?
     public var toolCalls: String
@@ -22,7 +21,6 @@ public struct ConversationMessage: Codable, Identifiable, Sendable
         content: String,
         timestamp: Date = Date(),
         recalledMemories: String = "[]",
-        memoryId: UUID? = nil,
         parentId: UUID? = nil,
         think: String? = nil,
         toolCalls: String = "[]",
@@ -34,7 +32,6 @@ public struct ConversationMessage: Codable, Identifiable, Sendable
         self.content = content
         self.timestamp = timestamp
         self.recalledMemories = recalledMemories
-        self.memoryId = memoryId
         self.parentId = parentId
         self.think = think
         self.toolCalls = toolCalls

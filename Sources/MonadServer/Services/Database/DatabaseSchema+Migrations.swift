@@ -45,8 +45,14 @@ extension DatabaseSchema {
 
         // v5: Add memoryId to conversationMessage
         migrator.registerMigration("v5") { db in
-            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "memoryId" })
-            {
+            // Skip if v29 already removed it or if it somehow doesn't exist
+            if try db.columns(in: "conversationMessage").contains(where: { $0.name == "memoryId" }) {
+                // No-op, it already exists or will be added/removed later. 
+                // Actually, if we are at v5, we want to add it.
+            } else {
+                // If it's missing at this stage, it might be because baseline removed it.
+                // But baseline should match the LATEST schema.
+                // Migrations should handle the EVOLUTION.
                 try db.alter(table: "conversationMessage") { t in
                     t.add(column: "memoryId", .blob).references("memory", onDelete: .setNull)
                 }
@@ -440,6 +446,15 @@ extension DatabaseSchema {
             if try db.tableExists("workspace") && !db.columns(in: "workspace").contains(where: { $0.name == "tools" }) {
                 try db.alter(table: "workspace") { t in
                     t.add(column: "tools", .text).notNull().defaults(to: "[]")
+                }
+            }
+        }
+
+        // v29: Remove memoryId from conversationMessage
+        migrator.registerMigration("v29") { db in
+            if try db.columns(in: "conversationMessage").contains(where: { $0.name == "memoryId" }) {
+                try db.alter(table: "conversationMessage") { t in
+                    t.drop(column: "memoryId")
                 }
             }
         }

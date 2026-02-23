@@ -88,13 +88,13 @@ extension Memory: FetchableRecord, PersistableRecord {
         
         self.init(
             id: id,
-            title: row["title"],
-            content: row["content"],
-            createdAt: row["createdAt"],
-            updatedAt: row["updatedAt"],
-            tags: row["tags"],
-            metadata: row["metadata"],
-            embedding: row["embedding"]
+            title: row["title"] as String,
+            content: row["content"] as String,
+            createdAt: row["createdAt"] as Date,
+            updatedAt: row["updatedAt"] as Date,
+            tags: row["tags"] as String,
+            metadata: row["metadata"] as String,
+            embedding: row["embedding"] as String
         )
     }
 }

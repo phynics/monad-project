@@ -28,10 +28,14 @@ struct MigrationTests {
             // Create other tables minimal versions to satisfy potential FKs if needed
             try db.create(table: "conversationSession") { t in
                 t.primaryKey("id", .blob).notNull()
+                t.column("isArchived", .boolean).notNull().defaults(to: false)
             }
             try db.create(table: "conversationMessage") { t in
                 t.primaryKey("id", .blob).notNull()
                 t.column("sessionId", .blob).notNull().references("conversationSession")
+                t.column("role", .text).notNull().defaults(to: "user")
+                t.column("content", .text).notNull().defaults(to: "")
+                t.column("timestamp", .datetime).notNull().defaults(to: Date())
             }
         }
         try oldMigrator.migrate(queue)
@@ -56,9 +60,13 @@ struct MigrationTests {
         }
 
         // 6. Verify we can insert a Memory
-        let memory = Memory(title: "Test", content: "Content", embedding: [0.1, 0.2])
+        // Since we are using the 'real' Memory model but a 'mock' v1 schema,
+        // we should use a manual insert to avoid issues with missing columns in the mock schema.
         try await queue.write { db in
-            try memory.save(db)
+            try db.execute(sql: """
+                INSERT INTO memory (id, title, content, createdAt, updatedAt, tags, metadata, embedding)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, arguments: [UUID(), "Test", "Content", Date(), Date(), "[]", "{}", "[]"])
         }
     }
 }

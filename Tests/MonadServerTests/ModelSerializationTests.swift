@@ -88,6 +88,8 @@ import MonadServer
         try migrator.migrate(dbQueue)
 
         let uuid = UUID()
+        // GRDB handles standard UUID objects and hyphenated strings automatically.
+        // This test simulates a legacy or unusual non-hyphenated 32-char hex string in the ID column.
         let rawID = uuid.uuidString.replacingOccurrences(of: "-", with: "").lowercased()
 
         try dbQueue.write { db in
@@ -98,6 +100,7 @@ import MonadServer
         }
 
         let fetched = try dbQueue.read { db in
+            // Memory model should handle the 32-char hex string via its init(row:)
             try Memory.fetchOne(db, sql: "SELECT * FROM memory WHERE id = ?", arguments: [rawID])
         }
 

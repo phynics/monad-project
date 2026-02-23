@@ -36,7 +36,7 @@ final class OrphanCleanupServiceTests: XCTestCase {
         let session = ConversationSession(id: UUID(), title: "Test", primaryWorkspaceId: activeId)
         mockPersistence.sessions = [session]
         
-        let service = OrphanCleanupService(workspaceRoot: workspaceRoot)
+        let service = OrphanCleanupService(workspaceRoot: workspaceRoot, persistenceService: mockPersistence)
         
         // Act
         try await withDependencies {
@@ -70,7 +70,7 @@ final class OrphanCleanupServiceTests: XCTestCase {
         mockPersistence.workspaces = [wsUser]
         mockPersistence.sessions = [] // No sessions, so it is technically "orphaned"
         
-        let service = OrphanCleanupService(workspaceRoot: workspaceRoot)
+        let service = OrphanCleanupService(workspaceRoot: workspaceRoot, persistenceService: mockPersistence)
         
         // Act
         try await withDependencies {

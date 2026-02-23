@@ -22,6 +22,12 @@ struct ConfigurationScreen {
 
         // Defaults
         var config = ProviderConfiguration.defaultFor(selectedProvider)
+        
+        // Try to load existing if available
+        if let existing = try? await client.getConfiguration(),
+           let existingProviderConfig = existing.providers[selectedProvider] {
+            config = existingProviderConfig
+        }
 
         // Customize
         print("\nConfiguring \(selectedProvider.rawValue):")
@@ -62,14 +68,12 @@ struct ConfigurationScreen {
         config.toolFormat = toolFormats[formatIndex]
 
         // Update Config
-        // We initialize LLMConfiguration with the active provider
-        var llmConfig = LLMConfiguration(activeProvider: selectedProvider)
-
-        // We override the default provider config with our customized one
-        llmConfig.providers[selectedProvider] = config
-
         TerminalUI.printLoading("Updating configuration...")
         do {
+            var llmConfig = try await client.getConfiguration()
+            llmConfig.activeProvider = selectedProvider
+            llmConfig.providers[selectedProvider] = config
+
             try await client.updateConfiguration(llmConfig)
             TerminalUI.printSuccess("Configuration updated successfully!")
         } catch {

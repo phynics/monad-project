@@ -467,6 +467,10 @@ actor ChatREPL: ChatREPLController {
 
             do {
                 try await command.run(args: Array(args.dropFirst()), context: context)
+                // If it was a config command, we might want to refresh startup info?
+                if command.name == "config" {
+                    await showContext()
+                }
             } catch {
                 await handleError(error)
             }

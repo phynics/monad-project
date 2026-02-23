@@ -153,46 +153,6 @@ final class ContextManagerTests: XCTestCase {
         XCTAssertEqual(tagMatch?.similarity ?? 0, 0.5, accuracy: 0.1)
     }
 
-    /*
-    func testAdaptiveLearning() async throws {
-        // Setup
-        let memoryId = UUID()
-        let initialVector = [1.0, 0.0, 0.0]  // X-axis
-        let memory = Memory(
-            id: memoryId,
-            title: "Learning Memory",
-            content: "Some content",
-            tags: [],
-            embedding: initialVector
-        )
-        mockPersistence.memories = [memory]
-
-        // Query vector is pointing towards Y-axis
-        let queryVector = [0.0, 1.0, 0.0]
-
-        // Positive feedback: memory should move towards query vector
-        let evaluations = [memoryId.uuidString: 1.0]
-
-        // Execute
-        try await contextManager.adjustEmbeddings(
-            evaluations: evaluations, queryVectors: [queryVector])
-
-        // Verify update was called
-        // We need to see if updateMemoryEmbedding was called on the mock
-        // Since our MockPersistenceService updates its 'memories' array:
-        let updatedMemory = try await mockPersistence.fetchMemory(id: memoryId)
-        let updatedVector = updatedMemory?.embeddingVector ?? []
-
-        XCTAssertFalse(updatedVector.isEmpty)
-        XCTAssertNotEqual(updatedVector, initialVector)
-
-        // In this simple case, a positive shift from [1,0,0] towards [0,1,0]
-        // should increase the Y component and decrease the X component.
-        XCTAssertGreaterThan(updatedVector[1], initialVector[1])
-        XCTAssertLessThan(updatedVector[0], initialVector[0])
-    }
-    */
-
     func testFilesystemNotesRetrieval() async throws {
         // 1. Setup workspace with a note file
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

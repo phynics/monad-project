@@ -67,7 +67,9 @@ extension DatabaseSchema {
             t.column("tags", .text).notNull().defaults(to: "")
             t.column("workingDirectory", .text)
             t.column("primaryWorkspaceId", .blob)
+                .references("workspace", onDelete: .setNull)
             t.column("attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
+            t.column("persona", .text)
         }
 
         // Conversation messages
@@ -78,6 +80,11 @@ extension DatabaseSchema {
             t.column("role", .text).notNull()
             t.column("content", .text).notNull()
             t.column("timestamp", .datetime).notNull()
+            t.column("recalledMemories", .text).notNull().defaults(to: "[]")
+            t.column("parentId", .blob).references("conversationMessage", onDelete: .setNull)
+            t.column("think", .text)
+            t.column("toolCalls", .text).notNull().defaults(to: "[]")
+            t.column("toolCallId", .text)
         }
 
         // Indexes for conversations
@@ -101,7 +108,7 @@ extension DatabaseSchema {
             t.column("createdAt", .datetime).notNull()
             t.column("updatedAt", .datetime).notNull()
             t.column("tags", .text).notNull().defaults(to: "")
-            t.column("metadata", .text).notNull().defaults(to: "")
+            t.column("metadata", .text).notNull().defaults(to: "{}")
             t.column("embedding", .text).notNull().defaults(to: "[]")
         }
     }

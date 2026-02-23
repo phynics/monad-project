@@ -59,8 +59,6 @@ public actor ConversationArchiver {
         
         // 3. Index and Save Messages
         for msg in messages {
-            var memoryId: UUID?
-            
             // Heuristic: Index messages longer than 20 chars as memories
             if msg.content.count > 20 {
                 do {
@@ -74,7 +72,7 @@ public actor ConversationArchiver {
                         embedding: embedding.map { Double($0) }
                     )
                     // Check similarity to avoid duplicate auto-generated memories
-                    memoryId = try await persistence.saveMemory(memory, policy: .preventSimilar(threshold: 0.92))
+                    _ = try await persistence.saveMemory(memory, policy: .preventSimilar(threshold: 0.92))
                 } catch {
                     logger.error("Failed to index message as memory: \(error.localizedDescription)")
                 }
@@ -86,7 +84,6 @@ public actor ConversationArchiver {
                 content: msg.content,
                 timestamp: msg.timestamp,
                 recalledMemories: "[]",
-                memoryId: memoryId,
                 parentId: msg.parentId,
                 think: msg.think,
                 toolCalls: {
