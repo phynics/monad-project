@@ -84,7 +84,6 @@ iOSInjectionProject/
 .gemini/
 *.log
 tmp/
-/conductor
 
 # Testing
 .test_workspaces/
