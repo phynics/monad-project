@@ -64,6 +64,7 @@ public struct MonadServerFactory {
         let appSupportDir = try defaultWorkspacePath().deletingLastPathComponent()
         let configURL = appSupportDir.appendingPathComponent("config.json")
         let storage = ConfigurationStorage(configURL: configURL)
+        await storage.migrateIfNeeded()
         let llmService = ServerLLMService(storage: storage)
         await llmService.loadConfiguration()
 

@@ -10,6 +10,7 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
     private let configURL: URL
     private let backupURL: URL
     private let userDefaults: UserDefaults // Keep for migration only
+    private let logger = Logger.server
 
     public init(configURL: URL, userDefaults: UserDefaults = .standard) {
         self.configURL = configURL
@@ -24,9 +25,21 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
         var config: LLMConfiguration
         
         // 1. Try loading from file
-        if let data = try? Data(contentsOf: configURL),
-           let decoded = try? JSONDecoder().decode(LLMConfiguration.self, from: data) {
-            config = decoded
+        if let data = try? Data(contentsOf: configURL) {
+            do {
+                config = try JSONDecoder().decode(LLMConfiguration.self, from: data)
+            } catch {
+                logger.error("Failed to decode configuration from \(configURL.path): \(error)")
+                
+                // 1.1 Try loading from backup
+                if let backup = loadBackup() {
+                    logger.info("Restored configuration from backup.")
+                    config = backup
+                } else {
+                    logger.warning("No valid backup found. Falling back to default.")
+                    config = .openAI
+                }
+            }
         } else {
             // 2. Fallback to default
             config = .openAI
@@ -48,7 +61,8 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
         
         // Provider-specific overrides (e.g. MONAD_OPENAI_API_KEY)
         for provider in LLMProvider.allCases {
-            let envVarName = "MONAD_\(provider.rawValue.uppercased())_API_KEY"
+            let safeName = provider.rawValue.replacingOccurrences(of: " ", with: "_").uppercased()
+            let envVarName = "MONAD_\(safeName)_API_KEY"
             if let envKey = env[envVarName], !envKey.isEmpty {
                 config.providers[provider]?.apiKey = envKey
             }
@@ -59,9 +73,10 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
 
     /// Save configuration to storage
     public func save(_ configuration: LLMConfiguration) throws {
-        // Validate before saving
-        guard configuration.isValid else {
-            throw ConfigurationError.invalidConfiguration
+        // Ensure parent directory exists
+        let dir = configURL.deletingLastPathComponent()
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
 
         // Create backup before saving
@@ -153,7 +168,7 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
         // 2. Try migrating from UserDefaults V2
         if let data = userDefaults.data(forKey: configKey),
            let config = try? JSONDecoder().decode(LLMConfiguration.self, from: data) {
-            Logger.llm.info("Migrating configuration from UserDefaults V2 to file...")
+            logger.info("Migrating configuration from UserDefaults V2 to file...")
             try? save(config)
             return
         }
@@ -178,7 +193,7 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
             if let oldConfig = try? JSONDecoder().decode(
                 LegacyLLMConfigurationV1.self, from: oldData)
             {
-                Logger.llm.info("Migrating configuration from V1 to file...")
+                logger.info("Migrating configuration from V1 to file...")
 
                 // Initialize defaults
                 var newProviders: [LLMProvider: ProviderConfiguration] = [:]

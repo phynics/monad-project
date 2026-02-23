@@ -41,7 +41,7 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
         modelName = try container.decode(String.self, forKey: .modelName)
         utilityModel = try container.decode(String.self, forKey: .utilityModel)
         fastModel = try container.decode(String.self, forKey: .fastModel)
-        toolFormat = try container.decode(ToolCallFormat.self, forKey: .toolFormat)
+        toolFormat = try container.decodeIfPresent(ToolCallFormat.self, forKey: .toolFormat) ?? .openAI
         timeoutInterval = try container.decodeIfPresent(TimeInterval.self, forKey: .timeoutInterval) ?? 60.0
         maxRetries = try container.decodeIfPresent(Int.self, forKey: .maxRetries) ?? 3
     }
@@ -151,6 +151,17 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
     public var provider: LLMProvider {
         get { activeProvider }
         set { activeProvider = newValue }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        activeProvider = try container.decode(LLMProvider.self, forKey: .activeProvider)
+        providers = try container.decode([LLMProvider: ProviderConfiguration].self, forKey: .providers)
+        
+        mcpServers = try container.decodeIfPresent([MCPServerConfiguration].self, forKey: .mcpServers) ?? []
+        memoryContextLimit = try container.decodeIfPresent(Int.self, forKey: .memoryContextLimit) ?? 5
+        documentContextLimit = try container.decodeIfPresent(Int.self, forKey: .documentContextLimit) ?? 5
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 5
     }
 
     public init(
