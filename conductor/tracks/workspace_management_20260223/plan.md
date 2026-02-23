@@ -1,6 +1,6 @@
 # Implementation Plan: Workspace Management System
 
-## Phase 1: Core Data Models & Storage
+## Phase 1: Core Data Models & Storage [checkpoint: 1484b17]
 - [x] Task: Define `Workspace` model and database schema d8f68c0
     - [x] Write unit tests for `Workspace` initialization and database mapping
     - [x] Implement `Workspace` struct and GRDB migrations
