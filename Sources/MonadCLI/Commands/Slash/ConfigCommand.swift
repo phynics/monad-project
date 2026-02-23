@@ -63,11 +63,13 @@ struct ConfigCommand: SlashCommand {
               endpoint      API endpoint URL
               memory        Memory context limit (number)
               document      Document context limit (number)
+              format        Tool calling format (openai, native, json, xml)
 
             \(TerminalUI.bold("Examples:"))
               /config set model gpt-4o
               /config set api-key
               /config provider openrouter
+              /config set format json
 
             """)
     }
@@ -135,6 +137,18 @@ struct ConfigCommand: SlashCommand {
                     TerminalUI.printError("Invalid number: \(value)")
                     return
                 }
+            case "tool-format", "format":
+                let format: ToolCallFormat
+                switch value.lowercased() {
+                case "openai", "native": format = .openAI
+                case "json": format = .json
+                case "xml": format = .xml
+                default:
+                    TerminalUI.printError("Unknown tool format: \(value)")
+                    print("  Available: openai, native, json, xml")
+                    return
+                }
+                config.toolFormat = format
             default:
                 TerminalUI.printError("Unknown config key: \(key)")
                 return
@@ -240,6 +254,20 @@ struct ConfigCommand: SlashCommand {
             if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
                 if let limit = Int(input) {
                     config.documentContextLimit = limit
+                }
+            }
+
+            // Tool Format
+            print("\nSelect Tool Calling Format:")
+            let toolFormats = ToolCallFormat.allCases
+            for (index, format) in toolFormats.enumerated() {
+                let isDefault = format == providerConfig.toolFormat ? " (current)" : ""
+                print("\(index + 1). \(format.rawValue)\(isDefault)")
+            }
+            print("Selection [1-\(toolFormats.count), Enter to skip]: ", terminator: "")
+            if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+                if let idx = Int(input), idx >= 1 && idx <= toolFormats.count {
+                    providerConfig.toolFormat = toolFormats[idx - 1]
                 }
             }
 

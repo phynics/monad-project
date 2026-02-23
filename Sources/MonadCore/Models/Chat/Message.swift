@@ -36,9 +36,6 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
     /// Memories that were provided as context for this message
     public var recalledMemories: [Memory]?
 
-    /// Documents that were provided as context for this message
-    public var recalledDocuments: [DocumentContext]?
-
     /// Context used for subagent execution (if applicable)
     public var subagentContext: SubagentContext?
 
@@ -76,7 +73,6 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
         parentId: UUID? = nil,
         gatheringProgress: ContextGatheringProgress? = nil,
         recalledMemories: [Memory]? = nil,
-        recalledDocuments: [DocumentContext]? = nil,
         subagentContext: SubagentContext? = nil,
         isSummary: Bool = false,
         summaryType: SummaryType? = nil
@@ -92,7 +88,6 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
         self.parentId = parentId
         self.gatheringProgress = gatheringProgress
         self.recalledMemories = recalledMemories
-        self.recalledDocuments = recalledDocuments
         self.subagentContext = subagentContext
         self.isSummary = isSummary
         self.summaryType = summaryType
