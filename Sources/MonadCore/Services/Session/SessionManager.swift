@@ -43,24 +43,31 @@ public actor SessionManager {
     internal let vectorStore: (any VectorStoreProtocol)?
     internal let workspaceRoot: URL
     internal let connectionManager: (any ClientConnectionManagerProtocol)?
+    public let workspaceManager: WorkspaceManager
 
     /// Initializes a new `SessionManager`.
     /// - Parameters:
-    ///   - persistenceService: The service used for database persistence.
-    ///   - embeddingService: The service used for generating vector embeddings.
     ///   - vectorStore: An optional store for vector embeddings.
-    ///   - llmService: The service used for LLM interactions.
-    ///   - agentRegistry: Registry for available autonomous agents.
     ///   - workspaceRoot: The root directory where session data is stored.
     ///   - connectionManager: Optional manager for client-side tool connections.
+    ///   - workspaceCreator: Factory for creating concrete `WorkspaceProtocol` instances.
     public init(
         vectorStore: (any VectorStoreProtocol)? = nil,
         workspaceRoot: URL,
-        connectionManager: (any ClientConnectionManagerProtocol)? = nil
+        connectionManager: (any ClientConnectionManagerProtocol)? = nil,
+        workspaceCreator: any WorkspaceCreating = NullWorkspaceCreator()
     ) {
         self.vectorStore = vectorStore
         self.workspaceRoot = workspaceRoot
         self.connectionManager = connectionManager
+        
+        // Use withDependencies to ensure repository picks up current context if needed,
+        // although Dependencies usually works via property wrappers.
+        self.workspaceManager = WorkspaceManager(
+            repository: WorkspaceRepository(),
+            connectionManager: connectionManager,
+            workspaceCreator: workspaceCreator
+        )
     }
     
     // MARK: - Component Setup
@@ -79,11 +86,15 @@ public actor SessionManager {
         workspaceURL: URL,
         parentId: UUID? = nil
     ) async {
+        // Resolve primary workspace via manager
+        let primaryWorkspaceId = session.primaryWorkspaceId ?? UUID() // Should ideally exist
+        let primaryWorkspace = try? await workspaceManager.getWorkspace(id: primaryWorkspaceId)
+
         let contextManager = ContextManager(
             persistenceService: persistenceService,
             embeddingService: embeddingService,
             vectorStore: vectorStore,
-            workspaceRoot: workspaceURL
+            workspace: primaryWorkspace
         )
         contextManagers[session.id] = contextManager
 
@@ -100,17 +111,16 @@ public actor SessionManager {
             parentId: parentId)
         toolManagers[session.id] = toolManager
 
-        // Hydrate workspaces and register with ToolManager
-        if let workspaces = await getWorkspaces(for: session.id) {
-            if let primary = workspaces.primary {
-                if let ws = try? WorkspaceFactory.create(from: primary, connectionManager: connectionManager) {
-                    await toolManager.registerWorkspace(ws)
-                }
-            }
-            for attached in workspaces.attached {
-                if let ws = try? WorkspaceFactory.create(from: attached, connectionManager: connectionManager) {
-                    await toolManager.registerWorkspace(ws)
-                }
+        // Hydrate workspaces and register with ToolManager using WorkspaceManager
+        if let primary = primaryWorkspace {
+            await toolManager.registerWorkspace(primary)
+        }
+        
+        // Handle attached workspaces
+        let attachedIds = session.attachedWorkspaces
+        for attachedId in attachedIds {
+            if let ws = try? await workspaceManager.getWorkspace(id: attachedId) {
+                await toolManager.registerWorkspace(ws)
             }
         }
 

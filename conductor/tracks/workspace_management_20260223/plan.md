@@ -10,7 +10,7 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Core Data Models & Storage' (Protocol in workflow.md)
 
 ## Phase 2: Workspace Manager Lifecycle
-- [ ] Task: Create `WorkspaceManager` to handle active sessions
+- [~] Task: Create `WorkspaceManager` to handle active sessions
     - [ ] Write tests for creating, fetching, and closing active workspaces
     - [ ] Implement `WorkspaceManager` with thread-safe session tracking
 - [ ] Task: Integrate `Workspace` with `ContextEngine`

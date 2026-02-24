@@ -1,3 +1,4 @@
+import MonadCore
 import MonadShared
 import Foundation
 
@@ -10,7 +11,8 @@ public actor LocalWorkspace: WorkspaceProtocol {
     private let rootURL: URL
     
     public init(reference: WorkspaceReference) throws {
-        guard reference.hostType == .server, let path = reference.rootPath else {
+        guard reference.hostType == .server || reference.hostType == .serverSession,
+              let path = reference.rootPath else {
             throw WorkspaceError.invalidWorkspaceType
         }
         self.reference = reference
@@ -23,13 +25,6 @@ public actor LocalWorkspace: WorkspaceProtocol {
     }
     
     public func executeTool(id: String, parameters: [String : AnyCodable]) async throws -> ToolResult {
-        // Local workspaces might use the generic ToolExecutor or specialized logic.
-        // For now, since tools in local workspaces are effectively system tools or scripts,
-        // we might delegate this. However, LocalWorkspace usually represents a file root.
-        // It might not "contain" tools in the executable sense unless they are script files.
-        // If the tool is a system tool, strict execution happens elsewhere.
-        // If the workspace "has" a tool, it might be a script.
-        
         throw WorkspaceError.toolExecutionNotSupported
     }
     
@@ -94,5 +89,3 @@ public actor LocalWorkspace: WorkspaceProtocol {
         return FileManager.default.fileExists(atPath: rootURL.path)
     }
 }
-
-

@@ -10,7 +10,8 @@ final class ContextManagerMockingTests: XCTestCase {
         // This should fail to compile because ContextManager expects PersistenceService (concrete)
         let contextManager = ContextManager(
             persistenceService: mockPersistence,
-            embeddingService: mockEmbedding
+            embeddingService: mockEmbedding,
+            workspace: nil
         )
 
         XCTAssertNotNil(contextManager)

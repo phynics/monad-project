@@ -33,9 +33,9 @@ import MonadCore
             #expect(retrievedSession != nil, "Should be able to retrieve created session")
             #expect(retrievedSession?.id == session.id)
     
-            // This fails because ContextManager support is not implemented
+            // Verify ContextManager is created and has access to workspace
             let contextManager = await sessionManager.getContextManager(for: session.id)
-            // #expect(contextManager != nil, "ContextManager should be created for session")
+            #expect(contextManager != nil, "ContextManager should be created for session")
         }
     }
 

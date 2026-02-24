@@ -1,3 +1,4 @@
+import MonadCore
 import MonadShared
 import Foundation
 
@@ -8,11 +9,6 @@ public actor RemoteWorkspace: WorkspaceProtocol {
     
     public nonisolated let id: UUID
     
-    // We need a way to communicate with the client.
-    // In a real implementation, this would inject a connection manager or similar.
-    // For this refactor, we'll define the structure and stub the communication.
-    
-
     public let connectionManager: any ClientConnectionManagerProtocol
     
     public init(reference: WorkspaceReference, connectionManager: any ClientConnectionManagerProtocol) throws {
@@ -26,8 +22,6 @@ public actor RemoteWorkspace: WorkspaceProtocol {
     }
     
     public func listTools() async throws -> [ToolReference] {
-        // In a real scenario, we might query the client for dynamic tools.
-        // For now, return what's in the DB reference.
         return reference.tools
     }
     
@@ -64,17 +58,12 @@ public actor RemoteWorkspace: WorkspaceProtocol {
         _ = try await connectionManager.send(
             method: "workspace/writeFile",
             params: try toAnyCodable(request),
-            expecting: Bool.self, // Expecting simple ack
+            expecting: Bool.self,
             to: clientId
         )
     }
     
     public func deleteFile(path: String) async throws {
-        // let request = ListFilesRequest(path: path) // Reuse struct for path? Read RPC definition.
-        // We lack a dedicated DeleteFileRequest in RPC.swift, let's assume one exists or use a generic path struct.
-        // Or simply define parameters inline if AnyCodable supports it.
-        // Let's use AnyCodable dictionary for simplicity if strict struct is not yet defined.
-        
         let params: [String: AnyCodable] = ["path": AnyCodable(path)]
         _ = try await connectionManager.send(
             method: "workspace/deleteFile",

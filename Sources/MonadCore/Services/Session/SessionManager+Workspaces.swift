@@ -46,12 +46,11 @@ extension SessionManager {
         
         // Update ToolManager
         if let toolManager = toolManagers[sessionId] {
-             if let wsRef = try? await getWorkspace(workspaceId) {
-                  if let ws = try? WorkspaceFactory.create(from: wsRef, connectionManager: connectionManager) {
-                      await toolManager.registerWorkspace(ws)
-                  }
-             }
+            if let ws = try? await workspaceManager.getWorkspace(id: workspaceId) {
+                await toolManager.registerWorkspace(ws)
+            }
         }
+
     }
 
     public func detachWorkspace(_ workspaceId: UUID, from sessionId: UUID) async throws {

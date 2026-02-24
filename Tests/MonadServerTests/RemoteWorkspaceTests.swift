@@ -1,36 +1,38 @@
 import MonadShared
-import XCTest
 import MonadCore
+@testable import MonadServer
+import XCTest
 
-// Mock Connection Manager
-actor MockConnectionManager: ClientConnectionManagerProtocol {
+// MockConnectionManager brings in all needed MonadCore protocols via MonadCore import.
+// The implementation is identical to the one in MonadCoreTests – kept here since RemoteWorkspace
+// now lives in MonadServer (which imports MonadCore).
+actor MockConnectionManagerForRemote: ClientConnectionManagerProtocol {
     var lastMethod: String?
     var lastParams: MonadShared.AnyCodable?
     var lastClientId: UUID?
     var nextResponse: Any?
     var shouldThrow: Error?
-    
+
     func setNextResponse(_ response: Any) {
         self.nextResponse = response
     }
-    
+
     func send<T: Codable & Sendable>(method: String, params: MonadShared.AnyCodable?, expecting: T.Type, to clientId: UUID) async throws -> T {
         lastMethod = method
         lastParams = params
         lastClientId = clientId
-        
+
         if let error = shouldThrow {
             throw error
         }
-        
+
         if let response = nextResponse as? T {
             return response
         }
-        
-        print("Mock ERROR: Expected \(T.self), got \(type(of: nextResponse)). nextResponse: \(String(describing: nextResponse))")
+
         fatalError("Mock not configured for return type \(T.self)")
     }
-    
+
     func isConnected(clientId: UUID) async -> Bool {
         return true
     }
@@ -38,11 +40,11 @@ actor MockConnectionManager: ClientConnectionManagerProtocol {
 
 final class RemoteWorkspaceTests: XCTestCase {
     var workspace: RemoteWorkspace!
-    var mockConnection: MockConnectionManager!
+    var mockConnection: MockConnectionManagerForRemote!
     let clientId = UUID()
-    
+
     override func setUp() async throws {
-        mockConnection = MockConnectionManager()
+        mockConnection = MockConnectionManagerForRemote()
         let ref = MonadShared.WorkspaceReference(
             id: UUID(),
             uri: WorkspaceURI(host: "client-host", path: "/remote"),
@@ -52,58 +54,52 @@ final class RemoteWorkspaceTests: XCTestCase {
         )
         workspace = try RemoteWorkspace(reference: ref, connectionManager: mockConnection)
     }
-    
+
     func testExecuteTool() async throws {
-        // Setup mock response
         let response = ToolExecutionResponse(status: "success", output: "Tool executed")
         await mockConnection.setNextResponse(response)
-        
+
         let result = try await workspace.executeTool(id: "test_tool", parameters: ["arg": MonadShared.AnyCodable("value")])
-        
-        // Use await to access actor properties
+
         let method = await mockConnection.lastMethod
         let params = await mockConnection.lastParams
         let cid = await mockConnection.lastClientId
-        
+
         XCTAssertEqual(method, "workspace/executeTool")
         XCTAssertEqual(cid, clientId)
-        
-        // Expected params value is a Dictionary because RemoteWorkspace converts struct to AnyCodable(dict)
+
         guard let requestDict = params?.value as? [String: Any] else {
              XCTFail("Invalid parameters type: \(type(of: params?.value))")
              return
         }
-        
+
         XCTAssertEqual(requestDict["toolId"] as? String, "test_tool")
-        
-        // parameters is [String: Any] (from AnyCodable.value)
+
         guard let parametersDict = requestDict["parameters"] as? [String: Any] else {
             XCTFail("Missing parameters dictionary")
             return
         }
         XCTAssertEqual(parametersDict["arg"] as? String, "value")
-        
-        // Check result
+
         if result.success {
             XCTAssertEqual(result.output, "Tool executed")
         } else {
             XCTFail("Expected success but got error: \(result)")
         }
     }
-    
+
     func testReadFile() async throws {
         let content = "Hello World"
         await mockConnection.setNextResponse(content)
-        
+
         let data = try await workspace.readFile(path: "test.txt")
-        // RemoteWorkspace returns String directly
         XCTAssertEqual(data, content)
-        
+
         let method = await mockConnection.lastMethod
         let params = await mockConnection.lastParams
-        
+
         XCTAssertEqual(method, "workspace/readFile")
-        
+
         guard let requestDict = params?.value as? [String: Any] else {
             XCTFail("Invalid parameters type: \(type(of: params?.value))")
             return

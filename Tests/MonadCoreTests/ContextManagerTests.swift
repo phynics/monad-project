@@ -12,7 +12,7 @@ final class ContextManagerTests: XCTestCase {
         mockPersistence = MockPersistenceService()
         mockEmbedding = MockEmbeddingService()
         contextManager = ContextManager(
-            persistenceService: mockPersistence, embeddingService: mockEmbedding)
+            persistenceService: mockPersistence, embeddingService: mockEmbedding, workspace: nil)
     }
 
     func testGatherContextSemanticRetrieval() async throws {
@@ -167,14 +167,22 @@ final class ContextManagerTests: XCTestCase {
         """
         try noteContent.write(to: notesDir.appendingPathComponent("FSNote.md"), atomically: true, encoding: .utf8)
 
-        // 2. Initialize ContextManager with workspaceRoot
+        // Create LocalWorkspace
+        let ref = WorkspaceReference(
+            id: UUID(),
+            uri: WorkspaceURI(host: "monad-server", path: tempURL.path),
+            hostType: .server,
+            rootPath: tempURL.path
+        )
+        let workspace = try MockLocalWorkspace(reference: ref)
+
+        // 2. Initialize ContextManager with workspace
         let manager = ContextManager(
             persistenceService: mockPersistence,
             embeddingService: mockEmbedding,
-            workspaceRoot: tempURL
+            workspace: workspace
         )
 
-        // 3. Execute
         // 3. Execute
         let stream = await manager.gatherContext(for: "some query")
         var context: ContextData?
@@ -193,6 +201,7 @@ final class ContextManagerTests: XCTestCase {
         XCTAssertEqual(context.notes.count, 1)
         let note = context.notes.first
         XCTAssertEqual(note?.name, "FSNote")
+        // LocalWorkspace returns relative path from root
         XCTAssertEqual(note?.source, "Notes/FSNote.md")
         XCTAssertEqual(note?.content, noteContent)
     }

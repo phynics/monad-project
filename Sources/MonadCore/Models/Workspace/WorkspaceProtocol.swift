@@ -38,3 +38,24 @@ public enum WorkspaceError: Error, Sendable {
     case workspaceNotFound
     case connectionFailed
 }
+
+/// Abstracts workspace instantiation to allow MonadCore to be decoupled from concrete implementations
+public protocol WorkspaceCreating: Sendable {
+    func create(
+        from reference: WorkspaceReference,
+        connectionManager: (any ClientConnectionManagerProtocol)?
+    ) throws -> any WorkspaceProtocol
+}
+
+/// A no-op workspace creator used when no concrete factory is available (e.g. in unit tests).
+/// Always throws `WorkspaceError.workspaceNotFound`.
+public struct NullWorkspaceCreator: WorkspaceCreating {
+    public init() {}
+    public func create(
+        from reference: WorkspaceReference,
+        connectionManager: (any ClientConnectionManagerProtocol)?
+    ) throws -> any WorkspaceProtocol {
+        throw WorkspaceError.workspaceNotFound
+    }
+}
+

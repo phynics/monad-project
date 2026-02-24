@@ -15,7 +15,7 @@ public actor ContextManager: @unchecked Sendable {
     private var embeddingService: any EmbeddingServiceProtocol { explicitEmbeddingService ?? defaultEmbeddingService }
     
     private let vectorStore: (any VectorStoreProtocol)?
-    private let workspaceRoot: URL?
+    private let workspace: (any WorkspaceProtocol)?
     private let logger = Logger(label: "com.monad.ContextManager")
 
     private let ranker = ContextRanker()
@@ -24,12 +24,12 @@ public actor ContextManager: @unchecked Sendable {
         persistenceService: (any PersistenceServiceProtocol)? = nil,
         embeddingService: (any EmbeddingServiceProtocol)? = nil,
         vectorStore: (any VectorStoreProtocol)? = nil,
-        workspaceRoot: URL? = nil
+        workspace: (any WorkspaceProtocol)? = nil
     ) {
         self.explicitPersistenceService = persistenceService
         self.explicitEmbeddingService = embeddingService
         self.vectorStore = vectorStore
-        self.workspaceRoot = workspaceRoot
+        self.workspace = workspace
     }
 
     /// Events emitted during the context gathering process
@@ -108,33 +108,27 @@ public actor ContextManager: @unchecked Sendable {
     private func fetchAllNotes() async throws -> [ContextFile] {
         var allNotes: [ContextFile] = []
 
-        // 2. Fetch from Filesystem
-        if let workspaceRoot = workspaceRoot {
-            let notesDir = workspaceRoot.appendingPathComponent("Notes", isDirectory: true)
-            let fileManager = FileManager.default
+        // 2. Fetch from Workspace
+        if let workspace = workspace {
+            do {
+                let files = try await workspace.listFiles(path: "Notes")
 
-            if fileManager.fileExists(atPath: notesDir.path) {
-                do {
-                    let files = try fileManager.contentsOfDirectory(
-                        at: notesDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
-
-                    for fileURL in files where fileURL.pathExtension == "md" {
-                        guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else {
-                            continue
-                        }
-                        let name = fileURL.deletingPathExtension().lastPathComponent
-
-                        let note = ContextFile(
-                            name: name,
-                            content: content,
-                            source: "Notes/\(fileURL.lastPathComponent)"
-                        )
-                        allNotes.append(note)
+                for filePath in files where filePath.hasSuffix(".md") {
+                    guard let content = try? await workspace.readFile(path: filePath) else {
+                        continue
                     }
-                } catch {
-                    logger.warning(
-                        "Failed to fetch notes from filesystem: \(error.localizedDescription)")
+                    let name = URL(fileURLWithPath: filePath).deletingPathExtension().lastPathComponent
+
+                    let note = ContextFile(
+                        name: name,
+                        content: content,
+                        source: filePath
+                    )
+                    allNotes.append(note)
                 }
+            } catch {
+                logger.warning(
+                    "Failed to fetch notes from workspace: \(error.localizedDescription)")
             }
         }
 

@@ -4,7 +4,7 @@ import Foundation
 /// Request object for executing a tool remotely
 public struct ToolExecutionRequest: Codable, Sendable {
     public let toolId: String
-    public let parameters: [String: AnyCodable] // dynamic JSON
+    public let parameters: [String: AnyCodable]
     
     public init(toolId: String, parameters: [String: Any]) {
         self.toolId = toolId
@@ -63,7 +63,6 @@ public struct WriteFileRequest: Codable, Sendable {
     }
 }
 
-
 /// Generic RPC Request Envelope
 public struct RPCRequest: Codable, Sendable {
     public let id: String
@@ -106,5 +105,3 @@ public enum RPCError: Error, LocalizedError {
         }
     }
 }
-
-

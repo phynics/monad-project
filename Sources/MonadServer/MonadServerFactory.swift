@@ -77,8 +77,10 @@ public struct MonadServerFactory {
         let agentRegistry = AgentRegistry()
         let sessionManager = SessionManager(
             workspaceRoot: workspaceRoot,
-            connectionManager: connectionManager
+            connectionManager: connectionManager,
+            workspaceCreator: WorkspaceFactory()
         )
+
         let toolRouter = ToolRouter()
         let chatEngine = ChatEngine()
         let agentExecutor = AgentExecutor(
@@ -177,7 +179,13 @@ public struct MonadServerFactory {
                 persistenceService: persistenceService, logger: logger)
             workspaceAPIController.addRoutes(to: workspacesGroup)
 
-            let workspaceStore = try await WorkspaceStore(persistenceService: persistenceService)
+            let workspaceStore = try await WorkspaceStore(
+                persistenceService: persistenceService,
+                workspaceCreator: WorkspaceFactory()
+            )
+            _ = try await SessionStore(persistenceService: persistenceService)
+
+
             let filesController = FilesAPIController<AppRequestContext>(
                 workspaceStore: workspaceStore)
             filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))

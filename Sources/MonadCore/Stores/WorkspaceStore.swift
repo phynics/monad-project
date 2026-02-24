@@ -4,11 +4,16 @@ import Logging
 
 public actor WorkspaceStore: Sendable {
     private let persistenceService: any PersistenceServiceProtocol
+    private let workspaceCreator: any WorkspaceCreating
     private var loadedWorkspaces: [UUID: any WorkspaceProtocol] = [:]
     private let logger = Logger(label: "monad.workspace.store")
     
-    public init(persistenceService: any PersistenceServiceProtocol) async throws {
+    public init(
+        persistenceService: any PersistenceServiceProtocol,
+        workspaceCreator: any WorkspaceCreating
+    ) async throws {
         self.persistenceService = persistenceService
+        self.workspaceCreator = workspaceCreator
         try await loadWorkspaces()
     }
     
@@ -17,7 +22,7 @@ public actor WorkspaceStore: Sendable {
         
         for reference in references {
             do {
-                let workspace = try WorkspaceFactory.create(from: reference)
+                let workspace = try workspaceCreator.create(from: reference, connectionManager: nil)
                 loadedWorkspaces[reference.id] = workspace
             } catch {
                 logger.error("Failed to load workspace \(reference.id): \(error)")
@@ -35,7 +40,7 @@ public actor WorkspaceStore: Sendable {
             return
         }
         
-        let workspace = try WorkspaceFactory.create(from: reference)
+        let workspace = try workspaceCreator.create(from: reference, connectionManager: nil)
         loadedWorkspaces[id] = workspace
     }
     
@@ -59,7 +64,7 @@ public actor WorkspaceStore: Sendable {
         
         try await persistenceService.saveWorkspace(reference)
         
-        let workspace = try WorkspaceFactory.create(from: reference)
+        let workspace = try workspaceCreator.create(from: reference, connectionManager: nil)
         loadedWorkspaces[reference.id] = workspace
         return workspace
     }
