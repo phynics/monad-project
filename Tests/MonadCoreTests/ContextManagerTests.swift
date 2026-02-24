@@ -35,7 +35,7 @@ final class ContextManagerTests: XCTestCase {
                 context = data
             }
         }
-        
+
         guard let context = context else {
             XCTFail("Context gathering failed to produce result")
             return
@@ -81,7 +81,7 @@ final class ContextManagerTests: XCTestCase {
                 context = data
             }
         }
-        
+
         guard let context = context else {
             XCTFail("Context gathering failed to produce result")
             return
@@ -125,7 +125,7 @@ final class ContextManagerTests: XCTestCase {
                 context = data
             }
         }
-        
+
         guard let context = context else {
             XCTFail("Context gathering failed to produce result")
             return
@@ -191,7 +191,7 @@ final class ContextManagerTests: XCTestCase {
                 context = data
             }
         }
-        
+
         guard let context = context else {
             XCTFail("Context gathering failed to produce result")
             return

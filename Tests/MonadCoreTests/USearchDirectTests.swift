@@ -4,7 +4,7 @@ import Foundation
 import USearch
 
 @Suite struct USearchDirectTests {
-    
+
     // @Test("Direct USearch Index Add")
     // func testDirectAdd() throws {
     //     let index = try USearchIndex.make(

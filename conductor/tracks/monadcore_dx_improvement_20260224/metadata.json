@@ -1,0 +1,8 @@
+{
+  "track_id": "monadcore_dx_improvement_20260224",
+  "type": "chore",
+  "status": "new",
+  "created_at": "2026-02-24T12:00:00Z",
+  "updated_at": "2026-02-24T12:00:00Z",
+  "description": "Comprehensive DX improvements for MonadCore including persistence split, type-safe tools, dependency safety, and testing modernization."
+}

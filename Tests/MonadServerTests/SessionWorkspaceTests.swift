@@ -36,18 +36,18 @@ final class SessionWorkspaceTests: XCTestCase {
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot
             )
-            
+
             // Act
             let session = try await sessionManager.createSession(title: "Workspace Test Session")
-    
+
             // Assert
             XCTAssertNotNil(session.primaryWorkspaceId, "Session should have a primary workspace ID")
-    
+
             // Verify workspace exists in DB
             let workspace = try await persistenceService.dbQueue.read { db in
                 try MonadShared.WorkspaceReference.fetchOne(db, key: session.primaryWorkspaceId)
             }
-    
+
             XCTAssertNotNil(workspace, "Primary workspace record should exist in database")
             XCTAssertEqual(workspace?.hostType, MonadShared.WorkspaceReference.WorkspaceHostType.server, "Primary workspace should be hosted on server")
             XCTAssertEqual(workspace?.uri.path, "/sessions/\(session.id.uuidString)", "Workspace URI path should match session ID convention")

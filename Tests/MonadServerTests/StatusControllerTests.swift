@@ -12,7 +12,7 @@ import NIOCore
     func testStatusEndpoint() async throws {
         let persistence = MockPersistenceService()
         let llmService = MockLLMService()
-        
+
         let router = Router()
         let controller = StatusAPIController<BasicRequestContext>(
             persistenceService: persistence,
@@ -20,13 +20,13 @@ import NIOCore
             startTime: Date()
         )
         controller.addRoutes(to: router)
-        
+
         let app = Application(router: router)
-        
+
         try await app.test(.router) { client in
             try await client.execute(uri: "/status", method: .get) { response in
                 #expect(response.status == .ok)
-                
+
                 let statusResponse = try JSONDecoder().decode(MonadShared.StatusResponse.self, from: response.body)
                 #expect(statusResponse.status == .ok)
                 #expect(statusResponse.components["database"]?.status == .ok)

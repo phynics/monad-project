@@ -1,0 +1,9 @@
+import Foundation
+import MonadShared
+
+public protocol ClientStoreProtocol: Sendable {
+    func saveClient(_ client: ClientIdentity) async throws
+    func fetchClient(id: UUID) async throws -> ClientIdentity?
+    func fetchAllClients() async throws -> [ClientIdentity]
+    func deleteClient(id: UUID) async throws -> Bool
+}

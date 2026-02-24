@@ -11,13 +11,13 @@ final class SystemStatusTests: XCTestCase {
             uptime: 3600,
             components: ["ai_provider": component]
         )
-        
+
         let encoder = JSONEncoder()
         let data = try encoder.encode(response)
-        
+
         let decoder = JSONDecoder()
         let decoded = try decoder.decode(MonadShared.StatusResponse.self, from: data)
-        
+
         XCTAssertEqual(decoded.status, .ok)
         XCTAssertEqual(decoded.version, "1.0.0")
         XCTAssertEqual(decoded.uptime, 3600)
@@ -31,7 +31,7 @@ final class SystemStatusTests: XCTestCase {
             func getHealthDetails() async -> [String: String]? { ["test": "true"] }
             func checkHealth() async -> MonadCore.HealthStatus { .ok }
         }
-        
+
         let service = MockService()
         let status = await service.checkHealth()
         let currentStatus = await service.getHealthStatus()

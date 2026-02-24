@@ -85,6 +85,9 @@ iOSInjectionProject/
 *.log
 tmp/
 
+# Claude
+.claude/
+
 # Testing
 .test_workspaces/
 implementation-plan.md

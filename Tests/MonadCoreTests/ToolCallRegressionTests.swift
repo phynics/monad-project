@@ -27,11 +27,9 @@ struct MockComplexTool: Tool, @unchecked Sendable {
               let ageValue = user["age"] else {
             return .failure("Expected 'user' dictionary with name/age")
         }
-        
+
         let age: Int
-        if let a = ageValue as? Int { age = a }
-        else if let d = ageValue as? Double { age = Int(d) }
-        else { return .failure("Age is not a number") }
+        if let a = ageValue as? Int { age = a } else if let d = ageValue as? Double { age = Int(d) } else { return .failure("Age is not a number") }
 
         return .success("Received tags: \(tags.compactMap { $0 as? String }.joined(separator: ", ")), User: \(name) (\(age))")
     }

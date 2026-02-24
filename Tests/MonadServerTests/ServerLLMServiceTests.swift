@@ -36,7 +36,7 @@ import OpenAI
 
         let newClient = await service.getClient()
         #expect(newClient != nil, "Client should be initialized after valid config")
-        
+
         try? FileManager.default.removeItem(at: tempURL)
     }
 
@@ -72,7 +72,7 @@ import OpenAI
         let tags = try await service.generateTags(for: "This is a post about Swift testing.")
         #expect(tags == ["swift", "testing", "llm"])
         #expect(mockClient.lastMessages.count > 0)
-        
+
         try? FileManager.default.removeItem(at: tempURL)
     }
 
@@ -94,7 +94,7 @@ import OpenAI
 
         let title = try await service.generateTitle(for: messages)
         #expect(title == "Test Conversation")
-        
+
         try? FileManager.default.removeItem(at: tempURL)
     }
 
@@ -125,7 +125,7 @@ import OpenAI
         // The mock response keys "uuid-1" won't match memory1.id, but the function returns the map as-is.
         #expect(scores["uuid-1"] == 1.0)
         #expect(scores["uuid-2"] == -0.5)
-        
+
         try? FileManager.default.removeItem(at: tempURL)
     }
 
@@ -162,7 +162,7 @@ import OpenAI
             }
         }
         #expect(received == "Hello")
-        
+
         try? FileManager.default.removeItem(at: tempURL)
     }
 

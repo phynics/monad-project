@@ -35,7 +35,7 @@ actor RaptorMockLLMService: LLMServiceProtocol {
         fatalError("Not implemented")
     }
 
-    func buildPrompt(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [AnyTool], systemInstructions: String?) async -> (messages: [ChatQuery.ChatCompletionMessageParam], rawPrompt: String, structuredContext: [String : String]) {
+    func buildPrompt(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [AnyTool], systemInstructions: String?) async -> (messages: [ChatQuery.ChatCompletionMessageParam], rawPrompt: String, structuredContext: [String: String]) {
         fatalError("Not implemented")
     }
 
@@ -45,11 +45,11 @@ actor RaptorMockLLMService: LLMServiceProtocol {
 
     func generateTags(for text: String) async throws -> [String] { return [] }
     func generateTitle(for messages: [Message]) async throws -> String { return "Title" }
-    func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws -> [String : Double] { return [:] }
+    func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws -> [String: Double] { return [:] }
     func fetchAvailableModels() async throws -> [String]? { return [] }
 
     func getHealthStatus() async -> MonadCore.HealthStatus { .ok }
-    func getHealthDetails() async -> [String : String]? { [:] }
+    func getHealthDetails() async -> [String: String]? { [:] }
     func checkHealth() async -> MonadCore.HealthStatus { .ok }
 }
 

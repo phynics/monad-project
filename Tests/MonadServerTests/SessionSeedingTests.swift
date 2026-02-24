@@ -24,9 +24,9 @@ final class SessionSeedingTests: XCTestCase {
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot
             )
-            
+
             let session = try await sessionManager.createSession(title: "Test Session")
-    
+
             let sessionDir = workspaceRoot.appendingPathComponent("sessions").appendingPathComponent(session.id.uuidString)
             let notesDir = sessionDir.appendingPathComponent("Notes")
             XCTAssertTrue(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Welcome.md").path))

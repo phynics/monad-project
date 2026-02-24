@@ -18,7 +18,7 @@ import Dependencies
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
-        
+
         try await withDependencies {
             $0.persistenceService = persistence
             $0.embeddingService = embedding
@@ -28,7 +28,7 @@ import Dependencies
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot
             )
-            
+
             // We need to inject sessionManager into the context for ToolRouter and ChatEngine
             try await withDependencies {
                 $0.sessionManager = sessionManager
@@ -38,19 +38,19 @@ import Dependencies
                     $0.toolRouter = toolRouter
                 } operation: {
                     let engine = ChatEngine()
-            
+
                     let router = Router()
                     router.add(middleware: ErrorMiddleware())
                     let protected = router.group("/api").add(middleware: AuthMiddleware())
                     ChatAPIController<BasicRequestContext>(
                         sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter
                     ).addRoutes(to: protected.group("/sessions"))
-            
+
                     let app = Application(router: router)
-            
+
                     let req = MonadShared.ChatRequest(message: "Hi")
                     let buffer = ByteBuffer(bytes: try JSONEncoder().encode(req))
-            
+
                     try await app.test(.router) { client in
                         var headers = HTTPFields()
                         headers[.authorization] = "Bearer monad-secret"
@@ -72,7 +72,7 @@ import Dependencies
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
-        
+
         try await withDependencies {
             $0.persistenceService = persistence
             $0.embeddingService = embedding
@@ -82,7 +82,7 @@ import Dependencies
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot
             )
-    
+
             try await withDependencies {
                 $0.sessionManager = sessionManager
             } operation: {
@@ -91,19 +91,19 @@ import Dependencies
                     $0.toolRouter = toolRouter
                 } operation: {
                     let engine = ChatEngine()
-            
+
                     let router = Router()
                     router.add(middleware: ErrorMiddleware())
                     let protected = router.group("/api").add(middleware: AuthMiddleware())
                     ChatAPIController<BasicRequestContext>(
                         sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter
                     ).addRoutes(to: protected.group("/sessions"))
-            
+
                     let app = Application(router: router)
-            
+
                     let req = MonadShared.ChatRequest(message: "Hi")
                     let buffer = ByteBuffer(bytes: try JSONEncoder().encode(req))
-            
+
                     try await app.test(.router) { client in
                         var headers = HTTPFields()
                         headers[.authorization] = "Bearer monad-secret"
@@ -125,7 +125,7 @@ import Dependencies
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
-        
+
         try await withDependencies {
             $0.persistenceService = persistence
             $0.embeddingService = embedding
@@ -135,15 +135,15 @@ import Dependencies
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot
             )
-    
+
             let router = Router()
             router.add(middleware: ErrorMiddleware())
             let protected = router.group("/api").add(middleware: AuthMiddleware())
             MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
                 to: protected.group("/memories"))
-    
+
             let app = Application(router: router)
-    
+
             try await app.test(.router) { client in
                 try await client.execute(uri: "/api/memories", method: .get) { response in
                     // With strict auth, request is blocked
@@ -159,7 +159,7 @@ import Dependencies
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
-        
+
         try await withDependencies {
             $0.persistenceService = persistence
             $0.embeddingService = embedding
@@ -169,15 +169,15 @@ import Dependencies
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot
             )
-    
+
             let router = Router()
             router.add(middleware: ErrorMiddleware())
             let protected = router.group("/api").add(middleware: AuthMiddleware())
             MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
                 to: protected.group("/memories"))
-    
+
             let app = Application(router: router)
-    
+
             try await app.test(.router) { client in
                 var headers = HTTPFields()
                 headers[.authorization] = "Bearer wrong"
@@ -196,7 +196,7 @@ import Dependencies
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
-        
+
         try await withDependencies {
             $0.persistenceService = persistence
             $0.embeddingService = embedding
@@ -206,15 +206,15 @@ import Dependencies
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot
             )
-    
+
             let router = Router()
             router.add(middleware: ErrorMiddleware())
             let protected = router.group("/api").add(middleware: AuthMiddleware())
             MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
                 to: protected.group("/memories"))
-    
+
             let app = Application(router: router)
-    
+
             try await app.test(.router) { client in
                 var headers = HTTPFields()
                 headers[.authorization] = "Bearer monad-secret"

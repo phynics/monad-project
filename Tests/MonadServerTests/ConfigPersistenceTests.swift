@@ -17,14 +17,14 @@ import Testing
             let storage = ConfigurationStorage(configURL: tempURL)
             let service = ServerLLMService(storage: storage)
             await service.loadConfiguration()
-            
+
             var config = await service.configuration
             config.activeProvider = .ollama
             config.providers[.ollama]?.modelName = "persistence-test-model"
             config.providers[.ollama]?.endpoint = "http://localhost:11434/api"
-            
+
             try await service.updateConfiguration(config)
-            
+
             // Verify immediate state
             let current = await service.configuration
             #expect(current.activeProvider == .ollama)
@@ -36,7 +36,7 @@ import Testing
             let storage = ConfigurationStorage(configURL: tempURL)
             let service = ServerLLMService(storage: storage)
             await service.loadConfiguration()
-            
+
             let loaded = await service.configuration
             #expect(loaded.activeProvider == .ollama)
             #expect(loaded.providers[.ollama]?.modelName == "persistence-test-model")

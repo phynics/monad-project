@@ -11,7 +11,7 @@ struct AgentRegistryTests {
 
     init() async throws {
         let mock = MockPersistenceService()
-        
+
         // Seed default agents
         let defaultAgent = Agent(
             id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
@@ -25,12 +25,12 @@ struct AgentRegistryTests {
             description: "Coordinates other agents",
             systemPrompt: "You are a coordinator."
         )
-        
+
         try await mock.saveAgent(defaultAgent)
         try await mock.saveAgent(coordinatorAgent)
-        
+
         self.persistence = mock
-        
+
         self.registry = await withDependencies {
             $0.persistenceService = mock
         } operation: {
@@ -42,11 +42,11 @@ struct AgentRegistryTests {
     func testDefaultSeeds() async throws {
         let agents = await registry.listAgents()
         #expect(agents.count >= 2)
-        
+
         let ids = agents.map { $0.id }
         #expect(ids.contains(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!))
         #expect(ids.contains(UUID(uuidString: "00000000-0000-0000-0000-000000000002")!))
-        
+
         let defaultAgent = await registry.getAgent(id: "00000000-0000-0000-0000-000000000001")
         #expect(defaultAgent?.name == "Default Assistant")
         #expect(defaultAgent?.systemPrompt.contains("assistant") == true)
@@ -67,7 +67,7 @@ struct AgentRegistryTests {
         let idRaw = "00000000-0000-0000-0000-000000000001"
         let exists = await registry.hasAgent(id: idRaw)
         #expect(exists)
-        
+
         let missing = await registry.hasAgent(id: UUID().uuidString)
         #expect(!missing)
     }
@@ -81,9 +81,9 @@ struct AgentRegistryTests {
             description: "Expert in Swift programming",
             systemPrompt: "You are a senior Swift developer."
         )
-        
+
         try await persistence.saveAgent(customAgent)
-        
+
         let fetched = await registry.getAgent(id: customId.uuidString)
         #expect(fetched?.name == "Swift Coder")
         #expect(fetched?.systemPrompt == "You are a senior Swift developer.")

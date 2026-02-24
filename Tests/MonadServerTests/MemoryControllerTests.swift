@@ -16,7 +16,7 @@ import NIOCore
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
-        
+
         try await withDependencies {
             $0.persistenceService = persistence
             $0.embeddingService = embedding
@@ -26,16 +26,16 @@ import NIOCore
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot
             )
-    
+
             let router = Router()
             let controller = MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager)
             controller.addRoutes(to: router.group("/memories"))
-    
+
             let app = Application(router: router)
-    
+
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
-    
+
             try await app.test(.router) { client in
                 // 1. List (Empty)
                 try await client.execute(uri: "/memories", method: .get) { response in
@@ -43,18 +43,18 @@ import NIOCore
                     let paginated = try decoder.decode(MonadShared.PaginatedResponse<Memory>.self, from: response.body)
                     #expect(paginated.items.isEmpty)
                 }
-    
+
                 // 2. Create
                 let createReq = MonadShared.CreateMemoryRequest(content: "Test Content", title: "Test Memory", tags: ["test"])
                 let createBuffer = ByteBuffer(bytes: try JSONEncoder().encode(createReq))
-    
+
                 try await client.execute(uri: "/memories", method: .post, body: createBuffer) { response in
                     #expect(response.status == .created)
                     let memory = try decoder.decode(Memory.self, from: response.body)
                     #expect(memory.title == "Test Memory")
                     #expect(memory.tagArray == ["test"])
                 }
-    
+
                 // 3. List (1 item)
                 try await client.execute(uri: "/memories", method: .get) { response in
                     #expect(response.status == .ok)
@@ -62,15 +62,15 @@ import NIOCore
                     #expect(paginated.items.count == 1)
                     #expect(paginated.items[0].title == "Test Memory")
                 }
-    
+
                 let listResponse = try await client.execute(uri: "/memories", method: .get) { $0 }
                 let memoryId = (try decoder.decode(MonadShared.PaginatedResponse<Memory>.self, from: listResponse.body)).items[0].id
-    
+
                 // 4. Delete
                 try await client.execute(uri: "/memories/\(memoryId)", method: .delete) { response in
                     #expect(response.status == .noContent)
                 }
-    
+
                 // 5. List (Empty)
                 try await client.execute(uri: "/memories", method: .get) { response in
                     let paginated = try decoder.decode(MonadShared.PaginatedResponse<Memory>.self, from: response.body)
@@ -80,5 +80,3 @@ import NIOCore
         }
     }
 }
-
-

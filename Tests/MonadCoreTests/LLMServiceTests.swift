@@ -44,7 +44,7 @@ struct LLMServiceTests {
             tools: [],
             systemInstructions: "System rules"
         )
-        
+
         // Render content to check presence
         let rawPrompt = await prompt.render()
 
@@ -54,7 +54,7 @@ struct LLMServiceTests {
         // History isn't rendered in raw prompt usually unless debug, but let's check structured context
         // Actually ContextBuilder sections render returns String?
         // ChatHistory section returns nil by default for render().
-        
+
         let messages = await prompt.toMessages()
 
         // Validate message ordering and roles
@@ -140,7 +140,7 @@ struct LLMServiceTests {
         // Create a large history that should be truncated
         // make sure it exceeds the limit we pass
         let limit = 100
-        
+
         let largeHistory = (1...10).map { i in
             Message(
                 content:
@@ -153,7 +153,7 @@ struct LLMServiceTests {
 
         // Should have fewer messages than total history
         #expect(optimized.count < largeHistory.count)
-        
+
         // Should contain a summary message at the start
         if let first = optimized.first {
             #expect(first.role == .system)
