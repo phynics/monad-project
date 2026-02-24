@@ -1,37 +1,36 @@
 import Foundation
 import GRDB
-import MonadShared
 
 // MARK: - Persistence
 
 extension WorkspaceReference: FetchableRecord, PersistableRecord {
     public static var databaseTableName: String { "workspace" }
-    
+
     public func encode(to container: inout PersistenceContainer) throws {
         container["id"] = id
         container["uri"] = uri.description
         container["hostType"] = hostType.rawValue
         container["ownerId"] = ownerId
-        
+
         if let toolsData = try? JSONEncoder().encode(tools),
            let toolsString = String(data: toolsData, encoding: .utf8) {
             container["tools"] = toolsString
         } else {
             container["tools"] = "[]"
         }
-        
+
         container["rootPath"] = rootPath
         container["trustLevel"] = trustLevel.rawValue
         container["lastModifiedBy"] = lastModifiedBy
         container["status"] = status.rawValue
-        
+
         if let metadataData = try? JSONEncoder().encode(metadata),
            let metadataString = String(data: metadataData, encoding: .utf8) {
             container["metadata"] = metadataString
         } else {
             container["metadata"] = "{}"
         }
-        
+
         container["createdAt"] = createdAt
     }
 }
@@ -41,17 +40,17 @@ extension WorkspaceReference: FetchableRecord, PersistableRecord {
 extension WorkspaceReference {
     public init(row: Row) throws {
         let id: UUID = row["id"]
-        
+
         let uriString: String = row["uri"]
         guard let uri = WorkspaceURI(parsing: uriString) else {
             throw PersistenceError.invalidUUIDFormat("Invalid WorkspaceURI: \(uriString)")
         }
-        
+
         let hostTypeString: String = row["hostType"]
         let hostType = WorkspaceHostType(rawValue: hostTypeString) ?? .server
-        
+
         let ownerId: UUID? = row["ownerId"]
-        
+
         let toolsString: String? = row.hasColumn("tools") ? row["tools"] : nil
         let tools: [ToolReference]
         if let ts = toolsString, !ts.isEmpty {
@@ -59,17 +58,17 @@ extension WorkspaceReference {
         } else {
             tools = []
         }
-        
+
         let rootPath: String? = row["rootPath"]
-        
+
         let trustLevelString: String = row["trustLevel"]
         let trustLevel = WorkspaceTrustLevel(rawValue: trustLevelString) ?? .full
-        
+
         let lastModifiedBy: UUID? = row["lastModifiedBy"]
-        
+
         let statusString: String = row["status"]
         let status = WorkspaceStatus(rawValue: statusString) ?? .active
-        
+
         let metadataString: String? = row.hasColumn("metadata") ? row["metadata"] : nil
         let metadata: [String: AnyCodable]
         if let ms = metadataString, !ms.isEmpty {
@@ -77,9 +76,9 @@ extension WorkspaceReference {
         } else {
             metadata = [:]
         }
-        
+
         let createdAt: Date = row["createdAt"]
-        
+
         self.init(
             id: id,
             uri: uri,

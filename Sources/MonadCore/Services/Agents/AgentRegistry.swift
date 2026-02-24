@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import Dependencies
@@ -8,9 +7,9 @@ import Dependencies
 public actor AgentRegistry {
     @Dependency(\.persistenceService) private var persistence
     private let logger = Logger(label: "com.monad.agent-registry")
-    
+
     public init() {}
-    
+
     /// Get an agent definition by ID from the database
     /// - Parameter id: The agent ID
     /// - Returns: The agent if found, nil otherwise
@@ -23,7 +22,7 @@ public actor AgentRegistry {
             return nil
         }
     }
-    
+
     /// List all agents defined in the database
     /// - Returns: Array of agents
     public func listAgents() async -> [Agent] {
@@ -34,7 +33,7 @@ public actor AgentRegistry {
             return []
         }
     }
-    
+
     /// Check if an agent exists in the database
     public func hasAgent(id: String) async -> Bool {
         return await persistence.hasAgent(id: id)

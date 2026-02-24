@@ -1,16 +1,23 @@
-import MonadShared
 import MonadCore
 import Foundation
 import GRDB
 import Logging
 
-
-
 /// Thread-safe persistence service using GRDB
-public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
+public actor PersistenceService: 
+    MemoryStoreProtocol, 
+    MessageStoreProtocol, 
+    SessionPersistenceProtocol,
+    JobStoreProtocol,
+    AgentStoreProtocol,
+    WorkspacePersistenceProtocol,
+    ClientStoreProtocol,
+    ToolPersistenceProtocol,
+    HealthCheckable 
+{
     internal let dbQueue: DatabaseQueue
     internal let logger = Logger.database
-    
+
     // Job Event Stream
     private let jobStream: AsyncStream<JobEvent>
     private let jobContinuation: AsyncStream<JobEvent>.Continuation
@@ -47,7 +54,7 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
         self.jobStream = stream
         self.jobContinuation = continuation
     }
-    
+
     public func monitorJobs() -> AsyncStream<JobEvent> {
         return jobStream
     }
@@ -147,9 +154,9 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
             let currentTables = try String.fetchAll(
                 db,
                 sql: """
-                        SELECT name FROM sqlite_master 
-                        WHERE type='table' 
-                        AND name NOT LIKE 'sqlite_%' 
+                        SELECT name FROM sqlite_master
+                        WHERE type='table'
+                        AND name NOT LIKE 'sqlite_%'
                         AND name NOT LIKE 'grdb_%'
                         AND name != 'table_directory'
                     """)
@@ -177,19 +184,19 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
         }
     }
     // MARK: - Agents
-    
+
     public func saveAgent(_ agent: Agent) async throws {
         try await dbQueue.write { db in
             try agent.save(db)
         }
     }
-    
+
     public func fetchAgent(id: UUID) async throws -> Agent? {
         try await dbQueue.read { db in
             try Agent.fetchOne(db, key: id)
         }
     }
-    
+
     public func fetchAgent(key: String) async throws -> Agent? {
          try await dbQueue.read { db in
              // Try to parse UUID first, if fails assume it's a key lookup if widely supported, 
@@ -203,13 +210,13 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
              return nil
          }
     }
-    
+
     public func fetchAllAgents() async throws -> [Agent] {
         try await dbQueue.read { db in
             try Agent.fetchAll(db)
         }
     }
-    
+
     public func hasAgent(id: String) async -> Bool {
         guard let uuid = UUID(uuidString: id) else { return false }
         return await (try? dbQueue.read { db in
@@ -218,25 +225,25 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
     }
 
     // MARK: - Workspaces
-    
+
     public func saveWorkspace(_ workspace: WorkspaceReference) async throws {
         try await dbQueue.write { db in
             try workspace.save(db)
         }
     }
-    
+
     public func fetchWorkspace(id: UUID) async throws -> WorkspaceReference? {
         try await dbQueue.read { db in
             try WorkspaceReference.fetchOne(db, key: id)
         }
     }
-    
+
     public func fetchAllWorkspaces() async throws -> [WorkspaceReference] {
         try await dbQueue.read { db in
             try WorkspaceReference.fetchAll(db)
         }
     }
-    
+
     public func deleteWorkspace(id: UUID) async throws {
         _ = try await dbQueue.write { db in
              try WorkspaceReference.deleteOne(db, key: id)
@@ -268,7 +275,7 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
             try ClientIdentity.deleteOne(db, key: id)
         }
     }
-    
+
     // MARK: - Advanced Tool Queries
 
     public func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws {
@@ -283,21 +290,21 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
             try workspaceTool.insert(db)
         }
     }
-    
+
     public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? {
         try await dbQueue.read { db in
             guard let workspace = try WorkspaceReference.fetchOne(db, key: id) else {
                 return nil
             }
-            
+
             if includeTools {
                 // Load associated tools from WorkspaceTool table (Join)
                 let workspaceTools = try WorkspaceTool
                     .filter(Column("workspaceId") == id)
                     .fetchAll(db)
-                
+
                 let toolRefs = workspaceTools.compactMap { try? $0.toToolReference() }
-                
+
                 // Create a new workspace with the tools populated
                 return WorkspaceReference(
                     id: workspace.id,
@@ -325,13 +332,13 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
             return try tools.map { try $0.toToolReference() }
          }
     }
-    
+
     public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] {
         return try await dbQueue.read { db in
             let workspaces = try WorkspaceReference
                 .filter(Column("ownerId") == clientId)
                 .fetchAll(db)
-            
+
             let workspaceIds = workspaces.map { $0.id }
             guard !workspaceIds.isEmpty else { return [] }
 
@@ -360,12 +367,10 @@ public actor PersistenceService: PersistenceServiceProtocol, HealthCheckable {
                 .filter(Column("toolId") == toolId)
                 .filter(workspaceIds.contains(Column("workspaceId")))
                 .fetchOne(db),
-                let ws = try WorkspaceReference.fetchOne(db, key: toolRecord.workspaceId)
-            {
+                let ws = try WorkspaceReference.fetchOne(db, key: toolRecord.workspaceId) {
                 if ws.hostType == .client {
                     if let owner = ws.ownerId,
-                        let client = try? ClientIdentity.fetchOne(db, key: owner)
-                    {
+                        let client = try? ClientIdentity.fetchOne(db, key: owner) {
                         return "Client: \(client.hostname)"
                     }
                     return "Client Workspace"
@@ -394,4 +399,3 @@ public enum PersistenceServiceError: LocalizedError {
         }
     }
 }
-

@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 
@@ -9,7 +8,7 @@ public struct AgentAsTool: Tool, Sendable {
     public let name: String
     public let description: String
     public let requiresPermission: Bool
-    
+
     private let agentId: String
     private let agentName: String
     private let jobQueueContext: JobQueueContext
@@ -18,14 +17,14 @@ public struct AgentAsTool: Tool, Sendable {
         self.agentId = agent.id.uuidString
         self.agentName = agent.name
         self.jobQueueContext = jobQueueContext
-        
+
         // Tool ID is the agent ID
         self.id = agent.id.uuidString
         self.name = agent.name
-        
+
         // Tool description uses the agent's description but emphasizes background execution
         self.description = "\(agent.description) (Launches a background task)"
-        
+
         // Delegation usually requires permission in this framework
         self.requiresPermission = true
     }
@@ -63,7 +62,7 @@ public struct AgentAsTool: Tool, Sendable {
         guard let taskDescription = parameters["task_description"] as? String else {
             return .failure("Missing 'task_description'")
         }
-        
+
         let priority = (parameters["priority"] as? Int) ?? 0
 
         let request = AddJobRequest(

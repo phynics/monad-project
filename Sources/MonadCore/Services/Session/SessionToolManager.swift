@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 
@@ -8,13 +7,13 @@ public actor SessionToolManager {
 
     /// available tools in the system
     public private(set) var availableTools: [AnyTool]
-    
+
     /// Context session for dynamic tool injection
     public let contextSession: ToolContextSession?
 
     /// Registered workspaces providing tools
     private var workspaces: [UUID: any WorkspaceProtocol] = [:]
-    
+
     /// Cached workspace tools
     private var workspaceTools: [String: WorkspaceToolWrapper] = [:]
 
@@ -52,7 +51,7 @@ public actor SessionToolManager {
     /// Refresh tools from all registered workspaces
     private func refreshWorkspaceTools() async {
         var newTools: [String: WorkspaceToolWrapper] = [:]
-        
+
         for workspace in workspaces.values {
             do {
                 let refs = try await workspace.listTools()
@@ -74,7 +73,7 @@ public actor SessionToolManager {
                 print("Failed to list tools for workspace \(workspace.id): \(error)")
             }
         }
-        
+
         self.workspaceTools = newTools
     }
 
@@ -86,13 +85,13 @@ public actor SessionToolManager {
         if let session = contextSession, await session.hasActiveContext {
             tools.append(contentsOf: await session.getContextTools())
         }
-        
+
         // Include workspace tools
         tools.append(contentsOf: workspaceTools.values.map { AnyTool($0) })
 
         return tools
     }
-    
+
     public func getAvailableTools() -> [AnyTool] {
         var tools = availableTools
         tools.append(contentsOf: workspaceTools.values.map { AnyTool($0) })
@@ -107,7 +106,7 @@ public actor SessionToolManager {
             enabledTools.insert(toolId)
         }
     }
-    
+
     /// Enable a tool explicitly
     public func enableTool(id: String) {
         // Only enable if it is available (checking system tools)
@@ -116,7 +115,7 @@ public actor SessionToolManager {
             enabledTools.insert(id)
         }
     }
-    
+
     /// Disable a tool explicitly
     public func disableTool(id: String) {
         enabledTools.remove(id)
@@ -135,7 +134,7 @@ public actor SessionToolManager {
                 return tool
             }
         }
-        
+
         // Then check workspace tools
         if let tool = workspaceTools[id] {
             return AnyTool(tool)

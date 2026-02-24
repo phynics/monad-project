@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Enhanced tool to search text content in files (search_files)
@@ -37,18 +36,18 @@ public struct SearchFilesTool: Tool, Sendable {
             "properties": [
                 "pattern": [
                     "type": "string",
-                    "description": "The text pattern to search for (regex supported)",
+                    "description": "The text pattern to search for (regex supported)"
                 ],
                 "path": [
                     "type": "string",
-                    "description": "The directory to search within (default: current directory)",
+                    "description": "The directory to search within (default: current directory)"
                 ],
                 "include": [
                     "type": "string",
-                    "description": "Optional glob pattern for files to include (e.g. '*.swift')",
+                    "description": "Optional glob pattern for files to include (e.g. '*.swift')"
                 ]
             ],
-            "required": ["pattern"],
+            "required": ["pattern"]
         ]
     }
 
@@ -70,21 +69,21 @@ public struct SearchFilesTool: Tool, Sendable {
         // Use 'grep' for search
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/grep")
-        
+
         var arguments = ["-rn", "--exclude-dir=.git", "--exclude-dir=.build"]
-        
+
         if let include = includePattern {
             arguments.append("--include=\(include)")
         }
-        
+
         arguments.append(pattern)
         arguments.append(url.path)
-        
+
         process.arguments = arguments
 
         let outputPipe = Pipe()
         process.standardOutput = outputPipe
-        
+
         let errorPipe = Pipe()
         process.standardError = errorPipe
 
@@ -101,7 +100,7 @@ public struct SearchFilesTool: Tool, Sendable {
                 if output.isEmpty {
                     return .success("No matches found for '\(pattern)'")
                 }
-                
+
                 // Limit output lines
                 let lines = output.components(separatedBy: .newlines)
                 if lines.count > 100 {

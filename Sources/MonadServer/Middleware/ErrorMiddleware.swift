@@ -1,4 +1,3 @@
-import MonadShared
 import Hummingbird
 import Foundation
 import HTTPTypes
@@ -8,7 +7,7 @@ import NIOCore
 
 public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
     public init() {}
-    
+
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
         do {
             return try await next(request, context)
@@ -46,7 +45,7 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
                 status = .internalServerError
                 code = "client_execution_required"
             }
-            
+
             let apiError = APIErrorResponse(error: .init(
                 code: code,
                 message: error.localizedDescription
@@ -62,7 +61,7 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
                 status = .notFound
                 code = "session_not_found"
             }
-            
+
             let apiError = APIErrorResponse(error: .init(
                 code: code,
                 message: error.localizedDescription

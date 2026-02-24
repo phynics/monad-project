@@ -7,7 +7,7 @@ public struct TextSection: ContextSection {
     public let priority: Int
     public let strategy: CompressionStrategy
     private let _estimatedTokens: Int?
-    
+
     public init(
         id: String,
         text: String,
@@ -21,12 +21,12 @@ public struct TextSection: ContextSection {
         self.strategy = strategy
         self._estimatedTokens = estimatedTokens
     }
-    
+
     public func render() async -> String? {
         guard !text.isEmpty else { return nil }
         return text
     }
-    
+
     public var estimatedTokens: Int {
         // Fallback if no estimator is available at this level
         // In real usage, one would inject an estimator or use a more specific type
@@ -41,9 +41,9 @@ public struct EmptySection: ContextSection {
     public let estimatedTokens = 0
     public let strategy: CompressionStrategy = .drop
     public let type: ContextSectionType = .text
-    
+
     public init() {}
-    
+
     public func render() async -> String? {
         return nil
     }

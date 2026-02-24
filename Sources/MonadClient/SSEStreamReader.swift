@@ -1,6 +1,5 @@
 import Foundation
 import Logging
-import MonadShared
 
 /// Parses Server-Sent Events (SSE) from an async byte stream
 public struct SSEStreamReader: Sendable {
@@ -8,8 +7,7 @@ public struct SSEStreamReader: Sendable {
 
     /// Parse SSE events from a URL response
     public func events(from bytes: URLSession.AsyncBytes, logger: Logger)
-        -> AsyncThrowingStream<MonadShared.ChatDelta, Error>
-    {
+        -> AsyncThrowingStream<ChatDelta, Error> {
         AsyncThrowingStream { continuation in
             Task {
                 do {
@@ -48,7 +46,7 @@ public struct SSEStreamReader: Sendable {
     }
 
     /// Parse a single SSE message
-    private func parseSSEMessage(_ message: String) -> MonadShared.ChatDelta? {
+    private func parseSSEMessage(_ message: String) -> ChatDelta? {
         let lines = message.split(separator: "\n", omittingEmptySubsequences: false)
 
         for line in lines {
@@ -57,13 +55,13 @@ public struct SSEStreamReader: Sendable {
 
                 // Check for done marker
                 if data == "[DONE]" {
-                    return MonadShared.ChatDelta(type: .streamCompleted)
+                    return ChatDelta(type: .streamCompleted)
                 }
 
                 // Try to parse JSON
                 if let jsonData = data.data(using: .utf8) {
                     // 1. Try to decode as ChatDelta directly (New Structured Format)
-                    if let delta = try? JSONDecoder().decode(MonadShared.ChatDelta.self, from: jsonData) {
+                    if let delta = try? JSONDecoder().decode(ChatDelta.self, from: jsonData) {
                         return delta
                     }
 
@@ -73,12 +71,11 @@ public struct SSEStreamReader: Sendable {
                             as? [String: Any],
                             let choices = json["choices"] as? [[String: Any]],
                             let firstChoice = choices.first,
-                            let delta = firstChoice["delta"] as? [String: Any]
-                        {
+                            let delta = firstChoice["delta"] as? [String: Any] {
                             let content = delta["content"] as? String
 
                             // Extract tool calls if present
-                            var toolCallDeltas: [MonadShared.ToolCallDelta]? = nil
+                            var toolCallDeltas: [ToolCallDelta]?
                             if let toolCalls = delta["tool_calls"] as? [[String: Any]] {
                                 toolCallDeltas = toolCalls.compactMap { dict in
                                     guard let index = dict["index"] as? Int else { return nil }
@@ -86,16 +83,16 @@ public struct SSEStreamReader: Sendable {
                                     let function = dict["function"] as? [String: Any]
                                     let name = function?["name"] as? String
                                     let arguments = function?["arguments"] as? String
-                                    return MonadShared.ToolCallDelta(
+                                    return ToolCallDelta(
                                         index: index, id: id, name: name, arguments: arguments)
                                 }
                             }
 
-                            return MonadShared.ChatDelta(type: .delta, content: content, toolCalls: toolCallDeltas)
+                            return ChatDelta(type: .delta, content: content, toolCalls: toolCallDeltas)
                         }
                     } catch {
                         // If JSON parsing fails, treat as plain text
-                        return MonadShared.ChatDelta(type: .delta, content: data)
+                        return ChatDelta(type: .delta, content: data)
                     }
                 }
             }

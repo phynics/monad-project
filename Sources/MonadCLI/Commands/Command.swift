@@ -1,4 +1,3 @@
-import MonadShared
 import ArgumentParser
 import Foundation
 import MonadClient
@@ -286,15 +285,14 @@ struct Command: AsyncParsableCommand {
     private func extractCommand(from response: String) -> String? {
         let patterns = [
             #"```(?:bash|sh|zsh)?\n?([\s\S]*?)```"#,
-            #"`([^`]+)`"#,
+            #"`([^`]+)`"#
         ]
         for pattern in patterns {
             if let regex = try? NSRegularExpression(pattern: pattern, options: []),
                 let match = regex.firstMatch(
                     in: response, range: NSRange(response.startIndex..., in: response)),
                 match.numberOfRanges > 1,
-                let range = Range(match.range(at: 1), in: response)
-            {
+                let range = Range(match.range(at: 1), in: response) {
                 let command = String(response[range]).trimmingCharacters(
                     in: .whitespacesAndNewlines)
                 if !command.isEmpty && command.count < 500 {

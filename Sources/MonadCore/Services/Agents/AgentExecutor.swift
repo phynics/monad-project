@@ -1,20 +1,19 @@
-import MonadShared
 import Foundation
 import Logging
 import Dependencies
 
 /// Service responsible for executing autonomous agents and managing their reasoning loops.
 public struct AgentExecutor: Sendable {
-    private let persistenceService: any PersistenceServiceProtocol
+    private let persistenceService: any JobStoreProtocol & MessageStoreProtocol
     private let chatEngine: ChatEngine
-    
+
     private let logger = Logger(label: "com.monad.agent-executor")
-    
-    public init(persistenceService: any PersistenceServiceProtocol, chatEngine: ChatEngine) {
+
+    public init(persistenceService: any JobStoreProtocol & MessageStoreProtocol, chatEngine: ChatEngine) {
         self.persistenceService = persistenceService
         self.chatEngine = chatEngine
     }
-    
+
     /// Execute an agent for a specific job
     public func execute(
         job: Job,
@@ -40,11 +39,11 @@ public struct AgentExecutor: Sendable {
                 [TASK EXECUTION]
                 Task: \(job.title)
                 Description: \(job.description ?? "N/A")
-                
+
                 Please execute this task.
                 When finished, state 'Job Complete'.
                 """
-            
+
             let triggerMessage = ConversationMessage(
                 sessionId: session.id,
                 role: .user,
@@ -53,7 +52,7 @@ public struct AgentExecutor: Sendable {
             )
             try? await persistenceService.saveMessage(triggerMessage)
         }
-        
+
         // 3. Run Chat Engine — consume stream internally for state tracking
         do {
             let availableTools = await toolExecutor.getAvailableTools()
@@ -65,7 +64,7 @@ public struct AgentExecutor: Sendable {
                 systemInstructions: agent.composedInstructions,
                 maxTurns: 10
             )
-            
+
             var fullContent = ""
             for try await event in stream {
                 switch event {
@@ -77,7 +76,7 @@ public struct AgentExecutor: Sendable {
                     break
                 }
             }
-            
+
             // Stream finished naturally — mark job complete
             currentJob.status = .completed
             currentJob.updatedAt = Date()
@@ -91,11 +90,11 @@ public struct AgentExecutor: Sendable {
     /// Shared failure logic with retry mechanism
     public func failJob(_ job: Job, reason: String) async {
         logger.error("Job \(job.id) failed: \(reason)")
-        
+
         var currentJob = job
         currentJob.updatedAt = Date()
         currentJob.logs.append("Error: \(reason)")
-        
+
         let maxRetries = 3
         if currentJob.retryCount < maxRetries {
             currentJob.retryCount += 1
@@ -107,7 +106,7 @@ public struct AgentExecutor: Sendable {
         } else {
             currentJob.status = .failed
             currentJob.logs.append("Max retries reached. Job failed permanently.")
-            
+
             let msg = ConversationMessage(
                 sessionId: job.sessionId,
                 role: .system,
@@ -116,7 +115,7 @@ public struct AgentExecutor: Sendable {
             )
             try? await persistenceService.saveMessage(msg)
         }
-        
+
         try? await persistenceService.saveJob(currentJob)
     }
 }

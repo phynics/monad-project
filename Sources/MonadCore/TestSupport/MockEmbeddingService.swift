@@ -1,6 +1,4 @@
-import MonadShared
 import Foundation
-
 
 public final class MockEmbeddingService: EmbeddingServiceProtocol, @unchecked Sendable {
     public var mockEmbedding: [Float] = [0.1, 0.2, 0.3]

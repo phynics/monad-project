@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Tool to list files in a directory
@@ -38,9 +37,9 @@ public struct ListDirectoryTool: Tool, Sendable {
                 "path": [
                     "type": "string",
                     "description":
-                        "The path to the directory (defaults to current directory if omitted)",
+                        "The path to the directory (defaults to current directory if omitted)"
                 ]
-            ],
+            ]
         ]
     }
 

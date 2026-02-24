@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Searchable memory item for storing knowledge
@@ -27,19 +26,19 @@ public struct Memory: Codable, Identifiable, Sendable, Equatable {
         self.content = content
         self.createdAt = createdAt
         self.updatedAt = updatedAt
-        
+
         if let data = try? JSONEncoder().encode(tags), let str = String(data: data, encoding: .utf8) {
             self.tags = str
         } else {
             self.tags = "[]"
         }
-        
+
         if let data = try? JSONEncoder().encode(metadata), let str = String(data: data, encoding: .utf8) {
             self.metadata = str
         } else {
             self.metadata = "{}"
         }
-        
+
         if let data = try? JSONEncoder().encode(embedding), let str = String(data: data, encoding: .utf8) {
             self.embedding = str
         } else {
@@ -75,7 +74,7 @@ public struct Memory: Codable, Identifiable, Sendable, Equatable {
         }
         return array
     }
-    
+
     public var embeddingVector: [Double] {
         guard let data = embedding.data(using: .utf8),
               let vector = try? JSONDecoder().decode([Double].self, from: data)
@@ -99,7 +98,7 @@ public struct Memory: Codable, Identifiable, Sendable, Equatable {
 public struct SemanticSearchResult: Sendable, Equatable {
     public let memory: Memory
     public let similarity: Double?
-    
+
     public init(memory: Memory, similarity: Double? = nil) {
         self.memory = memory
         self.similarity = similarity

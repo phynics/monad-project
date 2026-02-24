@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Testing
 @testable import MonadCore
@@ -7,10 +6,10 @@ import Testing
 
     @Test("Test string description")
     func testDescription() {
-        let ac = MonadShared.AnyCodable("hello")
+        let ac = AnyCodable("hello")
         #expect(ac.description == "hello")
 
-        let acInt = MonadShared.AnyCodable(123)
+        let acInt = AnyCodable(123)
         #expect(acInt.description == "123.0")
     }
 
@@ -19,9 +18,9 @@ import Testing
         let values: [Any] = ["string", 42, 3.14, true]
 
         for value in values {
-            let ac = MonadShared.AnyCodable(value)
+            let ac = AnyCodable(value)
             let data = try JSONEncoder().encode(ac)
-            let decoded = try JSONDecoder().decode(MonadShared.AnyCodable.self, from: data)
+            let decoded = try JSONDecoder().decode(AnyCodable.self, from: data)
             #expect(ac == decoded)
         }
     }
@@ -34,28 +33,28 @@ import Testing
             "null": NSNull()
         ]
 
-        let ac = MonadShared.AnyCodable(nested)
+        let ac = AnyCodable(nested)
         let data = try JSONEncoder().encode(ac)
-        let decoded = try JSONDecoder().decode(MonadShared.AnyCodable.self, from: data)
+        let decoded = try JSONDecoder().decode(AnyCodable.self, from: data)
 
         #expect(ac == decoded)
 
         // Verify specifically that we didn't double wrap
         let decodedDict = decoded.value as? [String: Any]
         #expect(decodedDict?["arr"] is [Any])
-        #expect(!(decodedDict?["arr"] is [MonadShared.AnyCodable])) // Decoded values are unwrapped
+        #expect(!(decodedDict?["arr"] is [AnyCodable])) // Decoded values are unwrapped
     }
 
     @Test("Test encoding double wrapped AnyCodable")
     func testDoubleWrappingPrevention() throws {
-        let inner = MonadShared.AnyCodable("inner")
-        let outer = MonadShared.AnyCodable(inner)
+        let inner = AnyCodable("inner")
+        let outer = AnyCodable(inner)
 
         let data = try JSONEncoder().encode(outer)
         let json = String(data: data, encoding: .utf8)
         #expect(json == "\"inner\"") // Should not be nested JSON
 
-        let decoded = try JSONDecoder().decode(MonadShared.AnyCodable.self, from: data)
+        let decoded = try JSONDecoder().decode(AnyCodable.self, from: data)
         #expect(decoded.value as? String == "inner")
     }
 }

@@ -1,7 +1,6 @@
 import XCTest
 @testable import MonadCore
 @testable import MonadPrompt
-import MonadShared
 
 final class ContextBuilderTruncationTests: XCTestCase {
 

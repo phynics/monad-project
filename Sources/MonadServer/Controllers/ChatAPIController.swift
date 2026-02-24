@@ -3,7 +3,6 @@ import HTTPTypes
 import Hummingbird
 import Logging
 import MonadCore
-import MonadShared
 import NIOCore
 import OpenAI
 
@@ -38,7 +37,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.badRequest)
         }
 
-        let chatRequest = try await request.decode(as: MonadShared.ChatRequest.self, context: context)
+        let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
 
         // Hydrate session and resolve tools at the server layer
         try await sessionManager.hydrateSession(id: id)
@@ -73,7 +72,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.badRequest)
         }
 
-        let chatRequest = try await request.decode(as: MonadShared.ChatRequest.self, context: context)
+        let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
 
         // Hydrate session and resolve tools at the server layer
         try await sessionManager.hydrateSession(id: id)
@@ -91,39 +90,39 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                 do {
                     for try await event in chatEngineStream {
                         if Task.isCancelled {
-                            throw CancellationError() 
+                            throw CancellationError()
                         }
-                        
+
                         let apiDelta = ChatDeltaMapper.mapEvent(event)
-                        
+
                         if let data = try? SerializationUtils.jsonEncoder.encode(apiDelta) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))
                         }
                     }
-                    
+
                     if Task.isCancelled {
                         throw CancellationError()
                     }
-                    
+
                     // Signal end of stream
-                    let doneDelta = MonadShared.ChatDelta(type: .streamCompleted)
+                    let doneDelta = ChatDelta(type: .streamCompleted)
                     if let data = try? SerializationUtils.jsonEncoder.encode(doneDelta) {
                         let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                         continuation.yield(ByteBuffer(string: sseString))
                     }
-                    
+
                     continuation.finish()
                 } catch {
                     if error is CancellationError {
-                        let cancelDelta = MonadShared.ChatDelta(type: .generationCancelled)
+                        let cancelDelta = ChatDelta(type: .generationCancelled)
                         if let data = try? SerializationUtils.jsonEncoder.encode(cancelDelta) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))
                         }
                     } else {
                         Logger.chat.error("Stream error: \(error)")
-                        let errorDelta = MonadShared.ChatDelta(type: .error, error: error.localizedDescription)
+                        let errorDelta = ChatDelta(type: .error, error: error.localizedDescription)
                         if let data = try? SerializationUtils.jsonEncoder.encode(errorDelta) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))
@@ -132,12 +131,12 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                     continuation.finish()
                 }
             }
-            
+
             let registrationTask = task
             Task {
                 await sessionManager.registerTask(registrationTask, for: id)
             }
-            
+
             continuation.onTermination = { @Sendable _ in
                 task.cancel()
             }
@@ -180,7 +179,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         var availableTools: [AnyTool] = []
         do {
             let references = try await sessionManager.getAllToolReferences(sessionId: sessionId, clientId: clientId)
-            
+
             availableTools = references.compactMap { (ref: ToolReference) -> AnyTool? in
                 var def: WorkspaceToolDefinition?
                 switch ref {
@@ -201,4 +200,3 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         return availableTools
     }
 }
-

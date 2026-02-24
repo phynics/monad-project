@@ -1,5 +1,4 @@
 import Foundation
-import MonadShared
 
 public protocol MessageStoreProtocol: Sendable {
     func saveMessage(_ message: ConversationMessage) async throws

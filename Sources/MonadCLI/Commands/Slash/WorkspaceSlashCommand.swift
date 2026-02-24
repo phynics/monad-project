@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import MonadClient
 import MonadCore
@@ -63,13 +62,13 @@ struct WorkspaceSlashCommand: SlashCommand {
         let attachedWorkspaces = sessionWS.attached
 
         print("\n\(TerminalUI.bold("Session Workspaces:"))")
-        
+
         if let primary = primaryWorkspace {
             printWorkspace(primary, marker: "★", color: "green")
         } else {
              print("  \(TerminalUI.dim("No primary workspace"))")
         }
-        
+
         for ws in attachedWorkspaces {
             printWorkspace(ws, marker: "●", color: "blue")
         }
@@ -87,19 +86,19 @@ struct WorkspaceSlashCommand: SlashCommand {
 
         let primaryId = sessionWS.primary?.id
         let attachedIds = Set(sessionWS.attached.map { $0.id })
-        
+
         let primaryWorkspace = allWorkspaces.first(where: { $0.id == primaryId })
         let attachedWorkspaces = allWorkspaces.filter { attachedIds.contains($0.id) && $0.id != primaryId }
         let availableWorkspaces = allWorkspaces.filter { $0.id != primaryId && !attachedIds.contains($0.id) }
 
         print("\n\(TerminalUI.bold("Current Session Workspaces:"))")
-        
+
         if let primary = primaryWorkspace {
             printWorkspace(primary, marker: "★", color: "green")
         } else {
              print("  \(TerminalUI.dim("No primary workspace"))")
         }
-        
+
         for ws in attachedWorkspaces {
             printWorkspace(ws, marker: "●", color: "blue")
         }
@@ -110,7 +109,7 @@ struct WorkspaceSlashCommand: SlashCommand {
                 printWorkspace(ws, marker: "○", color: "white")
             }
         }
-        
+
         print("")
         print("  ★ Primary  ● Attached  ○ Available")
         print("")
@@ -123,7 +122,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         case "blue": markerStr = TerminalUI.blue(marker)
         default: markerStr = marker
         }
-        
+
         print("  \(markerStr) \(TerminalUI.bold(ws.uri.description))")
         print("     ID: \(TerminalUI.dim(ws.id.uuidString))")
         if let path = ws.rootPath {
@@ -178,7 +177,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         let pwd = FileManager.default.currentDirectoryPath
         let hostname = ProcessInfo.processInfo.hostName
         let uriString = "file://\(hostname)\(pwd)"
-        
+
         guard let myId = RegistrationManager.shared.getIdentity()?.clientId else {
             TerminalUI.printError("Could not determine local client identity.")
             return
@@ -186,8 +185,8 @@ struct WorkspaceSlashCommand: SlashCommand {
 
         // Check if workspace already exists
         let allWorkspaces = try await context.client.listWorkspaces()
-        var targetWorkspaceId: UUID? = nil
-        
+        var targetWorkspaceId: UUID?
+
         if let existing = allWorkspaces.first(where: { $0.uri.description == uriString }) {
             targetWorkspaceId = existing.id
         } else {
@@ -196,7 +195,7 @@ struct WorkspaceSlashCommand: SlashCommand {
                 TerminalUI.printError("Failed to parse URI for local directory.")
                 return
             }
-            
+
             let newWs = try await context.client.createWorkspace(
                 uri: uri,
                 hostType: .client,
@@ -206,13 +205,13 @@ struct WorkspaceSlashCommand: SlashCommand {
             )
             targetWorkspaceId = newWs.id
         }
-        
+
         if let wsId = targetWorkspaceId {
             try await context.client.attachWorkspace(wsId, to: context.session.id, isPrimary: false)
-            
+
             // Persist the local reference
             LocalConfigManager.shared.saveClientWorkspace(uri: uriString, id: wsId.uuidString)
-            
+
             TerminalUI.printSuccess("Attached local directory '\(pwd)' as workspace.")
         }
     }

@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import OpenAI
@@ -24,18 +23,18 @@ public actor OllamaClient {
         if cleanEndpoint.hasSuffix("/api") {
             cleanEndpoint.removeLast(4)
         }
-        
+
         if let url = URL(string: cleanEndpoint) {
             self.endpoint = url
         } else {
             logger.warning("Invalid Ollama endpoint '\(cleanEndpoint)', falling back to http://localhost:11434")
             self.endpoint = URL(string: "http://localhost:11434")!
         }
-        
+
         self.modelName = modelName
         self.timeoutInterval = timeoutInterval
         self.maxRetries = maxRetries
-        
+
         // Use a custom configuration with longer timeout for local network robustness
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = timeoutInterval
@@ -102,8 +101,7 @@ public actor OllamaClient {
                             guard let data = line.data(using: .utf8) else { continue }
 
                             if let response = try? JSONDecoder().decode(
-                                OllamaChatResponse.self, from: data)
-                            {
+                                OllamaChatResponse.self, from: data) {
                                 if let converted = await self.convertToOpenAI(response) {
                                     // Check content or tool calls to mark yielded
                                     if let content = converted.choices.first?.delta.content, !content.isEmpty {
@@ -188,7 +186,7 @@ public actor OllamaClient {
             return OllamaMessage(role: role, content: content, tool_calls: nil)
         }
 
-        var format: String? = nil
+        var format: String?
         if let responseFormat = responseFormat {
             switch responseFormat {
             case .jsonObject, .jsonSchema:
@@ -239,12 +237,12 @@ public actor OllamaClient {
         if response.done {
             let promptEvalCount = response.prompt_eval_count ?? 0
             let evalCount = response.eval_count ?? 0
-            
+
             var delta: [String: Any] = [
                 "role": "assistant",
                 "content": response.message.content
             ]
-            
+
             if let tc = openAIToolCalls {
                 delta["tool_calls"] = tc
             }
@@ -258,7 +256,7 @@ public actor OllamaClient {
                     [
                         "index": 0,
                         "delta": delta,
-                        "finish_reason": response.message.tool_calls?.isEmpty == false ? "tool_calls" : "stop",
+                        "finish_reason": response.message.tool_calls?.isEmpty == false ? "tool_calls" : "stop"
                     ]
                 ],
                 "usage": [
@@ -267,7 +265,7 @@ public actor OllamaClient {
                     "total_tokens": promptEvalCount + evalCount
                 ]
             ]
-            
+
             do {
                 let data = try JSONSerialization.data(withJSONObject: jsonDict)
                 return try JSONDecoder().decode(ChatStreamResult.self, from: data)
@@ -285,9 +283,9 @@ public actor OllamaClient {
         // Manually construct JSON for intermediate chunks
         var delta: [String: Any] = [
             "role": "assistant",
-            "content": response.message.content,
+            "content": response.message.content
         ]
-        
+
         if let tc = openAIToolCalls {
             delta["tool_calls"] = tc
         }
@@ -301,9 +299,9 @@ public actor OllamaClient {
                 [
                     "index": 0,
                     "delta": delta,
-                    "finish_reason": nil,
+                    "finish_reason": nil
                 ]
-            ],
+            ]
         ]
 
         do {

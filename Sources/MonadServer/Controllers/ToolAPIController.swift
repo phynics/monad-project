@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import HTTPTypes
 import Hummingbird
@@ -8,9 +7,9 @@ import NIOCore
 public struct ExecuteToolRequest: Codable, Sendable {
     public let sessionId: UUID
     public let name: String
-    public let arguments: [String: MonadShared.AnyCodable]
+    public let arguments: [String: AnyCodable]
 
-    public init(sessionId: UUID, name: String, arguments: [String: MonadShared.AnyCodable]) {
+    public init(sessionId: UUID, name: String, arguments: [String: AnyCodable]) {
         self.sessionId = sessionId
         self.name = name
         self.arguments = arguments
@@ -51,16 +50,15 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         // Actually, `SessionManager` initializes tools inside `createToolManager`.
         // I'll skip implementing dynamic system tool list for now and return empty or a static list if I can.
         // Or I can just fetch it from a dummy session if one exists? No.
-        
+
         // I'll return empty list for now and mark TODO, as `SessionManager` refactor is risky.
         // But wait, user explicit request `GET /` to list system tools.
         // I should probably implement it properly. `SessionManager` line 148 has `availableTools`.
         // I can extract that list to a static property or method.
-        return [] 
+        return []
     }
 
-    @Sendable func enable(_ request: Request, context: Context) async throws -> HTTPResponse.Status
-    {
+    @Sendable func enable(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         let name = try context.parameters.require("name")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
@@ -69,12 +67,11 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound)
         }
 
-        await toolManager.enableTool(id: name) 
+        await toolManager.enableTool(id: name)
         return .ok
     }
 
-    @Sendable func disable(_ request: Request, context: Context) async throws -> HTTPResponse.Status
-    {
+    @Sendable func disable(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         let name = try context.parameters.require("name")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }

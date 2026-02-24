@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 
@@ -12,21 +11,21 @@ public enum MemoryVacuumPolicy: Sendable {
 
 /// Service to archive conversations and index them for semantic recall
 public actor ConversationArchiver {
-    private let persistence: PersistenceServiceProtocol
+    private let persistence: any SessionPersistenceProtocol & MemoryStoreProtocol & MessageStoreProtocol
     private let llmService: LLMService
     private let contextManager: ContextManager
     private let logger = Logger(label: "com.monad.ConversationArchiver")
-    
-    public init(persistence: PersistenceServiceProtocol, llmService: LLMService, contextManager: ContextManager) {
+
+    public init(persistence: any SessionPersistenceProtocol & MemoryStoreProtocol & MessageStoreProtocol, llmService: LLMService, contextManager: ContextManager) {
         self.persistence = persistence
         self.llmService = llmService
         self.contextManager = contextManager
     }
-    
+
     /// Archive a conversation and index its messages as semantic memories
     @discardableResult
     public func archive(
-        messages: [Message], 
+        messages: [Message],
         sessionId: UUID?,
         vacuumPolicy: MemoryVacuumPolicy = .run(threshold: 0.95)
     ) async throws -> UUID {
@@ -40,7 +39,7 @@ public actor ConversationArchiver {
                 title = String(firstUserMessage.prefix(40))
             }
         }
-        
+
         // 2. Resolve Session
         let session: ConversationSession
         if let sid = sessionId, let existing = try await persistence.fetchSession(id: sid) {
@@ -56,7 +55,7 @@ public actor ConversationArchiver {
             try await persistence.saveSession(newSession)
             session = newSession
         }
-        
+
         // 3. Index and Save Messages
         for msg in messages {
             // Heuristic: Index messages longer than 20 chars as memories
@@ -64,7 +63,7 @@ public actor ConversationArchiver {
                 do {
                     let tags = try await llmService.generateTags(for: msg.content)
                     let embedding = try await llmService.embeddingService.generateEmbedding(for: msg.content)
-                    
+
                     let memory = Memory(
                         title: title,
                         content: msg.content,
@@ -77,7 +76,7 @@ public actor ConversationArchiver {
                     logger.error("Failed to index message as memory: \(error.localizedDescription)")
                 }
             }
-            
+
             let conversationMsg = ConversationMessage(
                 sessionId: session.id,
                 role: .init(rawValue: msg.role.rawValue) ?? .user,
@@ -95,30 +94,30 @@ public actor ConversationArchiver {
             )
             try await persistence.saveMessage(conversationMsg)
         }
-        
+
         // 4. Update Summary? (Future improvement)
-        
+
         // 5. Memory Vacuum (Cleanup redundancies)
         if case .run(let threshold) = vacuumPolicy {
             _ = try await persistence.vacuumMemories(threshold: threshold)
         }
-        
+
         return session.id
     }
-    
+
     private func generateTitle(for userMessage: String) async throws -> String {
         let utilityClient = await llmService.getUtilityClient()
         let defaultClient = await llmService.getClient()
         guard let client = utilityClient ?? defaultClient else {
             return String(userMessage.prefix(40))
         }
-        
+
         let prompt = """
         Generate a very short, descriptive title (max 5 words) for a conversation that starts with:
         \(userMessage)
         Title:
         """
-        
+
         return try await client.sendMessage(prompt, responseFormat: nil)
             .replacingOccurrences(of: "\"", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)

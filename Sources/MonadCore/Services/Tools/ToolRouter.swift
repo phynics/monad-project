@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import Dependencies
@@ -6,7 +5,7 @@ import Dependencies
 /// Routes tool execution requests to the appropriate handler (local or remote)
 public actor ToolRouter {
     private let logger = Logger(label: "com.monad.core.tools")
-    
+
     @Dependency(\.sessionManager) private var sessionManager
 
     public init() {}
@@ -58,21 +57,21 @@ public actor ToolRouter {
         sessionId: UUID
     ) async throws -> String {
         logger.info("Executing locally: \(tool.displayName)")
-        
+
         guard let toolManager = await sessionManager.getToolManager(for: sessionId) else {
             throw ToolError.toolNotFound(tool.displayName)
         }
-        
+
         guard let realTool = await toolManager.getTool(id: tool.toolId) else {
              throw ToolError.toolNotFound(tool.displayName)
         }
-        
+
         // Convert arguments to [String: Any] for the tool
         var params: [String: Any] = [:]
         for (key, val) in arguments {
             params[key] = val.value
         }
-        
+
         let result = try await realTool.execute(parameters: params)
         if result.success {
             return result.output
@@ -87,7 +86,7 @@ public actor ToolRouter {
         workspace: WorkspaceReference
     ) async throws -> String {
         logger.info("Executing remotely on client: \(workspace.ownerId?.uuidString ?? "unknown")")
-        
+
         guard workspace.ownerId != nil else {
             throw ToolError.clientNotConnected
         }

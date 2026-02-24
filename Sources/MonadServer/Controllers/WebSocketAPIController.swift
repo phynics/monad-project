@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Hummingbird
 import HummingbirdWebSocket
@@ -10,13 +9,13 @@ import ServiceLifecycle
 
 struct WebSocketAPIController<Context>: Sendable where Context: WebSocketRequestContext, Context: RequestContext {
     let connectionManager: WebSocketConnectionManager
-    
+
     func addRoutes(to group: RouterGroup<Context>) {
         group.ws("/v1/connect", onUpgrade: { inbound, outbound, context in
             await self.handle(inbound: inbound, outbound: outbound, context: context)
         })
     }
-    
+
     @Sendable func handle(inbound: WebSocketInboundStream, outbound: WebSocketOutboundWriter, context: WebSocketRouterContext<Context>) async {
         let request = context.request
         // Identify client
@@ -25,16 +24,16 @@ struct WebSocketAPIController<Context>: Sendable where Context: WebSocketRequest
             // If we can't identify, close.
             return
         }
-        
+
         let clientId: UUID
         if let id = UUID(uuidString: clientIdStr) {
             clientId = id
         } else {
             return
         }
-        
+
         await connectionManager.addConnection(clientId: clientId, writer: outbound)
-        
+
         do {
             try await cancelWhenGracefulShutdown {
                 // Read loop
@@ -63,7 +62,7 @@ struct WebSocketAPIController<Context>: Sendable where Context: WebSocketRequest
         } catch {
             // socket error or cancellation
         }
-        
+
         await connectionManager.removeConnection(clientId: clientId)
     }
 }

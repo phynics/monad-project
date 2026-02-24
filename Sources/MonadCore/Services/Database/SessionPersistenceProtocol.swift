@@ -1,5 +1,4 @@
 import Foundation
-import MonadShared
 
 public protocol SessionPersistenceProtocol: Sendable {
     func saveSession(_ session: ConversationSession) async throws

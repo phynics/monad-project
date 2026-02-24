@@ -2,7 +2,6 @@ import Foundation
 import HTTPTypes
 import Hummingbird
 import MonadCore
-import MonadShared
 import NIOCore
 
 public struct SessionAPIController<Context: RequestContext>: Sendable {
@@ -18,11 +17,10 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         group.get("/{id}", use: get)
         group.patch("/{id}", use: update)
         group.delete("/{id}", use: delete)
-        
+
         // Messages
         group.get("/{id}/messages", use: getMessages)
         group.get("/{id}/history", use: getMessages) // Legacy alias
-
 
         // Workspace routes
         group.post("/{id}/workspaces", use: attachWorkspace)
@@ -56,7 +54,7 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         let perPage = pagination.perPage
 
         let sessions = try await sessionManager.listSessions()
-        
+
         // In-memory pagination
         let total = sessions.count
         let start = (page - 1) * perPage
@@ -81,15 +79,15 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
                 attachedWorkspaceIds: session.attachedWorkspaces
             )
         }
-        
+
         let metadata = PaginationMetadata(page: page, perPage: perPage, totalItems: total)
         return PaginatedResponse(items: sessionResponses, metadata: metadata)
     }
-    
+
     @Sendable func get(_ request: Request, context: Context) async throws -> SessionResponse {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
-        
+
         guard let session = await sessionManager.getSession(id: id) else {
              // Fallback to DB if not in memory
              let persistence = await sessionManager.getPersistenceService()
@@ -121,45 +119,44 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
             attachedWorkspaceIds: session.attachedWorkspaces
         )
     }
-    
+
     @Sendable func update(_ request: Request, context: Context) async throws -> SessionResponse {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
-        
+
         let input = try await request.decode(as: UpdateSessionRequest.self, context: context)
-        
+
         if let title = input.title {
             try await sessionManager.updateSessionTitle(id: id, title: title)
         }
-        
+
         return try await get(request, context: context)
     }
-    
+
     @Sendable func delete(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
-        
+
         // Remove from memory
         await sessionManager.deleteSession(id: id)
-        
+
         // Remove from DB
         let persistence = await sessionManager.getPersistenceService()
         try await persistence.deleteSession(id: id)
-        
+
         return .noContent
     }
-
 
     @Sendable func getMessages(_ request: Request, context: Context) async throws -> some ResponseGenerator {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
-        
+
         let pagination = request.getPagination(defaultPerPage: 50)
         let page = pagination.page
         let perPage = pagination.perPage
 
         let messages = try await sessionManager.getHistory(for: id)
-        
+
         // In-memory pagination
         let total = messages.count
         let start = (page - 1) * perPage
@@ -170,7 +167,7 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         } else {
             paginatedMessages = []
         }
-        
+
         let metadata = PaginationMetadata(page: page, perPage: perPage, totalItems: total)
         return PaginatedResponse(items: paginatedMessages, metadata: metadata)
     }
@@ -219,13 +216,13 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
     @Sendable func restoreWorkspace(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         let wsIdString = try context.parameters.require("wsId")
-        
+
         guard let _ = UUID(uuidString: idString), let wsId = UUID(uuidString: wsIdString) else {
             throw HTTPError(.badRequest)
         }
-        
+
         try await sessionManager.restoreWorkspace(wsId)
-        
+
         return .ok
     }
 }

@@ -1,24 +1,23 @@
-import MonadShared
 import MonadCore
 import Foundation
 
 public struct ChatDeltaMapper {
-    public static func mapEvent(_ event: ChatEvent) -> MonadShared.ChatDelta {
+    public static func mapEvent(_ event: ChatEvent) -> ChatDelta {
         switch event {
         case .generationContext(let m):
-            return MonadShared.ChatDelta(type: .generationContext, metadata: m)
+            return ChatDelta(type: .generationContext, metadata: m)
         case .delta(let content):
-            return MonadShared.ChatDelta(type: .delta, content: content)
+            return ChatDelta(type: .delta, content: content)
         case .thought(let content):
-            return MonadShared.ChatDelta(type: .thought, thought: content)
+            return ChatDelta(type: .thought, thought: content)
         case .thoughtCompleted:
-            return MonadShared.ChatDelta(type: .thoughtCompleted)
+            return ChatDelta(type: .thoughtCompleted)
         case .toolCall(let tc):
-            return MonadShared.ChatDelta(type: .toolCall, toolCalls: [tc])
+            return ChatDelta(type: .toolCall, toolCalls: [tc])
         case .toolCallError(let id, let name, let error):
-            return MonadShared.ChatDelta(
+            return ChatDelta(
                 type: .toolCallError,
-                toolCallError: MonadShared.ToolCallErrorDelta(
+                toolCallError: ToolCallErrorDelta(
                     toolCallId: id,
                     name: name,
                     error: error
@@ -29,7 +28,7 @@ public struct ChatDeltaMapper {
             var name: String?
             var target: String?
             var resultStr: String?
-            
+
             switch status {
             case .attempting(let n, let ref):
                 statusStr = "attempting"
@@ -47,10 +46,10 @@ public struct ChatDeltaMapper {
                 statusStr = "failure"
                 resultStr = err.localizedDescription
             }
-            
-            return MonadShared.ChatDelta(
+
+            return ChatDelta(
                 type: .toolExecution,
-                toolExecution: MonadShared.ToolExecutionDelta(
+                toolExecution: ToolExecutionDelta(
                     toolCallId: id,
                     status: statusStr,
                     name: name,
@@ -59,7 +58,7 @@ public struct ChatDeltaMapper {
                 )
             )
         case .generationCompleted(_, let meta):
-            let apiMeta = MonadShared.APIMetadataDelta(
+            let apiMeta = APIMetadataDelta(
                 model: meta.model,
                 promptTokens: meta.promptTokens,
                 completionTokens: meta.completionTokens,
@@ -70,12 +69,12 @@ public struct ChatDeltaMapper {
                 tokensPerSecond: meta.tokensPerSecond,
                 debugSnapshotData: meta.debugSnapshotData
             )
-            return MonadShared.ChatDelta(type: .generationCompleted, responseMetadata: apiMeta)
+            return ChatDelta(type: .generationCompleted, responseMetadata: apiMeta)
         case .error(let e):
             if e is CancellationError {
-                return MonadShared.ChatDelta(type: .generationCancelled)
+                return ChatDelta(type: .generationCancelled)
             } else {
-                return MonadShared.ChatDelta(type: .error, error: e.localizedDescription)
+                return ChatDelta(type: .error, error: e.localizedDescription)
             }
         }
     }

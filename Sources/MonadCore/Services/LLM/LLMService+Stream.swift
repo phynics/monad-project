@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import OpenAI
 
@@ -37,7 +36,7 @@ extension LLMService {
             tools: tools,
             systemInstructions: systemInstructions
         )
-        
+
         // Convert to OpenAI format
         let messages = await prompt.toMessages()
         let rawPrompt = await prompt.render()

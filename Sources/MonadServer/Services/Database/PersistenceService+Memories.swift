@@ -1,8 +1,6 @@
-import MonadShared
 import MonadCore
 import Foundation
 import GRDB
-
 
 // ...
 
@@ -40,8 +38,7 @@ extension PersistenceService {
     }
 
     public func searchMemories(embedding: [Double], limit: Int, minSimilarity: Double) async throws
-        -> [(memory: Memory, similarity: Double)]
-    {
+        -> [(memory: Memory, similarity: Double)] {
         let allMemories = try await fetchAllMemories()
         var results: [(memory: Memory, similarity: Double)] = []
 

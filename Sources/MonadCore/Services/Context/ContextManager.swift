@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import Dependencies
@@ -8,10 +7,10 @@ public actor ContextManager: @unchecked Sendable {
     @Dependency(\.persistenceService) private var defaultPersistenceService
     @Dependency(\.embeddingService) private var defaultEmbeddingService
     
-    private let explicitPersistenceService: (any PersistenceServiceProtocol)?
+    private let explicitPersistenceService: (any MemoryStoreProtocol)?
     private let explicitEmbeddingService: (any EmbeddingServiceProtocol)?
 
-    private var persistenceService: any PersistenceServiceProtocol { explicitPersistenceService ?? defaultPersistenceService }
+    private var persistenceService: any MemoryStoreProtocol { explicitPersistenceService ?? defaultPersistenceService }
     private var embeddingService: any EmbeddingServiceProtocol { explicitEmbeddingService ?? defaultEmbeddingService }
     
     private let vectorStore: (any VectorStoreProtocol)?
@@ -21,7 +20,7 @@ public actor ContextManager: @unchecked Sendable {
     private let ranker = ContextRanker()
 
     public init(
-        persistenceService: (any PersistenceServiceProtocol)? = nil,
+        persistenceService: (any MemoryStoreProtocol)? = nil,
         embeddingService: (any EmbeddingServiceProtocol)? = nil,
         vectorStore: (any VectorStoreProtocol)? = nil,
         workspace: (any WorkspaceProtocol)? = nil

@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 public struct ActiveMemory: Identifiable, Sendable, Equatable {
@@ -6,7 +5,7 @@ public struct ActiveMemory: Identifiable, Sendable, Equatable {
     public let memory: Memory
     public var isPinned: Bool
     public var lastAccessed: Date
-    
+
     public init(memory: Memory, isPinned: Bool = false, lastAccessed: Date = Date()) {
         self.id = memory.id
         self.memory = memory

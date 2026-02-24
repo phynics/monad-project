@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import MonadClient
 import MonadCore
@@ -21,7 +20,7 @@ actor ChatREPL: ChatREPLController {
     // Slash Command Registry
     private let registry = SlashCommandRegistry()
     private let lineReader = LineReader()
-    
+
     /// The currently active generation task
     private var currentGenerationTask: Task<Void, Never>?
     private var signalSource: DispatchSourceSignal?
@@ -55,7 +54,7 @@ actor ChatREPL: ChatREPLController {
         await registry.register(PruneSlashCommand())
         await registry.register(ClientCommand())
         await registry.register(JobSlashCommand())
-        
+
         // Utilities
         await registry.register(ClearCommand())
         await registry.register(DebugCommand())
@@ -150,7 +149,7 @@ actor ChatREPL: ChatREPLController {
                                 print(TerminalUI.dim("Using \(memories) memories and \(files) files"))
                             }
                         }
-                        
+
                     case .thought:
                         if let thought = delta.thought {
                             if !assistantStartPrinted {
@@ -162,10 +161,10 @@ actor ChatREPL: ChatREPLController {
                             print(TerminalUI.dim(thought), terminator: "")
                             fflush(stdout)
                         }
-                        
+
                     case .thoughtCompleted:
                         print("\n")
-                        
+
                     case .toolCall:
                         // Legacy or internal buffering
                         if let toolCalls = delta.toolCalls {
@@ -177,12 +176,12 @@ actor ChatREPL: ChatREPLController {
                                 toolCallState[index] = state
                             }
                         }
-                        
+
                     case .toolCallError:
                         if let err = delta.toolCallError {
                             print(TerminalUI.red("❌ Tool Error (\(err.name)): \(err.error)"))
                         }
-                        
+
                     case .toolExecution:
                         if let execution = delta.toolExecution {
                             switch execution.status {
@@ -197,7 +196,7 @@ actor ChatREPL: ChatREPLController {
                                 break
                             }
                         }
-                        
+
                     case .delta:
                         if let content = delta.content {
                             if !assistantStartPrinted {
@@ -207,7 +206,7 @@ actor ChatREPL: ChatREPLController {
                             print(content, terminator: "")
                             fflush(stdout)
                         }
-                        
+
                     case .generationCompleted:
                         if let meta = delta.responseMetadata {
                             if let snapshotData = meta.debugSnapshotData {
@@ -220,7 +219,7 @@ actor ChatREPL: ChatREPLController {
                         } else {
                             print("\n")
                         }
-                        
+
                     case .generationCancelled:
                         print(TerminalUI.yellow("\n[Generation cancelled]"))
 
@@ -230,7 +229,7 @@ actor ChatREPL: ChatREPLController {
                             TerminalUI.printError("Stream Error: \(error)")
                             return
                         }
-                        
+
                     case .streamCompleted:
                         break
                     }
@@ -351,14 +350,14 @@ actor ChatREPL: ChatREPLController {
 
     private func readInput() async -> String? {
         print("")
-        
+
         // Fetch context summary
         let contextSummary = await getContextSummary()
         if !contextSummary.isEmpty {
             print(TerminalUI.dim(contextSummary))
         }
 
-        var wsName: String? = nil
+        var wsName: String?
         if let selectedId = selectedWorkspaceId {
             wsName = (try? await client.getWorkspace(selectedId))?.uri.description
         }

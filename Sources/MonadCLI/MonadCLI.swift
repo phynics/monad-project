@@ -1,4 +1,3 @@
-import MonadShared
 import ArgumentParser
 import Foundation
 import MonadClient
@@ -21,13 +20,13 @@ struct MonadCLI: AsyncParsableCommand {
               /config                       View/edit configuration
               /debug                        Show rendered prompt & raw output
               /quit                         Exit (or :q)
-              
+
               SESSION & WORKSPACE:
               /new                          Start a new session
               /session info/list/switch     Manage chat sessions
               /workspace all/list/attach    Manage workspaces
               /workspace attach-pwd         Attach current local directory
-              
+
               FILES & CONTEXT:
               /ls, /cat, /write, /edit      Explore & modify workspace files
               /memory list/add/search       Manage session memories
@@ -56,7 +55,6 @@ struct Chat: AsyncParsableCommand {
 
     @Option(name: .shortAndLong, help: "Session ID to resume")
     var session: String?
-
 
     func run() async throws {
         // Load local config

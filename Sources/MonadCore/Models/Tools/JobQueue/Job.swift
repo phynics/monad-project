@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 // MARK: - Job Model

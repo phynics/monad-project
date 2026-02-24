@@ -1,6 +1,5 @@
 import Testing
 import Foundation
-import MonadShared
 @testable import MonadCore
 
 @Suite("Persistence Protocol Tests")

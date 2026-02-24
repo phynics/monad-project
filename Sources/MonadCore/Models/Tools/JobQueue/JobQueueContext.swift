@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 
@@ -14,7 +13,7 @@ public actor JobQueueContext: ToolContext {
     public static let contextDescription = "Manage a queue of jobs with priorities and statuses"
 
     private let logger = Logger.tools
-    private let persistenceService: any PersistenceServiceProtocol
+    private let persistenceService: any JobStoreProtocol
     private let sessionId: UUID
 
     public var contextTools: [AnyTool] {
@@ -28,7 +27,7 @@ public actor JobQueueContext: ToolContext {
         ]
     }
 
-    public init(persistenceService: any PersistenceServiceProtocol, sessionId: UUID) {
+    public init(persistenceService: any JobStoreProtocol, sessionId: UUID) {
         self.persistenceService = persistenceService
         self.sessionId = sessionId
     }

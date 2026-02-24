@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 extension SessionManager {

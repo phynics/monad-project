@@ -2,7 +2,6 @@ import Foundation
 import HTTPTypes
 import Hummingbird
 import MonadCore
-import MonadShared
 import NIOCore
 
 public struct MemoryAPIController<Context: RequestContext>: Sendable {
@@ -16,7 +15,7 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
         group.post("/", use: create)
         group.get("/", use: list)
         group.post("/search", use: search)
-        
+
         group.get("/{id}", use: get)
         group.patch("/{id}", use: update)
         group.delete("/{id}", use: delete)
@@ -24,7 +23,7 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
 
     @Sendable func create(_ request: Request, context: Context) async throws -> Response {
         let input = try? await request.decode(as: CreateMemoryRequest.self, context: context)
-        
+
         guard let content = input?.content, !content.isEmpty else {
             throw HTTPError(.badRequest)
         }
@@ -37,7 +36,7 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
 
         let persistence = await sessionManager.getPersistenceService()
         let id = try await persistence.saveMemory(memory, policy: .immediate)
-        
+
         guard let savedMemory = try await persistence.fetchMemory(id: id) else {
             throw HTTPError(.internalServerError)
         }
@@ -52,7 +51,7 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
 
         let persistence = await sessionManager.getPersistenceService()
         let memories = try await persistence.fetchAllMemories()
-        
+
         // In-memory pagination
         let total = memories.count
         let start = (page - 1) * perPage
@@ -63,7 +62,7 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
         } else {
             paginatedMemories = []
         }
-        
+
         let metadata = PaginationMetadata(page: page, perPage: perPage, totalItems: total)
         return PaginatedResponse(items: paginatedMemories, metadata: metadata)
     }
@@ -71,26 +70,26 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
     @Sendable func get(_ request: Request, context: Context) async throws -> Memory {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
-        
+
         let persistence = await sessionManager.getPersistenceService()
         guard let memory = try await persistence.fetchMemory(id: id) else {
             throw HTTPError(.notFound)
         }
-        
+
         return memory
     }
-    
+
     @Sendable func update(_ request: Request, context: Context) async throws -> Memory {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
-        
+
         let input = try await request.decode(as: UpdateMemoryRequest.self, context: context)
-        
+
         let persistence = await sessionManager.getPersistenceService()
         guard var memory = try await persistence.fetchMemory(id: id) else {
             throw HTTPError(.notFound)
         }
-        
+
         if let content = input.content {
             memory.content = content
         }
@@ -101,16 +100,16 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
                 memory.tags = tagsString
             }
         }
-        
+
         _ = try await persistence.saveMemory(memory, policy: .immediate)
-        
+
         return memory
     }
 
     @Sendable func search(_ request: Request, context: Context) async throws -> [Memory] {
         let input = try await request.decode(as: MemorySearchRequest.self, context: context)
         let persistence = await sessionManager.getPersistenceService()
-        
+
         let memories = try await persistence.searchMemories(query: input.query)
         return (input.limit != nil) ? Array(memories.prefix(input.limit!)) : memories
     }
@@ -118,10 +117,10 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
     @Sendable func delete(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
-        
+
         let persistence = await sessionManager.getPersistenceService()
         try await persistence.deleteMemory(id: id)
-        
+
         return .noContent
     }
 }

@@ -1,5 +1,4 @@
 import Foundation
-import MonadShared
 
 public protocol JobStoreProtocol: Sendable {
     func saveJob(_ job: Job) async throws

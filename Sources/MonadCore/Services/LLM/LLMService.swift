@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import Observation
@@ -54,7 +53,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     public func checkHealth() async -> MonadCore.HealthStatus {
         // Basic check: is configured
         guard isConfigured else { return .degraded }
-        
+
         // Optional: Proactive check by trying to list models (if supported)
         do {
             if let client = client {
@@ -66,7 +65,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
             logger.warning("LLM health check connectivity warning: \(error)")
             // We return ok if configured even if network check fails, 
             // but we could return degraded if we want to be strict.
-            return .ok 
+            return .ok
         }
     }
 
@@ -80,8 +79,6 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     private var fastClient: (any LLMClientProtocol)?
 
     private let storage: any ConfigurationServiceProtocol
-
-
 
     internal let logger = Logger.llm
 
@@ -234,32 +231,32 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         systemInstructions: String?
     ) async -> Prompt {
         let instructions = systemInstructions ?? DefaultInstructions.system()
-        
+
         return Prompt {
             SystemInstructions(instructions)
-            
+
             // Context & Memories
             ContextNotes(contextNotes)
             Memories(memories)
-            
+
             // Tools
             Tools(tools)
-            
+
             // Conversation
             ChatHistory(optimizeHistory(chatHistory, availableTokens: 120000 - 4000)) // Reserve ~4k for other sections
-            
+
             // User Query
             UserQuery(userQuery)
         }
     }
-    
+
     internal func optimizeHistory(
         _ messages: [Message],
         availableTokens: Int
     ) -> [Message] {
         var result: [Message] = []
         var usedTokens = 0
-        
+
         // Keep most recent messages
         for message in messages.reversed() {
             let tokens = TokenEstimator.estimate(text: message.content)
@@ -304,12 +301,12 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
             tools: tools,
             systemInstructions: systemInstructions
         )
-        
+
         // Convert using the extension
         let messages = await prompt.toMessages()
         let raw = await prompt.render()
         let ctx = await prompt.structuredContext()
-        
+
         return (messages, raw, ctx)
     }
 }

@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 extension SemanticSearchResult: Codable {

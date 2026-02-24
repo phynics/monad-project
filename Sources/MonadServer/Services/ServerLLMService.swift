@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import MonadCore
@@ -265,7 +264,7 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
             tools: tools,
             systemInstructions: systemInstructions
         )
-        
+
         let messages = await prompt.toMessages()
         let rawPrompt = await prompt.render()
         let structuredContext = await prompt.structuredContext()
@@ -298,12 +297,12 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
             tools: tools,
             systemInstructions: systemInstructions
         )
-        
+
         // Convert to OpenAI format
         let messages = await prompt.toMessages()
         let raw = await prompt.render()
         let ctx = await prompt.structuredContext()
-        
+
         return (messages, raw, ctx)
     }
 
@@ -399,8 +398,7 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
     }
 
     public func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory])
-        async throws -> [String: Double]
-    {
+        async throws -> [String: Double] {
         guard let client = utilityClient ?? client, !recalledMemories.isEmpty else {
             return [:]
         }

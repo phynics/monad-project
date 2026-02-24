@@ -1,4 +1,3 @@
-import MonadShared
 import MonadCore
 import Foundation
 import GRDB
@@ -10,13 +9,13 @@ extension PersistenceService {
         }
         emit(.jobUpdated(job))
     }
-    
+
     public func fetchJob(id: UUID) async throws -> Job? {
         try await dbQueue.read { db in
             try Job.fetchOne(db, key: id)
         }
     }
-    
+
     public func fetchAllJobs() async throws -> [Job] {
         try await dbQueue.read { db in
             try Job.fetchAll(db)
@@ -28,14 +27,14 @@ extension PersistenceService {
             try Job.filter(Column("sessionId") == sessionId).fetchAll(db)
         }
     }
-    
+
     public func deleteJob(id: UUID) async throws {
         try await dbQueue.write { db in
             _ = try Job.deleteOne(db, key: id)
         }
         emit(.jobDeleted(id))
     }
-    
+
     public func fetchPendingJobs(limit: Int = 10) async throws -> [Job] {
         try await dbQueue.read { db in
             try Job

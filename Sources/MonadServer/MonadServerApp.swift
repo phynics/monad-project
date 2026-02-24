@@ -1,4 +1,3 @@
-import MonadShared
 import ArgumentParser
 import Foundation
 import Hummingbird
@@ -42,7 +41,7 @@ struct MonadServer: AsyncParsableCommand {
     )
 
     typealias AppRequestContext = BasicWebSocketRequestContext
-    
+
     @Option(name: .shortAndLong, help: "Hostname to bind to")
     var hostname: String = "127.0.0.1"
 
@@ -54,7 +53,7 @@ struct MonadServer: AsyncParsableCommand {
 
     func run() async throws {
         let logger = Logger.server
-        
+
         let context = try await MonadServerFactory.createServerContext(
             hostname: hostname,
             port: port,

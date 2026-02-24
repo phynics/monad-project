@@ -1,5 +1,4 @@
 import Foundation
-import MonadShared
 
 public protocol WorkspacePersistenceProtocol: Sendable {
     func saveWorkspace(_ workspace: WorkspaceReference) async throws

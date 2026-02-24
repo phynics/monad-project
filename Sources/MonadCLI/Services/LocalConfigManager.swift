@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 struct LocalConfig: Codable {
@@ -19,7 +18,7 @@ struct LocalConfigManager {
 
     private var storageURL: URL {
         if let custom = customStorageURL { return custom }
-        
+
         let fileManager = FileManager.default
         let appName = "Monad"
         let filename = "config.json"

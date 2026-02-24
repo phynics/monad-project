@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import GRDB
 import Hummingbird
@@ -9,10 +8,10 @@ import NIOCore
 
 /// Controller for managing workspaces
 public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
-    let persistenceService: any PersistenceServiceProtocol
+    let persistenceService: any WorkspacePersistenceProtocol & ToolPersistenceProtocol
     let logger: Logger
 
-    public init(persistenceService: any PersistenceServiceProtocol, logger: Logger) {
+    public init(persistenceService: any WorkspacePersistenceProtocol & ToolPersistenceProtocol, logger: Logger) {
         self.persistenceService = persistenceService
         self.logger = logger
     }
@@ -59,9 +58,9 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         let pagination = request.getPagination()
         let page = pagination.page
         let perPage = pagination.perPage
-        
+
         let workspaces = try await persistenceService.fetchAllWorkspaces()
-        
+
         // In-memory pagination
         let total = workspaces.count
         let start = (page - 1) * perPage
@@ -72,7 +71,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         } else {
             paginatedWorkspaces = []
         }
-        
+
         let metadata = PaginationMetadata(page: page, perPage: perPage, totalItems: total)
         return PaginatedResponse(items: paginatedWorkspaces, metadata: metadata)
     }
@@ -92,25 +91,25 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
 
         return workspace
     }
-    
+
     /// PATCH /workspaces/:id
     @Sendable func update(request: Request, context: Context) async throws -> WorkspaceReference {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         let input = try await request.decode(as: UpdateWorkspaceRequest.self, context: context)
-        
+
         guard var workspace = try await persistenceService.fetchWorkspace(id: id) else {
             throw HTTPError(.notFound)
         }
-        
+
         if let rootPath = input.rootPath {
             workspace.rootPath = rootPath
         }
         if let trustLevel = input.trustLevel {
             workspace.trustLevel = trustLevel
         }
-        
+
         try await persistenceService.saveWorkspace(workspace)
-        
+
         return workspace
     }
 

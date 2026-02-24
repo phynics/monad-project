@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Terminal UI utilities with ANSI color support

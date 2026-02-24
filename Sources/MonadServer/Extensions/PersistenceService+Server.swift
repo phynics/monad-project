@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import GRDB
 import Logging
@@ -32,8 +31,7 @@ extension PersistenceService {
 
     /// Search for archived sessions that contain any of the provided tags
     public func searchArchivedSessions(matchingAnyTag tags: [String]) throws
-        -> [ConversationSession]
-    {
+        -> [ConversationSession] {
         guard !tags.isEmpty else { return [] }
 
         return try dbQueue.read { db in
@@ -60,8 +58,7 @@ extension PersistenceService {
     public func pruneSessions(
         olderThan timeInterval: TimeInterval, excluding: [UUID] = [], dryRun: Bool
     )
-        async throws -> Int
-    {
+        async throws -> Int {
         try await dbQueue.write { db in
             let cutoffDate = Date().addingTimeInterval(-timeInterval)
 
@@ -98,8 +95,7 @@ extension PersistenceService {
     }
 
     public func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws
-        -> Int
-    {
+        -> Int {
         try await dbQueue.write { db in
             let cutoffDate = Date().addingTimeInterval(-timeInterval)
             let query =
@@ -115,7 +111,7 @@ extension PersistenceService {
             }
         }
     }
-    
+
     public func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int {
         try await dbQueue.write { db in
             let pattern = "%\(query)%"
@@ -133,10 +129,9 @@ extension PersistenceService {
             }
         }
     }
-    
+
     public func pruneMemories(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws
-        -> Int
-    {
+        -> Int {
         let cutoffDate = Date().addingTimeInterval(-timeInterval)
 
         return try await dbQueue.write { db in

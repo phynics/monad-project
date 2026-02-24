@@ -1,4 +1,3 @@
-import MonadShared
 import MonadCore
 @testable import MonadServer
 import XCTest
@@ -8,7 +7,7 @@ import XCTest
 // now lives in MonadServer (which imports MonadCore).
 actor MockConnectionManagerForRemote: ClientConnectionManagerProtocol {
     var lastMethod: String?
-    var lastParams: MonadShared.AnyCodable?
+    var lastParams: AnyCodable?
     var lastClientId: UUID?
     var nextResponse: Any?
     var shouldThrow: Error?
@@ -17,7 +16,7 @@ actor MockConnectionManagerForRemote: ClientConnectionManagerProtocol {
         self.nextResponse = response
     }
 
-    func send<T: Codable & Sendable>(method: String, params: MonadShared.AnyCodable?, expecting: T.Type, to clientId: UUID) async throws -> T {
+    func send<T: Codable & Sendable>(method: String, params: AnyCodable?, expecting: T.Type, to clientId: UUID) async throws -> T {
         lastMethod = method
         lastParams = params
         lastClientId = clientId
@@ -45,7 +44,7 @@ final class RemoteWorkspaceTests: XCTestCase {
 
     override func setUp() async throws {
         mockConnection = MockConnectionManagerForRemote()
-        let ref = MonadShared.WorkspaceReference(
+        let ref = WorkspaceReference(
             id: UUID(),
             uri: WorkspaceURI(host: "client-host", path: "/remote"),
             hostType: .client,
@@ -59,7 +58,7 @@ final class RemoteWorkspaceTests: XCTestCase {
         let response = ToolExecutionResponse(status: "success", output: "Tool executed")
         await mockConnection.setNextResponse(response)
 
-        let result = try await workspace.executeTool(id: "test_tool", parameters: ["arg": MonadShared.AnyCodable("value")])
+        let result = try await workspace.executeTool(id: "test_tool", parameters: ["arg": AnyCodable("value")])
 
         let method = await mockConnection.lastMethod
         let params = await mockConnection.lastParams

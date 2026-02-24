@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import MonadClient
 import MonadCore
@@ -50,7 +49,7 @@ struct JobSlashCommand: SlashCommand {
         }
 
         let jobTitle = args.joined(separator: " ")
-        
+
         let job = try await context.client.addJob(sessionId: context.session.id, title: jobTitle, priority: 0)
         TerminalUI.printSuccess("Job added: \(job.title) (ID: \(job.id))")
     }
@@ -71,7 +70,7 @@ struct JobSlashCommand: SlashCommand {
             case .completed: statusColor = TerminalUI.green
             case .failed, .cancelled: statusColor = TerminalUI.red
             }
-            
+
             print("- [\(statusColor(job.status.rawValue))] \(job.title) (ID: \(job.id))")
         }
     }
@@ -81,7 +80,7 @@ struct JobSlashCommand: SlashCommand {
             TerminalUI.printError("Invalid Job ID")
             return
         }
-        
+
         // Fetch specific or search in list?
         // Client has `getJob`.
         do {
@@ -106,7 +105,7 @@ struct JobSlashCommand: SlashCommand {
             TerminalUI.printError("Invalid Job ID")
             return
         }
-        
+
         try await context.client.deleteJob(sessionId: context.session.id, jobId: id)
         TerminalUI.printSuccess("Job deleted.")
     }

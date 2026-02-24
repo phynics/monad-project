@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import OpenAI
@@ -17,11 +16,11 @@ public final class ChatEngine: @unchecked Sendable {
     @Dependency(\.sessionManager) private var sessionManager
     @Dependency(\.persistenceService) private var persistenceService
     @Dependency(\.llmService) private var llmService
-    
+
     private let logger = Logger(label: "com.monad.chat-engine")
-    
+
     public init() {}
-    
+
     /// Execute a chat turn and return a stream of deltas.
     /// - Parameters:
     ///   - sessionId: The unique identifier for the chat session.
@@ -41,20 +40,20 @@ public final class ChatEngine: @unchecked Sendable {
         systemInstructions: String? = nil,
         maxTurns: Int = 5
     ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
-        
+
         // Save conversation steps (user message + any tool outputs from previous turn)
         try await saveConversationSteps(sessionId: sessionId, message: message, toolOutputs: toolOutputs)
-        
+
         // Fetch history
         let history = try await sessionManager.getHistory(for: sessionId)
-        
+
         // Gather context (RAG)
         let contextData = await fetchContext(contextManager: contextManager, message: message, history: history)
-        
+
         guard await llmService.isConfigured else { throw ToolError.executionFailed("LLM Service not configured") }
-        
+
         let toolParams = tools.map { $0.toToolParam() }
-        
+
         // Build prompt
         let session = await sessionManager.getSession(id: sessionId)
         let (initialMessages, structuredContext) = await buildPrompt(
@@ -65,9 +64,9 @@ public final class ChatEngine: @unchecked Sendable {
             availableTools: tools,
             systemInstructions: systemInstructions
         )
-        
+
         let modelName = await llmService.configuration.modelName
-        
+
         return AsyncThrowingStream<ChatEvent, Error> { continuation in
             let task = Task {
                 await self.runChatLoop(
@@ -82,7 +81,7 @@ public final class ChatEngine: @unchecked Sendable {
                     maxTurns: maxTurns
                 )
             }
-            
+
             continuation.onTermination = { @Sendable _ in
                 task.cancel()
             }
@@ -110,23 +109,23 @@ public final class ChatEngine: @unchecked Sendable {
         var currentMessages = initialMessages
         var turnCount = 0
         var accumulatedRawOutput = ""
-        
+
         // Emit Metadata Event
         let metadata = ChatMetadata(
             memories: contextData.memories.map { $0.memory.id },
             files: contextData.notes.map { $0.name }
         )
         continuation.yield(.generationContext(metadata))
-        
+
         while turnCount < maxTurns {
             turnCount += 1
-            
+
             if Task.isCancelled {
                 continuation.yield(.error(CancellationError()))
                 continuation.finish()
                 return
             }
-            
+
             do {
                 let result = try await processTurn(
                     currentMessages: currentMessages,
@@ -140,7 +139,7 @@ public final class ChatEngine: @unchecked Sendable {
                     continuation: continuation,
                     accumulatedRawOutput: &accumulatedRawOutput
                 )
-                
+
                 switch result {
                 case .continue(let newMessages):
                     currentMessages.append(contentsOf: newMessages)
@@ -158,17 +157,17 @@ public final class ChatEngine: @unchecked Sendable {
                 return
             }
         }
-        
+
         // If we hit maxTurns, we still yield a completion event for the last turn's state
         // but without a new message (since we didn't get a final text response).
         continuation.yield(.generationCompleted(
             message: Message(timestamp: Date(), content: "", role: .assistant, isSummary: true),
             metadata: APIResponseMetadata(model: modelName, duration: 0, tokensPerSecond: 0)
         ))
-        
+
         continuation.finish()
     }
-    
+
     private func processTurn(
         currentMessages: [ChatQuery.ChatCompletionMessageParam],
         toolParams: [ChatQuery.ChatCompletionToolParam],
@@ -183,40 +182,40 @@ public final class ChatEngine: @unchecked Sendable {
     ) async throws -> TurnResult {
         var debugToolCalls: [ToolCallRecord] = []
         var debugToolResults: [ToolResultRecord] = []
-        
+
         let streamData = await llmService.chatStream(
             messages: currentMessages,
             tools: toolParams.isEmpty ? nil : toolParams,
             responseFormat: nil
         )
-        
+
         var fullResponse = ""
         var fullThinking = ""
         var toolCallAccumulators: [Int: (id: String, name: String, args: String)] = [:]
-        
+
         let parser = StreamingParser()
         var hasEmittedThought = false
-        
+
         // Bug 1: Track timing and token usage
         let turnStartTime = Date()
-        var streamUsage: ChatResult.CompletionUsage? = nil
-        
+        var streamUsage: ChatResult.CompletionUsage?
+
         for try await result in streamData {
             if Task.isCancelled { break }
-            
+
             // Capture usage stats (sent in final chunk when includeUsage: true)
             if let usage = result.usage { streamUsage = usage }
-            
+
             // Forward Content and Thinking
             if let delta = result.choices.first?.delta.content {
                 let parseResult = parser.process(delta)
-                
+
                 if let thinkingChunk = parseResult.thinking, !thinkingChunk.isEmpty {
                     fullThinking += thinkingChunk
                     hasEmittedThought = true
                     continuation.yield(.thought(thinkingChunk))
                 }
-                
+
                 if let contentChunk = parseResult.content, !contentChunk.isEmpty {
                     if hasEmittedThought {
                         continuation.yield(.thoughtCompleted)
@@ -226,18 +225,18 @@ public final class ChatEngine: @unchecked Sendable {
                     continuation.yield(.delta(contentChunk))
                 }
             }
-            
+
             // Forward separate reasoning_content if model supports it out of band
             // OpenAI type doesn't officially wrap reasoning_content locally yet unless we mapped it, 
             // but for now StreamingParser handles standard <think> tags locally.
-            
+
             // Accumulate Tool Calls
             if let calls = result.choices.first?.delta.toolCalls {
                 if hasEmittedThought {
                     continuation.yield(.thoughtCompleted)
                     hasEmittedThought = false
                 }
-                
+
                 for call in calls {
                     guard let index = call.index else { continue }
                     var acc = toolCallAccumulators[index] ?? ("", "", "")
@@ -245,7 +244,7 @@ public final class ChatEngine: @unchecked Sendable {
                     if let name = call.function?.name { acc.name += name }
                     if let args = call.function?.arguments { acc.args += args }
                     toolCallAccumulators[index] = acc
-                    
+
                     continuation.yield(.toolCall(ToolCallDelta(
                         index: index,
                         id: call.id,
@@ -255,7 +254,7 @@ public final class ChatEngine: @unchecked Sendable {
                 }
             }
         }
-        
+
         // Flush Any Pending Text
         let pending = parser.flush()
         if let thinkingChunk = pending.thinking, !thinkingChunk.isEmpty {
@@ -271,17 +270,17 @@ public final class ChatEngine: @unchecked Sendable {
             fullResponse += contentChunk
             continuation.yield(.delta(contentChunk))
         }
-        
+
         // Accumulate raw output for debug
         accumulatedRawOutput += fullThinking
         accumulatedRawOutput += fullResponse
-        
+
         let renderedPrompt = renderMessages(currentMessages)
-        
+
         if Task.isCancelled { throw CancellationError() }
-        
+
         var finalToolCalls = toolCallAccumulators
-        
+
         // Parse fallback calls if needed
         if finalToolCalls.isEmpty {
             let fallbackCalls = ToolOutputParser.parse(from: fullResponse)
@@ -290,40 +289,40 @@ public final class ChatEngine: @unchecked Sendable {
                     let argsJson = (try? SerializationUtils.jsonEncoder.encode(call.arguments)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
                     finalToolCalls[index] = (id: UUID().uuidString, name: call.name, args: argsJson)
                 }
-                
+
                 for (index, value) in finalToolCalls.sorted(by: { $0.key < $1.key }) {
                     continuation.yield(.toolCall(ToolCallDelta(index: index, id: value.id, name: value.name, arguments: value.args)))
                 }
             }
         }
-        
+
         // Filter out sentinel tool call names. Some models emit artifacts like
         // name="tool_call" as a formatting token.
         let validToolCalls = finalToolCalls.filter { _, value in
             !value.name.isEmpty && value.name != "tool_call"
         }
-        
+
         finalToolCalls = validToolCalls
-        
+
         // Bug 1: Compute timing and token metadata after the stream loop
         let turnDuration = Date().timeIntervalSince(turnStartTime)
         let completionTokens = streamUsage?.completionTokens
             ?? TokenEstimator.estimate(text: fullResponse + fullThinking)
         let tokensPerSecond: Double? = turnDuration > 0
             ? Double(completionTokens) / turnDuration : nil
-        
+
         if !finalToolCalls.isEmpty {
             let sortedCalls = finalToolCalls.sorted(by: { $0.key < $1.key })
             let toolCallsParam: [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam] = sortedCalls.map { _, value in
                 .init(id: value.id, function: .init(arguments: value.args, name: value.name))
             }
-            
+
             for (_, value) in sortedCalls {
                 debugToolCalls.append(ToolCallRecord(name: value.name, arguments: value.args, turn: turnCount))
             }
-            
+
             let assistantMessage = ChatQuery.ChatCompletionMessageParam.assistant(.init(content: .textContent(.init(fullResponse)), toolCalls: toolCallsParam))
-            
+
             let (executionResults, requiresClientExecution, newDebugRecords) = await executeTools(
                 calls: toolCallsParam,
                 availableTools: availableTools,
@@ -331,7 +330,7 @@ public final class ChatEngine: @unchecked Sendable {
                 continuation: continuation
             )
             debugToolResults.append(contentsOf: newDebugRecords)
-            
+
             if requiresClientExecution {
                 let callsForDB = toolCallsParam.compactMap { param -> ToolCall? in
                     let argsData = param.function.arguments.data(using: .utf8) ?? Data()
@@ -339,17 +338,17 @@ public final class ChatEngine: @unchecked Sendable {
                     return ToolCall(name: param.function.name, arguments: args)
                 }
                 let callsJSON = (try? SerializationUtils.jsonEncoder.encode(callsForDB)).flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
-                
+
                 let assistantMsg = ConversationMessage(sessionId: sessionId, role: .assistant, content: fullResponse, think: fullThinking.isEmpty ? nil : fullThinking, toolCalls: callsJSON)
                 do {
                     try await persistenceService.saveMessage(assistantMsg)
                 } catch {
                     logger.error("Failed to save assistant message: \(error)")
                 }
-                
+
                 let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
                 await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
-                
+
                 let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
                 continuation.yield(.generationCompleted(
                     message: assistantMsg.toMessage(),
@@ -365,11 +364,11 @@ public final class ChatEngine: @unchecked Sendable {
                 ))
                 return .finish
             }
-            
+
             var newMessages: [ChatQuery.ChatCompletionMessageParam] = [assistantMessage]
             newMessages.append(contentsOf: executionResults)
             return .continue(newMessages: newMessages)
-            
+
         } else {
             let assistantMsg = ConversationMessage(
                 sessionId: sessionId,
@@ -383,7 +382,7 @@ public final class ChatEngine: @unchecked Sendable {
             } catch {
                 logger.error("Failed to save assistant message: \(error)")
             }
-            
+
             let snapshot = DebugSnapshot(
                 structuredContext: structuredContext,
                 toolCalls: debugToolCalls,
@@ -394,7 +393,7 @@ public final class ChatEngine: @unchecked Sendable {
                 turnCount: turnCount
             )
             await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
-            
+
             let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
             continuation.yield(.generationCompleted(
                 message: assistantMsg.toMessage(),
@@ -430,7 +429,7 @@ public final class ChatEngine: @unchecked Sendable {
                 try await persistenceService.saveMessage(msg)
             }
         }
-        
+
         if !message.isEmpty {
             let userMsg = ConversationMessage(sessionId: sessionId, role: .user, content: message)
             try await persistenceService.saveMessage(userMsg)
@@ -445,14 +444,14 @@ public final class ChatEngine: @unchecked Sendable {
         history: [Message]
     ) async -> ContextData {
         guard let contextManager = contextManager else { return ContextData() }
-        
+
         do {
             let stream = await contextManager.gatherContext(
                 for: message.isEmpty ? (history.last?.content ?? "") : message,
                 history: history,
                 tagGenerator: { [llmService] query in try await llmService.generateTags(for: query) }
             )
-            
+
             for try await event in stream {
                 if case .complete(let data) = event {
                     return data
@@ -480,11 +479,11 @@ public final class ChatEngine: @unchecked Sendable {
             tools: availableTools,
             systemInstructions: systemInstructions
         )
-        
+
         // Convert to OpenAI format
         let messages = await prompt.toMessages()
         let structuredContext = await prompt.structuredContext()
-        
+
         return (messages, structuredContext)
     }
 
@@ -497,18 +496,18 @@ public final class ChatEngine: @unchecked Sendable {
         var executionResults: [ChatQuery.ChatCompletionMessageParam] = []
         var requiresClientExecution = false
         var debugRecords: [ToolResultRecord] = []
-        
+
         for call in calls {
             guard let tool = availableTools.first(where: { $0.name == call.function.name }) else {
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: Tool not found")), toolCallId: call.id)))
                 continuation.yield(.toolCallError(toolCallId: call.id, name: call.function.name, error: "Tool not found: \(call.function.name)"))
                 continue
             }
-            
+
             // Bug 2: Emit attempting event so the CLI can show tool progress
             let toolRef = tool.toolReference
             continuation.yield(.toolExecution(toolCallId: call.id, status: .attempting(name: tool.name, reference: toolRef)))
-            
+
             let argsData = call.function.arguments.data(using: .utf8) ?? Data()
             let argsDict = (try? JSONSerialization.jsonObject(with: argsData) as? [String: Any]) ?? [:]
 

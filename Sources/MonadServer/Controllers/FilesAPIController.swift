@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import HTTPTypes
 import Hummingbird
@@ -24,11 +23,11 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
 
     @Sendable func listFiles(_ request: Request, context: Context) async throws -> [String] {
         let workspaceId = try context.parameters.require("workspaceId", as: UUID.self)
-        
+
         guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
              throw HTTPError(.notFound)
         }
-        
+
         // Use an empty path to list from root, or implement recursive list in the workspace
         return try await workspace.listFiles(path: ".")
     }
@@ -44,7 +43,7 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
         guard let path = rawPath.removingPercentEncoding else {
              throw HTTPError(.badRequest, message: "Invalid path encoding")
         }
-        
+
         guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
              throw HTTPError(.notFound)
         }
@@ -88,7 +87,7 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
         guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
             throw HTTPError(.notFound)
         }
-        
+
         try await workspace.deleteFile(path: path)
         return Response(status: .noContent)
     }

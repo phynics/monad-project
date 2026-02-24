@@ -80,8 +80,7 @@ public struct ClientConfiguration: Sendable {
 
         // 2. Environment
         if let envURLString = ProcessInfo.processInfo.environment["MONAD_SERVER_URL"],
-            let envURL = URL(string: envURLString)
-        {
+            let envURL = URL(string: envURLString) {
             return ClientConfiguration(baseURL: envURL, apiKey: apiKey, verbose: verbose)
         }
 

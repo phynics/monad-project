@@ -1,17 +1,16 @@
 import Foundation
 import Hummingbird
 import MonadCore
-import MonadShared
 import NIOCore
 
 public struct StatusAPIController<Context: RequestContext>: Sendable {
-    public let persistenceService: any PersistenceServiceProtocol
+    public let persistenceService: any HealthCheckable
     public let llmService: any LLMServiceProtocol
     public let startTime: Date
     public let version = "1.0.0"
 
     public init(
-        persistenceService: any PersistenceServiceProtocol,
+        persistenceService: any HealthCheckable,
         llmService: any LLMServiceProtocol,
         startTime: Date
     ) {
@@ -19,40 +18,40 @@ public struct StatusAPIController<Context: RequestContext>: Sendable {
         self.llmService = llmService
         self.startTime = startTime
     }
-    
+
     public func addRoutes(to router: Router<Context>) {
         router.get("/status", use: getStatus)
     }
-    
-    @Sendable func getStatus(_ request: Request, context: Context) async throws -> MonadShared.StatusResponse {
+
+    @Sendable func getStatus(_ request: Request, context: Context) async throws -> StatusResponse {
         // Run health checks
         let dbHealth = await persistenceService.checkHealth()
         let dbDetails = await persistenceService.getHealthDetails()
-        
+
         let aiHealth = await llmService.checkHealth()
         let aiDetails = await llmService.getHealthDetails()
-        
-        // Map MonadCore.HealthStatus to MonadShared.HealthStatus
-        let mappedDbHealth = MonadShared.HealthStatus(fromCore: dbHealth)
-        let mappedAiHealth = MonadShared.HealthStatus(fromCore: aiHealth)
-        
-        let overallStatus: MonadShared.HealthStatus = (dbHealth == .ok && aiHealth == .ok) ? .ok : .degraded
-        
+
+        // Map MonadCore.HealthStatus to HealthStatus
+        let mappedDbHealth = HealthStatus(fromCore: dbHealth)
+        let mappedAiHealth = HealthStatus(fromCore: aiHealth)
+
+        let overallStatus: HealthStatus = (dbHealth == .ok && aiHealth == .ok) ? .ok : .degraded
+
         let uptime = Date().timeIntervalSince(startTime)
 
-        return MonadShared.StatusResponse(
+        return StatusResponse(
             status: overallStatus,
             version: version,
             uptime: uptime,
             components: [
-                "database": MonadShared.ComponentStatus(status: mappedDbHealth, details: dbDetails),
-                "ai_provider": MonadShared.ComponentStatus(status: mappedAiHealth, details: aiDetails)
+                "database": ComponentStatus(status: mappedDbHealth, details: dbDetails),
+                "ai_provider": ComponentStatus(status: mappedAiHealth, details: aiDetails)
             ]
         )
     }
 }
 
-extension MonadShared.HealthStatus {
+extension HealthStatus {
     init(fromCore status: MonadCore.HealthStatus) {
         switch status {
         case .ok: self = .ok

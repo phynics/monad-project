@@ -1,4 +1,3 @@
-import MonadShared
 import MonadCore
 import Foundation
 import Logging
@@ -7,11 +6,11 @@ import Dependencies
 
 /// Service that cleans up orphaned workspaces
 public final class OrphanCleanupService: Service, @unchecked Sendable {
-    private let persistenceService: any PersistenceServiceProtocol
+    private let persistenceService: any WorkspacePersistenceProtocol & SessionPersistenceProtocol
     private let workspaceRoot: URL
     private let logger = Logger(label: "com.monad.orphan-cleanup")
 
-    public init(workspaceRoot: URL, persistenceService: any PersistenceServiceProtocol) {
+    public init(workspaceRoot: URL, persistenceService: any WorkspacePersistenceProtocol & SessionPersistenceProtocol) {
         self.workspaceRoot = workspaceRoot
         self.persistenceService = persistenceService
     }
@@ -21,7 +20,7 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
         logger.info("OrphanCleanupService started")
         // Run initial cleanup
         await cleanup()
-        
+
         await cancelWhenGracefulShutdown {
             // Then run periodically (every 24 hours)
             while !Task.isCancelled {
@@ -45,9 +44,9 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
         do {
             let workspaces = try await persistenceService.fetchAllWorkspaces()
             let sessions = try await persistenceService.fetchAllSessions(includeArchived: true)
-            
+
             var referencedIds: Set<UUID> = []
-            
+
             // Collect all referenced IDs
             for session in sessions {
                 if let pid = session.primaryWorkspaceId {
@@ -57,17 +56,17 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
                     referencedIds.insert(aid)
                 }
             }
-            
+
             var deletedCount = 0
             for ws in workspaces {
                 if !referencedIds.contains(ws.id) {
                     // Check if it's safe to delete (is it in the Monad Workspaces dir?)
-                    if let rootPath = ws.rootPath, 
+                    if let rootPath = ws.rootPath,
                        rootPath.hasPrefix(workspaceRoot.path) || rootPath.contains("/.monad/workspaces/") || rootPath.contains("/Monad/Workspaces/") {
-                        
+
                         // Delete DB Record
                         try await persistenceService.deleteWorkspace(id: ws.id)
-                        
+
                         // Delete Filesystem
                         if FileManager.default.fileExists(atPath: rootPath) {
                             try? FileManager.default.removeItem(atPath: rootPath)
@@ -79,7 +78,7 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
                     }
                 }
             }
-            
+
             if deletedCount > 0 {
                 logger.info("Cleanup complete. Removed \(deletedCount) orphaned workspaces.")
             } else {

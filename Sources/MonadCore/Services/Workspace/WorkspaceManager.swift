@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 
@@ -12,10 +11,10 @@ public actor WorkspaceManager {
     private let connectionManager: (any ClientConnectionManagerProtocol)?
     private let workspaceCreator: any WorkspaceCreating
     private let logger = Logger(label: "com.monad.WorkspaceManager")
-    
+
     /// Cache of active workspace instances.
     private var activeWorkspaces: [UUID: any WorkspaceProtocol] = [:]
-    
+
     public init(
         repository: WorkspaceRepository,
         connectionManager: (any ClientConnectionManagerProtocol)? = nil,
@@ -25,40 +24,40 @@ public actor WorkspaceManager {
         self.connectionManager = connectionManager
         self.workspaceCreator = workspaceCreator
     }
-    
+
     /// Returns the number of currently active/cached workspaces.
     public var activeWorkspaceCount: Int {
         activeWorkspaces.count
     }
-    
+
     /// Retrieves an active workspace instance by its ID, creating and caching it if necessary.
     public func getWorkspace(id: UUID) async throws -> (any WorkspaceProtocol)? {
         // Check cache first
         if let active = activeWorkspaces[id] {
             return active
         }
-        
+
         // Fetch from repository
         guard let reference = try await repository.getWorkspace(id: id) else {
             return nil
         }
-        
+
         // Create concrete implementation via injected creator
         let workspace = try workspaceCreator.create(
             from: reference,
             connectionManager: connectionManager
         )
-        
+
         // Cache and return
         activeWorkspaces[id] = workspace
         return workspace
     }
-    
+
     /// Closes and removes a workspace from the active cache.
     public func closeWorkspace(id: UUID) {
         activeWorkspaces.removeValue(forKey: id)
     }
-    
+
     /// Performs a health check on all active workspaces.
     public func healthCheckAll() async -> [UUID: Bool] {
         var results: [UUID: Bool] = [:]

@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import OpenAI
@@ -38,7 +37,7 @@ public protocol Tool: Sendable, PromptFormattable {
 
     /// Convert to OpenAI tool parameter
     func toToolParam() -> ChatQuery.ChatCompletionToolParam
-    
+
     /// Type-erase to AnyTool
     func toAnyTool() -> AnyTool
 }
@@ -79,8 +78,7 @@ extension Tool {
         // Convert [String: Any] parametersSchema to JSONSchema using JSONSerialization/Decoder
         let schema: JSONSchema
         if let data = try? JSONSerialization.data(withJSONObject: parametersSchema),
-            let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data)
-        {
+            let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data) {
             schema = decoded
         } else {
             // Fallback to empty object if conversion fails
@@ -95,7 +93,7 @@ extension Tool {
             )
         )
     }
-    
+
     /// Type-erase to AnyTool
     public func toAnyTool() -> AnyTool {
         AnyTool(self)
@@ -108,7 +106,7 @@ extension Tool {
     public var promptString: String {
         promptString(provenance: nil)
     }
-    
+
     /// Formatted content for inclusion in LLM prompt with optional provenance.
     public func promptString(provenance: String?) -> String {
         let label = provenance.map { " [\($0)]" } ?? ""
@@ -155,8 +153,7 @@ public struct ToolResult: Sendable {
     public let subagentContext: SubagentContext?
 
     public static func success(_ output: String, subagentContext: SubagentContext? = nil)
-        -> ToolResult
-    {
+        -> ToolResult {
         ToolResult(success: true, output: output, error: nil, subagentContext: subagentContext)
     }
 
@@ -217,7 +214,7 @@ public struct AnyTool: Tool {
     public func toToolParam() -> ChatQuery.ChatCompletionToolParam {
         wrapped.toToolParam()
     }
-    
+
     /// Returns the ToolReference for this tool, used when emitting .toolExecution(.attempting) events.
     /// Downcasts to DelegatingTool to get the real reference; falls back to .known(id:) for other tools.
     public var toolReference: ToolReference {

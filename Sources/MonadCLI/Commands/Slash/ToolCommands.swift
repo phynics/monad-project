@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import MonadClient
 
@@ -50,4 +49,3 @@ struct ToolCommand: SlashCommand {
         print("")
     }
 }
-

@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import MonadCore
 import Hummingbird
@@ -9,25 +8,25 @@ public actor WebSocketConnectionManager: ClientConnectionManagerProtocol {
     private let logger = Logger(label: "com.monad.server.websocket")
     private var connections: [UUID: WebSocketOutboundWriter] = [:]
     private var pendingRequests: [String: CheckedContinuation<AnyCodable, Error>] = [:]
-    
+
     public init() {}
-    
+
     public func addConnection(clientId: UUID, writer: WebSocketOutboundWriter) {
         logger.info("Client connected: \(clientId)")
         connections[clientId] = writer
     }
-    
+
     public func removeConnection(clientId: UUID) {
         logger.info("Client disconnected: \(clientId)")
         connections.removeValue(forKey: clientId)
     }
-    
+
     // MARK: - ClientConnectionManagerProtocol
-    
+
     public func isConnected(clientId: UUID) async -> Bool {
         return connections[clientId] != nil
     }
-    
+
     public func send<T: Codable & Sendable>(
         method: String,
         params: AnyCodable?,
@@ -37,17 +36,17 @@ public actor WebSocketConnectionManager: ClientConnectionManagerProtocol {
         guard let writer = connections[clientId] else {
             throw RPCError.connectionLost
         }
-        
+
         let requestId = UUID().uuidString
         let request = RPCRequest(id: requestId, method: method, params: params)
-        
+
         guard let data = try? JSONEncoder().encode(request) else {
             throw RPCError.remoteError("Failed to encode request")
         }
-        
+
         let responseAny: AnyCodable = try await withCheckedThrowingContinuation { continuation in
             pendingRequests[requestId] = continuation
-            
+
             Task {
                 do {
                     // Send text frame
@@ -58,12 +57,12 @@ public actor WebSocketConnectionManager: ClientConnectionManagerProtocol {
                 }
             }
         }
-        
+
         // Try to cast directly
         if let casted = responseAny.value as? T {
             return casted
         }
-        
+
         // Try decoding
         do {
             let data = try JSONSerialization.data(withJSONObject: responseAny.value, options: [])
@@ -73,14 +72,14 @@ public actor WebSocketConnectionManager: ClientConnectionManagerProtocol {
             throw RPCError.invalidResponse
         }
     }
-    
+
     public func handleResponse(response: RPCResponse) {
         guard let continuation = pendingRequests.removeValue(forKey: response.id) else {
             // It might be a request from client to server?
             // For now we only handle Responses to our Requests.
             return
         }
-        
+
         if let error = response.error {
             continuation.resume(throwing: RPCError.remoteError(error))
         } else if let result = response.result {

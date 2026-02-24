@@ -1,13 +1,12 @@
-import MonadShared
 import Foundation
 import Logging
 
 public actor SessionStore: Sendable {
-    private let persistenceService: any PersistenceServiceProtocol
+    private let persistenceService: any SessionPersistenceProtocol
     private var loadedSessions: [UUID: ConversationSession] = [:]
     private let logger = Logger(label: "monad.session.store")
     
-    public init(persistenceService: any PersistenceServiceProtocol) async throws {
+    public init(persistenceService: any SessionPersistenceProtocol) async throws {
         self.persistenceService = persistenceService
         try await loadSessions()
     }

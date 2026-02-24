@@ -1,11 +1,10 @@
-import MonadShared
 import XCTest
 @testable import MonadCore
 
 final class SystemStatusTests: XCTestCase {
     func testStatusResponseSerialization() throws {
-        let component = MonadShared.ComponentStatus(status: .ok, details: ["provider": "openai"])
-        let response = MonadShared.StatusResponse(
+        let component = ComponentStatus(status: .ok, details: ["provider": "openai"])
+        let response = StatusResponse(
             status: .ok,
             version: "1.0.0",
             uptime: 3600,
@@ -16,7 +15,7 @@ final class SystemStatusTests: XCTestCase {
         let data = try encoder.encode(response)
 
         let decoder = JSONDecoder()
-        let decoded = try decoder.decode(MonadShared.StatusResponse.self, from: data)
+        let decoded = try decoder.decode(StatusResponse.self, from: data)
 
         XCTAssertEqual(decoded.status, .ok)
         XCTAssertEqual(decoded.version, "1.0.0")

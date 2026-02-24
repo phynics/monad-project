@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 
@@ -157,7 +156,7 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         activeProvider = try container.decode(LLMProvider.self, forKey: .activeProvider)
         providers = try container.decode([LLMProvider: ProviderConfiguration].self, forKey: .providers)
-        
+
         mcpServers = try container.decodeIfPresent([MCPServerConfiguration].self, forKey: .mcpServers) ?? []
         memoryContextLimit = try container.decodeIfPresent(Int.self, forKey: .memoryContextLimit) ?? 5
         documentContextLimit = try container.decodeIfPresent(Int.self, forKey: .documentContextLimit) ?? 5

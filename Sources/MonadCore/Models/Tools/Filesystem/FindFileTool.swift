@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Tool to find files matching a pattern
@@ -37,15 +36,15 @@ public struct FindFileTool: Tool, Sendable {
             "properties": [
                 "path": [
                     "type": "string",
-                    "description": "The root directory to start searching (default: .)",
+                    "description": "The root directory to start searching (default: .)"
                 ],
                 "pattern": [
                     "type": "string",
                     "description":
-                        "The filename pattern to match (contains check, case insensitive)",
-                ],
+                        "The filename pattern to match (contains check, case insensitive)"
+                ]
             ],
-            "required": ["pattern"],
+            "required": ["pattern"]
         ]
     }
 

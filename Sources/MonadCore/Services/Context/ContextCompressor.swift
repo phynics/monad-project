@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 
@@ -8,7 +7,7 @@ public enum CompressionScope: String, Sendable, CustomStringConvertible {
     case topic
     /// Force a broad summary that collapses all existing topic summaries into one.
     case broad
-    
+
     public var description: String { rawValue }
 }
 
@@ -32,16 +31,16 @@ public enum ConversationNode: Sendable {
 /// Service to compress conversation context using summarization
 public actor ContextCompressor {
     private let logger = Logger(label: "com.monad.ContextCompressor")
-    
+
     // Configuration
     private let topicGroupSize = 10 // Messages per topic chunk
     private let recentMessageBuffer = 10 // Keep last N messages raw
     private let broadSummaryThreshold = 2000 // Tokens before triggering broad summary
-    
+
     public init() {}
 
     // MARK: - Legacy Compression (Topic/Broad)
-    
+
     /// Compress the message history by summarizing older messages
     public func compress(
         messages: [Message],
@@ -51,22 +50,22 @@ public actor ContextCompressor {
         guard messages.count > recentMessageBuffer else {
             return messages
         }
-        
+
         let splitIndex = messages.count - recentMessageBuffer
         let olderMessages = Array(messages.prefix(splitIndex))
         let recentMessages = Array(messages.suffix(from: splitIndex))
-        
+
         // Chunk older messages based on topic markers or size
         let chunks = smartChunk(messages: olderMessages)
         var compressedHistory: [Message] = []
-        
+
         for chunk in chunks {
             // Check if this chunk is already a single summary?
             if chunk.count == 1, chunk[0].role == .summary {
                 compressedHistory.append(chunk[0])
                 continue
             }
-            
+
             // Check if the chunk contains a topic change tool call with a provided summary
             var providedSummary: String?
             for msg in chunk {
@@ -77,14 +76,14 @@ public actor ContextCompressor {
                     break
                 }
             }
-            
+
             let summaryContent: String
             if let provided = providedSummary {
                 summaryContent = provided
             } else {
                 summaryContent = await generateSummary(for: chunk, llmService: llmService)
             }
-            
+
             let summaryNode = Message(
                 content: summaryContent,
                 role: .summary,
@@ -93,10 +92,10 @@ public actor ContextCompressor {
             )
             compressedHistory.append(summaryNode)
         }
-        
+
         // Secondary Compression: "Broad Summary"
         let totalTokens = TokenEstimator.estimate(parts: compressedHistory.map(\.content))
-        
+
         if (totalTokens > broadSummaryThreshold || scope == .broad) && compressedHistory.count > 1 {
             let broadSummaryContent = await generateBroadSummary(from: compressedHistory, llmService: llmService)
             let broadSummaryNode = Message(
@@ -107,10 +106,10 @@ public actor ContextCompressor {
             )
             return [broadSummaryNode] + recentMessages
         }
-        
+
         return compressedHistory + recentMessages
     }
-    
+
     // MARK: - Raptor / Recursive Compression
 
     /// Recursively summarize messages to fit within a target token count
@@ -256,7 +255,6 @@ public actor ContextCompressor {
                 var interactionNodes: [Message] = [msg]
                 var j = i + 1
 
-
                 // Expect a tool message for each tool call
                 // Note: Messages might be interleaved or sequential.
                 // Simple heuristic: Collect subsequent .tool messages until we hit a user/assistant message or run out
@@ -347,13 +345,13 @@ public actor ContextCompressor {
     private func smartChunk(messages: [Message]) -> [[Message]] {
         var chunks: [[Message]] = []
         var currentChunk: [Message] = []
-        
+
         for (index, msg) in messages.enumerated() {
             currentChunk.append(msg)
-            
+
             // Check if this message initiated a topic change
             let hasTopicChangeSignal = msg.toolCalls?.contains { $0.name == "mark_topic_change" } ?? false
-            
+
             // Optimization: Avoid breaking tool sequences (Call -> Result)
             // If current message is a tool call, we should try to include the next message if it's a result.
             let isToolCall = msg.toolCalls != nil && !msg.toolCalls!.isEmpty
@@ -364,7 +362,7 @@ public actor ContextCompressor {
                     shouldDeferChunking = true
                 }
             }
-            
+
             if hasTopicChangeSignal {
                 chunks.append(currentChunk)
                 currentChunk = []
@@ -374,23 +372,23 @@ public actor ContextCompressor {
                 currentChunk = []
             }
         }
-        
+
         if !currentChunk.isEmpty {
             chunks.append(currentChunk)
         }
-        
+
         return chunks
     }
-    
+
     private func generateSummary(for messages: [Message], llmService: any LLMServiceProtocol) async -> String {
         let transcript = messages.map { "[\($0.role.rawValue.uppercased())] \($0.content)" }.joined(separator: "\n")
         let prompt = """
         Summarize the following discussion topic concisely (max 100 words). Focus on key decisions, technical details, and outcomes.
-        
+
         TRANSCRIPT:
         \(transcript)
         """
-        
+
         do {
             let summary = try await llmService.sendMessage(prompt, responseFormat: nil, useUtilityModel: true)
             return summary
@@ -399,17 +397,17 @@ public actor ContextCompressor {
             return "Topic Summary (Generation Failed): \(messages.count) messages."
         }
     }
-    
+
     private func generateBroadSummary(from summaries: [Message], llmService: any LLMServiceProtocol) async -> String {
         let transcript = summaries.map { $0.content }.joined(separator: "\n\n")
         let prompt = """
         Create a high-level "Broad Summary" of the conversation so far, based on the following topic summaries.
         The goal is to compress context while retaining the overall narrative arc and critical facts.
-        
+
         TOPIC SUMMARIES:
         \(transcript)
         """
-        
+
         do {
             let summary = try await llmService.sendMessage(prompt, responseFormat: nil, useUtilityModel: true)
             return summary

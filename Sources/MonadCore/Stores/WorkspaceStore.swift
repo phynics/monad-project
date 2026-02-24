@@ -1,15 +1,14 @@
-import MonadShared
 import Foundation
 import Logging
 
 public actor WorkspaceStore: Sendable {
-    private let persistenceService: any PersistenceServiceProtocol
+    private let persistenceService: any WorkspacePersistenceProtocol
     private let workspaceCreator: any WorkspaceCreating
     private var loadedWorkspaces: [UUID: any WorkspaceProtocol] = [:]
     private let logger = Logger(label: "monad.workspace.store")
     
     public init(
-        persistenceService: any PersistenceServiceProtocol,
+        persistenceService: any WorkspacePersistenceProtocol,
         workspaceCreator: any WorkspaceCreating
     ) async throws {
         self.persistenceService = persistenceService

@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Tool to read file content (cat)
@@ -37,10 +36,10 @@ public struct ReadFileTool: Tool, Sendable {
             "properties": [
                 "path": [
                     "type": "string",
-                    "description": "The path to the file to read",
+                    "description": "The path to the file to read"
                 ]
             ],
-            "required": ["path"],
+            "required": ["path"]
         ]
     }
 

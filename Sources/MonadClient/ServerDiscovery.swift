@@ -3,8 +3,7 @@ import Logging
 
 /// Discovers Monad Servers on the local network using Bonjour (NetServiceBrowser).
 public final class ServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServiceDelegate,
-    @unchecked Sendable
-{
+    @unchecked Sendable {
     private let browser = NetServiceBrowser()
     private var discoveredServices: [NetService] = []
     private let logger: Logger

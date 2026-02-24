@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import MonadClient
 
@@ -43,7 +42,7 @@ struct DebugCommand: SlashCommand {
             // Sort keys for consistent ordering
             let sectionOrder = [
                 "system_instructions", "context_notes", "memories",
-                "tools", "chat_history", "user_query",
+                "tools", "chat_history", "user_query"
             ]
 
             let sortedKeys = snapshot.structuredContext.keys.sorted { a, b in
@@ -70,8 +69,7 @@ struct DebugCommand: SlashCommand {
                         let json = try? JSONSerialization.jsonObject(with: data),
                         let pretty = try? JSONSerialization.data(
                             withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
-                        let prettyStr = String(data: pretty, encoding: .utf8)
-                    {
+                        let prettyStr = String(data: pretty, encoding: .utf8) {
                         for line in prettyStr.split(separator: "\n") {
                             print(TerminalUI.dim("    \(line)"))
                         }

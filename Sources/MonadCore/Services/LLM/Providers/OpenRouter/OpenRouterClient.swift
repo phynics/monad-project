@@ -1,11 +1,10 @@
-import MonadShared
 import Foundation
 import OpenAI
 import Logging
 
 /// A specialized client for OpenRouter that handles their specific model discovery API
 /// and ensures the correct /api/v1 path prefix is used for OpenAI compatibility.
-public actor OpenRouterClient: Sendable {
+public actor OpenRouterClient {
     private let apiKey: String
     private let modelName: String
     private let endpoint: URL
@@ -27,27 +26,27 @@ public actor OpenRouterClient: Sendable {
         self.modelName = modelName
         self.timeoutInterval = timeoutInterval
         self.maxRetries = maxRetries
-        
+
         // OpenRouter base URL is usually https://openrouter.ai/api
         // We ensure we have the base domain and /api path
         var urlString = "\(scheme)://\(host)"
         if port != 443 && port != 80 {
             urlString += ":\(port)"
         }
-        
+
         // If the host didn't already include /api, we might need it
         // But usually the host from LLMService is just the domain
         if !urlString.contains("/api") {
             urlString += "/api"
         }
-        
+
         if let url = URL(string: urlString) {
             self.endpoint = url
         } else {
             logger.warning("Invalid OpenRouter URL '\(urlString)', falling back to default")
             self.endpoint = URL(string: "https://openrouter.ai/api")!
         }
-        
+
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = timeoutInterval
         self.session = URLSession(configuration: config)
@@ -70,7 +69,7 @@ public actor OpenRouterClient: Sendable {
 
         let chatURL = endpoint.appendingPathComponent("v1/chat/completions")
         logger.debug("OpenRouter chat stream started for model: \(modelName) at \(chatURL.absoluteString)")
-        
+
         return AsyncThrowingStream { continuation in
             Task {
                 let hasYielded = Locked(false)
@@ -107,7 +106,7 @@ public actor OpenRouterClient: Sendable {
                         guard let httpResponse = response as? HTTPURLResponse else {
                             throw LLMServiceError.networkError("Invalid response type from OpenRouter")
                         }
-                        
+
                         logger.debug("OpenRouter response status: \(httpResponse.statusCode)")
 
                         guard (200...299).contains(httpResponse.statusCode) else {
@@ -122,7 +121,7 @@ public actor OpenRouterClient: Sendable {
                         for try await line in stream.lines {
                             let trimmed = line.trimmingCharacters(in: .whitespaces)
                             guard !trimmed.isEmpty else { continue }
-                            
+
                             // OpenRouter (OpenAI format) lines start with "data: "
                             if trimmed.hasPrefix("data: ") {
                                 let dataString = String(trimmed.dropFirst(6))
@@ -149,7 +148,7 @@ public actor OpenRouterClient: Sendable {
                             }
                         }
                     }
-                    
+
                     logger.debug("OpenRouter stream finished normally")
                     continuation.finish()
                 } catch {
@@ -185,7 +184,7 @@ public actor OpenRouterClient: Sendable {
         let endpoint = self.endpoint
         let session = self.session
         let logger = self.logger
-        
+
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
             let url = endpoint.appendingPathComponent("v1/models")
             let request = URLRequest(url: url)

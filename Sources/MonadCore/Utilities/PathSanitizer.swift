@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Utility to safely resolve paths within a jail directory
@@ -7,7 +6,7 @@ public enum PathSanitizer {
     public enum PathError: Error, LocalizedError {
         case accessDenied(String)
         case invalidPath(String)
-        
+
         public var errorDescription: String? {
             switch self {
             case .accessDenied(let path):
@@ -17,7 +16,7 @@ public enum PathSanitizer {
             }
         }
     }
-    
+
     /// Safely resolves a path string relative to a current directory, ensuring it remains within a jail root.
     /// - Parameters:
     ///   - pathString: The path provided by the user/tool (can be absolute or relative)
@@ -32,12 +31,12 @@ public enum PathSanitizer {
     ) throws -> URL {
         let rootURL = URL(fileURLWithPath: jailRoot).standardized
         let currentURL = URL(fileURLWithPath: currentDirectory).standardized
-        
+
         // Sanity check: currentDirectory must be within jailRoot
         guard currentURL.path.hasPrefix(rootURL.path) else {
             throw PathError.accessDenied("Current directory '\(currentDirectory)' is outside jail root.")
         }
-        
+
         let resolvedURL: URL
         if pathString.hasPrefix("/") {
             // Treat absolute paths as relative to jail root if they don't start with jail root?
@@ -51,15 +50,15 @@ public enum PathSanitizer {
         } else {
             resolvedURL = currentURL.appendingPathComponent(pathString).standardized
         }
-        
+
         // Ensure the resolved path starts with the root path
         guard resolvedURL.path.hasPrefix(rootURL.path) else {
             throw PathError.accessDenied(pathString)
         }
-        
+
         return resolvedURL
     }
-    
+
     /// Legacy alias for safelyResolve(path:within:jailRoot:) where currentDirectory == jailRoot
     public static func safelyResolve(path pathString: String, within root: String) throws -> URL {
         return try safelyResolve(path: pathString, within: root, jailRoot: root)

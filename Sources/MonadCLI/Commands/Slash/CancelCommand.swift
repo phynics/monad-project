@@ -1,6 +1,5 @@
 import Foundation
 import MonadClient
-import MonadShared
 
 /// Cancel an ongoing generation
 struct CancelCommand: SlashCommand {

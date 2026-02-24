@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import OpenAI
@@ -13,7 +12,7 @@ extension LLMService {
         let components = parseEndpoint(config.endpoint)
         let timeout = config.timeoutInterval
         let retries = config.maxRetries
-        
+
         switch config.provider {
         case .ollama:
             self.setClients(

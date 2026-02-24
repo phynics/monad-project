@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Tool to search text content in files (grep-like)
@@ -37,18 +36,18 @@ public struct SearchFileContentTool: Tool, Sendable {
             "properties": [
                 "path": [
                     "type": "string",
-                    "description": "The directory or file to search (default: .)",
+                    "description": "The directory or file to search (default: .)"
                 ],
                 "pattern": [
                     "type": "string",
-                    "description": "The text pattern to search for",
+                    "description": "The text pattern to search for"
                 ],
                 "recursive": [
                     "type": "boolean",
-                    "description": "Whether to search recursively (default: false)",
-                ],
+                    "description": "Whether to search recursively (default: false)"
+                ]
             ],
-            "required": ["pattern"],
+            "required": ["pattern"]
         ]
     }
 
@@ -95,11 +94,10 @@ public struct SearchFileContentTool: Tool, Sendable {
         if fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) {
             if isDirectory.boolValue {
                 let options: FileManager.DirectoryEnumerationOptions = [
-                    .skipsHiddenFiles, .skipsPackageDescendants,
+                    .skipsHiddenFiles, .skipsPackageDescendants
                 ]
                 if let enumerator = fileManager.enumerator(
-                    at: url, includingPropertiesForKeys: nil, options: options)
-                {
+                    at: url, includingPropertiesForKeys: nil, options: options) {
                     while let fileURL = enumerator.nextObject() as? URL {
                         // Skip directories if not recursive (enumerator is recursive by default, so we need to check depth if we wanted to enforce strictly non-recursive, but usually grep on dir is recursive or nothing. Let's rely on enumerator but skip deeper levels if !recursive is requested manually? No, simple logic: if !recursive, we only check top level files)
 
@@ -115,8 +113,7 @@ public struct SearchFileContentTool: Tool, Sendable {
                         if recursive {
                             var isDir: ObjCBool = false
                             if fileManager.fileExists(atPath: fileURL.path, isDirectory: &isDir),
-                                !isDir.boolValue
-                            {
+                                !isDir.boolValue {
                                 searchFile(at: fileURL)
                             }
                         } else {
@@ -135,8 +132,7 @@ public struct SearchFileContentTool: Tool, Sendable {
                     for fileURL in contents ?? [] {
                         var isDir: ObjCBool = false
                         if fileManager.fileExists(atPath: fileURL.path, isDirectory: &isDir),
-                            !isDir.boolValue
-                        {
+                            !isDir.boolValue {
                             searchFile(at: fileURL)
                         }
                     }

@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Defines the contract for managing client connections and sending RPC requests.

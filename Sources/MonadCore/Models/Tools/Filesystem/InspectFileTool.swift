@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Tool to inspect file metadata and type (similar to unix 'file' command)
@@ -37,10 +36,10 @@ public struct InspectFileTool: Tool, Sendable {
             "properties": [
                 "path": [
                     "type": "string",
-                    "description": "The path to the file to inspect",
+                    "description": "The path to the file to inspect"
                 ]
             ],
-            "required": ["path"],
+            "required": ["path"]
         ]
     }
 

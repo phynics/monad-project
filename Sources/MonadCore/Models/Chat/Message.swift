@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// UI message model for chat interface

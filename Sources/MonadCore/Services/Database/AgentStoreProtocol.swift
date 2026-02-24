@@ -1,5 +1,4 @@
 import Foundation
-import MonadShared
 
 public protocol AgentStoreProtocol: Sendable {
     func saveAgent(_ agent: Agent) async throws

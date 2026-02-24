@@ -1,4 +1,3 @@
-import MonadShared
 import MonadCore
 import Foundation
 import Logging
@@ -23,14 +22,14 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
     /// Load configuration from storage
     public func load() -> LLMConfiguration {
         var config: LLMConfiguration
-        
+
         // 1. Try loading from file
         if let data = try? Data(contentsOf: configURL) {
             do {
                 config = try JSONDecoder().decode(LLMConfiguration.self, from: data)
             } catch {
                 logger.error("Failed to decode configuration from \(configURL.path): \(error)")
-                
+
                 // 1.1 Try loading from backup
                 if let backup = loadBackup() {
                     logger.info("Restored configuration from backup.")
@@ -53,12 +52,12 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
 
     private func applyEnvironmentOverrides(to config: inout LLMConfiguration) {
         let env = ProcessInfo.processInfo.environment
-        
+
         // MONAD_API_KEY can override the active provider's key
         if let envKey = env["MONAD_API_KEY"], !envKey.isEmpty {
             config.providers[config.activeProvider]?.apiKey = envKey
         }
-        
+
         // Provider-specific overrides (e.g. MONAD_OPENAI_API_KEY)
         for provider in LLMProvider.allCases {
             let safeName = provider.rawValue.replacingOccurrences(of: " ", with: "_").uppercased()
@@ -191,8 +190,7 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
             }
 
             if let oldConfig = try? JSONDecoder().decode(
-                LegacyLLMConfigurationV1.self, from: oldData)
-            {
+                LegacyLLMConfigurationV1.self, from: oldData) {
                 logger.info("Migrating configuration from V1 to file...")
 
                 // Initialize defaults

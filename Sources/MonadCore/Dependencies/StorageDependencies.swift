@@ -1,14 +1,24 @@
-import MonadShared
 import Dependencies
 import Foundation
 
 // MARK: - Dependency Keys
 
+public typealias FullPersistenceService = 
+    MemoryStoreProtocol & 
+    MessageStoreProtocol & 
+    SessionPersistenceProtocol & 
+    JobStoreProtocol & 
+    AgentStoreProtocol & 
+    WorkspacePersistenceProtocol & 
+    ClientStoreProtocol & 
+    ToolPersistenceProtocol & 
+    HealthCheckable
+
 public enum PersistenceServiceKey: DependencyKey {
-    public static let liveValue: any PersistenceServiceProtocol = {
+    public static let liveValue: any FullPersistenceService = {
         fatalError("PersistenceService must be configured before use.")
     }()
-    public static let testValue: any PersistenceServiceProtocol = {
+    public static let testValue: any FullPersistenceService = {
         fatalError("PersistenceService must be provided in tests.")
     }()
 }
@@ -20,7 +30,7 @@ public enum VectorStoreKey: DependencyKey {
 // MARK: - Dependency Values
 
 extension DependencyValues {
-    public var persistenceService: any PersistenceServiceProtocol {
+    public var persistenceService: any FullPersistenceService {
         get { self[PersistenceServiceKey.self] }
         set { self[PersistenceServiceKey.self] = newValue }
     }

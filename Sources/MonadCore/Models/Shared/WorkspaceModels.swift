@@ -64,7 +64,7 @@ public struct WorkspaceReference: Codable, Sendable, Identifiable {
     public let uri: WorkspaceURI
     public var hostType: WorkspaceHostType
     public let ownerId: UUID?  // ClientIdentity.id or nil for server-owned
-    public let tools: [ToolReference]  // Tools available in this workspace
+    public var tools: [ToolReference]  // Tools available in this workspace
     public var rootPath: String?  // Filesystem root for the workspace
     public var trustLevel: WorkspaceTrustLevel
     public var lastModifiedBy: UUID?  // Session ID that last modified
@@ -327,6 +327,6 @@ public func toJsonString(_ dict: [String: AnyCodable]) throws -> String {
 
 extension Dictionary where Key == String, Value == AnyCodable {
     public func toJsonString() throws -> String {
-        return try MonadShared.toJsonString(self)
+        return try MonadCore.toJsonString(self)
     }
 }

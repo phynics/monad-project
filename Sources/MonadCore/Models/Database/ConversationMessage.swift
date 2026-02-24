@@ -1,8 +1,6 @@
-import MonadShared
 import Foundation
 /// Individual message within a conversation
-public struct ConversationMessage: Codable, Identifiable, Sendable
-{
+public struct ConversationMessage: Codable, Identifiable, Sendable {
     public var id: UUID
     public var sessionId: UUID
     public var role: String

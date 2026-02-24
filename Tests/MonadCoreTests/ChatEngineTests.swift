@@ -1,4 +1,3 @@
-import MonadShared
 import MonadPrompt
 import OpenAI
 import Testing

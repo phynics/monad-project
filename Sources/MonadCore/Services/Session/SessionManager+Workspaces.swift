@@ -1,13 +1,10 @@
-import MonadShared
 import Foundation
-
 
 extension SessionManager {
     // MARK: - Workspace Management
 
     public func attachWorkspace(_ workspaceId: UUID, to sessionId: UUID, isPrimary: Bool = false)
-        async throws
-    {
+        async throws {
         var session: ConversationSession
 
         if let memorySession = sessions[sessionId] {
@@ -27,8 +24,7 @@ extension SessionManager {
                 if !currentAttached.contains(workspaceId) {
                     currentAttached.append(workspaceId)
                     if let data = try? JSONEncoder().encode(currentAttached),
-                        let str = String(data: data, encoding: .utf8)
-                    {
+                        let str = String(data: data, encoding: .utf8) {
                         session.attachedWorkspaceIds = str
                     }
                 }
@@ -43,7 +39,7 @@ extension SessionManager {
         }
         // Always save to DB
         try await persistenceService.saveSession(session)
-        
+
         // Update ToolManager
         if let toolManager = toolManagers[sessionId] {
             if let ws = try? await workspaceManager.getWorkspace(id: workspaceId) {
@@ -72,8 +68,7 @@ extension SessionManager {
                 currentAttached.remove(at: index)
 
                 if let data = try? JSONEncoder().encode(currentAttached),
-                    let str = String(data: data, encoding: .utf8)
-                {
+                    let str = String(data: data, encoding: .utf8) {
                     session.attachedWorkspaceIds = str
                 }
             }
@@ -87,7 +82,7 @@ extension SessionManager {
         }
 
         try await persistenceService.saveSession(session)
-        
+
         // Update ToolManager
         if let toolManager = toolManagers[sessionId] {
              await toolManager.unregisterWorkspace(workspaceId)
@@ -145,7 +140,7 @@ extension SessionManager {
             let fileManager = FileManager.default
             if !fileManager.fileExists(atPath: path) {
                 try fileManager.createDirectory(at: sessionWorkspaceURL, withIntermediateDirectories: true)
-                
+
                 if workspace.uri.host == "monad-server" && workspace.uri.path.hasPrefix("/sessions/") {
                      let notesDir = sessionWorkspaceURL.appendingPathComponent("Notes", isDirectory: true)
                      try? fileManager.createDirectory(at: notesDir, withIntermediateDirectories: true)

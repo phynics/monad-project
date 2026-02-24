@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import ServiceLifecycle
@@ -28,7 +27,7 @@ final class BonjourAdvertiser: NSObject, NetServiceDelegate, Service, @unchecked
             service.schedule(in: .main, forMode: .common)
             service.publish()
         }
-        
+
         // Use cancelWhenGracefulShutdown to properly respond to shutdown signals
         try? await cancelWhenGracefulShutdown {
             // Wait for cancellation
@@ -36,7 +35,7 @@ final class BonjourAdvertiser: NSObject, NetServiceDelegate, Service, @unchecked
                 try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
             }
         }
-        
+
         // Clean up on cancellation
         await MainActor.run {
             service.stop()

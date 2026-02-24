@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import ArgumentParser
 import MonadClient
@@ -6,13 +5,13 @@ import MonadCore
 
 struct CLISessionManager {
     let client: MonadClient
-    
+
     /// Resolves which session to use (Resume or New)
     func resolveSession(
-        explicitId: String?, 
+        explicitId: String?,
         localConfig: LocalConfig
     ) async throws -> Session {
-        
+
         // 1. Try to resume from flag
         if let sessionId = explicitId, let uuid = UUID(uuidString: sessionId) {
             do {
@@ -24,7 +23,7 @@ struct CLISessionManager {
                 throw ExitCode.failure
             }
         }
-        
+
         // 2. Try to resume from config (automatic)
         if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
             do {
@@ -35,11 +34,11 @@ struct CLISessionManager {
                 // Stale config, ignore and proceed to menu
             }
         }
-        
+
         // 3. Interactive Menu
         return try await showSessionMenu()
     }
-    
+
     private func showSessionMenu() async throws -> Session {
         print("")
         print(TerminalUI.bold("No active session found."))
@@ -47,16 +46,16 @@ struct CLISessionManager {
         print("  [2] List Existing Sessions")
         print("")
         print("Select an option [1]: ", terminator: "")
-        
+
         let choice = readLine()?.trimmingCharacters(in: .whitespaces) ?? "1"
-        
+
         if choice == "2" {
             let sessions = try await client.listSessions()
             if sessions.isEmpty {
                 print("No sessions found. Creating new one.")
                 return try await createNewSessionFlow()
             }
-            
+
             print("")
             for (i, s) in sessions.enumerated() {
                 let title = s.title ?? "Untitled"
@@ -67,7 +66,7 @@ struct CLISessionManager {
             print("Select a session [1]: ", terminator: "")
             let indexStr = readLine()?.trimmingCharacters(in: .whitespaces) ?? "1"
             let index = (Int(indexStr) ?? 1) - 1
-            
+
             if index >= 0 && index < sessions.count {
                 let s = sessions[index]
                 return Session(id: s.id, title: s.title)
@@ -79,32 +78,32 @@ struct CLISessionManager {
             return try await createNewSessionFlow()
         }
     }
-    
+
     private func createNewSessionFlow() async throws -> Session {
         let session = try await client.createSession()
         TerminalUI.printSuccess("Created new session \(session.id.uuidString.prefix(8))")
         return session
     }
-    
+
     /// Handles re-attachment of client-side workspaces
     func handleWorkspaceReattachment(session: Session, localConfig: LocalConfig) async {
         guard let workspaces = localConfig.clientWorkspaces, !workspaces.isEmpty else { return }
-        
+
         print("")
         TerminalUI.printInfo("Found previously attached client-side workspaces:")
-        
+
         for (uri, _) in workspaces {
             print("  - \(uri)")
         }
-        
+
         print("")
         print("Re-attach these workspaces? (y/n) [y]: ", terminator: "")
         let response = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? "y"
-        
+
         if response == "y" || response == "" {
             for (uri, wsIdStr) in workspaces {
                 guard let wsId = UUID(uuidString: wsIdStr) else { continue }
-                
+
                 do {
                     // Verify workspace exists on server and is linked to this client
                     // Actually, we can just attempt to attach. If it fails, it might be gone.

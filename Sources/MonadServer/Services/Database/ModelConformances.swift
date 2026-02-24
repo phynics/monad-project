@@ -1,13 +1,12 @@
 import Foundation
 import GRDB
 import MonadCore
-import MonadShared
 
 // MARK: - Persistence Error
 
 public enum PersistenceError: LocalizedError {
     case invalidUUIDFormat(String)
-    
+
     public var errorDescription: String? {
         switch self {
         case .invalidUUIDFormat(let value):
@@ -85,7 +84,7 @@ extension Memory: FetchableRecord, PersistableRecord {
             // Try standard decoding which handles data blobs
             id = row["id"]
         }
-        
+
         self.init(
             id: id,
             title: row["title"] as String,

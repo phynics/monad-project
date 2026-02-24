@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Type of compactification node

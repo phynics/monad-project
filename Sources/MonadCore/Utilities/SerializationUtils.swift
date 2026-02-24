@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 public enum SerializationUtils {
@@ -7,7 +6,7 @@ public enum SerializationUtils {
         encoder.dateEncodingStrategy = .iso8601
         return encoder
     }()
-    
+
     public static let jsonDecoder: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601

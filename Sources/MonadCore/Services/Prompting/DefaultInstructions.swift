@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Default system instructions for the LLM
@@ -14,7 +13,7 @@ public enum DefaultInstructions {
 
         ## Workspace Management
         You operate within a multi-workspace environment:
-        - Primary Workspace: Your private sandbox on the server. Always trusted. 
+        - Primary Workspace: Your private sandbox on the server. Always trusted.
             - Location: `Notes/` directory.
             - Seeding: Initialized with `Welcome.md` and `Project.md`. You MUST update these to store long-term state.
         - Attached Workspaces: Client-hosted or shared project directories.

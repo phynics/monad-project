@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import OpenAI
@@ -10,13 +9,13 @@ public struct LaunchSubagentTool: Tool, Sendable {
     public let description = "Delegate a specific task to another agent. This task will run in the background."
     public let requiresPermission = true
 
-    private let persistenceService: any PersistenceServiceProtocol
+    private let persistenceService: any JobStoreProtocol
     private let sessionId: UUID
     private let parentId: UUID?
     private let agentRegistry: AgentRegistry
 
     public init(
-        persistenceService: any PersistenceServiceProtocol,
+        persistenceService: any JobStoreProtocol,
         sessionId: UUID,
         parentId: UUID? = nil,
         agentRegistry: AgentRegistry
@@ -71,9 +70,9 @@ public struct LaunchSubagentTool: Tool, Sendable {
         guard let taskDescription = parameters["task_description"] as? String else {
             return .failure("Missing 'task_description'")
         }
-        
+
         let priority = (parameters["priority"] as? Int) ?? 0
-        
+
         var resolvedParentId = parentId
         if let explicitParentIdString = parameters["parent_id"] as? String,
            let explicitParentId = UUID(uuidString: explicitParentIdString) {

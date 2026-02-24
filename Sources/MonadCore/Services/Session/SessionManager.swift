@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import Dependencies
@@ -35,7 +34,7 @@ public actor SessionManager {
     @Dependency(\.llmService) private var _llmService
     @Dependency(\.agentRegistry) private var _agentRegistry
 
-    internal var persistenceService: any PersistenceServiceProtocol { _persistenceService }
+    internal var persistenceService: any SessionPersistenceProtocol & MessageStoreProtocol & WorkspacePersistenceProtocol & MemoryStoreProtocol & ToolPersistenceProtocol & JobStoreProtocol & AgentStoreProtocol { _persistenceService }
     internal var embeddingService: any EmbeddingServiceProtocol { _embeddingService }
     internal var llmService: any LLMServiceProtocol { _llmService }
     internal var agentRegistry: AgentRegistry { _agentRegistry }
@@ -300,7 +299,7 @@ public actor SessionManager {
     }
 
     /// Returns the underlying persistence service.
-    public func getPersistenceService() -> any PersistenceServiceProtocol {
+    public func getPersistenceService() -> any SessionPersistenceProtocol & MessageStoreProtocol & WorkspacePersistenceProtocol & MemoryStoreProtocol & ToolPersistenceProtocol & JobStoreProtocol & AgentStoreProtocol {
         return persistenceService
     }
 

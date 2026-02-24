@@ -1,12 +1,10 @@
-import MonadShared
 import MonadCore
 import Foundation
 import GRDB
 
 /// GRDB-compatible persistence model for CompactificationNode
 public struct CompactificationNodeRecord: Codable, Identifiable, FetchableRecord, PersistableRecord,
-    Sendable
-{
+    Sendable {
     public static let databaseTableName = "compactificationNode"
 
     public var id: UUID

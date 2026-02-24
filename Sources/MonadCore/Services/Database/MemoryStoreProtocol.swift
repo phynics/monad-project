@@ -1,5 +1,4 @@
 import Foundation
-import MonadShared
 
 public protocol MemoryStoreProtocol: Sendable {
     func saveMemory(_ memory: Memory, policy: MemorySavePolicy) async throws -> UUID

@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 
@@ -69,7 +68,7 @@ public class StreamingParser {
         let finalContent = contentBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
         return (finalThinking.isEmpty ? nil : finalThinking, finalContent)
     }
-    
+
     /// Flushes any pending text in the buffer and returns just the newly flushed segments
     public func flush() -> (thinking: String?, content: String?) {
         var newThinking: String?
@@ -233,8 +232,7 @@ public class StreamingParser {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
             if let jsonData = jsonString.data(using: .utf8),
-                let toolCall = try? JSONDecoder().decode(ToolCall.self, from: jsonData)
-            {
+                let toolCall = try? JSONDecoder().decode(ToolCall.self, from: jsonData) {
                 toolCalls.append(toolCall)
             } else {
                 Logger.parser.error("Failed to parse tool call JSON: \(jsonString)")

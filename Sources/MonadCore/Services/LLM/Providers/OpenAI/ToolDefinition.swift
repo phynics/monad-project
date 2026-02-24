@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import OpenAI
 
@@ -6,13 +5,13 @@ import OpenAI
 public protocol ToolDefinition {
     /// The name of the tool
     static var name: String { get }
-    
+
     /// Description of what the tool does
     static var description: String { get }
-    
+
     /// JSON Schema for the tool's parameters
     static var parametersSchema: JSONSchema { get }
-    
+
     /// Execute the tool with the given arguments
     func execute(arguments: [String: Any]) async throws -> String
 }
@@ -25,7 +24,7 @@ public struct ToolConverter {
             description: tool.description,
             parameters: tool.parametersSchema
         )
-        
+
         return ChatQuery.ChatCompletionToolParam(function: function)
     }
 }
@@ -46,22 +45,22 @@ public struct GetCurrentTimeTool: ToolDefinition {
         ]),
         .required(["timezone"])
     )
-    
+
     public init() {}
-    
+
     public func execute(arguments: [String: Any]) async throws -> String {
         guard let timezone = arguments["timezone"] as? String else {
             throw ToolError.missingArgument("timezone")
         }
-        
+
         guard let tz = TimeZone(identifier: timezone) else {
             throw ToolError.invalidArgument("Invalid timezone identifier")
         }
-        
+
         let formatter = DateFormatter()
         formatter.timeZone = tz
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        
+
         return formatter.string(from: Date())
     }
 }
@@ -80,14 +79,14 @@ public struct CalculatorTool: ToolDefinition {
         ]),
         .required(["expression"])
     )
-    
+
     public init() {}
-    
+
     public func execute(arguments: [String: Any]) async throws -> String {
         guard let expression = arguments["expression"] as? String else {
             throw ToolError.missingArgument("expression")
         }
-        
+
         // Simple calculator using NSExpression
         let expr = NSExpression(format: expression)
         if let result = expr.expressionValue(with: nil, context: nil) {

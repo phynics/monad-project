@@ -1,4 +1,3 @@
-import MonadShared
 import Testing
 import Foundation
 @testable import MonadCore

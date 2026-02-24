@@ -1,4 +1,3 @@
-import MonadShared
 import MonadCore
 import Foundation
 import GRDB
@@ -60,7 +59,7 @@ extension DatabaseSchema {
         }
 
         // v6: Add tags to Note (Removed)
-        migrator.registerMigration("v6") { db in
+        migrator.registerMigration("v6") { _ in
             // No-op
         }
 
@@ -72,8 +71,7 @@ extension DatabaseSchema {
                     if let data = Data(base64Encoded: session.tags),
                         let tagsArray = try? JSONDecoder().decode([String].self, from: data),
                         let newData = try? JSONEncoder().encode(tagsArray),
-                        let newString = String(data: newData, encoding: .utf8)
-                    {
+                        let newString = String(data: newData, encoding: .utf8) {
                         session.tags = newString
                         try session.update(db)
                     }
@@ -83,8 +81,7 @@ extension DatabaseSchema {
 
         // v8: Add parentId to conversationMessage for tree structure
         migrator.registerMigration("v8") { db in
-            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "parentId" })
-            {
+            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "parentId" }) {
                 try db.alter(table: "conversationMessage") { t in
                     t.add(column: "parentId", .blob).references(
                         "conversationMessage", onDelete: .setNull)
@@ -169,7 +166,7 @@ extension DatabaseSchema {
 
         // v12: Remove alwaysAppend, isEnabled, and priority from Note
         // v12: Remove alwaysAppend, isEnabled, and priority from Note (Removed)
-        migrator.registerMigration("v12") { db in
+        migrator.registerMigration("v12") { _ in
            // No-op
         }
 
@@ -250,20 +247,19 @@ extension DatabaseSchema {
         }
 
         // v18: Remove legacy Note table
-        migrator.registerMigration("v18") { db in
+        migrator.registerMigration("v18") { _ in
             // Note table removal logic removed
         }
 
         // v19: Restore Note table
         // v19: Restore Note table (Removed)
-        migrator.registerMigration("v19") { db in
+        migrator.registerMigration("v19") { _ in
             // No-op
         }
 
         // v20: Add persona column to conversationSession
         migrator.registerMigration("v20") { db in
-            if try !db.columns(in: "conversationSession").contains(where: { $0.name == "persona" })
-            {
+            if try !db.columns(in: "conversationSession").contains(where: { $0.name == "persona" }) {
                 try db.alter(table: "conversationSession") { t in
                     t.add(column: "persona", .text)
                 }
@@ -427,14 +423,14 @@ extension DatabaseSchema {
                 """
             )
             try defaultAgent.insert(db)
-            
+
             // Seed with coordinator agent
             let coordinatorAgent = Agent(
                 id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
                 name: "Agent Coordinator",
                 description: "Coordinates multiple agents and complex workflows.",
                 systemPrompt: """
-                You are the Monad Coordinator. Your role is to break down complex tasks into smaller sub-tasks 
+                You are the Monad Coordinator. Your role is to break down complex tasks into smaller sub-tasks
                 and delegate them to specialized agents.
                 """
             )

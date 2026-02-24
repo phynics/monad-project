@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import MonadClient
 import MonadCore
@@ -74,7 +73,7 @@ struct RegistrationManager {
 
         // Define client tools
         let tools: [ToolReference] = [
-            .custom(definition: MonadShared.WorkspaceToolDefinition(from: AskAttachPWDTool()))
+            .custom(definition: WorkspaceToolDefinition(from: AskAttachPWDTool()))
         ]
 
         let response = try await client.registerClient(

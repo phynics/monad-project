@@ -1,5 +1,4 @@
 import Hummingbird
-import MonadShared
 import Foundation
 
 extension Request {

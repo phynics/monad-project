@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// A type that can be formatted for inclusion in an LLM prompt.

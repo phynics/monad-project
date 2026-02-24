@@ -1,5 +1,4 @@
 import Foundation
-import MonadShared
 
 public protocol ToolPersistenceProtocol: Sendable {
     func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws

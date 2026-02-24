@@ -1,6 +1,4 @@
-import MonadShared
 import Foundation
-
 
 extension SessionManager {
     // MARK: - Tool Management
@@ -19,7 +17,7 @@ extension SessionManager {
             AnyTool(ChangeDirectoryTool(
                 currentPath: currentWD,
                 root: jailRoot,
-                onChange: { newPath in
+                onChange: { _ in
                     // Update working directory logic
                 })),
             AnyTool(ListDirectoryTool(currentDirectory: currentWD, jailRoot: jailRoot)),
@@ -27,7 +25,7 @@ extension SessionManager {
             AnyTool(SearchFileContentTool(currentDirectory: currentWD, jailRoot: jailRoot)),
             AnyTool(SearchFilesTool(currentDirectory: currentWD, jailRoot: jailRoot)),
             AnyTool(ReadFileTool(currentDirectory: currentWD, jailRoot: jailRoot)),
-            
+
             // Agent Coordination
             AnyTool(LaunchSubagentTool(
                 persistenceService: persistenceService,
@@ -35,9 +33,9 @@ extension SessionManager {
                 parentId: parentId,
                 agentRegistry: agentRegistry
             )),
-            
+
             // Job Queue Gateway
-            AnyTool(JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession)),
+            AnyTool(JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession))
         ]
 
         return SessionToolManager(
@@ -45,8 +43,7 @@ extension SessionManager {
     }
 
     public func findWorkspaceForTool(_ tool: ToolReference, in workspaceIds: [UUID]) async throws
-        -> UUID?
-    {
+        -> UUID? {
         return try await persistenceService.findWorkspaceId(forToolId: tool.toolId, in: workspaceIds)
     }
 
@@ -70,12 +67,12 @@ extension SessionManager {
     /// Aggregates all available tool references for a session, including those from the client.
     public func getAllToolReferences(sessionId: UUID, clientId: UUID? = nil) async throws -> [ToolReference] {
         var references = try await getAggregatedTools(for: sessionId)
-        
+
         if let clientId = clientId {
             let clientTools = try await getClientTools(clientId: clientId)
             references.append(contentsOf: clientTools)
         }
-        
+
         // Deduplicate by ID
         var seenIds = Set<String>()
         return references.filter { ref in

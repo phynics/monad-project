@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import OpenAI
 import Logging
@@ -8,17 +7,17 @@ public actor OpenAIEmbeddingService: EmbeddingServiceProtocol {
     private let logger = Logger(label: "com.monad.OpenAIEmbeddingService")
     // Model is typealias for String in OpenAI library
     private let model: Model = "text-embedding-ada-002"
-    
+
     public init(apiKey: String) {
         self.client = OpenAI(apiToken: apiKey)
     }
-    
+
     public func generateEmbedding(for text: String) async throws -> [Float] {
         let query = EmbeddingsQuery(
             input: .string(text),
             model: model
         )
-        
+
         do {
             let result = try await client.embeddings(query: query)
             guard let embedding = result.data.first?.embedding else {
@@ -31,13 +30,13 @@ public actor OpenAIEmbeddingService: EmbeddingServiceProtocol {
             throw error
         }
     }
-    
+
     public func generateEmbeddings(for texts: [String]) async throws -> [[Float]] {
         let query = EmbeddingsQuery(
             input: .stringList(texts),
             model: model
         )
-        
+
         do {
             let result = try await client.embeddings(query: query)
             // Ensure order is preserved. Result data has 'index'.

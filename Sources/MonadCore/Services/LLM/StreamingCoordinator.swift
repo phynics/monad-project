@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Logging
 import Observation
@@ -100,7 +99,7 @@ public final class StreamingCoordinator {
                     if functionMirror.displayStyle == .optional, let (_, some) = functionMirror.children.first {
                         functionValue = some
                     }
-                    
+
                     let funcMirror = Mirror(reflecting: functionValue)
                     for funcChild in funcMirror.children {
                         switch funcChild.label {
@@ -205,7 +204,7 @@ public final class StreamingCoordinator {
         }
 
         let duration = startTime.map { Date().timeIntervalSince($0) }
-        
+
         let completionTokens = if let usageTokens = usage?.completionTokens {
             usageTokens
         } else {

@@ -4,12 +4,12 @@ import Foundation
 public struct TokenBudget: Sendable {
     public let maxTokens: Int
     public let reserveForResponse: Int
-    
+
     public init(maxTokens: Int, reserveForResponse: Int) {
         self.maxTokens = maxTokens
         self.reserveForResponse = reserveForResponse
     }
-    
+
     /// Apply the budget to a list of sections, returning a potentially modified list
     /// - Parameters:
     ///   - sections: The sections to process
@@ -18,12 +18,12 @@ public struct TokenBudget: Sendable {
     public func apply(to sections: [ContextSection], compressor: SectionCompressor? = nil) async -> [ContextSection] {
         let available = maxTokens - reserveForResponse
         let currentTotal = sections.reduce(0) { $0 + $1.estimatedTokens }
-        
+
         // If we fit, return as is
         if currentTotal <= available {
             return sections
         }
-        
+
         // We need to cut tokens.
         // Allocation strategy:
         // 1. Sort sections by priority (Highest first).
@@ -34,25 +34,25 @@ public struct TokenBudget: Sendable {
         //    - If .truncate: Give it remaining budget.
         //    - If .drop: Drop it.
         //    - If .summarize: Treat as drop for now (unless we have async summary size est, which we don't efficiently).
-        
+
         // Map original index to section for stability
         let indexedSections = sections.enumerated().map { (index: $0.offset, section: $0.element) }
         let sortedByPriority = indexedSections.sorted { $0.section.priority > $1.section.priority }
-        
+
         var decisions: [Int: SectionDecision] = [:]
         var remainingBudget = available
-        
+
         // First pass: Allocate .keep sections regardless of budget (they are mandatory-ish)
         // Wait, if we have 8000 tokens, and System (Keep, 1000) + User (Keep, 100) -> 1100.
         // If we prioritize strict budget, we might need to error out if Keep exceeds budget?
         // Let's assume .keep sections consume budget first.
-        
+
         // Revised Allocation:
         // Iterate Priority High -> Low.
-        
+
         for (index, section) in sortedByPriority {
             let size = section.estimatedTokens
-            
+
             if size <= remainingBudget {
                 // It fits
                 decisions[index] = .keepOriginal
@@ -66,7 +66,7 @@ public struct TokenBudget: Sendable {
                     // as we can't truncate .keep
                     decisions[index] = .keepOriginal
                     remainingBudget -= size
-                    
+
                 case .truncate:
                     if remainingBudget > 0 {
                         // Squeeze it in
@@ -76,18 +76,18 @@ public struct TokenBudget: Sendable {
                         // No budget left
                         decisions[index] = .drop
                     }
-                    
+
                 case .summarize:
                     // If we had a compressor and logic to "summarize to X", we'd use it.
                     // For now, if full content doesn't fit, we drop.
                     decisions[index] = .drop
-                    
+
                 case .drop:
                     decisions[index] = .drop
                 }
             }
         }
-        
+
         // Second pass: Reconstruct in original order
         var result: [ContextSection] = []
         for (index, section) in indexedSections {
@@ -95,7 +95,7 @@ public struct TokenBudget: Sendable {
                 // Should not happen, but default to drop if missing
                 continue
             }
-            
+
             switch decision {
             case .keepOriginal:
                 result.append(section)
@@ -105,10 +105,10 @@ public struct TokenBudget: Sendable {
                 break // Skip
             }
         }
-        
+
         return result
     }
-    
+
     private enum SectionDecision {
         case keepOriginal
         case constrain(limit: Int)

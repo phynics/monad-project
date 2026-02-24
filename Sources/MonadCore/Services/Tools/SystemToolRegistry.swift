@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import OpenAI
 
@@ -53,19 +52,18 @@ public struct SystemToolRegistry: Sendable {
             dict, pair in
             dict[pair.key] = [
                 "type": "string",
-                "description": String(describing: pair.value.value),
+                "description": String(describing: pair.value.value)
             ]
         }
 
         let schemaDict: [String: Any] = [
             "type": "object",
-            "properties": properties,
+            "properties": properties
         ]
 
         let schema: JSONSchema
         if let data = try? JSONSerialization.data(withJSONObject: schemaDict),
-            let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data)
-        {
+            let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data) {
             schema = decoded
         } else {
             schema = .object([:])

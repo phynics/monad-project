@@ -1,4 +1,3 @@
-import MonadShared
 import MonadCore
 import Foundation
 import GRDB
@@ -19,7 +18,7 @@ extension PersistenceService {
                 .fetchAll(db)
         }
     }
-    
+
     public func deleteMessages(for sessionId: UUID) throws {
         _ = try dbQueue.write { db in
             try ConversationMessage

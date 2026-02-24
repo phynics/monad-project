@@ -1,5 +1,4 @@
 import Hummingbird
-import MonadShared
 import MonadCore
 import Foundation
 import NIOCore
@@ -44,7 +43,7 @@ extension LLMConfiguration: ResponseGenerator {}
 
 extension PruneResponse: ResponseGenerator {}
 
-extension MonadShared.StatusResponse: ResponseGenerator {}
+extension StatusResponse: ResponseGenerator {}
 
 extension ChatResponse: ResponseGenerator {}
 

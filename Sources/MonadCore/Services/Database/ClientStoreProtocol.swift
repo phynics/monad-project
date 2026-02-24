@@ -1,5 +1,4 @@
 import Foundation
-import MonadShared
 
 public protocol ClientStoreProtocol: Sendable {
     func saveClient(_ client: ClientIdentity) async throws

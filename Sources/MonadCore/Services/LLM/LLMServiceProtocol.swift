@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import OpenAI
 import MonadPrompt
@@ -56,7 +55,7 @@ public protocol LLMServiceProtocol: HealthCheckable {
         rawPrompt: String,
         structuredContext: [String: String]
     )
-    
+
     /// Build a prompt object using the new ContextBuilder system
     func buildContext(
         userQuery: String,

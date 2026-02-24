@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 #if canImport(Darwin)
@@ -151,7 +150,7 @@ final class LineReader {
     private func longestCommonPrefix(of strings: [String]) -> String {
         guard let first = strings.first else { return "" }
         var prefix = first
-        
+
         for str in strings.dropFirst() {
             while !str.hasPrefix(prefix) {
                 prefix = String(prefix.dropLast())

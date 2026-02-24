@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import Testing
 @testable import MonadCore
@@ -119,9 +118,9 @@ struct ToolCallRegressionTests {
         // IMPORTANT: AnyCodable stores [Any], not [AnyCodable] for arrays if initialized with [Any]
         // But here we construct manually.
 
-        let args: [String: MonadShared.AnyCodable] = [
-            "tags": MonadShared.AnyCodable(["swift", "testing"]),
-            "user": MonadShared.AnyCodable([
+        let args: [String: AnyCodable] = [
+            "tags": AnyCodable(["swift", "testing"]),
+            "user": AnyCodable([
                 "name": "Bob",
                 "age": 25
             ] as [String: Any])

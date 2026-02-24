@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import GRDB
 import Hummingbird
@@ -7,10 +6,10 @@ import MonadCore
 
 /// Controller for managing client identities
 public struct ClientAPIController<Context: RequestContext>: Sendable {
-    let persistenceService: any PersistenceServiceProtocol
+    let persistenceService: any ClientStoreProtocol & WorkspacePersistenceProtocol & ToolPersistenceProtocol
     let logger: Logger
 
-    public init(persistenceService: any PersistenceServiceProtocol, logger: Logger) {
+    public init(persistenceService: any ClientStoreProtocol & WorkspacePersistenceProtocol & ToolPersistenceProtocol, logger: Logger) {
         self.persistenceService = persistenceService
         self.logger = logger
     }

@@ -1,11 +1,10 @@
 import Foundation
 import OpenAI
-import MonadShared
 
 extension ToolReference {
     public func toToolParam() -> ChatQuery.ChatCompletionToolParam? {
         switch self {
-        case .known(_):
+        case .known:
             // This usually needs resolving against a registry to get the schema
             // but for simple cases we might have a placeholder
             return nil
@@ -13,11 +12,11 @@ extension ToolReference {
             // definition.parametersSchema is [String: AnyCodable]
             // Convert to [String: Any] first
             let anyDict = definition.parametersSchema.mapValues { $0.value }
-            
+
             // Map to OpenAI compatible structure
             let schemaDict = mapToAnyJSONDocument(anyDict)
             let schema = JSONSchema.object(schemaDict)
-            
+
             return .init(
                 function: .init(
                     name: definition.name,

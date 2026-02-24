@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import OpenAI
 import MonadPrompt
@@ -11,12 +10,12 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
 
     // Support for tool calls in stream - use dictionaries to avoid type issues
     public var nextToolCalls: [[[String: Any]]] = []
-    
+
     /// Support for multi-chunk streaming. If not empty, this takes precedence over nextResponse.
     public var nextChunks: [[String]] = []
 
     /// Optional delay between chunks for testing cancellation
-    public var nextStreamWait: TimeInterval? = nil
+    public var nextStreamWait: TimeInterval?
 
     public init() {}
 
@@ -47,11 +46,11 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
         return AsyncThrowingStream { continuation in
             let task = Task {
                 for (index, chunk) in ctx.responses.enumerated() {
-                    if Task.isCancelled { 
+                    if Task.isCancelled {
                         continuation.finish(throwing: CancellationError())
-                        return 
+                        return
                     }
-                    
+
                     if let wait = ctx.wait {
                         do {
                             try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
@@ -60,10 +59,10 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
                             return
                         }
                     }
-                    
-                    if Task.isCancelled { 
+
+                    if Task.isCancelled {
                         continuation.finish(throwing: CancellationError())
-                        return 
+                        return
                     }
 
                     var delta: [String: Any] = [
@@ -105,7 +104,7 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
                 }
                 continuation.finish()
             }
-            
+
             continuation.onTermination = { @Sendable _ in
                 task.cancel()
             }
@@ -207,7 +206,7 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
     ) {
         return ([], "mock prompt", [:])
     }
-    
+
     public func buildContext(
         userQuery: String,
         contextNotes: [ContextFile],

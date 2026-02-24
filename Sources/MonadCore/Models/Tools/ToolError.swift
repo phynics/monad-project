@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 
 /// Errors related to tool execution and routing
@@ -10,7 +9,7 @@ public enum ToolError: Error, LocalizedError, Sendable {
     case workspaceNotFound(UUID)
     case clientNotConnected
     case clientExecutionRequired
-    
+
     public var errorDescription: String? {
         switch self {
         case .missingArgument(let arg):

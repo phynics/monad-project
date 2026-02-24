@@ -2,7 +2,6 @@ import Foundation
 import Hummingbird
 import Logging
 import MonadCore
-import MonadShared
 import ServiceLifecycle
 import UnixSignals
 import HummingbirdWebSocket
@@ -48,7 +47,7 @@ public struct MonadServerFactory {
             embeddingService = LocalEmbeddingService()
             logger.info("Using Local Embedding Service (OpenAI API Key not found)")
         }
-        
+
         // Initialize Vector Store
         var vectorStore: any VectorStoreProtocol
         do {
@@ -59,7 +58,7 @@ public struct MonadServerFactory {
             logger.error("Failed to initialize Vector Store: \(error). Falling back to mock.")
             vectorStore = MockVectorStore()
         }
-        
+
         // Initialize LLM Service
         let appSupportDir = try defaultWorkspacePath().deletingLastPathComponent()
         let configURL = appSupportDir.appendingPathComponent("config.json")
@@ -69,10 +68,10 @@ public struct MonadServerFactory {
         await llmService.loadConfiguration()
 
         let workspaceRoot = try defaultWorkspacePath()
-        
+
         // Initialize WebSocket Manager
         let connectionManager = WebSocketConnectionManager()
-        
+
         // Initialize Core Services
         let agentRegistry = AgentRegistry()
         let sessionManager = SessionManager(
@@ -124,7 +123,7 @@ public struct MonadServerFactory {
             router.get("/") { _, _ -> String in
                 return "Monad Server is running."
             }
-            
+
             // API Key from environment or default
             let apiKey = ProcessInfo.processInfo.environment["MONAD_API_KEY"] ?? "monad-secret"
 
@@ -174,7 +173,7 @@ public struct MonadServerFactory {
             agentController.addRoutes(to: protected.group("/agents"))
 
             let workspacesGroup = protected.group("/workspaces")
-            
+
             let workspaceAPIController = WorkspaceAPIController<AppRequestContext>(
                 persistenceService: persistenceService, logger: logger)
             workspaceAPIController.addRoutes(to: workspacesGroup)
@@ -184,7 +183,6 @@ public struct MonadServerFactory {
                 workspaceCreator: WorkspaceFactory()
             )
             _ = try await SessionStore(persistenceService: persistenceService)
-
 
             let filesController = FilesAPIController<AppRequestContext>(
                 workspaceStore: workspaceStore)
@@ -219,7 +217,7 @@ public struct MonadServerFactory {
                     logger: logger
                 )
             )
-            
+
             return ServerContext(
                 serviceGroup: serviceGroup,
                 dependencies: DependencyValues._current

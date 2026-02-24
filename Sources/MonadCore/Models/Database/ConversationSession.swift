@@ -1,8 +1,6 @@
-import MonadShared
 import Foundation
 /// A conversation session with messages
-public struct ConversationSession: Codable, Identifiable, Sendable
-{
+public struct ConversationSession: Codable, Identifiable, Sendable {
     public var id: UUID
     public var title: String
     public var createdAt: Date
@@ -32,16 +30,14 @@ public struct ConversationSession: Codable, Identifiable, Sendable
         self.workingDirectory = workingDirectory
         self.primaryWorkspaceId = primaryWorkspaceId
 
-        if let data = try? JSONEncoder().encode(tags), let str = String(data: data, encoding: .utf8)
-        {
+        if let data = try? JSONEncoder().encode(tags), let str = String(data: data, encoding: .utf8) {
             self.tags = str
         } else {
             self.tags = "[]"
         }
 
         if let data = try? JSONEncoder().encode(attachedWorkspaceIds),
-            let str = String(data: data, encoding: .utf8)
-        {
+            let str = String(data: data, encoding: .utf8) {
             self.attachedWorkspaceIds = str
         } else {
             self.attachedWorkspaceIds = "[]"

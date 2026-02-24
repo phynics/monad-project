@@ -1,28 +1,26 @@
 import Foundation
-import MonadShared
 import MonadCore
 
 // MARK: - Type Aliases from MonadCore
 
 // Session Models
-public typealias Session = MonadShared.SessionResponse
+public typealias Session = SessionResponse
 
 // Chat Models
-public typealias ChatRequest = MonadShared.ChatRequest
-public typealias ChatResponse = MonadShared.ChatResponse
+public typealias ChatRequest = ChatRequest
+public typealias ChatResponse = ChatResponse
 
 // Status Models
-public typealias StatusResponse = MonadShared.StatusResponse
-public typealias ComponentStatus = MonadShared.ComponentStatus
-public typealias HealthStatus = MonadShared.HealthStatus
+public typealias StatusResponse = StatusResponse
+public typealias ComponentStatus = ComponentStatus
+public typealias HealthStatus = HealthStatus
 
 // Memory Models
 public typealias Memory = MonadCore.Memory
-public typealias MemorySearchRequest = MonadShared.MemorySearchRequest
-
+public typealias MemorySearchRequest = MemorySearchRequest
 
 // Tool Models
-public typealias Tool = MonadShared.ToolInfo
+public typealias Tool = ToolInfo
 
 // Message Models
 public typealias Message = MonadCore.Message
@@ -30,27 +28,27 @@ public typealias MessageRole = MonadCore.Message.MessageRole
 
 // Job Models
 public typealias Job = MonadCore.Job
-public typealias AddJobRequest = MonadShared.AddJobRequest
+public typealias AddJobRequest = AddJobRequest
 
 // MARK: - Client-Specific Models
 
 /// A delta from a streaming chat response
-public typealias ChatDelta = MonadShared.ChatDelta
+public typealias ChatDelta = ChatDelta
 
 /// A delta for a tool call in a streaming response
-public typealias ToolCallDelta = MonadShared.ToolCallDelta
+public typealias ToolCallDelta = ToolCallDelta
 
 /// Metadata about the context used for a chat response
-public typealias ChatMetadata = MonadShared.ChatMetadata
+public typealias ChatMetadata = ChatMetadata
 
 // MARK: - Client API Models
-public typealias ClientIdentity = MonadShared.ClientIdentity
-public typealias WorkspaceReference = MonadShared.WorkspaceReference
-public typealias WorkspaceURI = MonadShared.WorkspaceURI
-public typealias WorkspaceTrustLevel = MonadShared.WorkspaceTrustLevel
-public typealias ToolReference = MonadShared.ToolReference
-public typealias WorkspaceToolDefinition = MonadShared.WorkspaceToolDefinition
-public typealias AnyCodable = MonadShared.AnyCodable
+public typealias ClientIdentity = ClientIdentity
+public typealias WorkspaceReference = WorkspaceReference
+public typealias WorkspaceURI = WorkspaceURI
+public typealias WorkspaceTrustLevel = WorkspaceTrustLevel
+public typealias ToolReference = ToolReference
+public typealias WorkspaceToolDefinition = WorkspaceToolDefinition
+public typealias AnyCodable = AnyCodable
 
 // MARK: - Error Models
 

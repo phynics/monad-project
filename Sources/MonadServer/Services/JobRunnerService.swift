@@ -1,4 +1,3 @@
-import MonadShared
 import MonadCore
 import Foundation
 import Logging
@@ -22,20 +21,20 @@ public final class JobRunnerService: Service, @unchecked Sendable {
         self.agentRegistry = agentRegistry
         self.agentExecutor = agentExecutor
     }
-    
+
     /// Run the job execution loop
     public func run() async throws {
         logger.info("Job Runner Service started (Event Driven)")
 
         let persistence = await self.sessionManager.getPersistenceService()
-        
+
         // Initial scan
         do {
             try await self.processPendingJobs(persistence)
         } catch {
             logger.error("Initial job scan failed: \(error)")
         }
-        
+
         try await cancelWhenGracefulShutdown {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 // 1. Event Stream Listener
@@ -60,7 +59,7 @@ public final class JobRunnerService: Service, @unchecked Sendable {
                         }
                     }
                 }
-                
+
                 // 2. Periodic Scanner (for scheduled jobs and fail-safety)
                 group.addTask {
                     while !Task.isCancelled {
@@ -74,16 +73,16 @@ public final class JobRunnerService: Service, @unchecked Sendable {
                         }
                     }
                 }
-                
+
                 // Wait for all tasks to complete/cancel
                 try await group.waitForAll()
             }
         }
-        
+
         logger.info("Job Runner Service stopped")
     }
-    
-    private func processPendingJobs(_ persistence: any PersistenceServiceProtocol) async throws {
+
+    private func processPendingJobs(_ persistence: any JobStoreProtocol) async throws {
         // Fetch pending jobs using new efficient query
         let jobs = try await persistence.fetchPendingJobs(limit: 5)
         for job in jobs {
@@ -91,8 +90,8 @@ public final class JobRunnerService: Service, @unchecked Sendable {
             try await processJob(job, persistence: persistence)
         }
     }
-    
-    private func processJob(_ job: Job, persistence: any PersistenceServiceProtocol) async throws {
+
+    private func processJob(_ job: Job, persistence: any JobStoreProtocol) async throws {
         // 1. Identify Session
         guard let session = await sessionManager.getSession(id: job.sessionId) else {
             let reason = "Session \(job.sessionId) not found"
@@ -100,7 +99,7 @@ public final class JobRunnerService: Service, @unchecked Sendable {
             await agentExecutor.failJob(job, reason: reason)
             return
         }
-        
+
         // 2. Ensure Session is Hydrated
         do {
             try await sessionManager.hydrateSession(id: session.id, parentId: job.id)
@@ -114,7 +113,7 @@ public final class JobRunnerService: Service, @unchecked Sendable {
             await agentExecutor.failJob(job, reason: "ToolExecutor not found after hydration")
             return
         }
-        
+
         // 4. Initialize Agent with ContextManager (RAG)
         let contextManager = await sessionManager.getContextManager(for: session.id)
 

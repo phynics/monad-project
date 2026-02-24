@@ -1,4 +1,3 @@
-import MonadShared
 import Darwin
 import Foundation
 import MonadClient
@@ -22,7 +21,7 @@ struct ConfigurationScreen {
 
         // Defaults
         var config = ProviderConfiguration.defaultFor(selectedProvider)
-        
+
         // Try to load existing if available
         if let existing = try? await client.getConfiguration(),
            let existingProviderConfig = existing.providers[selectedProvider] {

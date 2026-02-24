@@ -1,14 +1,14 @@
 # Implementation Plan: MonadCore Developer Experience (DX) Improvement
 
 ## Phase 1: Persistence Layer Refactoring (Hard Cutover)
-- [~] Task: Define domain-specific storage protocols
-    - [ ] Write unit tests for domain-specific store interfaces and mocking
-    - [ ] Implement `MemoryStoreProtocol`, `MessageStoreProtocol`, `SessionPersistenceProtocol`, `JobStoreProtocol`, `AgentStoreProtocol`, `WorkspacePersistenceProtocol`, and `ClientStoreProtocol`
-- [ ] Task: Migrate service consumers to narrow protocols
-    - [ ] Update `ContextManager` tests and implementation to use narrow protocols
-    - [ ] Update `SessionManager` tests and implementation to use narrow protocols
-    - [ ] Update `WorkspaceStore` and `SessionStore` tests and implementation
-- [ ] Task: Refactor testing mocks and finalize cutover
+- [x] Task: Define domain-specific storage protocols c297743
+    - [x] Write unit tests for domain-specific store interfaces and mocking
+    - [x] Implement `MemoryStoreProtocol`, `MessageStoreProtocol`, `SessionPersistenceProtocol`, `JobStoreProtocol`, `AgentStoreProtocol`, `WorkspacePersistenceProtocol`, and `ClientStoreProtocol`
+- [x] Task: Migrate service consumers to narrow protocols 72379
+    - [x] Update `ContextManager` tests and implementation to use narrow protocols
+    - [x] Update `SessionManager` tests and implementation to use narrow protocols
+    - [x] Update `WorkspaceStore` and `SessionStore` tests and implementation
+- [~] Task: Refactor testing mocks and finalize cutover
     - [ ] Split `MockPersistenceService` into focused domain mocks
     - [ ] Remove `PersistenceServiceProtocol` and update all remaining references in `MonadServer` and `MonadCLI`
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Persistence Layer Refactoring' (Protocol in workflow.md)

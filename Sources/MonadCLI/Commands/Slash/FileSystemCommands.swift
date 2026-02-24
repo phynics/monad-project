@@ -1,4 +1,3 @@
-import MonadShared
 import Foundation
 import MonadClient
 
@@ -51,8 +50,7 @@ private func resolvePath(_ input: String?, context: ChatContext) async throws ->
 
     // Default path logic
     if targetWorkspaceId == sessionWS.primary?.id && !input.contains("/") && !input.hasPrefix("Notes/")
-        && !input.hasPrefix("Personas/")
-    {
+        && !input.hasPrefix("Personas/") {
         return ResolvedPath(
             workspaceId: targetWorkspaceId, path: "Notes/\(input)", workspaceName: wsName)
     }
