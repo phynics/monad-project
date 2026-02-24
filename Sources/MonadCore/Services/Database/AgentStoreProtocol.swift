@@ -1,3 +1,5 @@
+/// Protocol for managing Agent definitions in persistent storage.
+
 import Foundation
 
 public protocol AgentStoreProtocol: Sendable {

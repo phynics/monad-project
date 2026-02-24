@@ -11,12 +11,8 @@ public struct WorkspaceToolWrapper: Tool, Sendable {
     public var requiresPermission: Bool { definition.requiresPermission }
     public var usageExample: String? { definition.usageExample }
 
-    public var parametersSchema: [String: Any] {
-        var schema: [String: Any] = [:]
-        for (key, value) in definition.parametersSchema {
-            schema[key] = value.value
-        }
-        return schema
+    public var parametersSchema: [String: AnyCodable] {
+        definition.parametersSchema
     }
 
     public init(workspace: any WorkspaceProtocol, definition: WorkspaceToolDefinition) {

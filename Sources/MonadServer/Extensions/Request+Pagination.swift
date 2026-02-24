@@ -1,3 +1,5 @@
+import MonadCore
+
 import Hummingbird
 import Foundation
 

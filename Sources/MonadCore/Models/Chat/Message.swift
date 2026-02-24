@@ -8,20 +8,20 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
     public let id: UUID
 
     /// The main response content (with <think> tags removed)
-    public let content: String
+    public var content: String
 
-    public let role: MessageRole
+    public var role: MessageRole
     public let timestamp: Date
 
     /// Chain of Thought reasoning extracted from <think>...</think> blocks
     /// Only present for models that support reasoning tags (e.g., DeepSeek R1, QwQ)
-    public let think: String?
+    public var think: String?
 
     /// Tool calls extracted from <tool_call>...</tool_call> blocks
-    public let toolCalls: [ToolCall]?
+    public var toolCalls: [ToolCall]?
 
     /// ID of the tool call this message is a response to (only for .tool role)
-    public let toolCallId: String?
+    public var toolCallId: String?
 
     /// Debug info - not persisted
     public var debugInfo: MessageDebugInfo?

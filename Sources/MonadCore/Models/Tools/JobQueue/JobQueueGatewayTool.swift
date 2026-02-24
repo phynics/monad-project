@@ -23,8 +23,8 @@ public final class JobQueueGatewayTool: ContextGatewayTool, Sendable {
 
     public func canExecute() async -> Bool { true }
 
-    public var parametersSchema: [String: Any] {
-        ["type": "object", "properties": [:]]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { _ in }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {

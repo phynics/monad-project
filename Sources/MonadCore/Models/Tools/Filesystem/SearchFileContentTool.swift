@@ -30,38 +30,29 @@ public struct SearchFileContentTool: Tool, Sendable {
         return true
     }
 
-    public var parametersSchema: [String: Any] {
-        return [
-            "type": "object",
-            "properties": [
-                "path": [
-                    "type": "string",
-                    "description": "The directory or file to search (default: .)"
-                ],
-                "pattern": [
-                    "type": "string",
-                    "description": "The text pattern to search for"
-                ],
-                "recursive": [
-                    "type": "boolean",
-                    "description": "Whether to search recursively (default: false)"
-                ]
-            ],
-            "required": ["pattern"]
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("path", description: "The directory or file to search (default: .)")
+            b.string("pattern", description: "The text pattern to search for", required: true)
+            b.boolean("recursive", description: "Whether to search recursively (default: false)")
+        }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let pattern = parameters["pattern"] as? String else {
-            let errorMsg = "Missing required parameter: pattern."
+        let params = ToolParameters(parameters)
+        let pattern: String
+        do {
+            pattern = try params.require("pattern", as: String.self)
+        } catch {
+            let errorMsg = error.localizedDescription
             if let example = usageExample {
                 return .failure("\(errorMsg) Example: \(example)")
             }
             return .failure(errorMsg)
         }
 
-        let pathString = parameters["path"] as? String ?? "."
-        let recursive = parameters["recursive"] as? Bool ?? false
+        let pathString = params.optional("path", as: String.self) ?? "."
+        let recursive = params.optional("recursive", as: Bool.self) ?? false
 
         let url: URL
         do {

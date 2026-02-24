@@ -42,6 +42,9 @@ public struct ChatDeltaMapper {
             case .success(let res):
                 statusStr = "success"
                 resultStr = res.output
+            case .failed(_, let error):
+                statusStr = "failure"
+                resultStr = "Error: \(error)"
             case .failure(let err):
                 statusStr = "failure"
                 resultStr = err.localizedDescription

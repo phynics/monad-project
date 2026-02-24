@@ -434,7 +434,7 @@ public final class ChatEngine: @unchecked Sendable {
             let userMsg = ConversationMessage(sessionId: sessionId, role: .user, content: message)
             try await persistenceService.saveMessage(userMsg)
         } else if toolOutputs?.isEmpty ?? true {
-            throw ToolError.invalidArgument("Message and tool outputs cannot both be empty")
+            throw ToolError.invalidArgument("input", expected: "message or toolOutputs", got: "empty")
         }
     }
 
@@ -517,7 +517,8 @@ public final class ChatEngine: @unchecked Sendable {
                 if result.success {
                     continuation.yield(.toolExecution(toolCallId: call.id, status: .success(result)))
                 } else {
-                    continuation.yield(.toolExecution(toolCallId: call.id, status: .failure(ToolError.executionFailed(result.error ?? "Unknown error"))))
+                    let errorMsg = result.error ?? "Unknown error"
+                    continuation.yield(.toolExecution(toolCallId: call.id, status: .failed(reference: toolRef, error: errorMsg)))
                 }
                 executionResults.append(.tool(.init(content: .textContent(.init(result.output)), toolCallId: call.id)))
             } catch let error as ToolError {
@@ -526,10 +527,10 @@ public final class ChatEngine: @unchecked Sendable {
                     break
                 }
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: \(error.localizedDescription)")), toolCallId: call.id)))
-                continuation.yield(.toolExecution(toolCallId: call.id, status: .failure(error)))
+                continuation.yield(.toolExecution(toolCallId: call.id, status: .failed(reference: toolRef, error: error.localizedDescription)))
             } catch {
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: \(error.localizedDescription)")), toolCallId: call.id)))
-                continuation.yield(.toolExecution(toolCallId: call.id, status: .failure(error)))
+                continuation.yield(.toolExecution(toolCallId: call.id, status: .failed(reference: toolRef, error: error.localizedDescription)))
             }
         }
         return (executionResults, requiresClientExecution, debugRecords)

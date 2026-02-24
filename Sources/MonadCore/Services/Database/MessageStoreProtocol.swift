@@ -1,3 +1,5 @@
+/// Protocol for managing chat history and message persistence.
+
 import Foundation
 
 public protocol MessageStoreProtocol: Sendable {

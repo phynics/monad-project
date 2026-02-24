@@ -1,7 +1,11 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadCore
 
-final class SystemStatusTests: XCTestCase {
+@Suite("System Status Tests")
+struct SystemStatusTests {
+    
+    @Test("StatusResponse Serialization")
     func testStatusResponseSerialization() throws {
         let component = ComponentStatus(status: .ok, details: ["provider": "openai"])
         let response = StatusResponse(
@@ -17,26 +21,27 @@ final class SystemStatusTests: XCTestCase {
         let decoder = JSONDecoder()
         let decoded = try decoder.decode(StatusResponse.self, from: data)
 
-        XCTAssertEqual(decoded.status, .ok)
-        XCTAssertEqual(decoded.version, "1.0.0")
-        XCTAssertEqual(decoded.uptime, 3600)
-        XCTAssertEqual(decoded.components["ai_provider"]?.status, .ok)
-        XCTAssertEqual(decoded.components["ai_provider"]?.details?["provider"], "openai")
+        #expect(decoded.status == .ok)
+        #expect(decoded.version == "1.0.0")
+        #expect(decoded.uptime == 3600)
+        #expect(decoded.components["ai_provider"]?.status == .ok)
+        #expect(decoded.components["ai_provider"]?.details?["provider"] == "openai")
     }
 
+    @Test("HealthCheckable Protocol")
     func testHealthCheckableProtocol() async throws {
         struct MockService: HealthCheckable {
-            func getHealthStatus() async -> MonadCore.HealthStatus { .ok }
+            func getHealthStatus() async -> HealthStatus { .ok }
             func getHealthDetails() async -> [String: String]? { ["test": "true"] }
-            func checkHealth() async -> MonadCore.HealthStatus { .ok }
+            func checkHealth() async -> HealthStatus { .ok }
         }
 
         let service = MockService()
         let status = await service.checkHealth()
         let currentStatus = await service.getHealthStatus()
         let currentDetails = await service.getHealthDetails()
-        XCTAssertEqual(status, .ok)
-        XCTAssertEqual(currentStatus, .ok)
-        XCTAssertEqual(currentDetails?["test"], "true")
+        #expect(status == .ok)
+        #expect(currentStatus == .ok)
+        #expect(currentDetails?["test"] == "true")
     }
 }

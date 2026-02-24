@@ -248,15 +248,26 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
 
     /// Validate configuration
     public var isValid: Bool {
-        guard let config = providers[activeProvider] else { return false }
+        (try? validate()) != nil
+    }
 
-        let modelsValid =
-            !config.modelName.isEmpty && !config.utilityModel.isEmpty && !config.fastModel.isEmpty
-        if activeProvider == .ollama {
-            return !config.endpoint.isEmpty && modelsValid && isValidEndpoint(config.endpoint)
+    /// Validates the LLM configuration and throws descriptive errors on failure.
+    public func validate() throws {
+        guard let config = providers[activeProvider] else {
+            throw ConfigurationError.invalidConfiguration(reason: "Active provider '\(activeProvider.rawValue)' has no configuration.")
         }
-        return !config.endpoint.isEmpty && modelsValid && !config.apiKey.isEmpty
-            && isValidEndpoint(config.endpoint)
+
+        if config.modelName.isEmpty {
+            throw ConfigurationError.invalidConfiguration(reason: "Primary model name is empty for \(activeProvider.rawValue).")
+        }
+
+        if activeProvider != .ollama && config.apiKey.isEmpty {
+            throw ConfigurationError.missingAPIKey(activeProvider)
+        }
+
+        if !isValidEndpoint(config.endpoint) {
+            throw ConfigurationError.invalidEndpoint(config.endpoint)
+        }
     }
 
     /// Validate endpoint URL format
@@ -308,17 +319,42 @@ public struct MCPServerConfiguration: Codable, Identifiable, Hashable, Sendable 
 
 // ConfigurationStorage moved to Services/ConfigurationStorage.swift
 
+/// Root configuration object for Monad.
+public struct Configuration: Codable, Sendable, Equatable {
+    public var llm: LLMConfiguration
+    
+    public init(llm: LLMConfiguration = .init()) {
+        self.llm = llm
+    }
+    
+    public static var `default`: Configuration {
+        Configuration(llm: .init())
+    }
+    
+    /// Validates the entire configuration.
+    /// Throws ``ConfigurationError`` if any setting is invalid.
+    public func validate() throws {
+        try llm.validate()
+    }
+}
+
 // MARK: - Errors
 
 public enum ConfigurationError: LocalizedError {
-    case invalidConfiguration
+    case invalidConfiguration(reason: String)
+    case missingAPIKey(LLMProvider)
+    case invalidEndpoint(String)
     case noBackupFound
     case importFailed
 
     public var errorDescription: String? {
         switch self {
-        case .invalidConfiguration:
-            return "Invalid configuration: Please check all fields are properly filled."
+        case .invalidConfiguration(let reason):
+            return "Invalid configuration: \(reason)"
+        case .missingAPIKey(let provider):
+            return "Missing API key for provider: \(provider.rawValue)"
+        case .invalidEndpoint(let endpoint):
+            return "Invalid endpoint URL: \(endpoint)"
         case .noBackupFound:
             return "No backup configuration found"
         case .importFailed:

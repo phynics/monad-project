@@ -1,10 +1,33 @@
 import Foundation
 
-public func getTestWorkspaceRoot() -> URL {
-    let fileManager = FileManager.default
-    // Use a robust temp directory for tests if possible, but keeping original logic for now
-    let currentDir = URL(fileURLWithPath: fileManager.currentDirectoryPath)
-    let testWorkspacesDir = currentDir.appendingPathComponent(".test_workspaces", isDirectory: true)
-    try? fileManager.createDirectory(at: testWorkspacesDir, withIntermediateDirectories: true)
-    return testWorkspacesDir
+#if DEBUG
+extension AsyncStream {
+    /// Collects all elements of the stream into an array.
+    /// Only works for finite streams.
+    public func collect() async -> [Element] {
+        var result: [Element] = []
+        for await element in self {
+            result.append(element)
+        }
+        return result
+    }
 }
+
+extension AsyncThrowingStream {
+    /// Collects all elements of the stream into an array.
+    /// Only works for finite streams.
+    public func collect() async throws -> [Element] {
+        var result: [Element] = []
+        for try await element in self {
+            result.append(element)
+        }
+        return result
+    }
+}
+
+public func getTestWorkspaceRoot() -> URL {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("com.monad.test-workspaces")
+    try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+    return url
+}
+#endif

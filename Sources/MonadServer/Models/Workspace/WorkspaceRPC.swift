@@ -1,3 +1,5 @@
+import MonadCore
+
 import Foundation
 
 /// Request object for executing a tool remotely

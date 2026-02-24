@@ -1,3 +1,5 @@
+/// Protocol for managing conversation session lifecycle and metadata.
+
 import Foundation
 
 public protocol SessionPersistenceProtocol: Sendable {

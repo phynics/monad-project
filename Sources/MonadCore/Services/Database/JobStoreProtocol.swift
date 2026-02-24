@@ -1,3 +1,5 @@
+/// Protocol for managing background jobs and the subagent task queue.
+
 import Foundation
 
 public protocol JobStoreProtocol: Sendable {

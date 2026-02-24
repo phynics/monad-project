@@ -1,3 +1,5 @@
+/// Protocol for managing semantic memories and vector search.
+
 import Foundation
 
 public protocol MemoryStoreProtocol: Sendable {

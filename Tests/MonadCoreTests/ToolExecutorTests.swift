@@ -12,7 +12,7 @@ import Testing
         let requiresPermission: Bool = false
         let shouldFail: Bool
 
-        var parametersSchema: [String: Any] { [:] }
+        var parametersSchema: [String: AnyCodable] { [:] }
 
         func canExecute() async -> Bool { true }
 

@@ -1,13 +1,14 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadCore
 
-final class FilesystemToolsTests: XCTestCase {
-    var tempURL: URL!
+@Suite("Filesystem Tools Tests")
+struct FilesystemToolsTests {
+    let tempURL: URL
 
-    override func setUp() {
-        super.setUp()
+    init() throws {
         tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try! FileManager.default.createDirectory(at: tempURL, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: tempURL, withIntermediateDirectories: true)
 
         // Structure:
         // /root
@@ -16,134 +17,135 @@ final class FilesystemToolsTests: XCTestCase {
         //   - /subdir
         //     - nested.txt ("Nested Hello")
 
-        try! "Hello World".write(to: tempURL.appendingPathComponent("file1.txt"), atomically: true, encoding: .utf8)
-        try! "Markdown content".write(to: tempURL.appendingPathComponent("file2.md"), atomically: true, encoding: .utf8)
+        try "Hello World".write(to: tempURL.appendingPathComponent("file1.txt"), atomically: true, encoding: .utf8)
+        try "Markdown content".write(to: tempURL.appendingPathComponent("file2.md"), atomically: true, encoding: .utf8)
 
         let subdir = tempURL.appendingPathComponent("subdir")
-        try! FileManager.default.createDirectory(at: subdir, withIntermediateDirectories: true)
-        try! "Nested Hello".write(to: subdir.appendingPathComponent("nested.txt"), atomically: true, encoding: .utf8)
+        try FileManager.default.createDirectory(at: subdir, withIntermediateDirectories: true)
+        try "Nested Hello".write(to: subdir.appendingPathComponent("nested.txt"), atomically: true, encoding: .utf8)
     }
 
-    override func tearDown() {
+    // Cleanup via deinit
+    func cleanup() {
         try? FileManager.default.removeItem(at: tempURL)
-        super.tearDown()
     }
 
+    @Test("List Directory Tool")
     func testListDirectoryTool() async throws {
+        defer { cleanup() }
         let tool = ListDirectoryTool(currentDirectory: tempURL.path, jailRoot: tempURL.path)
         let result = try await tool.execute(parameters: ["path": "."])
 
-        XCTAssertTrue(result.success, "Tool execution failed: \(result.error ?? "unknown")")
+        #expect(result.success)
         let content = result.output
 
-        XCTAssertTrue(content.contains("file1.txt"))
-        XCTAssertTrue(content.contains("file2.md"))
-        XCTAssertTrue(content.contains("subdir"))
-        // Should NOT contain nested files (shallow list)
-        XCTAssertFalse(content.contains("nested.txt"))
+        #expect(content.contains("file1.txt"))
+        #expect(content.contains("file2.md"))
+        #expect(content.contains("subdir"))
+        #expect(!content.contains("nested.txt"))
     }
 
+    @Test("Read File Tool")
     func testReadFileTool() async throws {
+        defer { cleanup() }
         let tool = ReadFileTool(currentDirectory: tempURL.path, jailRoot: tempURL.path)
         let result = try await tool.execute(parameters: ["path": "file1.txt"])
 
-        XCTAssertTrue(result.success, "Tool execution failed: \(result.error ?? "unknown")")
-        XCTAssertEqual(result.output, "Hello World")
+        #expect(result.success)
+        #expect(result.output == "Hello World")
     }
 
+    @Test("Inspect File Tool")
     func testInspectFileTool() async throws {
+        defer { cleanup() }
         let tool = InspectFileTool(currentDirectory: tempURL.path, jailRoot: tempURL.path)
         let result = try await tool.execute(parameters: ["path": "file2.md"])
 
-        XCTAssertTrue(result.success, "Tool execution failed: \(result.error ?? "unknown")")
+        #expect(result.success)
         let content = result.output
 
-        // Output is typically "/path/to/file: ASCII text" or "UTF-8 text"
-        XCTAssertTrue(content.contains("file2.md"))
-        XCTAssertTrue(content.contains("text"))
+        #expect(content.contains("file2.md"))
+        #expect(content.contains("text"))
     }
 
+    @Test("Find File Tool")
     func testFindFileTool() async throws {
+        defer { cleanup() }
         let tool = FindFileTool(currentDirectory: tempURL.path, jailRoot: tempURL.path)
 
-        // Search for 'nested.txt'
         let result = try await tool.execute(parameters: ["path": ".", "pattern": "nested"])
 
-        XCTAssertTrue(result.success, "Tool execution failed: \(result.error ?? "unknown")")
+        #expect(result.success)
         let content = result.output
 
-        XCTAssertTrue(content.contains("subdir/nested.txt"))
+        #expect(content.contains("subdir/nested.txt"))
     }
 
+    @Test("Search File Content Tool")
     func testSearchFileContentTool() async throws {
+        defer { cleanup() }
         let tool = SearchFileContentTool(currentDirectory: tempURL.path, jailRoot: tempURL.path)
 
-        // Search for "Hello"
-        // 1. Non-recursive (should find file1.txt only)
+        // 1. Non-recursive
         let result1 = try await tool.execute(parameters: ["path": ".", "pattern": "Hello", "recursive": false])
-        XCTAssertTrue(result1.success, "Tool execution failed: \(result1.error ?? "unknown")")
-        let content1 = result1.output
+        #expect(result1.success)
+        #expect(result1.output.contains("file1.txt"))
+        #expect(!result1.output.contains("nested.txt"))
 
-        XCTAssertTrue(content1.contains("file1.txt"))
-        XCTAssertFalse(content1.contains("nested.txt"))
-
-        // 2. Recursive (should find both)
+        // 2. Recursive
         let result2 = try await tool.execute(parameters: ["path": ".", "pattern": "Hello", "recursive": true])
-        XCTAssertTrue(result2.success, "Tool execution failed: \(result2.error ?? "unknown")")
-        let content2 = result2.output
-
-        XCTAssertTrue(content2.contains("file1.txt"))
-        XCTAssertTrue(content2.contains("nested.txt"))
+        #expect(result2.success)
+        #expect(result2.output.contains("file1.txt"))
+        #expect(result2.output.contains("nested.txt"))
     }
 
+    @Test("Search Files Tool")
     func testSearchFilesTool() async throws {
+        defer { cleanup() }
         let tool = SearchFilesTool(currentDirectory: tempURL.path, jailRoot: tempURL.path)
 
-        // Search for "Hello"
         let result = try await tool.execute(parameters: ["pattern": "Hello"])
-        XCTAssertTrue(result.success, "Tool execution failed: \(result.error ?? "unknown")")
+        #expect(result.success)
         let content = result.output
 
-        XCTAssertTrue(content.contains("file1.txt"))
-        XCTAssertTrue(content.contains("subdir/nested.txt"))
+        #expect(content.contains("file1.txt"))
+        #expect(content.contains("subdir/nested.txt"))
 
-        // Test with include pattern
         let resultInclude = try await tool.execute(parameters: ["pattern": "Hello", "include": "*.txt"])
-        XCTAssertTrue(resultInclude.success)
-        XCTAssertTrue(resultInclude.output.contains("file1.txt"))
-        XCTAssertFalse(resultInclude.output.contains("file2.md"))
+        #expect(resultInclude.success)
+        #expect(resultInclude.output.contains("file1.txt"))
+        #expect(!resultInclude.output.contains("file2.md"))
     }
 
+    @Test("Path Traversal Protection")
     func testPathTraversalProtection() async throws {
+        defer { cleanup() }
         let tool = ReadFileTool(currentDirectory: tempURL.path, jailRoot: tempURL.path)
 
-        // Attempt to read a file outside the root using ..
         let outsideFile = FileManager.default.temporaryDirectory.appendingPathComponent("outside_\(UUID().uuidString).txt")
-        try! "Secret Data".write(to: outsideFile, atomically: true, encoding: .utf8)
+        try "Secret Data".write(to: outsideFile, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: outsideFile) }
 
         let relativePathOutside = "../\(outsideFile.lastPathComponent)"
 
         let result = try await tool.execute(parameters: ["path": relativePathOutside])
 
-        // This should fail once we implement protection
-        XCTAssertFalse(result.success, "Tool should not allow access outside root: \(result.output)")
-        XCTAssertTrue(result.error?.contains("Access denied") ?? false, "Error should mention access denied")
+        #expect(!result.success)
+        #expect(result.error?.contains("Access denied") == true)
     }
 
+    @Test("Jailed Relative Path")
     func testJailedRelativePath() async throws {
+        defer { cleanup() }
         let subdir = tempURL.appendingPathComponent("subdir")
         let tool = ListDirectoryTool(currentDirectory: subdir.path, jailRoot: tempURL.path)
 
-        // List parent directory from subdir using ..
         let result = try await tool.execute(parameters: ["path": ".."])
 
-        // This should SUCCEED because it's still within jailRoot
-        XCTAssertTrue(result.success, "Should allow .. if within jail: \(result.error ?? "")")
-        XCTAssertTrue(result.output.contains("file1.txt"), "Should see file1.txt in parent")
+        #expect(result.success)
+        #expect(result.output.contains("file1.txt"))
 
-        // Attempt to list outside jailRoot from subdir
         let resultOutside = try await tool.execute(parameters: ["path": "../../.."])
-        XCTAssertFalse(resultOutside.success, "Should not allow escaping jailRoot via relative path")
+        #expect(!resultOutside.success)
     }
 }

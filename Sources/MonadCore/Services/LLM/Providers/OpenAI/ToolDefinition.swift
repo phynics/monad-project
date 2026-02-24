@@ -49,12 +49,11 @@ public struct GetCurrentTimeTool: ToolDefinition {
     public init() {}
 
     public func execute(arguments: [String: Any]) async throws -> String {
-        guard let timezone = arguments["timezone"] as? String else {
-            throw ToolError.missingArgument("timezone")
-        }
+        let params = ToolParameters(arguments)
+        let timezone = try params.require("timezone", as: String.self)
 
         guard let tz = TimeZone(identifier: timezone) else {
-            throw ToolError.invalidArgument("Invalid timezone identifier")
+            throw ToolError.invalidArgument("timezone", expected: "valid timezone identifier", got: timezone)
         }
 
         let formatter = DateFormatter()
@@ -83,9 +82,8 @@ public struct CalculatorTool: ToolDefinition {
     public init() {}
 
     public func execute(arguments: [String: Any]) async throws -> String {
-        guard let expression = arguments["expression"] as? String else {
-            throw ToolError.missingArgument("expression")
-        }
+        let params = ToolParameters(arguments)
+        let expression = try params.require("expression", as: String.self)
 
         // Simple calculator using NSExpression
         let expr = NSExpression(format: expression)

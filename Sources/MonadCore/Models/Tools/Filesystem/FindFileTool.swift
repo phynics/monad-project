@@ -30,34 +30,27 @@ public struct FindFileTool: Tool, Sendable {
         return true
     }
 
-    public var parametersSchema: [String: Any] {
-        return [
-            "type": "object",
-            "properties": [
-                "path": [
-                    "type": "string",
-                    "description": "The root directory to start searching (default: .)"
-                ],
-                "pattern": [
-                    "type": "string",
-                    "description":
-                        "The filename pattern to match (contains check, case insensitive)"
-                ]
-            ],
-            "required": ["pattern"]
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("path", description: "The root directory to start searching (default: .)")
+            b.string("pattern", description: "The filename pattern to match (contains check, case insensitive)", required: true)
+        }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let pattern = parameters["pattern"] as? String else {
-            let errorMsg = "Missing required parameter: pattern."
+        let params = ToolParameters(parameters)
+        let pattern: String
+        do {
+            pattern = try params.require("pattern", as: String.self)
+        } catch {
+            let errorMsg = error.localizedDescription
             if let example = usageExample {
                 return .failure("\(errorMsg) Example: \(example)")
             }
             return .failure(errorMsg)
         }
 
-        let pathString = parameters["path"] as? String ?? "."
+        let pathString = params.optional("path", as: String.self) ?? "."
         let url: URL
         do {
             url = try PathSanitizer.safelyResolve(path: pathString, within: currentDirectory, jailRoot: jailRoot)

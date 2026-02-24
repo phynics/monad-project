@@ -30,34 +30,25 @@ public struct SearchFilesTool: Tool, Sendable {
         return true
     }
 
-    public var parametersSchema: [String: Any] {
-        return [
-            "type": "object",
-            "properties": [
-                "pattern": [
-                    "type": "string",
-                    "description": "The text pattern to search for (regex supported)"
-                ],
-                "path": [
-                    "type": "string",
-                    "description": "The directory to search within (default: current directory)"
-                ],
-                "include": [
-                    "type": "string",
-                    "description": "Optional glob pattern for files to include (e.g. '*.swift')"
-                ]
-            ],
-            "required": ["pattern"]
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("pattern", description: "The text pattern to search for (regex supported)", required: true)
+            b.string("path", description: "The directory to search within (default: current directory)")
+            b.string("include", description: "Optional glob pattern for files to include (e.g. '*.swift')")
+        }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let pattern = parameters["pattern"] as? String else {
-            return .failure("Missing required parameter: pattern.")
+        let params = ToolParameters(parameters)
+        let pattern: String
+        do {
+            pattern = try params.require("pattern", as: String.self)
+        } catch {
+            return .failure(error.localizedDescription)
         }
 
-        let pathString = parameters["path"] as? String ?? "."
-        let includePattern = parameters["include"] as? String
+        let pathString = params.optional("path", as: String.self) ?? "."
+        let includePattern = params.optional("include", as: String.self)
 
         let url: URL
         do {

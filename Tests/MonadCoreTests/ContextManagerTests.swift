@@ -1,159 +1,125 @@
-import XCTest
-
+import Testing
+import Foundation
 @testable import MonadCore
 
-final class ContextManagerTests: XCTestCase {
-    var mockPersistence: MockPersistenceService!
-    var mockEmbedding: MockEmbeddingService!
-    var contextManager: ContextManager!
-
-    override func setUp() async throws {
-        mockPersistence = MockPersistenceService()
-        mockEmbedding = MockEmbeddingService()
-        contextManager = ContextManager(
-            persistenceService: mockPersistence, embeddingService: mockEmbedding, workspace: nil)
-    }
-
+@Suite("Context Manager Tests")
+struct ContextManagerTests {
+    
+    @Test("Gather Context: Semantic Retrieval")
     func testGatherContextSemanticRetrieval() async throws {
-        // Setup
-        let expectedMemory = Memory(
+        let mockPersistence = MockPersistenceService()
+        let mockEmbedding = MockEmbeddingService()
+        let contextManager = ContextManager(
+            persistenceService: mockPersistence, 
+            embeddingService: mockEmbedding, 
+            workspace: nil
+        )
+
+        let expectedMemory = Memory.fixture(
             title: "SwiftUI Guide",
             content: "SwiftUI is declarative.",
-            tags: ["swiftui"],
-            embedding: [0.1, 0.2, 0.3]
+            tags: ["swiftui"]
         )
         mockPersistence.memories = [expectedMemory]
         mockPersistence.searchResults = [(expectedMemory, 0.9)]
 
-        // Execute
-        // Execute
         let stream = await contextManager.gatherContext(for: "How to use SwiftUI?")
-        var context: ContextData?
-        for try await event in stream {
-            if case .complete(let data) = event {
-                context = data
-            }
-        }
-
+        let events = try await stream.collect()
+        
+        let context = events.compactMap { if case .complete(let data) = $0 { return data } else { return nil } }.first
+        
         guard let context = context else {
-            XCTFail("Context gathering failed to produce result")
+            Issue.record("Context gathering failed to produce result")
             return
         }
 
-        // Verify
-        XCTAssertEqual(context.memories.count, 1)
-        XCTAssertEqual(context.memories.first?.memory.id, expectedMemory.id)
-        XCTAssertEqual(context.memories.first?.similarity ?? 0, 0.9, accuracy: 0.001)
-        XCTAssertEqual(mockEmbedding.lastInput, "How to use SwiftUI?")
+        #expect(context.memories.count == 1)
+        #expect(context.memories.first?.memory.id == expectedMemory.id)
+        #expect(context.memories.first?.similarity ?? 0 == 0.9)
+        #expect(mockEmbedding.lastInput == "How to use SwiftUI?")
     }
 
+    @Test("Gather Context: Uses History for Tags but Query for Embedding")
     func testGatherContextUsesHistoryForTagsButQueryForEmbedding() async throws {
-        // Setup
-        let memory = Memory(
-            title: "Project Alpha",
-            content: "Details about Alpha",
-            tags: ["alpha"],
-            embedding: [0.1, 0.2, 0.3]
+        let mockPersistence = MockPersistenceService()
+        let mockEmbedding = MockEmbeddingService()
+        let contextManager = ContextManager(
+            persistenceService: mockPersistence, 
+            embeddingService: mockEmbedding, 
+            workspace: nil
         )
+
+        let memory = Memory.fixture(title: "Project Alpha", tags: "alpha")
         mockPersistence.memories = [memory]
         mockPersistence.searchResults = [(memory, 0.85)]
 
         let tagGenerator: @Sendable (String) async throws -> [String] = { text in
-            if text.contains("Previous") {
-                return ["alpha"]
-            }
+            if text.contains("Previous") { return ["alpha"] }
             return []
         }
 
-        let history = [Message(content: "Previous message", role: .user)]
+        let history = [Message.fixture(content: "Previous message")]
 
-        // Execute
-        // Execute
         let stream = await contextManager.gatherContext(
             for: "Current query",
             history: history,
             tagGenerator: tagGenerator
         )
-        var context: ContextData?
-        for try await event in stream {
-            if case .complete(let data) = event {
-                context = data
-            }
-        }
+        let events = try await stream.collect()
+        let context = events.compactMap { if case .complete(let data) = $0 { return data } else { return nil } }.first
 
         guard let context = context else {
-            XCTFail("Context gathering failed to produce result")
+            Issue.record("Context gathering failed to produce result")
             return
         }
 
-        // Verify
-        XCTAssertTrue(context.augmentedQuery?.contains("Previous message") == true)
-        XCTAssertEqual(mockEmbedding.lastInput, "Current query")  // Embedding only uses query
+        #expect(context.augmentedQuery?.contains("Previous message") == true)
+        #expect(mockEmbedding.lastInput == "Current query")
     }
 
+    @Test("Ranking Logic with Tag Boost")
     func testRankingLogicWithTagBoost() async throws {
-        // Setup
-        let memory1 = Memory(
-            title: "Tag Match", content: "Matches tag", tags: ["swift"], embedding: [0.1])
-        let memory2 = Memory(
-            title: "Semantic Match", content: "Matches vector", tags: [], embedding: [0.9])
+        let mockPersistence = MockPersistenceService()
+        let mockEmbedding = MockEmbeddingService()
+        let contextManager = ContextManager(
+            persistenceService: mockPersistence, 
+            embeddingService: mockEmbedding, 
+            workspace: nil
+        )
 
-        // Mock persistence behavior:
-        // searchMemories(matchingAnyTag:) returns memory1
-        // searchMemories(embedding:) returns memory2
+        let memory1 = Memory.fixture(title: "Tag Match", tags: "swift")
+        let memory2 = Memory.fixture(title: "Semantic Match")
 
-        // We need to subclass or customize MockPersistenceService to return specific results for specific calls
-        // Or simpler: MockPersistenceService just returns what's in its arrays.
-        // But searchMemories(matchingAnyTag) filters 'memories' array in our mock.
-        // searchMemories(embedding) returns 'searchResults'.
-
-        mockPersistence.memories = [memory1]  // Will be found by tag search
-        mockPersistence.searchResults = [(memory2, 0.8)]  // Will be found by vector search
+        mockPersistence.memories = [memory1]
+        mockPersistence.searchResults = [(memory2, 0.8)]
 
         let tagGenerator: @Sendable (String) async throws -> [String] = { _ in ["swift"] }
 
-        // Execute
-        // Execute
         let stream = await contextManager.gatherContext(
             for: "swift query",
             tagGenerator: tagGenerator
         )
-        var context: ContextData?
-        for try await event in stream {
-            if case .complete(let data) = event {
-                context = data
-            }
-        }
+        let events = try await stream.collect()
+        let context = events.compactMap { if case .complete(let data) = $0 { return data } else { return nil } }.first
 
         guard let context = context else {
-            XCTFail("Context gathering failed to produce result")
+            Issue.record("Context gathering failed to produce result")
             return
         }
 
-        // Verify
-        // ContextManager ranks by similarity. Tag matches get a +2.0 boost.
-        // Memory1 (Tag Match): Base sim (computed by VectorMath on mockEmbedding vs memory1.embedding) + 2.0
-        // Memory2 (Semantic Match): 0.8
-
-        // MockEmbedding default is [0.1, 0.2, 0.3]. Memory1 is [0.1]. Dimensions mismatch?
-        // Let's ensure embeddings align for VectorMath if it runs.
-        // Memory1 (Tag Match): Base sim 0.0 (dimension mismatch) + 0.5 boost = 0.5
-        // Memory2 (Semantic Match): 0.8
-
-        XCTAssertEqual(context.memories.count, 2)
-
-        // Memory2 should be first because 0.8 > 0.5 (Semantic wins with reduced boost)
-        XCTAssertEqual(context.memories.first?.memory.title, "Semantic Match")
-
-        // Memory1 should be second
+        #expect(context.memories.count == 2)
+        #expect(context.memories.first?.memory.title == "Semantic Match")
+        
         let tagMatch = context.memories.last
-        XCTAssertEqual(tagMatch?.memory.title, "Tag Match")
-        // Verify boost was applied (0.0 + 0.5)
-        XCTAssertEqual(tagMatch?.similarity ?? 0, 0.5, accuracy: 0.1)
+        #expect(tagMatch?.memory.title == "Tag Match")
+        #expect(tagMatch?.similarity ?? 0 == 0.5) // 0.0 base + 0.5 boost
     }
 
+    @Test("Filesystem Notes Retrieval")
     func testFilesystemNotesRetrieval() async throws {
-        // 1. Setup workspace with a note file
+        let mockPersistence = MockPersistenceService()
+        let mockEmbedding = MockEmbeddingService()
+        
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let notesDir = tempURL.appendingPathComponent("Notes", isDirectory: true)
         try FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true)
@@ -166,42 +132,31 @@ final class ContextManagerTests: XCTestCase {
         """
         try noteContent.write(to: notesDir.appendingPathComponent("FSNote.md"), atomically: true, encoding: .utf8)
 
-        // Create LocalWorkspace
-        let ref = WorkspaceReference(
-            id: UUID(),
+        let ref = WorkspaceReference.fixture(
             uri: WorkspaceURI(host: "monad-server", path: tempURL.path),
-            hostType: .server,
             rootPath: tempURL.path
         )
         let workspace = try MockLocalWorkspace(reference: ref)
 
-        // 2. Initialize ContextManager with workspace
         let manager = ContextManager(
             persistenceService: mockPersistence,
             embeddingService: mockEmbedding,
             workspace: workspace
         )
 
-        // 3. Execute
         let stream = await manager.gatherContext(for: "some query")
-        var context: ContextData?
-        for try await event in stream {
-            if case .complete(let data) = event {
-                context = data
-            }
-        }
+        let events = try await stream.collect()
+        let context = events.compactMap { if case .complete(let data) = $0 { return data } else { return nil } }.first
 
         guard let context = context else {
-            XCTFail("Context gathering failed to produce result")
+            Issue.record("Context gathering failed to produce result")
             return
         }
 
-        // 4. Verify
-        XCTAssertEqual(context.notes.count, 1)
+        #expect(context.notes.count == 1)
         let note = context.notes.first
-        XCTAssertEqual(note?.name, "FSNote")
-        // LocalWorkspace returns relative path from root
-        XCTAssertEqual(note?.source, "Notes/FSNote.md")
-        XCTAssertEqual(note?.content, noteContent)
+        #expect(note?.name == "FSNote")
+        #expect(note?.source == "Notes/FSNote.md")
+        #expect(note?.content == noteContent)
     }
 }

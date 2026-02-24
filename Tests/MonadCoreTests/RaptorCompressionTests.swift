@@ -1,12 +1,17 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadCore
 import OpenAI
 import MonadPrompt
 
 // Mock for LLMServiceProtocol
 actor RaptorMockLLMService: LLMServiceProtocol {
-    var isConfigured: Bool = true
-    var configuration: LLMConfiguration = .openAI
+    var isConfigured: Bool { get async { true } }
+    var configuration: LLMConfiguration { 
+        get async { 
+            .init(activeProvider: .openAI, providers: [:], mcpServers: [], memoryContextLimit: 0, documentContextLimit: 0, version: 1) 
+        } 
+    }
 
     // Stub response
     var summaryResponse: String = "Summary content"
@@ -27,15 +32,15 @@ actor RaptorMockLLMService: LLMServiceProtocol {
     }
 
     func chatStreamWithContext(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [AnyTool], systemInstructions: String?, responseFormat: ChatQuery.ResponseFormat?, useFastModel: Bool) async -> (stream: AsyncThrowingStream<ChatStreamResult, Error>, rawPrompt: String, structuredContext: [String: String]) {
-        fatalError("Not implemented")
+        return (AsyncThrowingStream { _ in }, "", [:])
     }
 
     func chatStream(messages: [ChatQuery.ChatCompletionMessageParam], tools: [ChatQuery.ChatCompletionToolParam]?, responseFormat: ChatQuery.ResponseFormat?) async -> AsyncThrowingStream<ChatStreamResult, Error> {
-        fatalError("Not implemented")
+        return AsyncThrowingStream { _ in }
     }
 
     func buildPrompt(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [AnyTool], systemInstructions: String?) async -> (messages: [ChatQuery.ChatCompletionMessageParam], rawPrompt: String, structuredContext: [String: String]) {
-        fatalError("Not implemented")
+        return ([], "", [:])
     }
 
     func buildContext(userQuery: String, contextNotes: [ContextFile], memories: [Memory], chatHistory: [Message], tools: [AnyTool], systemInstructions: String?) async -> Prompt {
@@ -52,99 +57,68 @@ actor RaptorMockLLMService: LLMServiceProtocol {
     func checkHealth() async -> MonadCore.HealthStatus { .ok }
 }
 
+@Suite("Raptor Compression Tests")
 @MainActor
-final class RaptorCompressionTests: XCTestCase {
-    var compressor: ContextCompressor!
-    var mockLLM: RaptorMockLLMService!
+struct RaptorCompressionTests {
 
-    override func setUp() async throws {
-        compressor = ContextCompressor()
-        mockLLM = RaptorMockLLMService()
-    }
-
+    @Test("Summarize Tool Interactions")
     func testSummarizeToolInteractions() async {
-        // Create a history with tool interactions older than buffer (buffer=10)
-        // We need > 10 messages.
-
+        let compressor = ContextCompressor()
         var messages: [Message] = []
 
-        // 0-4: Simple chat
         for i in 0..<5 {
-            messages.append(Message(content: "Msg \(i)", role: i % 2 == 0 ? .user : .assistant))
+            messages.append(Message.fixture(content: "Msg \(i)"))
         }
 
-        // 5: Assistant Tool Call
         let toolCall = ToolCall(name: "test_tool", arguments: [:])
-        let msg5 = Message(content: "Calling tool", role: .assistant, toolCalls: [toolCall])
+        var msg5 = Message.fixture(role: .assistant, content: "Calling tool")
+        msg5.toolCalls = [toolCall]
         messages.append(msg5)
 
-        // 6: Tool Result
-        let msg6 = Message(content: "Tool Result", role: .tool, toolCallId: toolCall.id.uuidString)
-        messages.append(msg6)
+        let msg6 = Message.fixture(role: .tool, content: "Tool Result")
+        var tcMsg6 = msg6
+        tcMsg6.toolCallId = toolCall.id.uuidString
+        messages.append(tcMsg6)
 
-        // 7-16: Filler to push 5/6 out of recent buffer (10 messages)
-        // Messages 7 to 16 are 10 messages.
-        // So 0..6 are "older".
         for i in 7...16 {
-            messages.append(Message(content: "Recent \(i)", role: .user))
+            messages.append(Message.fixture(content: "Recent \(i)"))
         }
 
         let collapsed = await compressor.summarizeToolInteractions(in: messages)
 
-        // Expected:
-        // Msg 0-4 (5 messages)
-        // Msg 5 and 6 should be collapsed into 1 summary message
-        // Msg 7-16 (10 messages) preserved
-        // Total = 5 + 1 + 10 = 16 messages. Original was 17.
+        #expect(collapsed.count == 16)
 
-        XCTAssertEqual(collapsed.count, 16)
-
-        // Verify the summary
         let summaryMsg = collapsed[5]
-        XCTAssertEqual(summaryMsg.role, .summary)
-        XCTAssertTrue(summaryMsg.content.contains("Tool Interaction"))
+        #expect(summaryMsg.role == .summary)
+        #expect(summaryMsg.content.contains("Tool Interaction"))
 
-        // Verify continuity
-        XCTAssertEqual(collapsed[0].content, "Msg 0")
-        XCTAssertEqual(collapsed[6].content, "Recent 7")
+        #expect(collapsed[0].content == "Msg 0")
+        #expect(collapsed[6].content == "Recent 7")
     }
 
+    @Test("Recursive Summarize")
     func testRecursiveSummarize() async {
-        // Create enough messages to trigger summarization
-        // Recursive summarization tries to fit targetTokens.
-
-        // Create 20 "older" messages (outside buffer of 10)
-        // Total 30 messages.
+        let compressor = ContextCompressor()
+        let mockLLM = RaptorMockLLMService()
+        
         var messages: [Message] = []
         for i in 0..<30 {
-             messages.append(Message(content: "Message content \(i)", role: .user))
+             messages.append(Message.fixture(content: "Message content \(i)"))
         }
-
-        // Assume each message is ~3-4 tokens. 30 messages ~ 100 tokens.
-        // Let's set target very low to force compression.
-        // Recent buffer (10 messages) will take ~30 tokens.
-        // We set target to 40 tokens. So older 20 messages must compress to ~10 tokens.
 
         let compressed = await compressor.recursiveSummarize(
             messages: messages,
-            targetTokens: 40, // Very tight constraint
+            targetTokens: 40,
             llmService: mockLLM
         )
 
-        // We expect older messages to be summarized.
-        // Recent 10 messages should be preserved.
-        // Older messages should be replaced by summaries.
-
         let recentStart = compressed.count - 10
-        XCTAssertTrue(recentStart > 0)
+        #expect(recentStart > 0)
 
-        // Check recent preserved
-        XCTAssertEqual(compressed.last?.content, "Message content 29")
+        #expect(compressed.last?.content == "Message content 29")
 
-        // Check older became summary
         let first = compressed[0]
-        // Either it's a summary or a leaf if it couldn't compress enough (mock returns "Summary content" which is 2 tokens)
-        XCTAssertEqual(first.role, .summary)
-        XCTAssertEqual(first.content, "Summary content")
+        #expect(first.role == .summary)
+        #expect(first.content == "Summary content")
     }
 }

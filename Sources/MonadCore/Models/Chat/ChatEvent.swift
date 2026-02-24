@@ -3,6 +3,7 @@ import Foundation
 public enum ToolExecutionStatus: Sendable {
     case attempting(name: String, reference: ToolReference)
     case success(ToolResult)
+    case failed(reference: ToolReference, error: String)
     case failure(Error)
 }
 

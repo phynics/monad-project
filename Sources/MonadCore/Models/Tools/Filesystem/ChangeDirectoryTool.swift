@@ -29,22 +29,19 @@ public struct ChangeDirectoryTool: Tool, Sendable {
         return true
     }
 
-    public var parametersSchema: [String: Any] {
-        return [
-            "type": "object",
-            "properties": [
-                "path": [
-                    "type": "string",
-                    "description": "The path to change to. Can be relative or absolute."
-                ]
-            ],
-            "required": ["path"]
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("path", description: "The path to change to. Can be relative or absolute.", required: true)
+        }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let path = parameters["path"] as? String else {
-            return .failure("Missing 'path' parameter")
+        let params = ToolParameters(parameters)
+        let path: String
+        do {
+            path = try params.require("path", as: String.self)
+        } catch {
+            return .failure(error.localizedDescription)
         }
 
         let newURL: URL

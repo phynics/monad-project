@@ -45,19 +45,12 @@ public struct DelegatingTool: Tool {
         true  // Assume available if routed
     }
 
-    public var parametersSchema: [String: Any] {
-        var schema: [String: Any] = [:]
-        for (key, value) in resolvedDefinition.parametersSchema {
-            schema[key] = value.value
-        }
-        return schema
+    public var parametersSchema: [String: AnyCodable] {
+        resolvedDefinition.parametersSchema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        var args: [String: AnyCodable] = [:]
-        for (key, value) in parameters {
-            args[key] = AnyCodable(value)
-        }
+        let args = parameters.mapValues { AnyCodable($0) }
 
         do {
             let output = try await router.execute(tool: ref, arguments: args, sessionId: sessionId)

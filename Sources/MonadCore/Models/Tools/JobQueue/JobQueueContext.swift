@@ -203,28 +203,25 @@ public struct AddJobTool: ContextTool, Sendable {
 
     public func canExecute() async -> Bool { true }
 
-    public var parametersSchema: [String: Any] {
-        [
-            "type": "object",
-            "properties": [
-                "title": ["type": "string", "description": "Job title (required)"],
-                "description": ["type": "string", "description": "Job description (optional)"],
-                "priority": [
-                    "type": "integer",
-                    "description": "Priority level (higher = more important, default: 0)",
-                ],
-            ],
-            "required": ["title"],
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("title", description: "Job title", required: true)
+            b.string("description", description: "Job description")
+            b.integer("priority", description: "Priority level (higher = more important, default: 0)")
+        }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let title = parameters["title"] as? String else {
-            return .failure("Missing required parameter: title")
+        let params = ToolParameters(parameters)
+        let title: String
+        do {
+            title = try params.require("title", as: String.self)
+        } catch {
+            return .failure(error.localizedDescription)
         }
 
-        let description = parameters["description"] as? String
-        let priority = parameters["priority"] as? Int ?? 0
+        let description = params.optional("description", as: String.self)
+        let priority = params.optional("priority", as: Int.self) ?? 0
 
         let job = try await context.addJob(title: title, description: description, priority: priority)
         return .success("Added job: \(job.title) [ID: \(job.id.uuidString.prefix(8))]")
@@ -248,19 +245,19 @@ public struct RemoveJobTool: ContextTool, Sendable {
 
     public func canExecute() async -> Bool { true }
 
-    public var parametersSchema: [String: Any] {
-        [
-            "type": "object",
-            "properties": [
-                "id": ["type": "string", "description": "Job ID (full or prefix)"]
-            ],
-            "required": ["id"],
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("id", description: "Job ID (full or prefix)", required: true)
+        }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let idString = parameters["id"] as? String else {
-            return .failure("Missing required parameter: id")
+        let params = ToolParameters(parameters)
+        let idString: String
+        do {
+            idString = try params.require("id", as: String.self)
+        } catch {
+            return .failure(error.localizedDescription)
         }
 
         // Try to find by prefix first, then by full UUID
@@ -294,23 +291,22 @@ public struct ChangePriorityTool: ContextTool, Sendable {
 
     public func canExecute() async -> Bool { true }
 
-    public var parametersSchema: [String: Any] {
-        [
-            "type": "object",
-            "properties": [
-                "id": ["type": "string", "description": "Job ID (full or prefix)"],
-                "priority": ["type": "integer", "description": "New priority level"],
-            ],
-            "required": ["id", "priority"],
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("id", description: "Job ID (full or prefix)", required: true)
+            b.integer("priority", description: "New priority level", required: true)
+        }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let idString = parameters["id"] as? String else {
-            return .failure("Missing required parameter: id")
-        }
-        guard let priority = parameters["priority"] as? Int else {
-            return .failure("Missing required parameter: priority")
+        let params = ToolParameters(parameters)
+        let idString: String
+        let priority: Int
+        do {
+            idString = try params.require("id", as: String.self)
+            priority = try params.require("priority", as: Int.self)
+        } catch {
+            return .failure(error.localizedDescription)
         }
 
         // Try to find by prefix first
@@ -345,8 +341,8 @@ public struct ListJobsTool: ContextTool, Sendable {
 
     public func canExecute() async -> Bool { true }
 
-    public var parametersSchema: [String: Any] {
-        ["type": "object", "properties": [:]]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { _ in }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
@@ -378,26 +374,25 @@ public struct UpdateJobStatusTool: ContextTool, Sendable {
 
     public func canExecute() async -> Bool { true }
 
-    public var parametersSchema: [String: Any] {
-        [
-            "type": "object",
-            "properties": [
-                "id": ["type": "string", "description": "Job ID (full or prefix)"],
-                "status": [
-                    "type": "string", "enum": ["pending", "in_progress", "completed", "cancelled"],
-                ],
-            ],
-            "required": ["id", "status"],
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("id", description: "Job ID (full or prefix)", required: true)
+            b.stringEnum("status", description: "New status", values: ["pending", "in_progress", "completed", "cancelled"], required: true)
+        }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let idString = parameters["id"] as? String else {
-            return .failure("Missing required parameter: id")
+        let params = ToolParameters(parameters)
+        let idString: String
+        let statusString: String
+        do {
+            idString = try params.require("id", as: String.self)
+            statusString = try params.require("status", as: String.self)
+        } catch {
+            return .failure(error.localizedDescription)
         }
-        guard let statusString = parameters["status"] as? String,
-            let status = Job.Status(rawValue: statusString)
-        else {
+
+        guard let status = Job.Status(rawValue: statusString) else {
             return .failure("Invalid status. Use: pending, in_progress, completed, or cancelled")
         }
 
@@ -433,8 +428,8 @@ public struct ClearQueueTool: ContextTool, Sendable {
 
     public func canExecute() async -> Bool { true }
 
-    public var parametersSchema: [String: Any] {
-        ["type": "object", "properties": [:]]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { _ in }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {

@@ -134,20 +134,30 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         return mockHealthStatus
     }
 
-    public var isConfigured: Bool = true
-    public var configuration: LLMConfiguration = .openAI
+    public var isConfigured: Bool { 
+        get async { true }
+    }
+    
+    public var configuration: LLMConfiguration {
+        get async { mockConfig }
+    }
+    
+    public var mockConfig: LLMConfiguration = .openAI
     public var nextResponse: String = ""
     public var nextTags: [String] = []
     public var mockClient = MockLLMClient()
+    
+    /// Allows tests to provide a custom stream for chatStream calls.
+    public var stubbedStream: AsyncThrowingStream<ChatStreamResult, Error>?
 
     public init() {}
 
     public func loadConfiguration() async {}
     public func updateConfiguration(_ config: LLMConfiguration) async throws {
-        self.configuration = config
+        self.mockConfig = config
     }
     public func clearConfiguration() async {
-        isConfigured = false
+        // can't easily change isConfigured if it's computed, but we can change mock state
     }
     public func restoreFromBackup() async throws {}
     public func exportConfiguration() async throws -> Data { return Data() }
@@ -177,8 +187,7 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         rawPrompt: String,
         structuredContext: [String: String]
     ) {
-        let stream = await mockClient.chatStream(
-            messages: [], tools: nil, responseFormat: responseFormat)
+        let stream = await chatStream(messages: [], tools: nil, responseFormat: responseFormat)
         return (stream, "mock prompt", [:])
     }
 
@@ -187,6 +196,9 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         tools: [ChatQuery.ChatCompletionToolParam]?,
         responseFormat: ChatQuery.ResponseFormat?
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
+        if let stubbed = stubbedStream {
+            return stubbed
+        }
         let stream = await mockClient.chatStream(
             messages: messages, tools: tools, responseFormat: responseFormat)
         return stream

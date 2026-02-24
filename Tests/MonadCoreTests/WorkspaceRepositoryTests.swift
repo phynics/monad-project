@@ -1,21 +1,20 @@
-import XCTest
+import Testing
 import Dependencies
+import Foundation
 @testable import MonadCore
 
-final class WorkspaceRepositoryTests: XCTestCase {
-    var persistence: MockPersistenceService!
-    var repository: WorkspaceRepository!
-
-    override func setUp() async throws {
-        persistence = MockPersistenceService()
-        repository = await withDependencies {
+@Suite("Workspace Repository Tests")
+struct WorkspaceRepositoryTests {
+    
+    @Test("Create Workspace")
+    func testCreateWorkspace() async throws {
+        let persistence = MockPersistenceService()
+        let repository = await withDependencies {
             $0.persistenceService = persistence
         } operation: {
             WorkspaceRepository()
         }
-    }
 
-    func testCreateWorkspace() async throws {
         let uri = WorkspaceURI(host: "monad-server", path: "/test")
         let metadata: [String: AnyCodable] = ["key": .string("value")]
 
@@ -26,17 +25,25 @@ final class WorkspaceRepositoryTests: XCTestCase {
             metadata: metadata
         )
 
-        XCTAssertEqual(ws.uri, uri)
-        XCTAssertEqual(ws.rootPath, "/tmp/ws")
-        XCTAssertEqual(ws.metadata["key"]?.asString, "value")
+        #expect(ws.uri == uri)
+        #expect(ws.rootPath == "/tmp/ws")
+        #expect(ws.metadata["key"]?.asString == "value")
 
         // Verify it was saved to persistence
         let saved = try await persistence.fetchWorkspace(id: ws.id)
-        XCTAssertNotNil(saved)
-        XCTAssertEqual(saved?.metadata["key"]?.asString, "value")
+        #expect(saved != nil)
+        #expect(saved?.metadata["key"]?.asString == "value")
     }
 
+    @Test("Get Workspace")
     func testGetWorkspace() async throws {
+        let persistence = MockPersistenceService()
+        let repository = await withDependencies {
+            $0.persistenceService = persistence
+        } operation: {
+            WorkspaceRepository()
+        }
+
         let ws = WorkspaceReference(
             uri: .serverSession(UUID()),
             hostType: .server,
@@ -46,34 +53,57 @@ final class WorkspaceRepositoryTests: XCTestCase {
         try await persistence.saveWorkspace(ws)
 
         let retrieved = try await repository.getWorkspace(id: ws.id)
-        XCTAssertNotNil(retrieved)
-        XCTAssertEqual(retrieved?.id, ws.id)
-        XCTAssertEqual(retrieved?.metadata["test"]?.asString, nil) // AnyCodable comparison
-        XCTAssertEqual(retrieved?.metadata["test"]?.value as? Bool, true)
+        #expect(retrieved != nil)
+        #expect(retrieved?.id == ws.id)
+        #expect(retrieved?.metadata["test"]?.value as? Bool == true)
     }
 
+    @Test("List Workspaces")
     func testListWorkspaces() async throws {
+        let persistence = MockPersistenceService()
+        let repository = await withDependencies {
+            $0.persistenceService = persistence
+        } operation: {
+            WorkspaceRepository()
+        }
+
         let ws1 = WorkspaceReference(uri: .serverSession(UUID()), hostType: .server)
         let ws2 = WorkspaceReference(uri: .serverSession(UUID()), hostType: .server)
         try await persistence.saveWorkspace(ws1)
         try await persistence.saveWorkspace(ws2)
 
         let list = try await repository.listWorkspaces()
-        XCTAssertEqual(list.count, 2)
-        XCTAssertTrue(list.contains(where: { $0.id == ws1.id }))
-        XCTAssertTrue(list.contains(where: { $0.id == ws2.id }))
+        #expect(list.count == 2)
+        #expect(list.contains(where: { $0.id == ws1.id }))
+        #expect(list.contains(where: { $0.id == ws2.id }))
     }
 
+    @Test("Delete Workspace")
     func testDeleteWorkspace() async throws {
+        let persistence = MockPersistenceService()
+        let repository = await withDependencies {
+            $0.persistenceService = persistence
+        } operation: {
+            WorkspaceRepository()
+        }
+
         let ws = WorkspaceReference(uri: .serverSession(UUID()), hostType: .server)
         try await persistence.saveWorkspace(ws)
 
         try await repository.deleteWorkspace(id: ws.id)
         let retrieved = try await persistence.fetchWorkspace(id: ws.id)
-        XCTAssertNil(retrieved)
+        #expect(retrieved == nil)
     }
 
+    @Test("Update Workspace")
     func testUpdateWorkspace() async throws {
+        let persistence = MockPersistenceService()
+        let repository = await withDependencies {
+            $0.persistenceService = persistence
+        } operation: {
+            WorkspaceRepository()
+        }
+
         var ws = WorkspaceReference(uri: .serverSession(UUID()), hostType: .server)
         try await persistence.saveWorkspace(ws)
 
@@ -81,6 +111,6 @@ final class WorkspaceRepositoryTests: XCTestCase {
         try await repository.updateWorkspace(ws)
 
         let retrieved = try await persistence.fetchWorkspace(id: ws.id)
-        XCTAssertEqual(retrieved?.status, .missing)
+        #expect(retrieved?.status == .missing)
     }
 }

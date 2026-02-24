@@ -1,3 +1,5 @@
+/// Protocol for managing virtual document workspaces.
+
 import Foundation
 
 public protocol WorkspacePersistenceProtocol: Sendable {

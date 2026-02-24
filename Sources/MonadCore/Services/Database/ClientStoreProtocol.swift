@@ -1,3 +1,5 @@
+/// Protocol for managing remote client identities and their connection state.
+
 import Foundation
 
 public protocol ClientStoreProtocol: Sendable {

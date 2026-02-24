@@ -29,26 +29,12 @@ public struct AgentAsTool: Tool, Sendable {
         self.requiresPermission = true
     }
 
-    public var parametersSchema: [String: Any] {
-        [
-            "type": "object",
-            "properties": [
-                "task_title": [
-                    "type": "string",
-                    "description": "A short, descriptive title for the task."
-                ],
-                "task_description": [
-                    "type": "string",
-                    "description": "A detailed description of what the agent should do."
-                ],
-                "priority": [
-                    "type": "integer",
-                    "description": "Priority of the task (0-10, higher is more urgent).",
-                    "default": 0
-                ]
-            ],
-            "required": ["task_title", "task_description"]
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("task_title", description: "A short, descriptive title for the task.", required: true)
+            b.string("task_description", description: "A detailed description of what the agent should do.", required: true)
+            b.integer("priority", description: "Priority of the task (0-10, higher is more urgent).")
+        }.schema
     }
 
     public func canExecute() async -> Bool {
@@ -56,14 +42,18 @@ public struct AgentAsTool: Tool, Sendable {
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let title = parameters["task_title"] as? String else {
-            return .failure("Missing 'task_title'")
-        }
-        guard let taskDescription = parameters["task_description"] as? String else {
-            return .failure("Missing 'task_description'")
+        let params = ToolParameters(parameters)
+        let title: String
+        let taskDescription: String
+        
+        do {
+            title = try params.require("task_title", as: String.self)
+            taskDescription = try params.require("task_description", as: String.self)
+        } catch {
+            return .failure(error.localizedDescription)
         }
 
-        let priority = (parameters["priority"] as? Int) ?? 0
+        let priority = params.optional("priority", as: Int.self) ?? 0
 
         let request = AddJobRequest(
             title: title,

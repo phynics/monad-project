@@ -11,7 +11,7 @@ struct MockComplexTool: Tool, @unchecked Sendable {
 
     var usageExample: String? { nil }
 
-    var parametersSchema: [String: Any] { [:] }
+    var parametersSchema: [String: AnyCodable] { [:] }
 
     func canExecute() async -> Bool { true }
 

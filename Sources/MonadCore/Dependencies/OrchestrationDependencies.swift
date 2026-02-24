@@ -8,27 +8,24 @@ public enum AgentRegistryKey: DependencyKey {
 }
 
 public enum SessionManagerKey: DependencyKey {
-    public static let liveValue: SessionManager = {
-        fatalError("SessionManager must be configured before use.")
-    }()
+    public static let liveValue = SessionManager(
+        workspaceRoot: FileManager.default.temporaryDirectory // Default for unconfigured
+    )
 }
 
 public enum ToolRouterKey: DependencyKey {
-    public static let liveValue: ToolRouter = {
-        fatalError("ToolRouter must be configured before use.")
-    }()
+    public static let liveValue = ToolRouter()
 }
 
 public enum ChatEngineKey: DependencyKey {
-    public static let liveValue: ChatEngine = {
-        fatalError("ChatEngine must be configured before use.")
-    }()
+    public static let liveValue = ChatEngine()
 }
 
 public enum AgentExecutorKey: DependencyKey {
-    public static let liveValue: AgentExecutor = {
-        fatalError("AgentExecutor must be configured before use.")
-    }()
+    public static let liveValue = AgentExecutor(
+        persistenceService: UnconfiguredPersistenceService(),
+        chatEngine: ChatEngine()
+    )
 }
 
 // MARK: - Dependency Values

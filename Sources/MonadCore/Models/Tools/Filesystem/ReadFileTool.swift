@@ -30,22 +30,19 @@ public struct ReadFileTool: Tool, Sendable {
         return true
     }
 
-    public var parametersSchema: [String: Any] {
-        return [
-            "type": "object",
-            "properties": [
-                "path": [
-                    "type": "string",
-                    "description": "The path to the file to read"
-                ]
-            ],
-            "required": ["path"]
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("path", description: "The path to the file to read", required: true)
+        }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let pathString = parameters["path"] as? String else {
-            let errorMsg = "Missing required parameter: path."
+        let params = ToolParameters(parameters)
+        let pathString: String
+        do {
+            pathString = try params.require("path", as: String.self)
+        } catch {
+            let errorMsg = error.localizedDescription
             if let example = usageExample {
                 return .failure("\(errorMsg) Example: \(example)")
             }

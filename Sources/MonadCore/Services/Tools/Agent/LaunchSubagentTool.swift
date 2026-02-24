@@ -26,34 +26,14 @@ public struct LaunchSubagentTool: Tool, Sendable {
         self.agentRegistry = agentRegistry
     }
 
-    public var parametersSchema: [String: Any] {
-        [
-            "type": "object",
-            "properties": [
-                "agent_id": [
-                    "type": "string",
-                    "description": "The ID of the agent to launch (e.g. 'default', 'researcher', 'coder')."
-                ],
-                "task_title": [
-                    "type": "string",
-                    "description": "A short, descriptive title for the task."
-                ],
-                "task_description": [
-                    "type": "string",
-                    "description": "A detailed description of what the subagent should do."
-                ],
-                "priority": [
-                    "type": "integer",
-                    "description": "Priority of the task (0-10, higher is more urgent).",
-                    "default": 0
-                ],
-                "parent_id": [
-                    "type": "string",
-                    "description": "Optional parent job ID. If not provided, it defaults to the current job ID if applicable."
-                ]
-            ],
-            "required": ["agent_id", "task_title", "task_description"]
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("agent_id", description: "The ID of the agent to launch (e.g. 'default', 'researcher', 'coder').", required: true)
+            b.string("task_title", description: "A short, descriptive title for the task.", required: true)
+            b.string("task_description", description: "A detailed description of what the subagent should do.", required: true)
+            b.integer("priority", description: "Priority of the task (0-10, higher is more urgent).")
+            b.string("parent_id", description: "Optional parent job ID. If not provided, it defaults to the current job ID if applicable.")
+        }.schema
     }
 
     public func canExecute() async -> Bool {
@@ -61,20 +41,23 @@ public struct LaunchSubagentTool: Tool, Sendable {
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        guard let agentId = parameters["agent_id"] as? String else {
-            return .failure("Missing 'agent_id'")
-        }
-        guard let title = parameters["task_title"] as? String else {
-            return .failure("Missing 'task_title'")
-        }
-        guard let taskDescription = parameters["task_description"] as? String else {
-            return .failure("Missing 'task_description'")
+        let params = ToolParameters(parameters)
+        let agentId: String
+        let title: String
+        let taskDescription: String
+        
+        do {
+            agentId = try params.require("agent_id", as: String.self)
+            title = try params.require("task_title", as: String.self)
+            taskDescription = try params.require("task_description", as: String.self)
+        } catch {
+            return .failure(error.localizedDescription)
         }
 
-        let priority = (parameters["priority"] as? Int) ?? 0
+        let priority = params.optional("priority", as: Int.self) ?? 0
 
         var resolvedParentId = parentId
-        if let explicitParentIdString = parameters["parent_id"] as? String,
+        if let explicitParentIdString = params.optional("parent_id", as: String.self),
            let explicitParentId = UUID(uuidString: explicitParentIdString) {
             resolvedParentId = explicitParentId
         }

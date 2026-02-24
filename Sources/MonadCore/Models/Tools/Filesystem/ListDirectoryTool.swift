@@ -30,21 +30,15 @@ public struct ListDirectoryTool: Tool, Sendable {
         return true
     }
 
-    public var parametersSchema: [String: Any] {
-        return [
-            "type": "object",
-            "properties": [
-                "path": [
-                    "type": "string",
-                    "description":
-                        "The path to the directory (defaults to current directory if omitted)"
-                ]
-            ]
-        ]
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { b in
+            b.string("path", description: "The path to the directory (defaults to current directory if omitted)")
+        }.schema
     }
 
     public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        let pathString = parameters["path"] as? String ?? "."
+        let params = ToolParameters(parameters)
+        let pathString = params.optional("path", as: String.self) ?? "."
 
         let url: URL
         do {
