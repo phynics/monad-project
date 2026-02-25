@@ -1,26 +1,27 @@
 import Foundation
 import MonadCore
+import MonadShared
 
 // MARK: - Type Aliases from MonadCore
 
 // Session Models
-public typealias Session = MonadCore.SessionResponse
+public typealias Session = MonadShared.SessionResponse
 
 // Chat Models
-public typealias ChatRequest = MonadCore.ChatRequest
-public typealias ChatResponse = MonadCore.ChatResponse
+public typealias ChatRequest = MonadShared.ChatRequest
+public typealias ChatResponse = MonadShared.ChatResponse
 
 // Status Models
-public typealias StatusResponse = MonadCore.StatusResponse
-public typealias ComponentStatus = MonadCore.ComponentStatus
+public typealias StatusResponse = MonadShared.StatusResponse
+public typealias ComponentStatus = MonadShared.ComponentStatus
 public typealias HealthStatus = MonadCore.HealthStatus
 
 // Memory Models
 public typealias Memory = MonadCore.Memory
-public typealias MemorySearchRequest = MonadCore.MemorySearchRequest
+public typealias MemorySearchRequest = MonadShared.MemorySearchRequest
 
 // Tool Models
-public typealias Tool = MonadCore.ToolInfo
+public typealias Tool = MonadShared.ToolInfo
 
 // Message Models
 public typealias Message = MonadCore.Message
@@ -33,7 +34,7 @@ public typealias AddJobRequest = MonadCore.AddJobRequest
 // MARK: - Client-Specific Models
 
 /// A delta from a streaming chat response
-public typealias ChatDelta = MonadCore.ChatDelta
+public typealias ChatDelta = MonadShared.ChatDelta
 
 /// A delta for a tool call in a streaming response
 public typealias ToolCallDelta = MonadCore.ToolCallDelta
@@ -42,7 +43,7 @@ public typealias ToolCallDelta = MonadCore.ToolCallDelta
 public typealias ChatMetadata = MonadCore.ChatMetadata
 
 // MARK: - Client API Models
-public typealias ClientIdentity = MonadCore.ClientIdentity
+public typealias ClientIdentity = MonadShared.ClientIdentity
 public typealias WorkspaceReference = MonadCore.WorkspaceReference
 public typealias WorkspaceURI = MonadCore.WorkspaceURI
 public typealias WorkspaceTrustLevel = MonadCore.WorkspaceTrustLevel

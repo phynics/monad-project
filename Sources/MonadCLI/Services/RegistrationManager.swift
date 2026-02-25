@@ -1,6 +1,7 @@
 import Foundation
 import MonadClient
 import MonadCore
+import MonadShared
 
 struct StoredIdentity: Codable {
     let clientId: UUID

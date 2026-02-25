@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import Dependencies
 @testable import MonadCore
+import MonadShared
 
 @Suite("Dependency Validator Tests")
 struct DependencyValidatorTests {

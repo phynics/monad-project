@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import MonadCore
+import MonadShared
 @testable import MonadPrompt
 
 @Suite("Context Builder Truncation Tests")

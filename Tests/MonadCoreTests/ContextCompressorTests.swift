@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import MonadCore
+import MonadShared
 
 @Suite("Context Compressor Tests")
 @MainActor

@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import MonadCore
+import MonadShared
 
 @Suite("Context Manager Mocking Tests")
 struct ContextManagerMockingTests {

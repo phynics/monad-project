@@ -1,6 +1,7 @@
 import Foundation
 import GRDB
 import MonadCore
+import MonadShared
 
 // MARK: - Persistence Error
 

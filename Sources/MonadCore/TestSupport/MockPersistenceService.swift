@@ -7,7 +7,6 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     private let jobsMock = MockJobStore()
     private let agentsMock = MockAgentStore()
     private let workspacesMock = MockWorkspacePersistence()
-    private let clientsMock = MockClientStore()
     private let toolsMock = MockToolPersistence()
 
     public var mockHealthStatus: HealthStatus = .ok
@@ -93,15 +92,6 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     public func fetchAllWorkspaces() async throws -> [WorkspaceReference] { try await workspacesMock.fetchAllWorkspaces() }
     public func deleteWorkspace(id: UUID) async throws { try await workspacesMock.deleteWorkspace(id: id) }
 
-    // MARK: - ClientStoreProtocol
-    public var clients: [ClientIdentity] {
-        get { clientsMock.clients }
-        set { clientsMock.clients = newValue }
-    }
-    public func saveClient(_ client: ClientIdentity) async throws { try await clientsMock.saveClient(client) }
-    public func fetchClient(id: UUID) async throws -> ClientIdentity? { try await clientsMock.fetchClient(id: id) }
-    public func fetchAllClients() async throws -> [ClientIdentity] { try await clientsMock.fetchAllClients() }
-    public func deleteClient(id: UUID) async throws -> Bool { try await clientsMock.deleteClient(id: id) }
 
     // MARK: - ToolPersistenceProtocol
     public func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws { 
@@ -128,6 +118,5 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
         jobs = []
         agents = []
         workspaces = []
-        clients = []
     }
 }

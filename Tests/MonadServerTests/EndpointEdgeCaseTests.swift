@@ -3,6 +3,7 @@ import HTTPTypes
 import Hummingbird
 import HummingbirdTesting
 import MonadCore
+import MonadShared
 import NIOCore
 import Testing
 import Dependencies

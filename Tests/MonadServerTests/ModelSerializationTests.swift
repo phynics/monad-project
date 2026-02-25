@@ -3,6 +3,7 @@ import Foundation
 import GRDB
 import MonadServer
 @testable import MonadCore
+import MonadShared
 
 @Suite struct ModelSerializationTests {
 

@@ -51,6 +51,7 @@ let package = Package(
             name: "MonadServer",
             dependencies: [
                 "MonadCore",
+                "MonadShared",
                 "MonadPrompt",
                 "MonadClient",
                 .product(name: "GRDB", package: "GRDB.swift"),
@@ -82,7 +83,7 @@ let package = Package(
         ),
         .testTarget(
             name: "MonadCoreTests",
-            dependencies: ["MonadCore", .product(name: "Dependencies", package: "swift-dependencies")],
+            dependencies: ["MonadCore", "MonadShared", .product(name: "Dependencies", package: "swift-dependencies")],
             path: "Tests/MonadCoreTests"
         ),
         .testTarget(
@@ -95,6 +96,7 @@ let package = Package(
             dependencies: [
                 "MonadServer",
                 "MonadCore",
+                "MonadShared",
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
                 .product(name: "Dependencies", package: "swift-dependencies")
             ],

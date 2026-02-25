@@ -3,6 +3,7 @@ import HTTPTypes
 import Hummingbird
 import Logging
 import MonadCore
+import MonadShared
 import NIOCore
 import OpenAI
 

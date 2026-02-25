@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import MonadCore
+import MonadShared
 
 @Suite("Persistence Protocol Tests")
 struct PersistenceProtocolTests {
@@ -18,7 +19,6 @@ struct PersistenceProtocolTests {
         #expect(mock is JobStoreProtocol)
         #expect(mock is AgentStoreProtocol)
         #expect(mock is WorkspacePersistenceProtocol)
-        #expect(mock is ClientStoreProtocol)
         #expect(mock is ToolPersistenceProtocol)
     }
 }
@@ -31,7 +31,6 @@ final class MockPersistenceStore:
     JobStoreProtocol,
     AgentStoreProtocol,
     WorkspacePersistenceProtocol,
-    ClientStoreProtocol,
     ToolPersistenceProtocol,
     @unchecked Sendable {
     // MemoryStoreProtocol
@@ -80,11 +79,6 @@ final class MockPersistenceStore:
     func fetchAllWorkspaces() async throws -> [WorkspaceReference] { [] }
     func deleteWorkspace(id: UUID) async throws {}
 
-    // ClientStoreProtocol
-    func saveClient(_ client: ClientIdentity) async throws {}
-    func fetchClient(id: UUID) async throws -> ClientIdentity? { nil }
-    func fetchAllClients() async throws -> [ClientIdentity] { [] }
-    func deleteClient(id: UUID) async throws -> Bool { false }
 
     // ToolPersistenceProtocol
     func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws {}

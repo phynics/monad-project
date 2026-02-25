@@ -2,6 +2,7 @@ import Foundation
 import Testing
 
 @testable import MonadCore
+import MonadShared
 
 @Suite struct StreamingParserStressTests {
 

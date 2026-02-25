@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import MonadCore
+import MonadShared
 
 @Suite @MainActor
 struct LoopDetectionTests {

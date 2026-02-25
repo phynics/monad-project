@@ -5,6 +5,7 @@ import Foundation
 import Dependencies
 @testable import MonadServer
 import MonadCore
+import MonadShared
 import NIOCore
 
 @Suite struct MemoryControllerTests {

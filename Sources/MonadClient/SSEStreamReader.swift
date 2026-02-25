@@ -1,4 +1,5 @@
 import Foundation
+import MonadShared
 import Logging
 
 /// Parses Server-Sent Events (SSE) from an async byte stream

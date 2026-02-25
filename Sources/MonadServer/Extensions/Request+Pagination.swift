@@ -1,4 +1,5 @@
 import MonadCore
+import MonadShared
 
 import Hummingbird
 import Foundation

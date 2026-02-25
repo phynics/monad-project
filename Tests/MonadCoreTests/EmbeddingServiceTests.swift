@@ -1,5 +1,6 @@
 import Foundation
 import MonadCore
+import MonadShared
 import Testing
 
 @Suite struct EmbeddingServiceTests {

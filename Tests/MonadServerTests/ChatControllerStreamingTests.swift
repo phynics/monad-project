@@ -2,6 +2,7 @@ import Foundation
 import Hummingbird
 import HummingbirdTesting
 import MonadCore
+import MonadShared
 import NIOCore
 import OpenAI
 import Testing

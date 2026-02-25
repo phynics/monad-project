@@ -4,6 +4,7 @@ import HummingbirdTesting
 import Foundation
 @testable import MonadServer
 import MonadCore
+import MonadShared
 import NIOCore
 import Logging
 import Dependencies

@@ -3,6 +3,7 @@ import GRDB
 import Hummingbird
 import Logging
 import MonadCore
+import MonadShared
 import HTTPTypes
 import NIOCore
 

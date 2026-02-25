@@ -1,5 +1,6 @@
 import Foundation
 import MonadCore
+import MonadShared
 
 // MARK: - Type Aliases from MonadCore
 

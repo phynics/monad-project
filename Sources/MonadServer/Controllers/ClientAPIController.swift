@@ -3,6 +3,7 @@ import GRDB
 import Hummingbird
 import Logging
 import MonadCore
+import MonadShared
 
 /// Controller for managing client identities
 public struct ClientAPIController<Context: RequestContext>: Sendable {

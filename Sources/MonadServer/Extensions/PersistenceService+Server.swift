@@ -2,6 +2,7 @@ import Foundation
 import GRDB
 import Logging
 import MonadCore
+import MonadShared
 
 extension PersistenceService {
     /// Search archived sessions by title, tags, or message content

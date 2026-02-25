@@ -10,7 +10,6 @@ public typealias FullPersistenceService =
     JobStoreProtocol & 
     AgentStoreProtocol & 
     WorkspacePersistenceProtocol & 
-    ClientStoreProtocol & 
     ToolPersistenceProtocol & 
     HealthCheckable
 
@@ -84,10 +83,7 @@ public struct UnconfiguredPersistenceService: FullPersistenceService {
     public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? { fail() }
     public func fetchAllWorkspaces() async throws -> [WorkspaceReference] { fail() }
     public func deleteWorkspace(id: UUID) async throws { fail() }
-    public func saveClient(_ client: ClientIdentity) async throws { fail() }
-    public func fetchClient(id: UUID) async throws -> ClientIdentity? { fail() }
-    public func fetchAllClients() async throws -> [ClientIdentity] { fail() }
-    public func deleteClient(id: UUID) async throws -> Bool { fail() }
+
     public func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws { fail() }
     public func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] { fail() }
     public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] { fail() }

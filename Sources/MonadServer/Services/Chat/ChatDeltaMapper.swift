@@ -1,4 +1,5 @@
 import MonadCore
+import MonadShared
 import Foundation
 
 public struct ChatDeltaMapper {

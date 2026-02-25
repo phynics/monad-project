@@ -2,6 +2,7 @@ import Testing
 import Dependencies
 import Foundation
 @testable import MonadCore
+import MonadShared
 
 @Suite("Workspace Repository Tests")
 struct WorkspaceRepositoryTests {

@@ -4,6 +4,7 @@ import Testing
 import Foundation
 import Dependencies
 @testable import MonadCore
+import MonadShared
 
 @Suite @MainActor
 struct ChatEngineTests {

@@ -1,6 +1,7 @@
 import Foundation
 import Hummingbird
 import MonadCore
+import MonadShared
 import NIOCore
 
 public struct StatusAPIController<Context: RequestContext>: Sendable {

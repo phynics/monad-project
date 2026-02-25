@@ -1,4 +1,6 @@
 import Foundation
+import MonadShared
+@testable import MonadServer
 
 public final class MockClientStore: ClientStoreProtocol, @unchecked Sendable {
     public var clients: [ClientIdentity] = []

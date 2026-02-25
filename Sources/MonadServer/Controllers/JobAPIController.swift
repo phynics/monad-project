@@ -2,6 +2,7 @@ import Foundation
 import HTTPTypes
 import Hummingbird
 import MonadCore
+import MonadShared
 import NIOCore
 
 public struct JobAPIController<Context: RequestContext>: Sendable {

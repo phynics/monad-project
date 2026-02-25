@@ -1,4 +1,5 @@
 import Foundation
+import MonadCore
 
 /// Represents the status of a specific system component for API responses.
 public struct ComponentStatus: Codable, Sendable {

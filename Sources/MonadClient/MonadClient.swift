@@ -1,5 +1,6 @@
 import Foundation
 import MonadCore
+import MonadShared
 
 /// HTTP client for communicating with MonadServer
 public actor MonadClient {

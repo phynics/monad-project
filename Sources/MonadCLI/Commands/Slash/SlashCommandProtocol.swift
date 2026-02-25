@@ -1,6 +1,7 @@
 import Foundation
 import MonadClient
 import MonadCore
+import MonadShared
 
 /// Protocol for a slash command in the chat REPL
 protocol SlashCommand: Sendable {

@@ -3,6 +3,7 @@ import Foundation
 import Hummingbird
 import Logging
 import MonadCore
+import MonadShared
 import ServiceLifecycle
 import UnixSignals
 import HummingbirdWebSocket
