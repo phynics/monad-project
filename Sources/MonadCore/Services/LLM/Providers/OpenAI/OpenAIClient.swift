@@ -48,7 +48,9 @@ public actor OpenAIClient {
         let query = ChatQuery(
             messages: messages,
             model: modelName,
+            parallelToolCalls: tools != nil ? false : nil,
             responseFormat: responseFormat,
+            toolChoice: tools != nil ? .auto : nil,
             tools: tools,
             streamOptions: .init(includeUsage: true)
         )

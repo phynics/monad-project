@@ -57,6 +57,7 @@ extension WorkspaceReference {
         uri: WorkspaceURI = .serverSession(UUID()),
         hostType: WorkspaceHostType = .server,
         ownerId: UUID? = nil,
+        rootPath: String? = nil,
         tools: [ToolReference] = [],
         status: WorkspaceStatus = .active
     ) -> WorkspaceReference {
@@ -66,7 +67,7 @@ extension WorkspaceReference {
             hostType: hostType,
             ownerId: ownerId,
             tools: tools,
-            rootPath: nil,
+            rootPath: rootPath,
             trustLevel: .full,
             status: status
         )

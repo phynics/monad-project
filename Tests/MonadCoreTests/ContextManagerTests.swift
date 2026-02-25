@@ -35,7 +35,8 @@ struct ContextManagerTests {
 
         #expect(context.memories.count == 1)
         #expect(context.memories.first?.memory.id == expectedMemory.id)
-        #expect(context.memories.first?.similarity ?? 0 == 0.9)
+        let similarity = context.memories.first?.similarity ?? 0
+        #expect(abs(similarity - 0.9) < 0.001, "Expected similarity ~0.9, got \(similarity)")
         #expect(mockEmbedding.lastInput == "How to use SwiftUI?")
     }
 
@@ -49,7 +50,7 @@ struct ContextManagerTests {
             workspace: nil
         )
 
-        let memory = Memory.fixture(title: "Project Alpha", tags: "alpha")
+        let memory = Memory.fixture(title: "Project Alpha", tags: ["alpha"])
         mockPersistence.memories = [memory]
         mockPersistence.searchResults = [(memory, 0.85)]
 
@@ -87,7 +88,7 @@ struct ContextManagerTests {
             workspace: nil
         )
 
-        let memory1 = Memory.fixture(title: "Tag Match", tags: "swift")
+        let memory1 = Memory.fixture(title: "Tag Match", tags: ["swift"])
         let memory2 = Memory.fixture(title: "Semantic Match")
 
         mockPersistence.memories = [memory1]
@@ -112,7 +113,8 @@ struct ContextManagerTests {
         
         let tagMatch = context.memories.last
         #expect(tagMatch?.memory.title == "Tag Match")
-        #expect(tagMatch?.similarity ?? 0 == 0.5) // 0.0 base + 0.5 boost
+        let tagSimilarity = tagMatch?.similarity ?? 0
+        #expect(abs(tagSimilarity - 0.5) < 0.001, "Expected similarity ~0.5, got \(tagSimilarity)") // 0.0 base + 0.5 boost
     }
 
     @Test("Filesystem Notes Retrieval")

@@ -347,6 +347,16 @@ public actor ContextCompressor {
         var currentChunk: [Message] = []
 
         for (index, msg) in messages.enumerated() {
+            // Existing summaries should be preserved as individual chunks
+            if msg.role == .summary {
+                if !currentChunk.isEmpty {
+                    chunks.append(currentChunk)
+                    currentChunk = []
+                }
+                chunks.append([msg])
+                continue
+            }
+            
             currentChunk.append(msg)
 
             // Check if this message initiated a topic change

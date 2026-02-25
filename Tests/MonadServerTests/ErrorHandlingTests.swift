@@ -3,6 +3,7 @@ import Hummingbird
 import HummingbirdTesting
 import Foundation
 @testable import MonadServer
+import MonadCore
 
 @Suite struct ErrorHandlingTests {
 

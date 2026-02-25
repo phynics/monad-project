@@ -71,7 +71,7 @@ import NIOCore
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
         let llmService = MockLLMService()
-        llmService.isConfigured = false
+        llmService.mockIsConfigured = false
 
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 

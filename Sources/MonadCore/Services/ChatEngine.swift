@@ -285,6 +285,7 @@ public final class ChatEngine: @unchecked Sendable {
         if finalToolCalls.isEmpty {
             let fallbackCalls = ToolOutputParser.parse(from: fullResponse)
             if !fallbackCalls.isEmpty {
+                logger.warning("Structured tool calls empty — falling back to text parsing. Parsed \(fallbackCalls.count) call(s) from response text.")
                 for (index, call) in fallbackCalls.enumerated() {
                     let argsJson = (try? SerializationUtils.jsonEncoder.encode(call.arguments)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
                     finalToolCalls[index] = (id: UUID().uuidString, name: call.name, args: argsJson)
@@ -293,6 +294,8 @@ public final class ChatEngine: @unchecked Sendable {
                 for (index, value) in finalToolCalls.sorted(by: { $0.key < $1.key }) {
                     continuation.yield(.toolCall(ToolCallDelta(index: index, id: value.id, name: value.name, arguments: value.args)))
                 }
+            } else if fullResponse.contains("tool_call") || fullResponse.contains("\"name\"") {
+                logger.warning("No structured tool calls and fallback parser found nothing, but response contains tool-like text. Response prefix: \(String(fullResponse.prefix(200)))")
             }
         }
 

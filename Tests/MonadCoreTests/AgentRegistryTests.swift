@@ -30,7 +30,7 @@ struct AgentRegistryTests {
 
         self.persistence = mock
 
-        self.registry = await withDependencies {
+        self.registry = withDependencies {
             $0.persistenceService = mock
         } operation: {
             AgentRegistry()

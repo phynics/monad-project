@@ -5,7 +5,7 @@ import Testing
 @Suite struct ToolExecutorTests {
 
     // Mock Tool for testing
-    struct MockTool: Tool {
+    struct MockTool: MonadCore.Tool {
         let id: String
         let name: String
         let description: String

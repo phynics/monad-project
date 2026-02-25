@@ -138,7 +138,7 @@ struct ChatEngineTests {
         let name = "mock_tool"
         let description = "A mock tool for testing"
         let requiresPermission = false
-        let parametersSchema: [String: Any] = [:]
+        let parametersSchema: [String: AnyCodable] = [:]
 
         var result: ToolResult = .success("Tool result")
         var shouldWait: Bool = false
@@ -303,7 +303,7 @@ struct ChatEngineTests {
 
             #expect(events.contains(where: {
                 if case .toolExecution(let id, let status) = $0 {
-                    if case .failure = status { return id == "call_1" }
+                    if case .failed = status { return id == "call_1" }
                 }
                 return false
             }))

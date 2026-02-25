@@ -134,8 +134,9 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         return mockHealthStatus
     }
 
+    public var mockIsConfigured: Bool = true
     public var isConfigured: Bool { 
-        get async { true }
+        get async { mockIsConfigured }
     }
     
     public var configuration: LLMConfiguration {

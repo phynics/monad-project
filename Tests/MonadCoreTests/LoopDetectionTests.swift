@@ -5,12 +5,12 @@ import Testing
 @Suite @MainActor
 struct LoopDetectionTests {
 
-    struct MockTool: Tool, @unchecked Sendable {
+    struct MockTool: MonadCore.Tool, @unchecked Sendable {
         let id = "mock_tool"
         let name = "Mock Tool"
         let description = "A mock tool"
         let requiresPermission = false
-        var parametersSchema: [String: Any] { [:] }
+        var parametersSchema: [String: AnyCodable] { [:] }
         func canExecute() async -> Bool { true }
         func execute(parameters: [String: Any]) async throws -> ToolResult {
             return .success("Executed")
