@@ -17,7 +17,7 @@ public final class ChatEngine: @unchecked Sendable {
     @Dependency(\.persistenceService) private var persistenceService
     @Dependency(\.llmService) private var llmService
 
-    private let logger = Logger(label: "com.monad.chat-engine")
+    private let logger = Logger.module(named: "com.monad.chat-engine")
 
     public init() {}
 

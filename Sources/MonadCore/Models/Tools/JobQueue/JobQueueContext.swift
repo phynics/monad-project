@@ -12,7 +12,7 @@ public actor JobQueueContext: ToolContext {
     public static let displayName = "Job Queue Manager"
     public static let contextDescription = "Manage a queue of jobs with priorities and statuses"
 
-    private let logger = Logger.tools
+    private let logger = Logger.module(named: "tools")
     private let persistenceService: any JobStoreProtocol
     private let sessionId: UUID
 

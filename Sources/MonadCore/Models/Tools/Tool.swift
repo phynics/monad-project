@@ -92,7 +92,7 @@ extension Tool {
             let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data) {
             schema = decoded
         } else {
-            let logger = Logger(label: "com.monad.tool-schema")
+            let logger = Logger.module(named: "tool-schema")
             logger.warning("Failed to decode parametersSchema for tool '\(id)' — using empty schema. Raw: \(parametersSchema)")
             // Fallback to empty object if conversion fails
             schema = .object([:])

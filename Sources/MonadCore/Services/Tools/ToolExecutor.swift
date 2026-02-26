@@ -30,7 +30,7 @@ public struct ToolExecutionResult: Sendable {
 /// Executes tool calls and manages tool results
 public actor ToolExecutor {
     private let toolManager: SessionToolManager
-    private let logger = Logger.tools
+    private let logger = Logger.module(named: "tools")
 
     /// Active tool context session
     public let contextSession: ToolContextSession

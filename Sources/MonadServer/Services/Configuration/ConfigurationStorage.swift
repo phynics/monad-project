@@ -10,7 +10,7 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
     private let configURL: URL
     private let backupURL: URL
     private let userDefaults: UserDefaults // Keep for migration only
-    private let logger = Logger.server
+    private let logger = Logger.module(named: "server")
 
     public init(configURL: URL, userDefaults: UserDefaults = .standard) {
         self.configURL = configURL

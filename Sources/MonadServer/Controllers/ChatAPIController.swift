@@ -67,7 +67,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func chatStream(_ request: Request, context: Context) async throws -> Response {
-        if verbose { Logger.chat.debug("chatStream called") }
+        if verbose { Logger.module(named: "chat").debug("chatStream called") }
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else {
             throw HTTPError(.badRequest)
@@ -122,7 +122,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                             continuation.yield(ByteBuffer(string: sseString))
                         }
                     } else {
-                        Logger.chat.error("Stream error: \(error)")
+                        Logger.module(named: "chat").error("Stream error: \(error)")
                         let errorDelta = ChatDelta(type: .error, error: error.localizedDescription)
                         if let data = try? SerializationUtils.jsonEncoder.encode(errorDelta) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
@@ -196,7 +196,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                 ))
             }
         } catch {
-            Logger.chat.error("Failed to resolve tools for session \(sessionId): \(error)")
+            Logger.module(named: "chat").error("Failed to resolve tools for session \(sessionId): \(error)")
         }
         return availableTools
     }

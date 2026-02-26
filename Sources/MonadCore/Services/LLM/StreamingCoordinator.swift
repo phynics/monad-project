@@ -21,7 +21,7 @@ public final class StreamingCoordinator {
 
     // Parser
     private let parser = StreamingParser()
-    private let logger = Logger.chat
+    private let logger = Logger.module(named: "chat")
 
     public init() {}
 

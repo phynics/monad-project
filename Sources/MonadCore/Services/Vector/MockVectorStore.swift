@@ -4,7 +4,7 @@ import Logging
 /// A mock implementation of VectorStoreProtocol for development and testing
 /// when the real USearch library is unavailable or unstable.
 public actor MockVectorStore: VectorStoreProtocol {
-    private let logger = Logger(label: "com.monad.MockVectorStore")
+    private let logger = Logger.module(named: "com.monad.MockVectorStore")
     private var vectors: [UInt64: [Float]] = [:]
 
     public init() {}

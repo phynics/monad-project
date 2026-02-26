@@ -10,7 +10,7 @@ public actor WorkspaceManager {
     private let repository: WorkspaceRepository
     private let connectionManager: (any ClientConnectionManagerProtocol)?
     private let workspaceCreator: any WorkspaceCreating
-    private let logger = Logger(label: "com.monad.WorkspaceManager")
+    private let logger = Logger.module(named: "com.monad.WorkspaceManager")
 
     /// Cache of active workspace instances.
     private var activeWorkspaces: [UUID: any WorkspaceProtocol] = [:]

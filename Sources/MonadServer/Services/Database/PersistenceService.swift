@@ -17,7 +17,7 @@ public actor PersistenceService:
     HealthCheckable 
 {
     internal let dbQueue: DatabaseQueue
-    internal let logger = Logger.database
+    internal let logger = Logger.module(named: "database")
 
     // Job Event Stream
     private let jobStream: AsyncStream<JobEvent>

@@ -37,13 +37,13 @@ extension LLMService {
             guard let data = cleanJson.data(using: String.Encoding.utf8),
                 let tagResponse = try? JSONDecoder().decode(TagResponse.self, from: data)
             else {
-                Logger.llm.warning("Failed to parse tags from LLM response: \(response)")
+                Logger.module(named: "llm").warning("Failed to parse tags from LLM response: \(response)")
                 return []
             }
 
             return tagResponse.tags.map { $0.lowercased() }
         } catch {
-            Logger.llm.error("Failed to generate tags: \(error.localizedDescription)")
+            Logger.module(named: "llm").error("Failed to generate tags: \(error.localizedDescription)")
             return []
         }
     }
@@ -72,7 +72,7 @@ extension LLMService {
 
             return title.isEmpty ? "New Conversation" : title
         } catch {
-            Logger.llm.error("Failed to generate title: \(error.localizedDescription)")
+            Logger.module(named: "llm").error("Failed to generate title: \(error.localizedDescription)")
             return "New Conversation"
         }
     }
@@ -128,7 +128,7 @@ extension LLMService {
             guard let data = cleanJson.data(using: String.Encoding.utf8),
                 let scores = try? JSONDecoder().decode([String: Double].self, from: data)
             else {
-                Logger.llm.warning(
+                Logger.module(named: "llm").warning(
                     "Failed to parse recall evaluation from LLM response: \(response)")
                 return [:]
             }

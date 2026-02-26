@@ -9,7 +9,7 @@ public actor VectorStore: VectorStoreProtocol {
     private let index: USearchIndex
     private let dimensions: Int
     private let path: String
-    private let logger = Logger(label: "com.monad.VectorStore")
+    private let logger = Logger.module(named: "com.monad.VectorStore")
 
     public init(dimensions: Int = 1536, path: String? = nil) throws {
         self.dimensions = dimensions

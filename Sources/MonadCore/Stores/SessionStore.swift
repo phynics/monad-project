@@ -4,7 +4,7 @@ import Logging
 public actor SessionStore: Sendable {
     private let persistenceService: any SessionPersistenceProtocol
     private var loadedSessions: [UUID: ConversationSession] = [:]
-    private let logger = Logger(label: "monad.session.store")
+    private let logger = Logger.module(named: "store")
     
     public init(persistenceService: any SessionPersistenceProtocol) async throws {
         self.persistenceService = persistenceService

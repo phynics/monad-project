@@ -8,7 +8,7 @@ public actor OpenAIClient {
     private let modelName: String
     private let timeoutInterval: TimeInterval
     private let maxRetries: Int
-    private let logger = Logger(label: "com.monad.openai-client")
+    private let logger = Logger.module(named: "com.monad.openai-client")
 
     public init(
         apiKey: String,

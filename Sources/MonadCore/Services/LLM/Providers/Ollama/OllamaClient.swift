@@ -8,7 +8,7 @@ public actor OllamaClient {
     private let timeoutInterval: TimeInterval
     private let maxRetries: Int
     private let session: URLSession
-    private let logger = Logger(label: "com.monad.ollama-client")
+    private let logger = Logger.module(named: "com.monad.ollama-client")
 
     public init(
         endpoint: String,

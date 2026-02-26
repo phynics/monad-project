@@ -15,7 +15,7 @@ public actor ContextManager: @unchecked Sendable {
     
     private let vectorStore: (any VectorStoreProtocol)?
     private let workspace: (any WorkspaceProtocol)?
-    private let logger = Logger(label: "com.monad.ContextManager")
+    private let logger = Logger.module(named: "com.monad.ContextManager")
 
     private let ranker = ContextRanker()
 

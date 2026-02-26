@@ -21,7 +21,7 @@ public struct MonadServerFactory {
         hostname: String = "127.0.0.1",
         port: Int = 8080,
         verbose: Bool = false,
-        logger: Logger = Logger.server
+        logger: Logger = Logger.module(named: "server")
     ) async throws -> ServerContext {
         // Initialize Persistence
         let persistenceService: PersistenceService

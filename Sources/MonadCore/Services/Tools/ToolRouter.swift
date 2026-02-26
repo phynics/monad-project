@@ -4,7 +4,7 @@ import Dependencies
 
 /// Routes tool execution requests to the appropriate handler (local or remote)
 public actor ToolRouter {
-    private let logger = Logger(label: "com.monad.core.tools")
+    private let logger = Logger.module(named: "com.monad.core.tools")
 
     @Dependency(\.sessionManager) private var sessionManager
 

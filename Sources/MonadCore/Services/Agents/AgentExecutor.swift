@@ -7,7 +7,7 @@ public struct AgentExecutor: Sendable {
     private let persistenceService: any JobStoreProtocol & MessageStoreProtocol
     private let chatEngine: ChatEngine
 
-    private let logger = Logger(label: "com.monad.agent-executor")
+    private let logger = Logger.module(named: "com.monad.agent-executor")
 
     public init(persistenceService: any JobStoreProtocol & MessageStoreProtocol, chatEngine: ChatEngine) {
         self.persistenceService = persistenceService

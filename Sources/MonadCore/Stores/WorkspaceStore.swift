@@ -5,7 +5,7 @@ public actor WorkspaceStore: Sendable {
     private let persistenceService: any WorkspacePersistenceProtocol
     private let workspaceCreator: any WorkspaceCreating
     private var loadedWorkspaces: [UUID: any WorkspaceProtocol] = [:]
-    private let logger = Logger(label: "monad.workspace.store")
+    private let logger = Logger.module(named: "monad.workspace.store")
     
     public init(
         persistenceService: any WorkspacePersistenceProtocol,

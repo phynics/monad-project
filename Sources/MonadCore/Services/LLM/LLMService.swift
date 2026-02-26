@@ -80,7 +80,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
 
     private let storage: any ConfigurationServiceProtocol
 
-    internal let logger = Logger.llm
+    internal let logger = Logger.module(named: "llm")
 
     private let contextCompressor = ContextCompressor()
 

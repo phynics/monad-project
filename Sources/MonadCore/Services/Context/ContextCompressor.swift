@@ -30,7 +30,7 @@ public enum ConversationNode: Sendable {
 
 /// Service to compress conversation context using summarization
 public actor ContextCompressor {
-    private let logger = Logger(label: "com.monad.ContextCompressor")
+    private let logger = Logger.module(named: "com.monad.ContextCompressor")
 
     // Configuration
     private let topicGroupSize = 10 // Messages per topic chunk

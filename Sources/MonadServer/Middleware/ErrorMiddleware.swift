@@ -71,7 +71,7 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
             response.status = status
             return response
         } catch {
-            Logger.server.error("Unhandled error in middleware: \(error)")
+            Logger.module(named: "server").error("Unhandled error in middleware: \(error)")
             let apiError = APIErrorResponse(error: .init(
                 code: "internal_server_error",
                 message: "An unexpected error occurred."

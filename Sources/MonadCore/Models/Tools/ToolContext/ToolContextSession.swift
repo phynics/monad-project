@@ -24,7 +24,7 @@ public protocol ContextGatewayTool: Tool {
 /// Only one context can be active at a time. When a new context is activated,
 /// any existing non-persistent context is first deactivated.
 public actor ToolContextSession {
-    private let logger = Logger.tools
+    private let logger = Logger.module(named: "tools")
 
     /// Currently active context (only one at a time)
     public private(set) var activeContext: (any ToolContext)?

@@ -40,7 +40,7 @@ public class StreamingParser {
             } else {
                 // Check for orphaned closing tag marker
                 if result.text.contains("RECLASSIFY_THINKING_MARKER") {
-                    Logger.parser.warning("[Parser] ORPHANED </think> DETECTED! Reclassifying.")
+                    Logger.module(named: "parser").warning("[Parser] ORPHANED </think> DETECTED! Reclassifying.")
                     let actualText = result.text.replacingOccurrences(
                         of: "RECLASSIFY_THINKING_MARKER", with: "")
 
@@ -235,7 +235,7 @@ public class StreamingParser {
                 let toolCall = try? JSONDecoder().decode(ToolCall.self, from: jsonData) {
                 toolCalls.append(toolCall)
             } else {
-                Logger.parser.error("Failed to parse tool call JSON: \(jsonString)")
+                Logger.module(named: "parser").error("Failed to parse tool call JSON: \(jsonString)")
             }
 
             cleanText = (cleanText as NSString).replacingCharacters(in: fullRange, with: "")
