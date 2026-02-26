@@ -18,12 +18,8 @@ public struct ToolExecutionResult: Sendable {
     /// The response message from the tool
     public let message: Message
 
-    /// Compactification node for context compression (optional)
-    public let compactificationNode: CompactificationNode?
-
-    public init(message: Message, compactificationNode: CompactificationNode? = nil) {
+    public init(message: Message) {
         self.message = message
-        self.compactificationNode = compactificationNode
     }
 }
 
@@ -173,19 +169,7 @@ public actor ToolExecutor {
         let toolResult = ToolResult.success(message.content)
         let summary = tool.summarize(parameters: anyArgs, result: toolResult)
 
-        let compactNode = CompactificationNode.toolExecution(
-            toolName: toolCall.name,
-            arguments: anyArgs,
-            resultSummary: String(message.content.prefix(100)),
-            callMessageId: assistantMessageId,
-            responseMessageId: message.id
-        )
-
-        // Override summary with tool-specific one
-        var node = compactNode
-        node.summary = summary
-
-        return ToolExecutionResult(message: message, compactificationNode: node)
+        return ToolExecutionResult(message: message)
     }
 
     /// Execute multiple tool calls concurrently
