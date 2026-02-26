@@ -43,11 +43,13 @@ extension PersistenceService {
         let allMemories = try await fetchAllMemories()
         var results: [(memory: Memory, similarity: Double)] = []
 
+        let embeddingMagnitude = VectorMath.magnitude(embedding)
+
         for memory in allMemories {
             let memoryVector = memory.embeddingVector
             guard !memoryVector.isEmpty else { continue }
 
-            let similarity = VectorMath.cosineSimilarity(embedding, memoryVector)
+            let similarity = VectorMath.cosineSimilarity(embedding, memoryVector, magnitudeA: embeddingMagnitude)
             if similarity >= minSimilarity {
                 results.append((memory: memory, similarity: similarity))
             }
