@@ -10,7 +10,7 @@ public actor OpenRouterClient {
     private let endpoint: URL
     private let timeoutInterval: TimeInterval
     private let maxRetries: Int
-    private let logger = Logger.module(named: "com.monad.openrouter-client")
+    private let logger = Logger.module(named: "openrouter-client")
     private let session: URLSession
 
     public init(

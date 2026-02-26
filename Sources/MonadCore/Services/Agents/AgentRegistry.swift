@@ -6,7 +6,7 @@ import Dependencies
 /// Now backed by the Persistence Layer (Database).
 public actor AgentRegistry {
     @Dependency(\.persistenceService) private var persistence
-    private let logger = Logger.module(named: "com.monad.agent-registry")
+    private let logger = Logger.module(named: "agent-registry")
 
     public init() {}
 

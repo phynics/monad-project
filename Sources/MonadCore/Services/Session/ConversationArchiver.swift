@@ -14,7 +14,7 @@ public actor ConversationArchiver {
     private let persistence: any SessionPersistenceProtocol & MemoryStoreProtocol & MessageStoreProtocol
     private let llmService: LLMService
     private let contextManager: ContextManager
-    private let logger = Logger.module(named: "com.monad.ConversationArchiver")
+    private let logger = Logger.module(named: "ConversationArchiver")
 
     public init(persistence: any SessionPersistenceProtocol & MemoryStoreProtocol & MessageStoreProtocol, llmService: LLMService, contextManager: ContextManager) {
         self.persistence = persistence

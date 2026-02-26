@@ -4,7 +4,7 @@ import Logging
 
 public actor OpenAIEmbeddingService: EmbeddingServiceProtocol {
     private let client: OpenAI
-    private let logger = Logger.module(named: "com.monad.OpenAIEmbeddingService")
+    private let logger = Logger.module(named: "OpenAIEmbeddingService")
     // Model is typealias for String in OpenAI library
     private let model: Model = "text-embedding-ada-002"
 

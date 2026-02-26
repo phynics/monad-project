@@ -4,7 +4,7 @@ import Logging
 
 /// Utility to validate that critical dependencies are configured before use.
 public struct DependencyValidator: Sendable {
-    private let logger = Logger.module(named: "com.monad.dependency-validator")
+    private let logger = Logger.module(named: "dependency-validator")
 
     public init() {}
 

@@ -3,7 +3,7 @@ import Logging
 import OpenAI
 
 public enum RetryPolicy {
-    private static let logger = Logger.module(named: "com.monad.retry-policy")
+    private static let logger = Logger.module(named: "retry-policy")
 
     /// Executes an async operation with retry logic
     /// - Parameters:
