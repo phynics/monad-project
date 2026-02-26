@@ -7,10 +7,10 @@ A headless AI assistant built for deep context integration, focusing on how data
 *   **Language:** Swift 6.0
 *   **Platform:** macOS 15+
 *   **Architecture:**
-    *   **MonadCore:** Pure logic framework. Handles session management, context engine, persistence (GRDB/SQLite), and tool execution.
+    *   **MonadCore:** Pure logic framework. Handles session management, context engine, persistence (GRDB/SQLite), and tool execution. Models are organized into `Agents/`, `Chat/`, `Configuration/`, `Context/`, `Database/`, `Tools/`, and `Workspace/` subdirectories. Key types: `Timeline` (the persistent conversation record, formerly `ConversationSession`), `LLMConfiguration` (split from the old `Configuration` wrapper, MCP removed), `ToolReference`, `WorkspaceReference`.
     *   **MonadPrompt:** A standalone, type-safe DSL for constructing LLM prompts using Swift result builders.
-    *   **MonadShared:** Common types and protocols shared across all modules (Message, Memory, ToolCall, ChatDelta).
-    *   **MonadServer:** REST API server built with Hummingbird. Uses advanced SSE (Server-Sent Events) streaming mapped from internal `ChatEvent` states to provide rich, real-time feedback (tool execution status, thoughts, metadata).
+    *   **MonadShared:** Common types and protocols shared across all modules (`ToolReference`, `WorkspaceReference`, `AnyCodable`, `ChatDelta`).
+    *   **MonadServer:** REST API server built with Hummingbird. Uses advanced SSE (Server-Sent Events) streaming mapped from internal `ChatEvent` states to provide rich, real-time feedback (tool execution status, thoughts, metadata). API contract types are split into category-specific files (`ChatAPI`, `ClientAPI`, `CommonAPI`, etc.).
     *   **MonadClient:** HTTP client library for communicating with the server.
     *   **MonadCLI:** Command-line interface for interacting with the server.
 *   **Key Technologies:**
@@ -73,9 +73,11 @@ make open
 
 ## Development Conventions
 
-*   **Concurrency:** use `AsyncThrowingStream` for processes that emit progress updates, rather than closure callbacks. This allows for cleaner `for try await` loops at the call site.
+*   **Concurrency:** Use `AsyncThrowingStream` for processes that emit progress updates, rather than closure callbacks. This allows for cleaner `for try await` loops at the call site. Use Swift 6 `Mutex` for synchronous shared state (the old custom `Locked` wrapper has been removed).
 
 *   **Graceful Shutdown:** Any `Service` registered with `ServiceGroup` **must** wrap its long-running work in `cancelWhenGracefulShutdown { ... }` (from `ServiceLifecycle`). Do NOT rely on `Task.isCancelled` alone—it is only set *after* all services have returned from `run()`, which will deadlock if services are waiting for it. See `BonjourAdvertiser` for a reference implementation.
+
+*   **Logging:** Use `Logger.module(named: "ComponentName")` throughout all targets. Do **not** use `Logger(label: ...)` directly.
 
 *   **Code Structure:**
     *   `Sources/`: Application source code.
@@ -111,7 +113,7 @@ The CLI provides a rich REPL with slash commands for administration and interact
 - `/config`: Edit server settings interactively.
 
 ### 3. Workspace Management
-Monad uses a multi-workspace system for scoping tools and files:
+Monad uses a multi-workspace system for scoping tools and files. Key types: `WorkspaceReference` (describes a workspace), `WorkspaceURI` (unique identifier), `WorkspaceToolDefinition` (per-workspace tool manifest).
 - **Primary Workspace**: Private session sandbox (contains `Notes/` directory).
 - **Attached Workspaces**: Shared project directories attached via `/workspace attach` or `attach-pwd`.
 - **Tool Provenance**: Tools are surfaced as `[System]`, `[Workspace: Name]`, or `[Session]` to indicate their scope.

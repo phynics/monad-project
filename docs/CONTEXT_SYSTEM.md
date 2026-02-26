@@ -34,7 +34,7 @@ Agents provide high-level "profiles" that influence the prompt:
 - **Persona Prompt**: Specific character traits.
 - **Guardrails**: Safety and formatting constraints.
 
-The `AgentRegistry` and `PersistenceService` seed default agents like the **Default Assistant** and **Agent Coordinator**.
+The `AgentRegistry` and `PersistenceService` seed default agents like the **Default Assistant** and **Agent Coordinator**. Conversation records are stored in `Timeline` (formerly `ConversationSession`). Default prompt text lives in `Services/Prompting/DefaultInstructions.swift`.
 
 ---
 

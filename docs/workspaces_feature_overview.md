@@ -17,7 +17,7 @@ A **Workspace** is a defined environment with a specific root path, trust level,
 | **Status** | `active` (available) or `missing` (client disconnected or path moved). |
 
 ### 2. The Session
-A **Session** (`ConversationSession`) represents a continuous thread of interaction between the User and the AI. It orchestrates context, memory, and tool execution.
+A **Session** (`Timeline`) represents a continuous thread of interaction between the User and the AI. It orchestrates context, memory, and tool execution. (Previously called `ConversationSession`.)
 
 ### Sessions
 A session can have one **Primary Workspace** (usually a `ServerSession` type providing a private sandbox) and multiple **Attached Workspaces**. 
