@@ -6,7 +6,7 @@ import MonadShared
 
 extension PersistenceService {
     /// Search archived sessions by title, tags, or message content
-    public func searchArchivedSessions(query: String) throws -> [ConversationSession] {
+    public func searchArchivedSessions(query: String) throws -> [Timeline] {
         try dbQueue.read { db in
             let pattern = "%\(query)%"
 
@@ -19,7 +19,7 @@ extension PersistenceService {
                 .map { $0 as UUID }
 
             return
-                try ConversationSession
+                try Timeline
                 .filter(Column("isArchived") == true)
                 .filter(
                     Column("title").like(pattern) || Column("tags").like(pattern)
@@ -32,7 +32,7 @@ extension PersistenceService {
 
     /// Search for archived sessions that contain any of the provided tags
     public func searchArchivedSessions(matchingAnyTag tags: [String]) throws
-        -> [ConversationSession] {
+        -> [Timeline] {
         guard !tags.isEmpty else { return [] }
 
         return try dbQueue.read { db in
@@ -44,7 +44,7 @@ extension PersistenceService {
             let query = conditions.joined(operator: .or)
 
             let candidates =
-                try ConversationSession
+                try Timeline
                 .filter(Column("isArchived") == true)
                 .filter(query)
                 .fetchAll(db)
@@ -63,7 +63,7 @@ extension PersistenceService {
         try await dbQueue.write { db in
             let cutoffDate = Date().addingTimeInterval(-timeInterval)
 
-            var query = ConversationSession.filter(Column("updatedAt") < cutoffDate)
+            var query = Timeline.filter(Column("updatedAt") < cutoffDate)
                 .filter(Column("isArchived") == false)
 
             if !excluding.isEmpty {
@@ -83,7 +83,7 @@ extension PersistenceService {
                     }
 
                     do {
-                        let didDelete = try ConversationSession.deleteOne(
+                        let didDelete = try Timeline.deleteOne(
                             db, key: ["id": session.id])
                         deletedCount += (didDelete ? 1 : 0)
                     } catch {

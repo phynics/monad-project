@@ -168,18 +168,18 @@ public struct ToolResult: Sendable {
     /// Optional error message, shown to the LLM on failure.
     public let error: String?
     
-    /// Optional context provided if the tool launched a subagent or created a background job.
-    public let subagentContext: SubagentContext?
+    // Optional context provided if the tool launched a subagent or created a background job.
+    // public let subagentContext: SubagentContext?
 
     /// Creates a successful tool result.
-    public static func success(_ output: String, subagentContext: SubagentContext? = nil)
+    public static func success(_ output: String)
         -> ToolResult {
-        ToolResult(success: true, output: output, error: nil, subagentContext: subagentContext)
+        ToolResult(success: true, output: output, error: nil)
     }
 
     /// Creates a failed tool result with an error message.
     public static func failure(_ error: String) -> ToolResult {
-        ToolResult(success: false, output: "", error: error, subagentContext: nil)
+        ToolResult(success: false, output: "", error: error)
     }
 }
 

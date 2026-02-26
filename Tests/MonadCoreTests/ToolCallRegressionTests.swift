@@ -82,7 +82,7 @@ struct ToolCallRegressionTests {
         coordinator.processToolCalls([chunk2])
         coordinator.processToolCalls([chunk3])
 
-        let message = coordinator.finalize(rawPrompt: "test", structuredContext: [:])
+        let message = coordinator.finalize()
 
         #expect(message.toolCalls?.count == 1)
         let toolCall = message.toolCalls?.first

@@ -59,7 +59,7 @@ public struct SessionAPIController<Context: RequestContext>: Sendable {
         // In-memory pagination
         let total = sessions.count
         let start = (page - 1) * perPage
-        let paginatedSessions: [ConversationSession]
+        let paginatedSessions: [Timeline]
         if start < total {
             let end = min(start + perPage, total)
             paginatedSessions = Array(sessions[start..<end])

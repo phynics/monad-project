@@ -18,7 +18,7 @@ public struct AgentExecutor: Sendable {
     public func execute(
         job: Job,
         agent: Agent,
-        session: ConversationSession,
+        session: Timeline,
         toolExecutor: ToolExecutor,
         contextManager: ContextManager?
     ) async {

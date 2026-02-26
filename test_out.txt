@@ -1,0 +1,668 @@
+[1/1] Compiling plugin GenerateManual
+[2/2] Compiling plugin GenerateDoccReference
+Building for debugging...
+[2/8] Write swift-version--4C93BC3534C3854D.txt
+Build complete! (0.51s)
+Test Suite 'All tests' started at 2026-02-26 05:13:49.157.
+Test Suite 'MonadProjectPackageTests.xctest' started at 2026-02-26 05:13:49.170.
+Test Suite 'ContextBuilderTests' started at 2026-02-26 05:13:49.170.
+Test Case '-[MonadPromptTests.ContextBuilderTests testConditionals]' started.
+Test Case '-[MonadPromptTests.ContextBuilderTests testConditionals]' passed (0.006 seconds).
+Test Case '-[MonadPromptTests.ContextBuilderTests testExampleBuilder]' started.
+Test Case '-[MonadPromptTests.ContextBuilderTests testExampleBuilder]' passed (0.001 seconds).
+Test Case '-[MonadPromptTests.ContextBuilderTests testLoop]' started.
+Test Case '-[MonadPromptTests.ContextBuilderTests testLoop]' passed (0.001 seconds).
+Test Suite 'ContextBuilderTests' passed at 2026-02-26 05:13:49.178.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.007 (0.008) seconds
+Test Suite 'LocalConfigManagerTests' started at 2026-02-26 05:13:49.178.
+Test Case '-[MonadCLITests.LocalConfigManagerTests testPersistence]' started.
+Test Case '-[MonadCLITests.LocalConfigManagerTests testPersistence]' passed (0.009 seconds).
+Test Suite 'LocalConfigManagerTests' passed at 2026-02-26 05:13:49.188.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.009 (0.010) seconds
+Test Suite 'OrphanCleanupServiceTests' started at 2026-02-26 05:13:49.188.
+Test Case '-[MonadServerTests.OrphanCleanupServiceTests testCleanupOrphanedWorkspace]' started.
+2026-02-26T05:13:49+0100 info com.monad.orphan-cleanup: [MonadServer] OrphanCleanupService started
+2026-02-26T05:13:49+0100 info com.monad.orphan-cleanup: [MonadServer] Starting orphaned workspace cleanup...
+2026-02-26T05:13:49+0100 info com.monad.orphan-cleanup: [MonadServer] Deleted orphaned workspace: 4D03303C-E62A-4264-97E9-37411265DC96 at /var/folders/6p/pxxs07n96vbgmmjnllm1j55c0000gn/T/C2D2610E-BE62-48A5-B9E1-37F0B0F3D3B7/4D03303C-E62A-4264-97E9-37411265DC96
+2026-02-26T05:13:49+0100 info com.monad.orphan-cleanup: [MonadServer] Cleanup complete. Removed 1 orphaned workspaces.
+2026-02-26T05:13:49+0100 info com.monad.orphan-cleanup: [MonadServer] OrphanCleanupService shutting down gracefully
+2026-02-26T05:13:49+0100 info com.monad.orphan-cleanup: [MonadServer] OrphanCleanupService stopped
+Test Case '-[MonadServerTests.OrphanCleanupServiceTests testCleanupOrphanedWorkspace]' passed (0.120 seconds).
+Test Case '-[MonadServerTests.OrphanCleanupServiceTests testDoNotCleanupUserManagedWorkspace]' started.
+2026-02-26T05:13:49+0100 info com.monad.orphan-cleanup: [MonadServer] OrphanCleanupService started
+2026-02-26T05:13:49+0100 info com.monad.orphan-cleanup: [MonadServer] Starting orphaned workspace cleanup...
+2026-02-26T05:13:49+0100 warning com.monad.orphan-cleanup: [MonadServer] Skipping cleanup of user-managed workspace: E986AE51-C30D-45EB-AA60-20156F28704A at /var/folders/6p/pxxs07n96vbgmmjnllm1j55c0000gn/T/UserManaged_594E916C-9050-4B81-9BE0-D0E69CD5EDF2
+2026-02-26T05:13:49+0100 info com.monad.orphan-cleanup: [MonadServer] Cleanup complete. No orphaned workspaces found.
+2026-02-26T05:13:49+0100 info com.monad.orphan-cleanup: [MonadServer] OrphanCleanupService shutting down gracefully
+2026-02-26T05:13:49+0100 info com.monad.orphan-cleanup: [MonadServer] OrphanCleanupService stopped
+Test Case '-[MonadServerTests.OrphanCleanupServiceTests testDoNotCleanupUserManagedWorkspace]' passed (0.106 seconds).
+Test Suite 'OrphanCleanupServiceTests' passed at 2026-02-26 05:13:49.414.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.226 (0.226) seconds
+Test Suite 'RemoteWorkspaceTests' started at 2026-02-26 05:13:49.414.
+Test Case '-[MonadServerTests.RemoteWorkspaceTests testExecuteTool]' started.
+Test Case '-[MonadServerTests.RemoteWorkspaceTests testExecuteTool]' passed (0.005 seconds).
+Test Case '-[MonadServerTests.RemoteWorkspaceTests testReadFile]' started.
+Test Case '-[MonadServerTests.RemoteWorkspaceTests testReadFile]' passed (0.001 seconds).
+Test Suite 'RemoteWorkspaceTests' passed at 2026-02-26 05:13:49.420.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'SessionSeedingTests' started at 2026-02-26 05:13:49.420.
+Test Case '-[MonadServerTests.SessionSeedingTests testSessionSeeding]' started.
+Test Case '-[MonadServerTests.SessionSeedingTests testSessionSeeding]' passed (0.008 seconds).
+Test Suite 'SessionSeedingTests' passed at 2026-02-26 05:13:49.428.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.008 (0.008) seconds
+Test Suite 'SessionWorkspaceTests' started at 2026-02-26 05:13:49.428.
+Test Case '-[MonadServerTests.SessionWorkspaceTests testCreateSessionCreatesDedicatedWorkspace]' started.
+/Volumes/Development/monad-project/.build/checkouts/GRDB.swift/GRDB/Core/SerializedDatabase.swift:130: error: -[MonadServerTests.SessionWorkspaceTests testCreateSessionCreatesDedicatedWorkspace] : failed: caught error: "SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`"
+<unknown>:0: -[MonadServerTests.SessionWorkspaceTests testCreateSessionCreatesDedicatedWorkspace] : Test skipped: threw error "SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`"
+Test Case '-[MonadServerTests.SessionWorkspaceTests testCreateSessionCreatesDedicatedWorkspace]' failed (0.101 seconds).
+Test Suite 'SessionWorkspaceTests' failed at 2026-02-26 05:13:49.529.
+	 Executed 1 test, with 1 test skipped and 1 failure (1 unexpected) in 0.101 (0.101) seconds
+Test Suite 'WorkspaceManagerTests' started at 2026-02-26 05:13:49.529.
+Test Case '-[MonadServerTests.WorkspaceManagerTests testCloseWorkspace]' started.
+Test Case '-[MonadServerTests.WorkspaceManagerTests testCloseWorkspace]' passed (0.002 seconds).
+Test Case '-[MonadServerTests.WorkspaceManagerTests testGetNonExistentWorkspace]' started.
+Test Case '-[MonadServerTests.WorkspaceManagerTests testGetNonExistentWorkspace]' passed (0.000 seconds).
+Test Case '-[MonadServerTests.WorkspaceManagerTests testGetWorkspaceCreatesAndCaches]' started.
+Test Case '-[MonadServerTests.WorkspaceManagerTests testGetWorkspaceCreatesAndCaches]' passed (0.002 seconds).
+Test Case '-[MonadServerTests.WorkspaceManagerTests testHealthCheckAll]' started.
+Test Case '-[MonadServerTests.WorkspaceManagerTests testHealthCheckAll]' passed (0.002 seconds).
+Test Suite 'WorkspaceManagerTests' passed at 2026-02-26 05:13:49.536.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'MonadProjectPackageTests.xctest' failed at 2026-02-26 05:13:49.536.
+	 Executed 14 tests, with 1 test skipped and 1 failure (1 unexpected) in 0.364 (0.366) seconds
+Test Suite 'All tests' failed at 2026-02-26 05:13:49.536.
+	 Executed 14 tests, with 1 test skipped and 1 failure (1 unexpected) in 0.364 (0.379) seconds
+􀟈  Test run started.
+􀄵  Testing Library Version: 1734.3
+􀄵  Target Platform: arm64e-apple-macos14.0
+􀟈  Suite "Raptor Compression Tests" started.
+􀟈  Suite RecallEvaluationTests started.
+􀟈  Suite AgentRegistryTests started.
+􀟈  Suite "Dependency Safety Tests" started.
+􀟈  Suite "Context Builder Truncation Tests" started.
+􀟈  Suite "System Status Tests" started.
+􀟈  Suite StreamingParserTests started.
+􀟈  Suite "Context Manager Mocking Tests" started.
+􀟈  Suite "Tool Parameter Schema Tests" started.
+􀟈  Suite "Context Compressor Tests" started.
+􀟈  Suite LoopDetectionTests started.
+􀟈  Suite MockVectorStoreTests started.
+􀟈  Suite "Tool Parameters Extraction Tests" started.
+􀟈  Suite "Retry Policy Tests" started.
+􀟈  Suite EmbeddingServiceTests started.
+􀟈  Suite "Dependency Validator Tests" started.
+􀟈  Suite StreamingParserCodeBlockTests started.
+􀟈  Suite TokenEstimatorTests started.
+􀟈  Suite JobPersistenceTests started.
+􀟈  Suite VectorStoreTests started.
+􀟈  Suite EndpointEdgeCaseTests started.
+􀟈  Suite "Tool Call Regression Tests" started.
+􀟈  Suite "Context Manager Tests" started.
+􁁛  Suite RecallEvaluationTests passed after 0.001 seconds.
+􀟈  Suite "Test Fixtures and Builders Tests" started.
+􀟈  Suite "Remediation and Validation Tests" started.
+􀟈  Suite "Test Helper Tests" started.
+􀟈  Suite "Filesystem Tools Tests" started.
+􀟈  Suite MemoryControllerTests started.
+􀟈  Suite AnyCodableTests started.
+􀟈  Suite "Tool Error Surfacing Tests" started.
+􀟈  Suite ConfigurationControllerTests started.
+􀟈  Suite JobQueueTests started.
+􀟈  Suite FilesControllerTests started.
+􀟈  Suite StreamingParserStressTests started.
+􀟈  Suite SessionManagerTests started.
+􀟈  Suite ChatEngineTests started.
+􀟈  Suite PersistenceTests started.
+􀟈  Suite PromptIntegrationTests started.
+􀟈  Suite "Workspace Repository Tests" started.
+􀟈  Suite ToolControllerTests started.
+􀟈  Suite LLMServiceTests started.
+􀟈  Suite ConfigPersistenceTests started.
+􀟈  Suite ErrorHandlingTests started.
+􀟈  Suite ChatControllerTests started.
+􀟈  Suite USearchDirectTests started.
+􀟈  Suite ModelSerializationTests started.
+􁁛  Suite USearchDirectTests passed after 0.001 seconds.
+􀟈  Suite ToolExecutorTests started.
+􀟈  Suite ServerLLMServiceTests started.
+􀟈  Suite PruneComplexSessionTests started.
+􀟈  Suite ChatControllerStreamingTests started.
+􀟈  Suite PersistenceImmutabilityTests started.
+􀟈  Suite "Persistence Protocol Tests" started.
+􀟈  Suite SessionControllerTests started.
+􀟈  Suite MigrationTests started.
+􀟈  Suite StatusControllerTests started.
+􀟈  Suite PersistenceServiceJobTests started.
+􀟈  Test "Unconfigured PersistenceService throws descriptive error" started.
+􀟈  Test "Summarize Tool Interactions" started.
+􀟈  Test "HealthCheckable Protocol" started.
+􀟈  Test "Recursive Summarize" started.
+􀟈  Test "Default agents are seeded" started.
+􀟈  Suite LLMConfigurationTests started.
+􀟈  Test "Token Budget Application" started.
+􀟈  Test "Test multiple chunks" started.
+􀟈  Test "Chat History Truncation" started.
+􀟈  Test "Compression Basics" started.
+􀟈  Test "Test different arguments do not trigger loop detection" started.
+􀟈  Test "Test malformed tags" started.
+􀟈  Test "Context Manager Initialization with Mocks" started.
+􀟈  Test "Test loop detection reset" started.
+􀟈  Test "Test loop detection triggers after 3 identical calls" started.
+􀟈  Test "Mock Store Search" started.
+􀟈  Test "Mock Store Initialize and Add" started.
+􀟈  Test "StatusResponse Serialization" started.
+􀟈  Test "Optional Parameters" started.
+􀟈  Test "Broad Summary Trigger" started.
+􀟈  Test "Basic Object Building" started.
+􀟈  Test "Require Parameter Success" started.
+􀟈  Test "Succeeds after transient failures" started.
+􀟈  Test "Require Missing Parameter Fails" started.
+􀟈  Test "String Enum Building" started.
+􀟈  Test "Test basic content extraction" started.
+􀟈  Test "Fails after max retries exhausted" started.
+􀟈  Test "Test full thinking block" started.
+􀟈  Test "Test semantic similarity logic" started.
+􀟈  Test "Validator identifies missing critical dependencies" started.
+􀟈  Test "Test generating multiple embeddings" started.
+􀟈  Test "Test tool call inside standard code block" started.
+􀟈  Test "Test tool call inside markdown code block" started.
+􀟈  Test "Test empty string estimation" started.
+􀟈  Test "Test mixed content with code block tool call" started.
+􀟈  Test "Delete non-existent memory (Should be 204)" started.
+􀟈  Test "Chat with invalid UUID (400)" started.
+􀟈  Test "Auth Failure: Invalid Token (Strict -> 401 Unauthorized)" started.
+􀟈  Test "Require Invalid Type Fails" started.
+􀟈  Test "Auth Failure: Missing Header (Strict -> 401 Unauthorized)" started.
+􀟈  Test "Chat with non-existent session (404)" started.
+􀟈  Test "Sanity Check" started.
+􀟈  Test "Test multi-byte character estimation" started.
+􀟈  Test "ToolExecutor correctly unwraps AnyCodable arguments" started.
+􀟈  Test "StreamingCoordinator parses complex JSON arguments from native tool calls" started.
+􀟈  Test "Gather Context: Semantic Retrieval" started.
+􀟈  Test "Ranking Logic with Tag Boost" started.
+􀟈  Test "Test generating a single embedding" started.
+􀟈  Test "Filesystem Notes Retrieval" started.
+􀟈  Test "Gather Context: Uses History for Tags but Query for Embedding" started.
+􀟈  Test "Message Builder creates valid message with defaults" started.
+􀟈  Test "Memory Builder creates valid memory" started.
+􀟈  Test "Job Builder creates valid job" started.
+􀟈  Test "collect() helper captures all stream elements" started.
+􀟈  Test "Test basic english estimation" started.
+􀟈  Test "Test partial thinking block streaming" started.
+􀟈  Test "Fails immediately on non-transient error" started.
+􀟈  Test "List Directory Tool" started.
+􀟈  Test "ToolError provides remediation hints" started.
+􀟈  Test "Find File Tool" started.
+􀟈  Test "Read File Tool" started.
+􀟈  Test "Search Files Tool" started.
+􀟈  Test "Test job table creation" started.
+􀟈  Test "Test Memories CRUD" started.
+􀟈  Test "Context Notes Truncation" started.
+􀟈  Test "Configuration validation identifies missing API keys" started.
+􀟈  Test "Test encoding and decoding primitive types" started.
+􀟈  Test "Test encoding double wrapped AnyCodable" started.
+􀟈  Test "ToolResult.success has correct properties" started.
+􀟈  Test "Test encoding and decoding nested structures" started.
+􀟈  Test "Test string description" started.
+􀟈  Test "Smart Chunking with Topic Change" started.
+􀟈  Test "Search File Content Tool" started.
+􀟈  Test "Test Configuration CRUD" started.
+􀟈  Test "ToolResult.failure has correct properties" started.
+􀟈  Test "Inspect File Tool" started.
+􀟈  Test "Test List Files" started.
+􀟈  Test "Partial code block delimiters across chunks" started.
+􀟈  Test "Test Stale Session Cleanup" started.
+􀟈  Test "Validator succeeds when dependencies are configured" started.
+􀟈  Test "Jailed Relative Path" started.
+􀟈  Test "Think tag inside code block should be treated as text" started.
+􀟈  Test "Closing think tag inside code block (nested in thinking) should be preserved" started.
+􀟈  Test "Interleaved partials" started.
+􀟈  Test "Sentinel name 'tool_call' is discarded" started.
+􀟈  Test "Succeeds on first attempt" started.
+􀟈  Test "XML fallback tool call is executed" started.
+􀟈  Test "Tool error events are emitted for failed tool execution" started.
+􀟈  Test "Partial tag delimiters across chunks" started.
+􀟈  Test "Thinking tags emit thought events" started.
+􀟈  Test "Unknown tool name emits toolCallError" started.
+􀟈  Test "Failing tool returns error result to LLM" started.
+􀟈  Test "Path Traversal Protection" started.
+􀟈  Test "Empty buffer handling" started.
+􀟈  Test "maxTurns limits the generation loop" started.
+􀟈  Test "Response is persisted to the database" started.
+􀟈  Test "Test Session Creation and Context Manager Access" started.
+􀟈  Test "Plain text response emits correct events" started.
+􀟈  Test "Test Get Nested File Content (Manual Path Extraction)" started.
+􀟈  Test "Client tool execution pauses the stream" started.
+􀟈  Test "Orphaned closing tag triggers reclassification" started.
+􀟈  Test "Add job via tool" started.
+􀟈  Test "Test creating a conversation session" started.
+􀟈  Test "testUserQueryPreventsLeakageIntoSystem" started.
+􀟈  Test "Generation context event is emitted first" started.
+􀟈  Test "Empty message and no tool outputs throws error" started.
+􀟈  Test "testNonEmptyUserQueryAppendsMessage" started.
+􀟈  Test "Update Workspace" started.
+􀟈  Test "Tool failure produces correct ToolResult" started.
+􀟈  Test "Create Workspace" started.
+􀟈  Test "Server-side tool call is executed and yields events" started.
+􀟈  Test "Get Workspace" started.
+􀟈  Test "Test Tools API" started.
+􀟈  Test "List Workspaces" started.
+􀟈  Test "Test prompt building with empty context" started.
+􀟈  Test "Test prompt building logic and structure" started.
+􀟈  Test "testEmptyUserQueryDoesNotAppendMessage" started.
+􀟈  Test "Edge Case: Empty Fields" started.
+􀟈  Test "Test history optimization (truncation)" started.
+􀟈  Test "Timeline JSON Serialization" started.
+􀟈  Test "Test LLMService error when not configured" started.
+􀟈  Test "Timeline Database Roundtrip" started.
+􀟈  Test "Configuration should be persisted across service instances" started.
+􀟈  Test "Test Chat Endpoint Unconfigured" started.
+􀟈  Test "Memory Database Decoding with Non-Hyphenated UUID" started.
+􀟈  Test "Test executing a single successful tool" started.
+􀟈  Test "Test Chat Endpoint" started.
+􀟈  Test "Test chatStreamWithContext" started.
+􀟈  Test "Memory JSON Serialization" started.
+􀟈  Test "Test updating LLM configuration" started.
+􀟈  Test "Test generateTitle method" started.
+􀟈  Test "Test evaluateRecallPerformance" started.
+􀟈  Test "Test Standardized Error Responses (Empty Body)" started.
+􀟈  Test "Test generateTags" started.
+􀟈  Test "Test generateTitle" started.
+􀟈  Test "Test executing multiple tools" started.
+􀟈  Test "Test executing a failing tool" started.
+􀟈  Test "pruneSessions should handle archived sessions with complex dependencies" started.
+􀟈  Test "Test that archived messages cannot be deleted or modified" started.
+􀟈  Test "Test Chat Streaming Endpoint Unconfigured" started.
+􀟈  Test "Test Chat Streaming Endpoint" started.
+􀟈  Test "Test Chat Cancellation" started.
+􀟈  Test "Delete Workspace" started.
+􀟈  Test "Test large input estimation" started.
+􀟈  Test "Protocol Composition Test" started.
+􀟈  Test "Test ServerLLMService Initialization and Config Load" started.
+􀟈  Test "Test Provider Configuration (OpenRouter)" started.
+􀟈  Test "StreamingParser extracts XML tool calls with complex JSON" started.
+􀟈  Test "Test executing a non-existent tool" started.
+􀟈  Test "Test Create Session Endpoint" started.
+􀟈  Test "LLM service errors are propagated through the stream" started.
+􀟈  Test "Complex interleaved stream" started.
+􀟈  Test "Verify v2 migration adds embedding column to existing v1 database" started.
+2026-02-26T05:13:49+0100 info com.monad.core.mock-vector-store: [MonadCore] [MockVectorStore] Added 2 vectors
+2026-02-26T05:13:49+0100 info com.monad.core.mock-vector-store: [MonadCore] [MockVectorStore] Searching with query vector
+2026-02-26T05:13:49+0100 info com.monad.core.mock-vector-store: [MonadCore] [MockVectorStore] Initialized
+2026-02-26T05:13:49+0100 info com.monad.core.mock-vector-store: [MonadCore] [MockVectorStore] Added 2 vectors
+2026-02-26T05:13:49+0100 error com.monad.core.dependency-validator: [MonadCore] Missing critical dependencies: PersistenceService, LLMService, EmbeddingService. Did you call MonadCore.configure()?
+2026-02-26T05:13:49+0100 warning com.monad.core.retry-policy: [MonadCore] Retry attempt 1/2 in 0.00s due to: The operation couldn’t be completed. (NSURLErrorDomain error -1001.)
+2026-02-26T05:13:49+0100 warning com.monad.core.retry-policy: [MonadCore] Retry attempt 1/3 in 0.00s due to: The operation couldn’t be completed. (NSURLErrorDomain error -1001.)
+􀟈  Test "Test Status Endpoint" started.
+2026-02-26T05:13:49+0100 info com.monad.core.chat: [MonadCore] Finalized with 1 tool calls
+2026-02-26T05:13:49+0100 error com.monad.core.retry-policy: [MonadCore] Non-retryable error encountered: The operation couldn’t be completed. (MonadCoreTests.RetryPolicyTests.(unknown context at $1104b0638).(unknown context at $1104b0644).FatalError error 1.)
+􀟈  Test "Test saving and fetching job via PersistenceService" started.
+􀢄  Test "Test job table creation" recorded an issue at JobPersistenceTests.swift:19:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+2026-02-26T05:13:49+0100 warning com.monad.core.parser: [MonadCore] [Parser] ORPHANED </think> DETECTED! Reclassifying.
+2026-02-26T05:13:49+0100 warning com.monad.core.server: [MonadServer] LLM service not yet configured
+􀢄  Test "Timeline Database Roundtrip" recorded an issue at ModelSerializationTests.swift:34:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Test
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Test executed successfully
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Fail
+2026-02-26T05:13:49+0100 error com.monad.core.tools: [MonadCore] Tool Fail failed: Mock failure
+􀢄  Test "Memory Database Decoding with Non-Hyphenated UUID" recorded an issue at ModelSerializationTests.swift:83:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀟈  Test "Legacy JSON Decoding" started.
+􀟈  Test "Custom timeout and retries" started.
+􀟈  Test "Missing Model Name" started.
+􀟈  Test "Invalid Endpoint" started.
+􀟈  Test "Valid OpenAI configuration" started.
+􀟈  Test "Default configuration validity" started.
+􀟈  Test "Valid Ollama configuration (No API Key)" started.
+􁁛  Test "Unconfigured PersistenceService throws descriptive error" passed after 0.098 seconds.
+2026-02-26T05:13:49+0100 error com.monad.core.tools: [MonadCore] Tool not found: unknown_tool
+􁁛  Test "HealthCheckable Protocol" passed after 0.101 seconds.
+2026-02-26T05:13:49+0100 warning com.monad.core.server: [MonadServer] LLM service not yet configured
+􁁛  Test "Test malformed tags" passed after 0.103 seconds.
+􁁛  Test "Test multiple chunks" passed after 0.103 seconds.
+􁁛  Test "Context Manager Initialization with Mocks" passed after 0.103 seconds.
+􁁛  Test "Default agents are seeded" passed after 0.103 seconds.
+􁁛  Test "Optional Parameters" passed after 0.103 seconds.
+􁁛  Test "Require Parameter Success" passed after 0.103 seconds.
+􁁛  Test "Basic Object Building" passed after 0.103 seconds.
+􁁛  Test "String Enum Building" passed after 0.103 seconds.
+􁁛  Test "Test basic content extraction" passed after 0.103 seconds.
+􁁛  Test "Mock Store Search" passed after 0.103 seconds.
+􁁛  Test "Mock Store Initialize and Add" passed after 0.105 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Mock Tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Mock Tool executed successfully
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Mock Tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Mock Tool executed successfully
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Mock Tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Mock Tool executed successfully
+􁁛  Test "Test full thinking block" passed after 0.105 seconds.
+􁁛  Test "Require Missing Parameter Fails" passed after 0.105 seconds.
+􁁛  Test "StatusResponse Serialization" passed after 0.106 seconds.
+􁁛  Test "Test tool call inside standard code block" passed after 0.106 seconds.
+􁁛  Test "Test tool call inside markdown code block" passed after 0.106 seconds.
+􁁛  Test "Test mixed content with code block tool call" passed after 0.106 seconds.
+􁁛  Test "Test empty string estimation" passed after 0.106 seconds.
+􁁛  Test "Token Budget Application" passed after 0.107 seconds.
+􁁛  Test "Require Invalid Type Fails" passed after 0.107 seconds.
+􁁛  Test "Sanity Check" passed after 0.106 seconds.
+􁁛  Test "Test multi-byte character estimation" passed after 0.106 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Complex Tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Complex Tool executed successfully
+􁁛  Test "Chat History Truncation" passed after 0.107 seconds.
+2026-02-26T05:13:49+0100 warning Hummingbird: hb.request.id=87e02dad05141a283df784a5957cc136 [MonadServer] Invalid auth token received: Bearer wrong. Blocking.
+􁁛  Test "Validator identifies missing critical dependencies" passed after 0.107 seconds.
+2026-02-26T05:13:49+0100 warning Hummingbird: hb.request.id=87e02dad05141a283df784a5957cc135 [MonadServer] Missing Authorization header. Blocking.
+􁁛  Test "Memory Builder creates valid memory" passed after 0.107 seconds.
+􁁛  Test "Message Builder creates valid message with defaults" passed after 0.107 seconds.
+􁁛  Test "Test basic english estimation" passed after 0.107 seconds.
+􁁛  Test "Test partial thinking block streaming" passed after 0.107 seconds.
+􁁛  Test "ToolError provides remediation hints" passed after 0.107 seconds.
+􁁛  Test "collect() helper captures all stream elements" passed after 0.107 seconds.
+􁁛  Test "Job Builder creates valid job" passed after 0.107 seconds.
+􁁛  Test "Fails immediately on non-transient error" passed after 0.108 seconds.
+􁁛  Test "Read File Tool" passed after 0.107 seconds.
+􁁛  Test "Find File Tool" passed after 0.107 seconds.
+􁁛  Test "Context Notes Truncation" passed after 0.107 seconds.
+􁁛  Test "Configuration validation identifies missing API keys" passed after 0.107 seconds.
+􁁛  Test "Test encoding and decoding primitive types" passed after 0.107 seconds.
+􁁛  Test "Test encoding double wrapped AnyCodable" passed after 0.107 seconds.
+􁁛  Test "ToolResult.success has correct properties" passed after 0.107 seconds.
+􁁛  Test "Test string description" passed after 0.107 seconds.
+􁁛  Test "Test encoding and decoding nested structures" passed after 0.107 seconds.
+􁁛  Test "ToolResult.failure has correct properties" passed after 0.107 seconds.
+􁁛  Test "List Directory Tool" passed after 0.107 seconds.
+􀢄  Test "Test job table creation" failed after 0.107 seconds with 1 issue.
+􁁛  Test "Search Files Tool" passed after 0.107 seconds.
+􁁛  Test "Partial code block delimiters across chunks" passed after 0.107 seconds.
+􁁛  Test "Test Stale Session Cleanup" passed after 0.107 seconds.
+􁁛  Test "Think tag inside code block should be treated as text" passed after 0.107 seconds.
+􁁛  Test "Closing think tag inside code block (nested in thinking) should be preserved" passed after 0.107 seconds.
+􁁛  Test "Validator succeeds when dependencies are configured" passed after 0.107 seconds.
+􁁛  Test "Interleaved partials" passed after 0.107 seconds.
+􁁛  Test "Succeeds on first attempt" passed after 0.107 seconds.
+􁁛  Test "Tool error events are emitted for failed tool execution" passed after 0.107 seconds.
+􁁛  Test "Partial tag delimiters across chunks" passed after 0.107 seconds.
+􁁛  Test "Empty buffer handling" passed after 0.107 seconds.
+􁁛  Test "Inspect File Tool" passed after 0.108 seconds.
+􁁛  Test "Jailed Relative Path" passed after 0.108 seconds.
+􁁛  Test "Orphaned closing tag triggers reclassification" passed after 0.107 seconds.
+􁁛  Test "Path Traversal Protection" passed after 0.108 seconds.
+􁁛  Test "Test Session Creation and Context Manager Access" passed after 0.108 seconds.
+􁁛  Test "Tool failure produces correct ToolResult" passed after 0.108 seconds.
+􁁛  Test "Update Workspace" passed after 0.107 seconds.
+􁁛  Test "Create Workspace" passed after 0.107 seconds.
+􁁛  Test "Get Workspace" passed after 0.107 seconds.
+􁁛  Test "List Workspaces" passed after 0.107 seconds.
+􁁛  Test "Edge Case: Empty Fields" passed after 0.107 seconds.
+􁁛  Test "Timeline JSON Serialization" passed after 0.107 seconds.
+􀢄  Test "Test creating a conversation session" recorded an issue at PersistenceTests.swift:24:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+2026-02-26T05:13:49+0100 notice com.monad.core.llm: [MonadCore] LLM service not yet configured
+2026-02-26T05:13:49+0100 notice com.monad.core.llm: [MonadCore] LLM service not yet configured
+2026-02-26T05:13:49+0100 notice com.monad.core.llm: [MonadCore] LLM service not yet configured
+􀢄  Test "Timeline Database Roundtrip" failed after 0.110 seconds with 1 issue.
+􁁛  Test "Test executing a single successful tool" passed after 0.110 seconds.
+􁁛  Test "Memory JSON Serialization" passed after 0.111 seconds.
+􁁛  Test "Test evaluateRecallPerformance" passed after 0.111 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: T1
+2026-02-26T05:13:49+0100 notice com.monad.core.llm: [MonadCore] LLM service not yet configured
+􁁛  Test "Test generateTitle" passed after 0.111 seconds.
+􁁛  Test "Test executing a failing tool" passed after 0.111 seconds.
+􁁛  Test "Search File Content Tool" passed after 0.112 seconds.
+􀢄  Test "Memory Database Decoding with Non-Hyphenated UUID" failed after 0.111 seconds with 1 issue.
+2026-02-26T05:13:49+0100 info com.monad.core.llm: [MonadCore] Updating configuration to models: test-model / gpt-4o-mini / gpt-4o-mini
+􀢄  Test "pruneSessions should handle archived sessions with complex dependencies" recorded an issue at PruneComplexSessionTests.swift:24:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􁁛  Test "Delete Workspace" passed after 0.110 seconds.
+􁁛  Test "Configuration should be persisted across service instances" passed after 0.111 seconds.
+􁁛  Test "Test large input estimation" passed after 0.110 seconds.
+􁁛  Test "Protocol Composition Test" passed after 0.110 seconds.
+􁁛  Test "Test executing a non-existent tool" passed after 0.111 seconds.
+􁁛  Test "Complex interleaved stream" passed after 0.110 seconds.
+􁁛  Test "Test generateTags" passed after 0.112 seconds.
+􁁛  Test "Test Provider Configuration (OpenRouter)" passed after 0.111 seconds.
+􀢄  Test "Test saving and fetching job via PersistenceService" recorded an issue at JobPersistenceTests.swift:110:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+2026-02-26T05:13:49+0100 warning com.monad.core.retry-policy: [MonadCore] Retry attempt 2/2 in 0.00s due to: The operation couldn’t be completed. (NSURLErrorDomain error -1001.)
+2026-02-26T05:13:49+0100 warning com.monad.core.retry-policy: [MonadCore] Retry attempt 2/3 in 0.00s due to: The operation couldn’t be completed. (NSURLErrorDomain error -1001.)
+􁁛  Test "StreamingCoordinator parses complex JSON arguments from native tool calls" passed after 0.116 seconds.
+􀢄  Test "Test that archived messages cannot be deleted or modified" recorded an issue at PersistenceImmutabilityTests.swift:26:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Mock Tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Mock Tool executed successfully
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Mock Tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Mock Tool executed successfully
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Mock Tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Mock Tool executed successfully
+􁁛  Test "Test ServerLLMService Initialization and Config Load" passed after 0.114 seconds.
+􀢄  Test "Test creating a conversation session" failed after 0.117 seconds with 1 issue.
+2026-02-26T05:13:49+0100 notice com.monad.core.llm: [MonadCore] LLM service not yet configured
+2026-02-26T05:13:49+0100 notice com.monad.core.llm: [MonadCore] LLM service not yet configured
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Added job: 3BC6B935-8C75-4CEF-9A6F-C1AC5201EFDE
+2026-02-26T05:13:49+0100 notice com.monad.core.llm: [MonadCore] LLM service not yet configured
+2026-02-26T05:13:49+0100 notice com.monad.core.llm: [MonadCore] LLM service not yet configured
+􀢄  Test "pruneSessions should handle archived sessions with complex dependencies" failed after 0.118 seconds with 1 issue.
+􀢄  Test "Verify v2 migration adds embedding column to existing v1 database" recorded an issue at MigrationTests.swift:11:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+2026-02-26T05:13:49+0100 notice com.monad.core.llm: [MonadCore] LLM service not yet configured
+􁁛  Test "Legacy JSON Decoding" passed after 0.023 seconds.
+􁁛  Test "Custom timeout and retries" passed after 0.023 seconds.
+􁁛  Test "Missing Model Name" passed after 0.023 seconds.
+􁁛  Test "Invalid Endpoint" passed after 0.023 seconds.
+􁁛  Test "Default configuration validity" passed after 0.023 seconds.
+􁁛  Test "Valid Ollama configuration (No API Key)" passed after 0.023 seconds.
+􁁛  Suite "Dependency Safety Tests" passed after 0.123 seconds.
+􁁛  Test "Valid OpenAI configuration" passed after 0.023 seconds.
+􁁛  Suite "System Status Tests" passed after 0.123 seconds.
+􁁛  Suite StreamingParserTests passed after 0.123 seconds.
+􁁛  Suite "Context Manager Mocking Tests" passed after 0.123 seconds.
+􁁛  Suite "Tool Parameter Schema Tests" passed after 0.123 seconds.
+􁁛  Suite "Tool Parameters Extraction Tests" passed after 0.123 seconds.
+􁁛  Suite MockVectorStoreTests passed after 0.123 seconds.
+􁁛  Suite StreamingParserCodeBlockTests passed after 0.123 seconds.
+􁁛  Suite TokenEstimatorTests passed after 0.123 seconds.
+􁁛  Suite "Context Builder Truncation Tests" passed after 0.123 seconds.
+􀢄  Test "Test saving and fetching job via PersistenceService" failed after 0.071 seconds with 1 issue.
+􁁛  Suite VectorStoreTests passed after 0.123 seconds.
+􀢄  Test "Test that archived messages cannot be deleted or modified" failed after 0.119 seconds with 1 issue.
+􁁛  Test "Summarize Tool Interactions" passed after 0.122 seconds.
+􁁛  Test "Compression Basics" passed after 0.122 seconds.
+􁁛  Test "Broad Summary Trigger" passed after 0.122 seconds.
+􁁛  Test "ToolExecutor correctly unwraps AnyCodable arguments" passed after 0.121 seconds.
+􁁛  Suite "Dependency Validator Tests" passed after 0.123 seconds.
+􁁛  Test "Auth Failure: Invalid Token (Strict -> 401 Unauthorized)" passed after 0.121 seconds.
+􁁛  Test "Chat with invalid UUID (400)" passed after 0.121 seconds.
+􁁛  Suite "Remediation and Validation Tests" passed after 0.124 seconds.
+􁁛  Suite "Test Helper Tests" passed after 0.124 seconds.
+􁁛  Suite "Test Fixtures and Builders Tests" passed after 0.124 seconds.
+􁁛  Suite "Filesystem Tools Tests" passed after 0.124 seconds.
+􁁛  Suite "Tool Error Surfacing Tests" passed after 0.124 seconds.
+􁁛  Test "Delete non-existent memory (Should be 204)" passed after 0.122 seconds.
+􁁛  Test "Chat with non-existent session (404)" passed after 0.122 seconds.
+􁁛  Suite AnyCodableTests passed after 0.124 seconds.
+􁁛  Suite SessionManagerTests passed after 0.124 seconds.
+􁁛  Suite "Workspace Repository Tests" passed after 0.124 seconds.
+􁁛  Suite StreamingParserStressTests passed after 0.124 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Mock Tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Mock Tool executed successfully
+2026-02-26T05:13:49+0100 warning com.monad.core.tools: [MonadCore] Loop detected for tool: mock_tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Mock Tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Mock Tool executed successfully
+􁁛  Test "Smart Chunking with Topic Change" passed after 0.123 seconds.
+􁁛  Test "Recursive Summarize" passed after 0.123 seconds.
+􀢄  Suite ModelSerializationTests failed after 0.124 seconds with 2 issues.
+􁁛  Test "Test prompt building with empty context" passed after 0.120 seconds.
+􁁛  Test "Test Get Nested File Content (Manual Path Extraction)" passed after 0.121 seconds.
+􁁛  Test "Test Chat Endpoint Unconfigured" passed after 0.120 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.com.monad.core.tools: [MonadCore] Routing execution for tool: test_tool in session AA60E05D-27B6-48DD-87AF-2A1ABB10CF8F
+2026-02-26T05:13:49+0100 info com.monad.core.llm: [MonadCore] Loaded configuration. Main: test-model, Utility: gpt-4o-mini, Fast: gpt-4o-mini
+􀢄  Test "Verify v2 migration adds embedding column to existing v1 database" failed after 0.118 seconds with 1 issue.
+􁁛  Suite ConfigPersistenceTests passed after 0.124 seconds.
+􁁛  Test "Test Chat Streaming Endpoint Unconfigured" passed after 0.120 seconds.
+􁁛  Test "Auth Failure: Missing Header (Strict -> 401 Unauthorized)" passed after 0.122 seconds.
+􁁛  Test "testEmptyUserQueryDoesNotAppendMessage" passed after 0.121 seconds.
+􁁛  Test "testNonEmptyUserQueryAppendsMessage" passed after 0.121 seconds.
+􁁛  Test "Test history optimization (truncation)" passed after 0.121 seconds.
+􁁛  Test "Test generateTitle method" passed after 0.121 seconds.
+􁁛  Suite "Persistence Protocol Tests" passed after 0.124 seconds.
+􁁛  Test "testUserQueryPreventsLeakageIntoSystem" passed after 0.121 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.com.monad.ContextManager: [MonadCore] Recall performance: 1 memories selected from 1 semantic + 1 tag matches
+􁁛  Test "Test Status Endpoint" passed after 0.105 seconds.
+􁁛  Test "Test List Files" passed after 0.122 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.com.monad.ContextManager: [MonadCore] Recall performance: 0 memories selected from 0 semantic + 0 tag matches
+􁁛  Test "Test chatStreamWithContext" passed after 0.121 seconds.
+􀢄  Suite PruneComplexSessionTests failed after 0.125 seconds with 1 issue.
+􁁛  Suite LLMConfigurationTests passed after 0.125 seconds.
+􀟈  Test "Fetch agent by ID" started.
+2026-02-26T05:13:49+0100 info com.monad.core.com.monad.ContextManager: [MonadCore] Recall performance: 1 memories selected from 1 semantic + 0 tag matches
+2026-02-26T05:13:49+0100 info com.monad.core.com.monad.ContextManager: [MonadCore] Recall performance: 2 memories selected from 1 semantic + 1 tag matches
+􁁛  Suite "Raptor Compression Tests" passed after 0.126 seconds.
+􁁛  Suite "Context Compressor Tests" passed after 0.125 seconds.
+􁁛  Test "Test prompt building logic and structure" passed after 0.121 seconds.
+􁁛  Test "Test LLMService error when not configured" passed after 0.121 seconds.
+􁁛  Test "Test Create Session Endpoint" passed after 0.119 seconds.
+2026-02-26T05:13:49+0100 error com.monad.core.retry-policy: [MonadCore] Max retries (2) reached. Final error: The operation couldn’t be completed. (NSURLErrorDomain error -1001.)
+2026-02-26T05:13:49+0100 info com.monad.core.com.monad.ContextManager: [MonadCore] Context gathered in 0.016s
+􀟈  Test "Test basic job persistence" started.
+2026-02-26T05:13:49+0100 info com.monad.core.com.monad.ContextManager: [MonadCore] Context gathered in 0.016s
+􁁛  Suite FilesControllerTests passed after 0.125 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool T1 executed successfully
+􀢄  Suite MigrationTests failed after 0.125 seconds with 1 issue.
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Mock Tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Mock Tool executed successfully
+2026-02-26T05:13:49+0100 error com.monad.core.server: [MonadServer] Unhandled error in middleware: Error Domain=test Code=1 "Internal failure" UserInfo={NSLocalizedDescription=Internal failure}
+􁁛  Test "Test Tools API" passed after 0.126 seconds.
+􁁛  Suite PromptIntegrationTests passed after 0.130 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.com.monad.ContextManager: [MonadCore] Context gathered in 0.022s
+2026-02-26T05:13:49+0100 info com.monad.core.com.monad.ContextManager: [MonadCore] Context gathered in 0.022s
+􁁛  Test "Succeeds after transient failures" passed after 0.129 seconds.
+􁁛  Suite StatusControllerTests passed after 0.130 seconds.
+􀟈  Test "Test message persistence within a session" started.
+􁁛  Suite EndpointEdgeCaseTests passed after 0.131 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: T2
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool T2 executed successfully
+􁁛  Suite ServerLLMServiceTests passed after 0.131 seconds.
+􁁛  Test "StreamingParser extracts XML tool calls with complex JSON" passed after 0.126 seconds.
+􁁛  Test "Test loop detection triggers after 3 identical calls" passed after 0.130 seconds.
+􁁛  Test "Fails after max retries exhausted" passed after 0.129 seconds.
+􁁛  Test "Test loop detection reset" passed after 0.130 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Executing tool: Mock Tool
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Tool Mock Tool executed successfully
+􀟈  Test "Test listing all jobs via PersistenceService" started.
+􁁛  Test "Fetch agent by ID" passed after 0.006 seconds.
+􀟈  Test "Test that non-archived messages CAN be deleted or modified" started.
+􁁛  Suite SessionControllerTests passed after 0.131 seconds.
+􁁛  Test "Gather Context: Uses History for Tags but Query for Embedding" passed after 0.129 seconds.
+􁁛  Test "Test executing multiple tools" passed after 0.128 seconds.
+􁁛  Test "Add job via tool" passed after 0.129 seconds.
+2026-02-26T05:13:49+0100 error com.monad.core.com.monad.chat-engine: [MonadCore] Error in chat loop turn 1: Error Domain=MockError Code=1 "(null)"
+􁁛  Test "Test Standardized Error Responses (Empty Body)" passed after 0.129 seconds.
+􁁛  Suite ToolControllerTests passed after 0.134 seconds.
+􁁛  Test "Ranking Logic with Tag Boost" passed after 0.132 seconds.
+􁁛  Test "Gather Context: Semantic Retrieval" passed after 0.132 seconds.
+􁁛  Suite "Retry Policy Tests" passed after 0.135 seconds.
+􀢄  Test "Test basic job persistence" recorded an issue at JobPersistenceTests.swift:38:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􁁛  Suite "Tool Call Regression Tests" passed after 0.136 seconds.
+􁁛  Test "Filesystem Notes Retrieval" passed after 0.135 seconds.
+􁁛  Test "Test updating LLM configuration" passed after 0.133 seconds.
+􁁛  Test "Test different arguments do not trigger loop detection" passed after 0.136 seconds.
+􀢄  Test "Test basic job persistence" failed after 0.013 seconds with 1 issue.
+􁁛  Suite ToolExecutorTests passed after 0.139 seconds.
+􁁛  Test "Test Configuration CRUD" passed after 0.137 seconds.
+􁁛  Suite ErrorHandlingTests passed after 0.139 seconds.
+2026-02-26T05:13:49+0100 warning com.monad.core.com.monad.chat-engine: [MonadCore] Structured tool calls empty — falling back to text parsing. Parsed 1 call(s) from response text.
+􁁛  Test "Test Chat Endpoint" passed after 0.135 seconds.
+􁁛  Suite "Context Manager Tests" passed after 0.140 seconds.
+􁁛  Suite LLMServiceTests passed after 0.139 seconds.
+􁁛  Suite LoopDetectionTests passed after 0.140 seconds.
+􀟈  Test "Has agent" started.
+􀟈  Test "List jobs via tool" started.
+􁁛  Suite ConfigurationControllerTests passed after 0.140 seconds.
+􀢄  Test "Test listing all jobs via PersistenceService" recorded an issue at JobPersistenceTests.swift:120:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test listing all jobs via PersistenceService" failed after 0.011 seconds with 1 issue.
+􁁛  Suite ChatControllerTests passed after 0.143 seconds.
+􁁛  Test "Has agent" passed after 0.003 seconds.
+􁁛  Test "Test Chat Streaming Endpoint" passed after 0.139 seconds.
+􀟈  Test "Test job update" started.
+􀟈  Test "Test listing jobs for session via PersistenceService" started.
+􀟈  Test "Custom agent persistence" started.
+􁁛  Test "Custom agent persistence" passed after 0.001 seconds.
+􁁛  Test "Test Memories CRUD" passed after 0.141 seconds.
+􁁛  Suite AgentRegistryTests passed after 0.144 seconds.
+􁁛  Suite MemoryControllerTests passed after 0.144 seconds.
+􀢄  Test "Test message persistence within a session" recorded an issue at PersistenceTests.swift:34:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test message persistence within a session" failed after 0.015 seconds with 1 issue.
+􁁛  Test "Empty message and no tool outputs throws error" passed after 0.142 seconds.
+􀟈  Test "Test message persistence with recalled memories" started.
+􀢄  Test "Test listing jobs for session via PersistenceService" recorded an issue at JobPersistenceTests.swift:131:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test listing jobs for session via PersistenceService" failed after 0.007 seconds with 1 issue.
+􀟈  Test "Test deleting job via PersistenceService" started.
+􀢄  Test "Test job update" recorded an issue at JobPersistenceTests.swift:66:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test that non-archived messages CAN be deleted or modified" recorded an issue at PersistenceImmutabilityTests.swift:62:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test job update" failed after 0.011 seconds with 1 issue.
+􀢄  Test "Test that non-archived messages CAN be deleted or modified" failed after 0.023 seconds with 1 issue.
+􀢄  Suite JobPersistenceTests failed after 0.155 seconds with 3 issues.
+􀟈  Test "Test that archived sessions cannot be deleted or modified" started.
+􀢄  Test "Test deleting job via PersistenceService" recorded an issue at JobPersistenceTests.swift:146:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test deleting job via PersistenceService" failed after 0.007 seconds with 1 issue.
+􀢄  Suite PersistenceServiceJobTests failed after 0.158 seconds with 4 issues.
+􀢄  Test "Test message persistence with recalled memories" recorded an issue at PersistenceTests.swift:51:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Added job: 9B2C51A8-EFF4-42E6-ABB5-D437FE67D670
+􀢄  Test "Test message persistence with recalled memories" failed after 0.018 seconds with 1 issue.
+􁁛  Test "Generation context event is emitted first" passed after 0.161 seconds.
+􁁛  Test "LLM service errors are propagated through the stream" passed after 0.161 seconds.
+􀟈  Test "Test cascading deletes: Deleting an archived session is now blocked" started.
+􀢄  Test "Test that archived sessions cannot be deleted or modified" recorded an issue at PersistenceImmutabilityTests.swift:93:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Added job: 809B6370-4AC6-4D9B-BEE1-86F543B4EB13
+􀢄  Test "Test that archived sessions cannot be deleted or modified" failed after 0.018 seconds with 1 issue.
+􀟈  Test "Test that non-archived sessions CAN be deleted or modified" started.
+􀢄  Test "Test cascading deletes: Deleting an archived session is now blocked" recorded an issue at PersistenceTests.swift:78:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test cascading deletes: Deleting an archived session is now blocked" failed after 0.016 seconds with 1 issue.
+􀟈  Test "Test message ordering: Messages are chronological" started.
+􀢄  Test "Test that non-archived sessions CAN be deleted or modified" recorded an issue at PersistenceImmutabilityTests.swift:116:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test that non-archived sessions CAN be deleted or modified" failed after 0.014 seconds with 1 issue.
+􁁛  Test "Plain text response emits correct events" passed after 0.184 seconds.
+􁁛  Test "Response is persisted to the database" passed after 0.184 seconds.
+􁁛  Test "List jobs via tool" passed after 0.047 seconds.
+􀢄  Suite PersistenceImmutabilityTests failed after 0.187 seconds with 4 issues.
+􀟈  Test "Update job status via tool" started.
+􀢄  Test "Test message ordering: Messages are chronological" recorded an issue at PersistenceTests.swift:93:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test message ordering: Messages are chronological" failed after 0.011 seconds with 1 issue.
+􁁛  Test "Sentinel name 'tool_call' is discarded" passed after 0.189 seconds.
+􀟈  Test "Test archiving sessions: Once archived, they are immutable" started.
+􁁛  Test "Thinking tags emit thought events" passed after 0.189 seconds.
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Added job: C353D972-7CEE-4DCB-91EC-A0D00AE42F2A
+􁁛  Test "Client tool execution pauses the stream" passed after 0.189 seconds.
+􁁛  Test "Unknown tool name emits toolCallError" passed after 0.190 seconds.
+􀢄  Test "Test archiving sessions: Once archived, they are immutable" recorded an issue at PersistenceTests.swift:113:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Updated status for job: C353D972-7CEE-4DCB-91EC-A0D00AE42F2A to in_progress
+􀢄  Test "Test archiving sessions: Once archived, they are immutable" failed after 0.007 seconds with 1 issue.
+􁁛  Test "Server-side tool call is executed and yields events" passed after 0.196 seconds.
+􀟈  Test "Test database reset: Wipes only non-immutable data" started.
+􁁛  Test "Failing tool returns error result to LLM" passed after 0.196 seconds.
+􀢄  Test "Test database reset: Wipes only non-immutable data" recorded an issue at PersistenceTests.swift:133:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􁁛  Test "XML fallback tool call is executed" passed after 0.202 seconds.
+􀢄  Test "Test database reset: Wipes only non-immutable data" failed after 0.005 seconds with 1 issue.
+􁁛  Test "maxTurns limits the generation loop" passed after 0.201 seconds.
+􁁛  Test "Update job status via tool" passed after 0.017 seconds.
+􀟈  Test "Test memory persistence and retrieval" started.
+􀟈  Test "Dequeue next job" started.
+􁁛  Suite ChatEngineTests passed after 0.205 seconds.
+􀢄  Test "Test memory persistence and retrieval" recorded an issue at PersistenceTests.swift:149:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test memory persistence and retrieval" failed after 0.007 seconds with 1 issue.
+􀟈  Test "Test memory update (upsert)" started.
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Added job: 4673DA9E-7BDD-4A30-BB53-6EC8825D175D
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Added job: 95436048-2337-4851-9A70-DC5C0EB602A7
+􀢄  Test "Test memory update (upsert)" recorded an issue at PersistenceTests.swift:166:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+2026-02-26T05:13:49+0100 info com.monad.core.tools: [MonadCore] Dequeued job: High (priority: 10)
+􀢄  Test "Test memory update (upsert)" failed after 0.005 seconds with 1 issue.
+􀟈  Test "Test semantic memory search" started.
+􀢄  Test "Test semantic memory search" recorded an issue at PersistenceTests.swift:188:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test semantic memory search" failed after 0.004 seconds with 1 issue.
+􁁛  Test "Dequeue next job" passed after 0.017 seconds.
+􀟈  Test "Test search memories with empty database" started.
+􁁛  Suite JobQueueTests passed after 0.223 seconds.
+􀢄  Test "Test search memories with empty database" recorded an issue at PersistenceTests.swift:205:6: Caught error: SQLite error 1: no such table: timeline - while executing `SELECT * FROM "timeline"`
+􀢄  Test "Test search memories with empty database" failed after 0.005 seconds with 1 issue.
+􀢄  Suite PersistenceTests failed after 0.228 seconds with 11 issues.
+􁁛  Test "Test generating a single embedding" passed after 0.294 seconds.
+􁁛  Test "Test generating multiple embeddings" passed after 0.306 seconds.
+􁁛  Test "Test semantic similarity logic" passed after 0.310 seconds.
+􁁛  Suite EmbeddingServiceTests passed after 0.312 seconds.
+􁁛  Test "Test Chat Cancellation" passed after 0.614 seconds.
+􁁛  Suite ChatControllerStreamingTests passed after 0.618 seconds.
+􀢄  Test run with 185 tests in 57 suites failed after 0.620 seconds with 26 issues.

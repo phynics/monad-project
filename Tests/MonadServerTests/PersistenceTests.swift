@@ -23,7 +23,7 @@ struct PersistenceTests {
 
     @Test("Test creating a conversation session")
     func sessionCreation() async throws {
-        let session = ConversationSession(title: "Test Session")
+        let session = Timeline(title: "Test Session")
         try await persistence.saveSession(session)
 
         let fetched = try await persistence.fetchSession(id: session.id)
@@ -33,7 +33,7 @@ struct PersistenceTests {
 
     @Test("Test message persistence within a session")
     func messagePersistence() async throws {
-        let session = ConversationSession(title: "Test Session")
+        let session = Timeline(title: "Test Session")
         try await persistence.saveSession(session)
 
         let message = ConversationMessage(
@@ -50,7 +50,7 @@ struct PersistenceTests {
 
     @Test("Test message persistence with recalled memories")
     func messagePersistenceWithMemories() async throws {
-        let session = ConversationSession(title: "Test Session")
+        let session = Timeline(title: "Test Session")
         try await persistence.saveSession(session)
 
         let memories = [
@@ -77,7 +77,7 @@ struct PersistenceTests {
 
     @Test("Test cascading deletes: Deleting an archived session is now blocked")
     func cascadingDeletes() async throws {
-        var session = ConversationSession(title: "Test Session")
+        var session = Timeline(title: "Test Session")
         session.isArchived = true
         try await persistence.saveSession(session)
 
@@ -92,7 +92,7 @@ struct PersistenceTests {
 
     @Test("Test message ordering: Messages are chronological")
     func messageOrdering() async throws {
-        let session = ConversationSession(title: "Test Session")
+        let session = Timeline(title: "Test Session")
         try await persistence.saveSession(session)
 
         let m1 = ConversationMessage(
@@ -112,7 +112,7 @@ struct PersistenceTests {
 
     @Test("Test archiving sessions: Once archived, they are immutable")
     func archiveSession() async throws {
-        var session = ConversationSession(title: "Test Session")
+        var session = Timeline(title: "Test Session")
         session.isArchived = false
         try await persistence.saveSession(session)
 
@@ -133,7 +133,7 @@ struct PersistenceTests {
     @Test("Test database reset: Wipes only non-immutable data")
     func databaseReset() async throws {
         // Add some custom data
-        try await persistence.saveSession(ConversationSession(title: "Archive to keep"))
+        try await persistence.saveSession(Timeline(title: "Archive to keep"))
         let memory = Memory(title: "Memory to wipe", content: "Should be gone")
         _ = try await persistence.saveMemory(memory, policy: .immediate)
 

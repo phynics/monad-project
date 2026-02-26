@@ -1,11 +1,11 @@
 import Foundation
 
 public final class MockSessionPersistence: SessionPersistenceProtocol, @unchecked Sendable {
-    public var sessions: [ConversationSession] = []
+    public var sessions: [Timeline] = []
 
     public init() {}
 
-    public func saveSession(_ session: ConversationSession) async throws {
+    public func saveSession(_ session: Timeline) async throws {
         if let index = sessions.firstIndex(where: { $0.id == session.id }) {
             sessions[index] = session
         } else {
@@ -13,11 +13,11 @@ public final class MockSessionPersistence: SessionPersistenceProtocol, @unchecke
         }
     }
 
-    public func fetchSession(id: UUID) async throws -> ConversationSession? {
+    public func fetchSession(id: UUID) async throws -> Timeline? {
         return sessions.first(where: { $0.id == id })
     }
 
-    public func fetchAllSessions(includeArchived: Bool) async throws -> [ConversationSession] {
+    public func fetchAllSessions(includeArchived: Bool) async throws -> [Timeline] {
         if includeArchived {
             return sessions
         } else {

@@ -32,7 +32,7 @@ public struct WorkspaceToolWrapper: Tool, Sendable {
         let result = try await workspace.executeTool(id: id, parameters: codableParams)
 
         if result.success {
-            return .success(result.output, subagentContext: nil)
+            return .success(result.output)
         } else {
             return .failure(result.error ?? "Unknown error during workspace tool execution")
         }

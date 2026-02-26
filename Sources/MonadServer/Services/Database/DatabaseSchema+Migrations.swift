@@ -66,7 +66,7 @@ extension DatabaseSchema {
 
         // v7: Convert conversationSession tags from base64 to JSON
         migrator.registerMigration("v7") { db in
-            let sessions = try ConversationSession.fetchAll(db)
+            let sessions = try Timeline.fetchAll(db)
             for var session in sessions {
                 if !session.tags.isEmpty && !session.tags.hasPrefix("[") {
                     if let data = Data(base64Encoded: session.tags),

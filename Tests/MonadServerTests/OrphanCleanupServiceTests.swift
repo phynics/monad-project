@@ -33,7 +33,7 @@ final class OrphanCleanupServiceTests: XCTestCase {
 
         mockPersistence.workspaces = [wsOrphan, wsActive]
 
-        let session = ConversationSession(id: UUID(), title: "Test", primaryWorkspaceId: activeId)
+        let session = Timeline(id: UUID(), title: "Test", primaryWorkspaceId: activeId)
         mockPersistence.sessions = [session]
 
         let service = OrphanCleanupService(workspaceRoot: workspaceRoot, persistenceService: mockPersistence)

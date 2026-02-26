@@ -4,12 +4,12 @@ import Dependencies
 
 /// Manages conversation sessions, their associated context, and tool execution environments.
 ///
-/// The `SessionManager` is responsible for the lifecycle of `ConversationSession` objects,
+/// The `SessionManager` is responsible for the lifecycle of `Timeline` objects,
 /// including their creation, hydration from persistence, and cleanup. It also coordinates
 /// session-specific components like `ContextManager` and `ToolExecutor`.
 public actor SessionManager {
     /// In-memory cache of active sessions.
-    internal var sessions: [UUID: ConversationSession] = [:]
+    internal var sessions: [UUID: Timeline] = [:]
     
     /// Context managers responsible for RAG and context gathering for each session.
     internal var contextManagers: [UUID: ContextManager] = [:]
@@ -81,7 +81,7 @@ public actor SessionManager {
     ///   - workspaceURL: The file system URL for the session's workspace.
     ///   - parentId: An optional parent session ID for context inheritance.
     internal func setupSessionComponents(
-        session: ConversationSession,
+        session: Timeline,
         workspaceURL: URL,
         parentId: UUID? = nil
     ) async {
@@ -136,10 +136,10 @@ public actor SessionManager {
     /// Creates a new conversation session, initializes its workspace, and saves it to persistence.
     /// - Parameters:
     ///   - title: The initial title of the session.
-    /// - Returns: The newly created `ConversationSession`.
+    /// - Returns: The newly created `Timeline`.
     public func createSession(title: String = "New Conversation")
         async throws
-        -> ConversationSession
+        -> Timeline
     {
         let sessionId = UUID()
 
@@ -192,7 +192,7 @@ public actor SessionManager {
 
         try await persistenceService.saveWorkspace(workspace)
 
-        var session = ConversationSession(
+        var session = Timeline(
             id: sessionId,
             title: title,
             primaryWorkspaceId: workspace.id
@@ -208,8 +208,8 @@ public actor SessionManager {
 
     /// Retrieves a session by its ID and updates its `updatedAt` timestamp.
     /// - Parameter id: The unique identifier of the session.
-    /// - Returns: The `ConversationSession` if found, `nil` otherwise.
-    public func getSession(id: UUID) -> ConversationSession? {
+    /// - Returns: The `Timeline` if found, `nil` otherwise.
+    public func getSession(id: UUID) -> Timeline? {
         guard var session = sessions[id] else { return nil }
         session.updatedAt = Date()
         sessions[id] = session
@@ -249,7 +249,7 @@ public actor SessionManager {
     ///   - id: The session ID.
     ///   - title: The new title.
     public func updateSessionTitle(id: UUID, title: String) async throws {
-        var session: ConversationSession
+        var session: Timeline
         if let memorySession = sessions[id] {
             session = memorySession
         } else if let dbSession = try await persistenceService.fetchSession(id: id) {
@@ -318,7 +318,7 @@ public actor SessionManager {
     }
 
     /// Lists all active (non-archived) sessions from persistence.
-    public func listSessions() async throws -> [ConversationSession] {
+    public func listSessions() async throws -> [Timeline] {
         return try await persistenceService.fetchAllSessions(includeArchived: false)
     }
 

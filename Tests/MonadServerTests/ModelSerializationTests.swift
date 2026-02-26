@@ -7,11 +7,11 @@ import MonadShared
 
 @Suite struct ModelSerializationTests {
 
-    // MARK: - ConversationSession
+    // MARK: - Timeline
 
-    @Test("ConversationSession JSON Serialization")
-    func testConversationSessionJSON() throws {
-        let session = ConversationSession(
+    @Test("Timeline JSON Serialization")
+    func testTimelineJSON() throws {
+        let session = Timeline(
             id: UUID(),
             title: "Test Session",
             createdAt: Date(),
@@ -22,7 +22,7 @@ import MonadShared
         )
 
         let data = try JSONEncoder().encode(session)
-        let decoded = try JSONDecoder().decode(ConversationSession.self, from: data)
+        let decoded = try JSONDecoder().decode(Timeline.self, from: data)
 
         #expect(decoded.id == session.id)
         #expect(decoded.title == session.title)
@@ -31,14 +31,14 @@ import MonadShared
         #expect(decoded.workingDirectory == session.workingDirectory)
     }
 
-    @Test("ConversationSession Database Roundtrip")
-    func testConversationSessionDB() throws {
+    @Test("Timeline Database Roundtrip")
+    func testTimelineDB() throws {
         let dbQueue = try DatabaseQueue()
         var migrator = DatabaseMigrator()
         DatabaseSchema.registerMigrations(in: &migrator)
         try migrator.migrate(dbQueue)
 
-        let session = ConversationSession(
+        let session = Timeline(
             id: UUID(),
             title: "DB Session",
             tags: ["db", "test"]
@@ -49,7 +49,7 @@ import MonadShared
         }
 
         let fetched = try dbQueue.read { db in
-            try ConversationSession.fetchOne(db, key: ["id": session.id])
+            try Timeline.fetchOne(db, key: ["id": session.id])
         }
 
         #expect(fetched != nil)
@@ -112,9 +112,9 @@ import MonadShared
 
     @Test("Edge Case: Empty Fields")
     func testEmptyFields() throws {
-        let session = ConversationSession(title: "")
+        let session = Timeline(title: "")
         let data = try JSONEncoder().encode(session)
-        let decoded = try JSONDecoder().decode(ConversationSession.self, from: data)
+        let decoded = try JSONDecoder().decode(Timeline.self, from: data)
         #expect(decoded.title.isEmpty)
         #expect(decoded.tagArray.isEmpty)
     }

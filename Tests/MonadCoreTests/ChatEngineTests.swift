@@ -17,7 +17,7 @@ struct ChatEngineTests {
         let mockPersistence = MockPersistenceService()
 
         // Seed a session
-        let session = ConversationSession(id: sessionId, title: "Test Session")
+        let session = Timeline(id: sessionId, title: "Test Session")
         try await mockPersistence.saveSession(session)
 
         return try await withDependencies {

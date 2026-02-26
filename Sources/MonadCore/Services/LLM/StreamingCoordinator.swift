@@ -151,9 +151,7 @@ public final class StreamingCoordinator {
     }
 
     public func finalize(
-        wasCancelled: Bool = false,
-        rawPrompt: String? = nil,
-        structuredContext: [String: String]? = nil
+        wasCancelled: Bool = false
     ) -> Message {
         // flush manually if any remaining text
         if !parser.buffer.isEmpty {
@@ -229,22 +227,7 @@ public final class StreamingCoordinator {
             content: contentWithoutTools,
             role: .assistant,
             think: finalThinking.isEmpty ? nil : finalThinking,
-            toolCalls: finalToolCalls.isEmpty ? nil : finalToolCalls,
-            debugInfo: .assistantMessage(
-                response: APIResponseMetadata(
-                    promptTokens: usage?.promptTokens,
-                    completionTokens: usage?.completionTokens,
-                    totalTokens: usage?.totalTokens,
-                    duration: duration,
-                    tokensPerSecond: tokensPerSecond
-                ),
-                original: streamingContent,
-                parsed: contentWithoutTools,
-                thinking: finalThinking.isEmpty ? nil : finalThinking,
-                toolCalls: finalToolCalls.isEmpty ? nil : finalToolCalls,
-                rawPrompt: rawPrompt,
-                structuredContext: structuredContext
-            )
+            toolCalls: finalToolCalls.isEmpty ? nil : finalToolCalls
         )
     }
 }

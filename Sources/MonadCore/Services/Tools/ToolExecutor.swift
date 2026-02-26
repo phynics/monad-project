@@ -132,8 +132,7 @@ public actor ToolExecutor {
             return Message(
                 content: responseContent,
                 role: .tool,
-                think: nil,
-                subagentContext: result.subagentContext
+                think: nil
             )
         } catch {
             logger.error("Error executing tool \(tool.name): \(error.localizedDescription)")
@@ -167,7 +166,7 @@ public actor ToolExecutor {
 
         // Create tool result for summarization
         let toolResult = ToolResult.success(message.content)
-        let summary = tool.summarize(parameters: anyArgs, result: toolResult)
+        _ = tool.summarize(parameters: anyArgs, result: toolResult)
 
         return ToolExecutionResult(message: message)
     }

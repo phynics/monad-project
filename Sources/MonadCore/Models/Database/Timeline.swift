@@ -1,6 +1,6 @@
 import Foundation
 /// A conversation session with messages
-public struct ConversationSession: Codable, Identifiable, Sendable {
+public struct Timeline: Codable, Identifiable, Sendable {
     public var id: UUID
     public var title: String
     public var createdAt: Date

@@ -4,29 +4,29 @@ import Foundation
 import GRDB
 
 extension PersistenceService {
-    public func saveSession(_ session: ConversationSession) throws {
+    public func saveSession(_ session: Timeline) throws {
         logger.debug("Saving session: \(session.id)")
         try dbQueue.write { db in
             try session.save(db)
         }
     }
 
-    public func fetchSession(id: UUID) throws -> ConversationSession? {
+    public func fetchSession(id: UUID) throws -> Timeline? {
         try dbQueue.read { db in
-            try ConversationSession.fetchOne(db, key: ["id": id])
+            try Timeline.fetchOne(db, key: ["id": id])
         }
     }
 
-    public func fetchAllSessions(includeArchived: Bool = false) throws -> [ConversationSession] {
+    public func fetchAllSessions(includeArchived: Bool = false) throws -> [Timeline] {
         try dbQueue.read { db in
             if includeArchived {
                 return
-                    try ConversationSession
+                    try Timeline
                     .order(Column("updatedAt").desc)
                     .fetchAll(db)
             } else {
                 return
-                    try ConversationSession
+                    try Timeline
                     .filter(Column("isArchived") == false)
                     .order(Column("updatedAt").desc)
                     .fetchAll(db)
@@ -36,7 +36,7 @@ extension PersistenceService {
 
     public func deleteSession(id: UUID) throws {
         _ = try dbQueue.write { db in
-            try ConversationSession.deleteOne(db, key: ["id": id])
+            try Timeline.deleteOne(db, key: ["id": id])
         }
     }
 

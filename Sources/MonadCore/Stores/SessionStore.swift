@@ -3,7 +3,7 @@ import Logging
 
 public actor SessionStore: Sendable {
     private let persistenceService: any SessionPersistenceProtocol
-    private var loadedSessions: [UUID: ConversationSession] = [:]
+    private var loadedSessions: [UUID: Timeline] = [:]
     private let logger = Logger.module(named: "store")
     
     public init(persistenceService: any SessionPersistenceProtocol) async throws {
@@ -20,7 +20,7 @@ public actor SessionStore: Sendable {
         logger.info("Loaded \(sessions.count) active sessions into cache.")
     }
     
-    public func getSession(id: UUID) -> ConversationSession? {
+    public func getSession(id: UUID) -> Timeline? {
         return loadedSessions[id]
     }
     
@@ -42,8 +42,8 @@ public actor SessionStore: Sendable {
         title: String = "New Conversation",
         workingDirectory: String? = nil,
         primaryWorkspaceId: UUID? = nil
-    ) async throws -> ConversationSession {
-        let session = ConversationSession(
+    ) async throws -> Timeline {
+        let session = Timeline(
             title: title,
             workingDirectory: workingDirectory,
             primaryWorkspaceId: primaryWorkspaceId
@@ -55,7 +55,7 @@ public actor SessionStore: Sendable {
     }
     
     /// Update an existing session in the database and cache
-    public func updateSession(_ session: ConversationSession) async throws {
+    public func updateSession(_ session: Timeline) async throws {
         try await persistenceService.saveSession(session)
         loadedSessions[session.id] = session
     }

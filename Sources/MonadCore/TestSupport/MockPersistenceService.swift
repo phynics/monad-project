@@ -48,13 +48,13 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     public func deleteMessages(for sessionId: UUID) async throws { try await messagesMock.deleteMessages(for: sessionId) }
 
     // MARK: - SessionPersistenceProtocol
-    public var sessions: [ConversationSession] {
+    public var sessions: [Timeline] {
         get { sessionsMock.sessions }
         set { sessionsMock.sessions = newValue }
     }
-    public func saveSession(_ session: ConversationSession) async throws { try await sessionsMock.saveSession(session) }
-    public func fetchSession(id: UUID) async throws -> ConversationSession? { try await sessionsMock.fetchSession(id: id) }
-    public func fetchAllSessions(includeArchived: Bool) async throws -> [ConversationSession] { try await sessionsMock.fetchAllSessions(includeArchived: includeArchived) }
+    public func saveSession(_ session: Timeline) async throws { try await sessionsMock.saveSession(session) }
+    public func fetchSession(id: UUID) async throws -> Timeline? { try await sessionsMock.fetchSession(id: id) }
+    public func fetchAllSessions(includeArchived: Bool) async throws -> [Timeline] { try await sessionsMock.fetchAllSessions(includeArchived: includeArchived) }
     public func deleteSession(id: UUID) async throws { try await sessionsMock.deleteSession(id: id) }
 
     // MARK: - JobStoreProtocol

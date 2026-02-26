@@ -18,8 +18,8 @@ struct RemediationTests {
     
     @Test("Configuration validation identifies missing API keys")
     func testConfigurationValidation() {
-        var config = Configuration.default
-        config.llm.providers[.openAI] = ProviderConfiguration(
+        var config = LLMConfiguration.default
+        config.providers[.openAI] = ProviderConfiguration(
             endpoint: "test",
             apiKey: "",
             modelName: "gpt-4",

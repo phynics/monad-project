@@ -24,7 +24,7 @@ struct PruneComplexSessionTests {
     @Test("pruneSessions should handle archived sessions with complex dependencies")
     func testPruneComplexDependencies() async throws {
         // 1. Create archived session
-        var archivedSession = ConversationSession(title: "Archived Session")
+        var archivedSession = Timeline(title: "Archived Session")
         archivedSession.isArchived = true
         archivedSession.updatedAt = Date().addingTimeInterval(-3600)
         try await persistence.saveSession(archivedSession)
@@ -52,7 +52,7 @@ struct PruneComplexSessionTests {
         }
 
         // 2. Create non-archived session
-        var liveSession = ConversationSession(title: "Live Session")
+        var liveSession = Timeline(title: "Live Session")
         liveSession.isArchived = false
         liveSession.updatedAt = Date().addingTimeInterval(-3600)
         try await persistence.saveSession(liveSession)

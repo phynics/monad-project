@@ -75,7 +75,6 @@ struct ToolErrorSurfaceTests {
         #expect(!result.success)
         #expect(result.error == "Something went wrong")
         #expect(result.output.isEmpty)
-        #expect(result.subagentContext == nil)
     }
     
     @Test("ToolResult.success has correct properties")

@@ -22,9 +22,9 @@ extension ConversationMessage: FetchableRecord, PersistableRecord {
     // Default Codable implementation
 }
 
-// MARK: - ConversationSession
+// MARK: - Timeline
 
-extension ConversationSession: FetchableRecord, PersistableRecord {
+extension Timeline: FetchableRecord, PersistableRecord {
     // Default Codable implementation
 }
 

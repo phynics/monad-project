@@ -2,12 +2,12 @@ import Foundation
 
 /// Model for database backup/export
 public struct DatabaseBackup: Codable, Sendable {
-    public let sessions: [ConversationSession]
+    public let sessions: [Timeline]
     public let messages: [ConversationMessage]
     public let memories: [Memory]
 
     public init(
-        sessions: [ConversationSession],
+        sessions: [Timeline],
         messages: [ConversationMessage],
         memories: [Memory]
     ) {

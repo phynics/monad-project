@@ -51,9 +51,9 @@ final class MockPersistenceStore:
     func deleteMessages(for sessionId: UUID) async throws {}
 
     // SessionPersistenceProtocol
-    func saveSession(_ session: ConversationSession) async throws {}
-    func fetchSession(id: UUID) async throws -> ConversationSession? { nil }
-    func fetchAllSessions(includeArchived: Bool) async throws -> [ConversationSession] { [] }
+    func saveSession(_ session: Timeline) async throws {}
+    func fetchSession(id: UUID) async throws -> Timeline? { nil }
+    func fetchAllSessions(includeArchived: Bool) async throws -> [Timeline] { [] }
     func deleteSession(id: UUID) async throws {}
 
     // JobStoreProtocol

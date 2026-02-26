@@ -17,7 +17,7 @@ struct JobQueueTests {
         self.persistence = mock
         self.context = JobQueueContext(persistenceService: mock, sessionId: sid)
 
-        let session = ConversationSession(id: sid, title: "Test Session")
+        let session = Timeline(id: sid, title: "Test Session")
         try await mock.saveSession(session)
     }
 

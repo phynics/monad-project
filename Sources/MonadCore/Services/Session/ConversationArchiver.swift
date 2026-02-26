@@ -41,7 +41,7 @@ public actor ConversationArchiver {
         }
 
         // 2. Resolve Session
-        let session: ConversationSession
+        let session: Timeline
         if let sid = sessionId, let existing = try await persistence.fetchSession(id: sid) {
             var updated = existing
             updated.title = title
@@ -50,7 +50,7 @@ public actor ConversationArchiver {
             try await persistence.saveSession(updated)
             session = updated
         } else {
-            var newSession = ConversationSession(title: title)
+            var newSession = Timeline(title: title)
             newSession.isArchived = true
             try await persistence.saveSession(newSession)
             session = newSession

@@ -5,7 +5,7 @@ extension SessionManager {
 
     public func attachWorkspace(_ workspaceId: UUID, to sessionId: UUID, isPrimary: Bool = false)
         async throws {
-        var session: ConversationSession
+        var session: Timeline
 
         if let memorySession = sessions[sessionId] {
             session = memorySession
@@ -50,7 +50,7 @@ extension SessionManager {
     }
 
     public func detachWorkspace(_ workspaceId: UUID, from sessionId: UUID) async throws {
-        var session: ConversationSession
+        var session: Timeline
 
         if let memorySession = sessions[sessionId] {
             session = memorySession

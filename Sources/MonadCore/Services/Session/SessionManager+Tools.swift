@@ -4,7 +4,7 @@ extension SessionManager {
     // MARK: - Tool Management
 
     internal func createToolManager(
-        for session: ConversationSession,
+        for session: Timeline,
         jailRoot: String,
         toolContextSession: ToolContextSession,
         jobQueueContext: JobQueueContext,

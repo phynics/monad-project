@@ -25,7 +25,7 @@ struct PersistenceImmutabilityTests {
 
     @Test("Test that archived messages cannot be deleted or modified")
     func archiveImmutability() async throws {
-        var session = ConversationSession(title: "Archived Session")
+        var session = Timeline(title: "Archived Session")
         session.isArchived = true
         try await persistence.saveSession(session)
 
@@ -61,7 +61,7 @@ struct PersistenceImmutabilityTests {
 
     @Test("Test that non-archived messages CAN be deleted or modified")
     func nonArchivedImmutability() async throws {
-        var session = ConversationSession(title: "Live Session")
+        var session = Timeline(title: "Live Session")
         session.isArchived = false
         try await persistence.saveSession(session)
 
@@ -92,7 +92,7 @@ struct PersistenceImmutabilityTests {
 
     @Test("Test that archived sessions cannot be deleted or modified")
     func sessionImmutability() async throws {
-        var session = ConversationSession(title: "Permanent Session")
+        var session = Timeline(title: "Permanent Session")
         session.isArchived = true
         try await persistence.saveSession(session)
 
@@ -115,7 +115,7 @@ struct PersistenceImmutabilityTests {
 
     @Test("Test that non-archived sessions CAN be deleted or modified")
     func nonArchivedSessionImmutability() async throws {
-        var session = ConversationSession(title: "Temporary Session")
+        var session = Timeline(title: "Temporary Session")
         session.isArchived = false
         try await persistence.saveSession(session)
 

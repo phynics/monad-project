@@ -23,23 +23,11 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
     /// ID of the tool call this message is a response to (only for .tool role)
     public var toolCallId: String?
 
-    /// Debug info - not persisted
-    public var debugInfo: MessageDebugInfo?
-
     /// Optional ID of the parent message in the forest structure
     public var parentId: UUID?
 
-    /// Current progress of context gathering (only for user messages)
-    public var gatheringProgress: ContextGatheringProgress?
-
     /// Memories that were provided as context for this message
     public var recalledMemories: [Memory]?
-
-    /// Context used for subagent execution (if applicable)
-    public var subagentContext: SubagentContext?
-
-    /// For user messages: structured map of prompt sections (e.g. "system" -> content)
-    public var structuredContext: [String: String]?
 
     /// Whether this message is a system summary/truncation notice
     public var isSummary: Bool
@@ -47,20 +35,9 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
     /// Type of summary (if role is .summary)
     public var summaryType: SummaryType?
 
-    /// Helper to get generated tags from debug info
-    public var tags: [String]? {
-        debugInfo?.generatedTags
-    }
-
     public enum SummaryType: String, Codable, Sendable {
         case topic  // Vertical line
         case broad  // Middle blob
-    }
-
-    /// Helper to get generation stats from debug info
-    public var stats: (tokensPerSecond: Double?, totalTokens: Int?)? {
-        guard let apiResponse = debugInfo?.apiResponse else { return nil }
-        return (apiResponse.tokensPerSecond, apiResponse.totalTokens)
     }
 
     public init(
@@ -68,11 +45,8 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
         timestamp: Date = Date(),
         content: String, role: MessageRole, think: String? = nil, toolCalls: [ToolCall]? = nil,
         toolCallId: String? = nil,
-        debugInfo: MessageDebugInfo? = nil,
         parentId: UUID? = nil,
-        gatheringProgress: ContextGatheringProgress? = nil,
         recalledMemories: [Memory]? = nil,
-        subagentContext: SubagentContext? = nil,
         isSummary: Bool = false,
         summaryType: SummaryType? = nil
     ) {
@@ -83,11 +57,8 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
         self.think = think
         self.toolCalls = toolCalls
         self.toolCallId = toolCallId
-        self.debugInfo = debugInfo
         self.parentId = parentId
-        self.gatheringProgress = gatheringProgress
         self.recalledMemories = recalledMemories
-        self.subagentContext = subagentContext
         self.isSummary = isSummary
         self.summaryType = summaryType
     }

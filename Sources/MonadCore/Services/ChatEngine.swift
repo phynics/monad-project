@@ -486,7 +486,7 @@ public final class ChatEngine: @unchecked Sendable {
     }
 
     private func buildPrompt(
-        session: ConversationSession?,
+        session: Timeline?,
         message: String,
         contextData: ContextData,
         history: [Message],

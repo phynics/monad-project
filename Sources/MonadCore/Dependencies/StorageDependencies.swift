@@ -62,9 +62,9 @@ public struct UnconfiguredPersistenceService: FullPersistenceService {
     public func saveMessage(_ message: ConversationMessage) async throws { fail() }
     public func fetchMessages(for sessionId: UUID) async throws -> [ConversationMessage] { fail() }
     public func deleteMessages(for sessionId: UUID) async throws { fail() }
-    public func saveSession(_ session: ConversationSession) async throws { fail() }
-    public func fetchSession(id: UUID) async throws -> ConversationSession? { fail() }
-    public func fetchAllSessions(includeArchived: Bool) async throws -> [ConversationSession] { fail() }
+    public func saveSession(_ session: Timeline) async throws { fail() }
+    public func fetchSession(id: UUID) async throws -> Timeline? { fail() }
+    public func fetchAllSessions(includeArchived: Bool) async throws -> [Timeline] { fail() }
     public func deleteSession(id: UUID) async throws { fail() }
     public func saveJob(_ job: Job) async throws { fail() }
     public func fetchJob(id: UUID) async throws -> Job? { fail() }
