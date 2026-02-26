@@ -94,17 +94,6 @@ public struct Memory: Codable, Identifiable, Sendable, Equatable {
     }
 }
 
-/// Result of a semantic search including the memory and its similarity score
-public struct SemanticSearchResult: Sendable, Equatable {
-    public let memory: Memory
-    public let similarity: Double?
-
-    public init(memory: Memory, similarity: Double? = nil) {
-        self.memory = memory
-        self.similarity = similarity
-    }
-}
-
 // MARK: - Prompt Formatting
 
 extension Memory: PromptFormattable {

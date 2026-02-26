@@ -5,14 +5,15 @@ import Logging
 ///
 /// Handles streaming responses that contain `<think>...</think>` blocks,
 /// separating reasoning from main content in real-time.
-public class StreamingParser {
+public struct StreamingParser {
     // MARK: - State
-    private var buffer = ""
-    private var thinkingBuffer = ""
-    private var contentBuffer = ""
+    public private(set) var buffer = ""
+    public private(set) var thinking = ""
+    public private(set) var content = ""
 
-    private var insideThinkTag = false
-    private var insideCodeBlock = false
+    public private(set) var isThinking = false
+    public private(set) var insideCodeBlock = false
+    public private(set) var hasReclassified = false
 
     private var rawBuffer = ""  // Debug history
 
@@ -20,23 +21,15 @@ public class StreamingParser {
 
     // MARK: - Public API
 
-    /// Process a new text chunk
-    /// - Returns: Tuple with new thinking text, new content text, and reclassification flag
-    public func process(_ chunk: String) -> (
-        thinking: String?, content: String?, isReclassified: Bool
-    ) {
+    public mutating func process(_ chunk: String) {
+        hasReclassified = false
         buffer += chunk
         rawBuffer += chunk
-
-        var isReclassified = false
-        var newThinking: String?
-        var newContent: String?
 
         // Process buffer exhaustively
         while let result = extractNextSegment() {
             if result.isThinking {
-                thinkingBuffer += result.text
-                newThinking = (newThinking ?? "") + result.text
+                thinking += result.text
             } else {
                 // Check for orphaned closing tag marker
                 if result.text.contains("RECLASSIFY_THINKING_MARKER") {
@@ -45,61 +38,22 @@ public class StreamingParser {
                         of: "RECLASSIFY_THINKING_MARKER", with: "")
 
                     // Move all previous content to thinking
-                    thinkingBuffer = contentBuffer + actualText
-                    contentBuffer = ""
-                    isReclassified = true
-
-                    newThinking = thinkingBuffer
-                    newContent = ""
+                    thinking = content + actualText
+                    content = ""
+                    hasReclassified = true
                 } else {
-                    contentBuffer += result.text
-                    newContent = (newContent ?? "") + result.text
+                    content += result.text
                 }
             }
         }
-
-        return (newThinking, newContent, isReclassified)
     }
 
-    /// Finalize parsing and return complete buffers
-    public func finalize() -> (thinking: String?, content: String) {
-        _ = flush()
-        let finalThinking = thinkingBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
-        let finalContent = contentBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (finalThinking.isEmpty ? nil : finalThinking, finalContent)
-    }
 
-    /// Flushes any pending text in the buffer and returns just the newly flushed segments
-    public func flush() -> (thinking: String?, content: String?) {
-        var newThinking: String?
-        var newContent: String?
-        if !buffer.isEmpty {
-            if insideThinkTag {
-                thinkingBuffer += buffer
-                newThinking = buffer
-            } else {
-                contentBuffer += buffer
-                newContent = buffer
-            }
-            buffer = ""
-        }
-        return (newThinking, newContent)
-    }
-
-    /// Reset parser state
-    public func reset() {
-        buffer = ""
-        thinkingBuffer = ""
-        contentBuffer = ""
-        insideThinkTag = false
-        insideCodeBlock = false
-        rawBuffer = ""
-    }
 
     // MARK: - Core Parsing Logic
 
     /// Extracts the next valid text segment from the buffer, updating state
-    private func extractNextSegment() -> (text: String, isThinking: Bool)? {
+    private mutating func extractNextSegment() -> (text: String, isThinking: Bool)? {
         guard !buffer.isEmpty else { return nil }
 
         // 1. Check for Code Block Delimiters ("```")
@@ -111,10 +65,10 @@ public class StreamingParser {
 
             // Return text before delimiter with *previous* state
             if !prefix.isEmpty {
-                return (prefix, insideThinkTag)
+                return (prefix, isThinking)
             }
             // Return the delimiter itself
-            return ("```", insideThinkTag)
+            return ("```", isThinking)
         }
 
         // 2. Hold Partial Code Delimiters
@@ -126,13 +80,13 @@ public class StreamingParser {
 
         // 3. Handle Tags (Only if NOT inside a code block)
         if !insideCodeBlock {
-            if insideThinkTag {
+            if isThinking {
                 // Looking for closing </think>
                 if let range = buffer.range(of: "</think>") {
-                    let content = String(buffer[..<range.lowerBound])
+                    let text = String(buffer[..<range.lowerBound])
                     buffer.removeSubrange(..<range.upperBound)
-                    insideThinkTag = false
-                    return (content, true)
+                    isThinking = false
+                    return (text, true)
                 }
 
                 // Check for partial closing tag at end
@@ -151,12 +105,12 @@ public class StreamingParser {
             } else {
                 // Looking for opening <think>
                 if let range = buffer.range(of: "<think>") {
-                    let content = String(buffer[..<range.lowerBound])
+                    let text = String(buffer[..<range.lowerBound])
                     buffer.removeSubrange(..<range.upperBound)
-                    insideThinkTag = true
+                    isThinking = true
 
-                    if !content.isEmpty {
-                        return (content, false)
+                    if !text.isEmpty {
+                        return (text, false)
                     }
                     // Recursively process immediately to handle content inside the tag
                     return extractNextSegment()
@@ -200,7 +154,7 @@ public class StreamingParser {
         // So safe to flush everything.
         let text = buffer
         buffer = ""
-        return (text, insideThinkTag)
+        return (text, isThinking)
     }
 
     // MARK: - Tool Parsing

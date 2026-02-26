@@ -10,15 +10,16 @@ import MonadShared
 
     @Test("Think tag inside code block should be treated as text")
     func testThinkTagInsideCodeBlock() {
-        let parser = StreamingParser()
+        var parser = StreamingParser()
         // Input: ```\n<think>\n```
         // Expected: All content, no thinking.
 
-        _ = parser.process("```\n")
-        _ = parser.process("<think>\n")
-        _ = parser.process("```")
+        parser.process("```\n")
+        parser.process("<think>\n")
+        parser.process("```")
 
-        let (thinking, content) = parser.finalize()
+        let thinking: String? = parser.thinking.isEmpty ? nil : parser.thinking
+        let content = parser.content
 
         #expect(thinking == nil)
         #expect(content.contains("<think>") == true)
@@ -26,7 +27,7 @@ import MonadShared
 
     @Test("Closing think tag inside code block (nested in thinking) should be preserved")
     func testClosingThinkTagInsideCodeBlockInThinking() {
-        let parser = StreamingParser()
+        var parser = StreamingParser()
         // Input: <think>\nHere is code:\n```\nprint(\"</think>")\n```\n</think>
         // Expected: Thinking contains the code block with the tag literal.
 
@@ -40,10 +41,11 @@ import MonadShared
         ]
 
         for chunk in chunks {
-            _ = parser.process(chunk)
+            parser.process(chunk)
         }
 
-        let (thinking, content) = parser.finalize()
+        let thinking: String? = parser.thinking.isEmpty ? nil : parser.thinking
+        let content = parser.content
 
         #expect(thinking != nil)
         #expect(thinking?.contains("print(\\\"<\\/think>\\\")") == true)
@@ -54,21 +56,21 @@ import MonadShared
 
     @Test("Partial code block delimiters across chunks")
     func testPartialBackticks() {
-        let parser = StreamingParser()
+        var parser = StreamingParser()
         // Sequence: "Start", "`", "`", "`", "Code", "`", "`", "`", "End"
         // Should detect block.
 
-        _ = parser.process("Start ")
-        _ = parser.process("`")
-        _ = parser.process("`")
-        _ = parser.process("`")
-        _ = parser.process("Code")
-        _ = parser.process("`")
-        _ = parser.process("`")
-        _ = parser.process("`")
-        _ = parser.process(" End")
+        parser.process("Start ")
+        parser.process("`")
+        parser.process("`")
+        parser.process("`")
+        parser.process("Code")
+        parser.process("`")
+        parser.process("`")
+        parser.process("`")
+        parser.process(" End")
 
-        let (_, _) = parser.finalize()
+        
 
         // "```" are stripped or preserved?
         // In `extractNextSegment`, it returns "```" as text.
@@ -76,31 +78,33 @@ import MonadShared
         // But the *state* `insideCodeBlock` should have toggled correctly to protect content if it had tags.
         // Let's test with a tag inside.
 
-        parser.reset()
-        _ = parser.process("`")
-        _ = parser.process("`")
-        _ = parser.process("`")
-        _ = parser.process("<think>")  // Should be ignored as tag
-        _ = parser.process("`")
-        _ = parser.process("`")
-        _ = parser.process("`")
+        parser = StreamingParser()
+        parser.process("`")
+        parser.process("`")
+        parser.process("`")
+        parser.process("<think>")  // Should be ignored as tag
+        parser.process("`")
+        parser.process("`")
+        parser.process("`")
 
-        let (thinking, content2) = parser.finalize()
+        let thinking: String? = parser.thinking.isEmpty ? nil : parser.thinking
+        let content2 = parser.content
         #expect(thinking == nil)
         #expect(content2.contains("<think>"))
     }
 
     @Test("Partial tag delimiters across chunks")
     func testPartialTags() {
-        let parser = StreamingParser()
+        var parser = StreamingParser()
         // < t h i n k >
 
         let input = "<think>Inner</think>"
         for char in input {
-            _ = parser.process(String(char))
+            parser.process(String(char))
         }
 
-        let (thinking, content) = parser.finalize()
+        let thinking: String? = parser.thinking.isEmpty ? nil : parser.thinking
+        let content = parser.content
         #expect(thinking == "Inner")
         #expect(content.isEmpty == true)
     }
@@ -109,13 +113,14 @@ import MonadShared
 
     @Test("Orphaned closing tag triggers reclassification")
     func testOrphanedClosingTag() {
-        let parser = StreamingParser()
+        var parser = StreamingParser()
 
-        _ = parser.process("Some content that ")
-        _ = parser.process("was actually thinking </think>")
-        _ = parser.process(" Real content")
+        parser.process("Some content that ")
+        parser.process("was actually thinking </think>")
+        parser.process(" Real content")
 
-        let (thinking, content) = parser.finalize()
+        let thinking: String? = parser.thinking.isEmpty ? nil : parser.thinking
+        let content = parser.content
 
         // The parser logic: if </think> found without <think>, it treats everything before as thinking.
         #expect(thinking?.contains("Some content that was actually thinking") == true)
@@ -124,22 +129,23 @@ import MonadShared
 
     @Test("Empty buffer handling")
     func testEmptyProcessing() {
-        let parser = StreamingParser()
-        _ = parser.process("")
-        let (thinking, content) = parser.finalize()
+        var parser = StreamingParser()
+        parser.process("")
+        let thinking: String? = parser.thinking.isEmpty ? nil : parser.thinking
+        let content = parser.content
         #expect(thinking == nil)
         #expect(content == "")
     }
 
     @Test("Interleaved partials")
     func testInterleavedPartials() {
-        let parser = StreamingParser()
+        var parser = StreamingParser()
         // `<` then `think>`
-        _ = parser.process("<")
+        parser.process("<")
         // Verify intermediate state didn't crash or output garbage
-        _ = parser.process("think>Content")
+        parser.process("think>Content")
 
-        let (thinking, _) = parser.finalize()
+        let thinking: String? = parser.thinking.isEmpty ? nil : parser.thinking
         #expect(thinking == "Content")
     }
 
@@ -147,7 +153,7 @@ import MonadShared
 
     @Test("Complex interleaved stream")
     func testComplexStream() {
-        let parser = StreamingParser()
+        var parser = StreamingParser()
         let chunks = [
             "Start ",
             "<thi", "nk>",
@@ -162,10 +168,11 @@ import MonadShared
         ]
 
         for chunk in chunks {
-            _ = parser.process(chunk)
+            parser.process(chunk)
         }
 
-        let (thinking, content) = parser.finalize()
+        let thinking: String? = parser.thinking.isEmpty ? nil : parser.thinking
+        let content = parser.content
 
         #expect(thinking?.contains("Reasoning...") == true)
         #expect(thinking?.contains("if x < 10") == true)

@@ -20,7 +20,8 @@ public final class StreamingCoordinator {
     private var currentToolCallIndex: Int?
 
     // Parser
-    private let parser = StreamingParser()
+    @ObservationIgnored
+    private var parser = StreamingParser()
     private let logger = Logger.module(named: "chat")
 
     public init() {}
@@ -36,7 +37,7 @@ public final class StreamingCoordinator {
         isStreaming = true
         startTime = Date()
         usage = nil
-        parser.reset()
+        parser = StreamingParser()
         logger.debug("Started streaming")
     }
 
@@ -55,21 +56,15 @@ public final class StreamingCoordinator {
     public func processChunk(_ delta: String) {
         logger.debug("PARSING CHUNK: '\(delta)'")
         // Parse the chunk using our parser (handles <think> tags)
-        let (newThinking, newContent, isReclassified) = parser.process(delta)
+        parser.process(delta)
 
-        if isReclassified {
+        if parser.hasReclassified {
             logger.warning("PARSER RECLASSIFIED STATE: content moved to thinking")
-            streamingThinking = newThinking ?? ""
-            streamingContent = newContent ?? ""
+            streamingThinking = parser.thinking
+            streamingContent = parser.content
         } else {
-            if let thinking = newThinking {
-                logger.debug("PARSED THINKING: \(thinking.count) chars")
-                streamingThinking += thinking
-            }
-            if let content = newContent {
-                logger.debug("PARSED CONTENT: \(content.count) chars")
-                streamingContent += content
-            }
+            streamingThinking = parser.thinking
+            streamingContent = parser.content
         }
     }
 
@@ -160,8 +155,20 @@ public final class StreamingCoordinator {
         rawPrompt: String? = nil,
         structuredContext: [String: String]? = nil
     ) -> Message {
+        // flush manually if any remaining text
+        if !parser.buffer.isEmpty {
+            if parser.isThinking {
+                streamingThinking += parser.buffer
+            } else {
+                streamingContent += parser.buffer
+            }
+        }
+
+        let finalThinking = streamingThinking.trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalContent = streamingContent.trimmingCharacters(in: .whitespacesAndNewlines)
+
         // 1. Extract XML tools from the content
-        let (contentWithoutTools, xmlToolCalls) = parser.extractToolCalls(from: streamingContent)
+        let (contentWithoutTools, xmlToolCalls) = parser.extractToolCalls(from: finalContent)
 
         // 2. Combine native tools and XML tools
         var finalToolCalls: [ToolCall] = []
@@ -221,7 +228,7 @@ public final class StreamingCoordinator {
         return Message(
             content: contentWithoutTools,
             role: .assistant,
-            think: streamingThinking.isEmpty ? nil : streamingThinking,
+            think: finalThinking.isEmpty ? nil : finalThinking,
             toolCalls: finalToolCalls.isEmpty ? nil : finalToolCalls,
             debugInfo: .assistantMessage(
                 response: APIResponseMetadata(
@@ -233,7 +240,7 @@ public final class StreamingCoordinator {
                 ),
                 original: streamingContent,
                 parsed: contentWithoutTools,
-                thinking: streamingThinking.isEmpty ? nil : streamingThinking,
+                thinking: finalThinking.isEmpty ? nil : finalThinking,
                 toolCalls: finalToolCalls.isEmpty ? nil : finalToolCalls,
                 rawPrompt: rawPrompt,
                 structuredContext: structuredContext

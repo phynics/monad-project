@@ -193,7 +193,7 @@ public final class ChatEngine: @unchecked Sendable {
         var fullThinking = ""
         var toolCallAccumulators: [Int: (id: String, name: String, args: String)] = [:]
 
-        let parser = StreamingParser()
+        var parser = StreamingParser()
         var hasEmittedThought = false
 
         // Bug 1: Track timing and token usage
@@ -208,21 +208,35 @@ public final class ChatEngine: @unchecked Sendable {
 
             // Forward Content and Thinking
             if let delta = result.choices.first?.delta.content {
-                let parseResult = parser.process(delta)
+                let oldThinkingCount = parser.thinking.count
+                let oldContentCount = parser.content.count
+                
+                parser.process(delta)
 
-                if let thinkingChunk = parseResult.thinking, !thinkingChunk.isEmpty {
-                    fullThinking += thinkingChunk
-                    hasEmittedThought = true
-                    continuation.yield(.thought(thinkingChunk))
+                let thinkingChunk: Substring
+                let contentChunk: Substring
+
+                if parser.hasReclassified {
+                    thinkingChunk = parser.thinking.dropFirst(oldThinkingCount)
+                    contentChunk = ""
+                } else {
+                    thinkingChunk = parser.thinking.dropFirst(oldThinkingCount)
+                    contentChunk = parser.content.dropFirst(oldContentCount)
                 }
 
-                if let contentChunk = parseResult.content, !contentChunk.isEmpty {
+                if !thinkingChunk.isEmpty {
+                    fullThinking += thinkingChunk
+                    hasEmittedThought = true
+                    continuation.yield(.thought(String(thinkingChunk)))
+                }
+
+                if !contentChunk.isEmpty {
                     if hasEmittedThought {
                         continuation.yield(.thoughtCompleted)
                         hasEmittedThought = false
                     }
                     fullResponse += contentChunk
-                    continuation.yield(.delta(contentChunk))
+                    continuation.yield(.delta(String(contentChunk)))
                 }
             }
 
@@ -256,19 +270,24 @@ public final class ChatEngine: @unchecked Sendable {
         }
 
         // Flush Any Pending Text
-        let pending = parser.flush()
-        if let thinkingChunk = pending.thinking, !thinkingChunk.isEmpty {
-            fullThinking += thinkingChunk
-            hasEmittedThought = true
-            continuation.yield(.thought(thinkingChunk))
+        if !parser.buffer.isEmpty {
+            if parser.isThinking {
+                fullThinking += parser.buffer
+                hasEmittedThought = true
+                continuation.yield(.thought(parser.buffer))
+            } else {
+                if hasEmittedThought {
+                    continuation.yield(.thoughtCompleted)
+                    hasEmittedThought = false
+                }
+                fullResponse += parser.buffer
+                continuation.yield(.delta(parser.buffer))
+            }
         }
+        
         if hasEmittedThought {
             continuation.yield(.thoughtCompleted)
             hasEmittedThought = false
-        }
-        if let contentChunk = pending.content, !contentChunk.isEmpty {
-            fullResponse += contentChunk
-            continuation.yield(.delta(contentChunk))
         }
 
         // Accumulate raw output for debug
