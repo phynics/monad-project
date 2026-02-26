@@ -145,6 +145,10 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         LLMConfiguration(activeProvider: .openRouter)
     }
 
+    public static var `default`: LLMConfiguration {
+        LLMConfiguration()
+    }
+
     /// Validate configuration
     public var isValid: Bool {
         (try? validate()) != nil
@@ -173,5 +177,30 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
     private func isValidEndpoint(_ endpoint: String) -> Bool {
         guard let url = URL(string: endpoint) else { return false }
         return url.scheme == "http" || url.scheme == "https"
+    }
+}
+
+// MARK: - Errors
+
+public enum ConfigurationError: LocalizedError {
+    case invalidConfiguration(reason: String)
+    case missingAPIKey(LLMProvider)
+    case invalidEndpoint(String)
+    case noBackupFound
+    case importFailed
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalidConfiguration(let reason):
+            return "Invalid configuration: \(reason)"
+        case .missingAPIKey(let provider):
+            return "Missing API key for provider: \(provider.rawValue)"
+        case .invalidEndpoint(let endpoint):
+            return "Invalid endpoint URL: \(endpoint)"
+        case .noBackupFound:
+            return "No backup configuration found"
+        case .importFailed:
+            return "Failed to import configuration: Invalid format"
+        }
     }
 }

@@ -1,0 +1,6 @@
+[0/1] Planning build
+[1/1] Compiling plugin GenerateManual
+[2/2] Compiling plugin GenerateDoccReference
+Building for debugging...
+[2/7] Write swift-version--4C93BC3534C3854D.txt
+Build complete! (5.80s)
