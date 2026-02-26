@@ -185,7 +185,6 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
                 var version: Int
                 var provider: LLMProvider
                 var toolFormat: ToolCallFormat
-                var mcpServers: [MCPServerConfiguration]
                 var memoryContextLimit: Int
                 var documentContextLimit: Int
             }
@@ -213,7 +212,6 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
                 let newConfig = LLMConfiguration(
                     activeProvider: oldConfig.provider,
                     providers: newProviders,
-                    mcpServers: oldConfig.mcpServers,
                     memoryContextLimit: oldConfig.memoryContextLimit,
                     documentContextLimit: oldConfig.documentContextLimit,
                     version: 5

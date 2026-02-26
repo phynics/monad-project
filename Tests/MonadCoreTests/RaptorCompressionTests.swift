@@ -10,7 +10,7 @@ actor RaptorMockLLMService: LLMServiceProtocol {
     var isConfigured: Bool { get async { true } }
     var configuration: LLMConfiguration { 
         get async { 
-            .init(activeProvider: .openAI, providers: [:], mcpServers: [], memoryContextLimit: 0, documentContextLimit: 0, version: 1) 
+            .init(activeProvider: .openAI, providers: [:], memoryContextLimit: 0, documentContextLimit: 0, version: 1) 
         } 
     }
 

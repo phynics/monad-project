@@ -43,7 +43,6 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
             .init(
                 activeProvider: .openAI, 
                 providers: [:], 
-                mcpServers: [], 
                 memoryContextLimit: 0, 
                 documentContextLimit: 0, 
                 version: 1
