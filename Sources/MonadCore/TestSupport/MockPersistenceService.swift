@@ -86,7 +86,14 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
         get { workspacesMock.workspaces }
         set { workspacesMock.workspaces = newValue }
     }
-    public func saveWorkspace(_ workspace: WorkspaceReference) async throws { try await workspacesMock.saveWorkspace(workspace) }
+    public func saveWorkspace(_ workspace: WorkspaceReference) async throws { 
+        try await workspacesMock.saveWorkspace(workspace) 
+        if let idx = toolsMock.workspaces.firstIndex(where: { $0.id == workspace.id }) {
+            toolsMock.workspaces[idx] = workspace
+        } else {
+            toolsMock.workspaces.append(workspace)
+        }
+    }
     public func fetchWorkspace(id: UUID) async throws -> WorkspaceReference? { try await workspacesMock.fetchWorkspace(id: id) }
     public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? { try await workspacesMock.fetchWorkspace(id: id, includeTools: includeTools) }
     public func fetchAllWorkspaces() async throws -> [WorkspaceReference] { try await workspacesMock.fetchAllWorkspaces() }

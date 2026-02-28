@@ -106,6 +106,16 @@ let package = Package(
             name: "MonadCLITests",
             dependencies: ["MonadCLI", "MonadClient"],
             path: "Tests/MonadCLITests"
+        ),
+        .testTarget(
+            name: "MonadSharedTests",
+            dependencies: ["MonadShared"],
+            path: "Tests/MonadSharedTests"
+        ),
+        .testTarget(
+            name: "MonadClientTests",
+            dependencies: ["MonadClient", "MonadCore"],
+            path: "Tests/MonadClientTests"
         )
     ]
 )

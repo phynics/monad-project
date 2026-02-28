@@ -25,7 +25,7 @@ extension ConversationMessage: FetchableRecord, PersistableRecord {
 // MARK: - Timeline
 
 extension Timeline: FetchableRecord, PersistableRecord {
-    // Default Codable implementation
+    public static var databaseTableName: String { "conversationSession" }
 }
 
 // MARK: - Job
