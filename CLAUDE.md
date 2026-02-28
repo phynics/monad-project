@@ -1,80 +1,190 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Quick reference for Claude Code working with the Monad project.
 
-## Project
+## Project Essentials
 
-Monad — a headless AI assistant with deep context integration, built in Swift 6.0 for macOS 15+. Server/CLI architecture with modular targets managed by Swift Package Manager.
+- **Language:** Swift 6.0 (macOS 15+)
+- **Architecture:** Server/CLI with six modular targets (no circular dependencies)
+- **Build System:** Swift Package Manager
+- **Key Tech:** Hummingbird (REST/SSE), GRDB/SQLite, USearch (embeddings), swift-dependencies
 
-## Build & Test Commands
+## Quick Commands
 
 ```bash
 swift build                          # Build all targets
 swift build -c release               # Release build
-swift test                           # Run all tests
-swift test --filter MonadCoreTests   # Run tests for a specific module
-swift test --filter ChatEngineTests  # Run a specific test suite
-swift run MonadServer                # Start the server
-swift run MonadCLI chat              # Interactive CLI (requires running server)
-make lint                            # SwiftLint (requires swiftlint installed)
+swift test                           # All tests
+swift test --filter MonadCoreTests   # Specific module
+swift run MonadServer                # Start server
+swift run MonadCLI chat              # Interactive CLI
+make lint                            # SwiftLint check
 ```
 
 ## Module Architecture
 
-Six targets with a strict dependency hierarchy (no circular dependencies):
+Six targets with strict dependency hierarchy:
 
-- **MonadCore** — Core business logic: `ChatEngine`, `SessionManager`, `ContextManager`, `ToolRouter`/`ToolExecutor`, LLM providers (OpenAI/Ollama/OpenRouter), embeddings, persistence models. `LLMConfiguration` is the canonical config type (split into focused files: `LLMProvider`, `ProviderConfiguration`, `ToolCallFormat`). `StreamingParser` lives in `Services/LLM/`. Depends on MonadPrompt, OpenAI, USearch, swift-dependencies. This should work as a standalone library.
-- **MonadServer** — Server implementation using MonadCore. Hummingbird REST API with SSE streaming, GRDB/SQLite persistence, WebSocket support, service lifecycle. Controllers live in `Sources/MonadServer/Controllers/`. API contract types are split into category-specific files (`ChatAPI`, `ClientAPI`, `CommonAPI`, etc.).
-- **MonadClient** — Client library for MonadServer with Bonjour auto-discovery.
-- **MonadCLI** — Command-line interface using MonadClient with slash commands.
-- **MonadShared** — Common types used by **MonadClient** and **MonadServer**.
-- **MonadPrompt** — Standalone DSL for prompt construction using `@ContextBuilder` result builder. No external dependencies.
+1. **MonadPrompt** — Standalone DSL for prompt construction (`@ContextBuilder`). No dependencies.
+2. **MonadCore** — Core business logic. Contains `ChatEngine`, `SessionManager`, `ContextManager`, `ToolRouter`/`ToolExecutor`, LLM providers (OpenAI/Ollama/OpenRouter), embeddings, persistence. **Works as a standalone library.**
+3. **MonadShared** — Common types for client/server (`ToolReference`, `WorkspaceReference`, `AnyCodable`, `ChatDelta`).
+4. **MonadServer** — Hummingbird REST API, SSE streaming, GRDB persistence, WebSocket, service lifecycle.
+5. **MonadClient** — Client library with Bonjour auto-discovery.
+6. **MonadCLI** — Command-line interface with slash commands.
 
-## MonadCore Model Layout
+### MonadCore Model Layout
 
 ```
 Sources/MonadCore/Models/
-├── Agents/        Agent.swift
+├── Agents/        Agent
 ├── Chat/          APIRequests, APIResponseMetadata, ChatEvent, Message, ToolCall
 ├── Configuration/ LLMConfiguration, LLMProvider, ProviderConfiguration, ToolCallFormat
 ├── Context/       ActiveMemory, ContextFile, DebugSnapshot
 ├── Database/      ConversationMessage, DatabaseBackup, Memory, SemanticSearchResult, Timeline
 ├── Tools/         Tool, ToolReference, ToolError, ToolParameters, …
-│   ├── Filesystem/
-│   ├── JobQueue/
-│   └── ToolContext/
+│   ├── Filesystem/  (7 tools: cd, find, inspect, ls, cat, grep, search)
+│   ├── JobQueue/    JobQueueGatewayTool, Job, JobQueueContext
+│   └── ToolContext/ ContextTool, ToolContext, ToolContextSession
 └── Workspace/     WorkspaceAttachment, WorkspaceLock, WorkspaceProtocol,
                    WorkspaceReference, WorkspaceTool, WorkspaceToolDefinition,
                    WorkspaceToolError, WorkspaceURI
 ```
 
-Key model notes:
-- **`Timeline`** (formerly `ConversationSession`) — the persistent conversation record.
-- **`LLMConfiguration`** — replaces the old monolithic `Configuration` wrapper struct. MCP config removed.
-- **`ToolReference`** / **`WorkspaceReference`** — dedicated types, no longer embedded in `WorkspaceModels`.
-- Removed: `MessageDebugInfo`, `SubagentContext`, `CompactificationNode`.
+**Key Model Notes:**
+- **`Timeline`** — persistent conversation record (formerly `ConversationSession`)
+- **`LLMConfiguration`** — multi-provider config supporting OpenAI, OpenRouter, Ollama, OpenAI-compatible. Split into `LLMProvider`, `ProviderConfiguration`, `ToolCallFormat`.
+- **`Message`** — includes Chain of Thought support via optional `think` field
+- **`ToolReference`** / **`WorkspaceReference`** — dedicated types
+- **`AnyTool`** — type-erased tool wrapper with optional `provenance` for labeling
 
-## Key Conventions
+### Core Services
 
-**Concurrency**: Use `AsyncThrowingStream` for streaming/progress, not closure callbacks. Use actors for thread-safe state. `Mutex` is used for fine-grained locking where actors are too heavy. All code uses Swift structured concurrency (async/await).
+```
+Sources/MonadCore/Services/
+├── ChatEngine.swift              — Unified chat/agent engine
+├── Agents/                       — AgentExecutor, AgentRegistry
+├── Configuration/                — ConfigurationServiceProtocol
+├── Context/                      — ContextManager, ContextRanker, ContextCompressor
+├── Database/                     — Persistence protocols (7 store protocols)
+├── Embeddings/                   — EmbeddingService, LocalEmbeddingService, OpenAIEmbeddingService
+├── LLM/                          — LLMService, StreamingParser, StreamingCoordinator
+│   └── Providers/                — OpenAI, Ollama, OpenRouter clients
+├── Prompting/                    — DefaultInstructions, PromptSections
+├── Session/                      — SessionManager, SessionToolManager
+├── Tools/                        — SystemToolRegistry, ToolExecutor, ToolRouter
+│   └── Agent/                    — LaunchSubagentTool, AgentAsTool
+├── Vector/                       — VectorStore, MockVectorStore
+└── Workspace/                    — WorkspaceManager, WorkspaceRepository
+```
 
-**Graceful Shutdown**: Services registered with `ServiceGroup` must wrap long-running work in `cancelWhenGracefulShutdown { ... }`. Do NOT rely on `Task.isCancelled` alone — it deadlocks because it's only set after all services return from `run()`. See `BonjourAdvertiser` for reference.
+## Critical Conventions
 
-**Dependency Injection**: Uses Point-Free's `swift-dependencies` (`@Dependency`).
+### Concurrency
+- Use `AsyncThrowingStream` for streaming/progress (not callbacks)
+- Use **actors** for thread-safe state management (`SessionManager`, `ContextManager`, `ToolRouter`, `WorkspaceManager`)
+- Use `Locked<T>` (wraps `OSAllocatedUnfairLock`) for fine-grained locking
+- All code uses Swift structured concurrency (async/await)
 
-**Tool Protocol**: All tools conform to `Tool` with `id`, `name`, `description`, `parametersSchema`, `execute(parameters:)` returning `ToolResult`, and `summarize(parameters:result:)` for context compression. `ToolReference` is a dedicated type for referencing tools.
+### Graceful Shutdown
+- Services in `ServiceGroup` **must** wrap work in `cancelWhenGracefulShutdown { ... }` from `ServiceLifecycle`
+- **CRITICAL:** DO NOT rely on `Task.isCancelled` alone — it deadlocks (only set after all services return from `run()`)
+- Reference: `Sources/MonadServer/BonjourAdvertiser.swift`
 
-**Context System**: `ContextManager` assembles prompts from system instructions, context notes, semantic memories (vector search with tag boosting), tool definitions, chat history (auto-truncated), and user query. Token budgeting uses priority-based sections with `keep`/`truncate`/`summarize` strategies.
+### Dependency Injection
+- Uses Point-Free's `swift-dependencies` (`@Dependency`)
+- Keys in `Sources/MonadCore/Dependencies/`: `LLMDependencies.swift`, `OrchestrationDependencies.swift`, `StorageDependencies.swift`
+- Usage: `@Dependency(\.sessionManager) private var sessionManager`
+- Configure with `withDependencies { ... }`
 
-**Workspace Model**: Sessions have a primary workspace (private sandbox with `Notes/` directory) and can attach shared project directories. Workspace types live in `Models/Workspace/`. Tools are labeled with provenance: `[System]`, `[Workspace: Name]`, or `[Session]`.
+### Tool Protocol
+- All tools conform to `Tool` (see `Sources/MonadCore/Models/Tools/Tool.swift`)
+- Required: `id`, `name`, `description`, `requiresPermission`, `parametersSchema`, `canExecute()`, `execute(parameters:)` → `ToolResult`
+- Optional: `summarize(parameters:result:)`, `toToolParam()`
+- Use `ToolParameterSchema.object { ... }` builder for schemas
+- Use `PathSanitizer.safelyResolve()` for secure path handling
+- Return `ToolResult.success(_)` or `ToolResult.failure(_)`
 
-**Logging**: Use `Logger.module(named: "ComponentName")` throughout. Do not use `Logger(label: ...)` directly.
+### Context System
+- **ContextManager** assembles prompts from:
+  1. System instructions (`DefaultInstructions.swift`)
+  2. Context notes from `Notes/` directory in workspace
+  3. Semantic memories (vector search + tag boosting, re-ranked)
+  4. Tool definitions (formatted with provenance labels)
+  5. Chat history (auto-truncated)
+  6. User query
+- Token budgeting via `MonadPrompt`: priority-based sections with `keep`/`truncate`/`summarize`/`drop` strategies
+- `gatherContext()` returns `AsyncThrowingStream<ContextGatheringEvent>` with progress
 
-## Testing
+### Workspace Model
+- Sessions have a **primary workspace** (private sandbox with `Notes/` directory)
+- Can attach **shared project directories** (attached workspaces)
+- Workspace types: `WorkspaceReference` (metadata), `WorkspaceProtocol` (interface), `WorkspaceURI` (identifier)
+- Host types: `.server`, `.serverSession`, `.client`
+- Trust levels: `.full`, `.restricted`
+- Tool provenance labels: `[System]`, `[Workspace: Name]`, `[Session]`
 
-Mock services are in `Sources/MonadCore/TestSupport/`: `MockLLMService`, `MockPersistenceService`, `MockEmbeddingService`, `MockConfigurationService`. Server tests use `HummingbirdTesting`.
+### Logging
+- Use `Logger.module(named: "ComponentName")` throughout
+- **Never** use `Logger(label: ...)` directly
+- Extension: `Sources/MonadCore/Utilities/Logger+Extensions.swift`
+
+### Testing
+- Mock services in `Sources/MonadCore/TestSupport/`: `MockLLMService`, `MockPersistenceService`, `MockEmbeddingService`, `MockConfigurationService`, `MockLocalWorkspace`
+- Server tests use `HummingbirdTesting`
 
 ## Environment Variables
 
 - `MONAD_API_KEY` — API key for LLM access
 - `MONAD_VERBOSE=true` — Enable verbose logging
+
+## Key Architectural Patterns
+
+### Streaming Response Pattern
+- `ChatEngine.chatStream()` returns `AsyncThrowingStream<ChatEvent, Error>`
+- Phases: `generationContext` → `thought` / `delta` → `toolCall` → `toolExecution` → `generationCompleted`
+- `StreamingParser` extracts Chain of Thought from `<think>...</think>` tags
+
+### Tool Execution Flow
+1. LLM requests tool via `ToolCall`
+2. `ToolRouter` resolves workspace containing tool
+3. Execute locally (server) or throw `ToolError.clientExecutionRequired` (client)
+4. Result fed back to LLM as new message
+5. LLM continues with result context
+
+### Multi-Provider LLM Support
+- `LLMConfiguration` supports OpenAI, OpenRouter, Ollama, OpenAI-compatible
+- `activeProvider` determines which `ProviderConfiguration` is used
+- Each provider has: `endpoint`, `apiKey`, `modelName`, `utilityModel`, `fastModel`, `toolFormat`, `timeoutInterval`, `maxRetries`
+- Validation on load: ensures active provider configured, API key present (except Ollama)
+
+## System Tools (15 implemented)
+
+**Filesystem (7):**
+- `cd`, `find`, `inspect_file`, `ls`, `cat`, `grep`, `search_files`
+
+**Agent (2):**
+- `LaunchSubagentTool`, `AgentAsTool`
+
+**System (2):**
+- `system_memory_search`, `system_web_search`
+
+**Job Queue (1):**
+- `JobQueueGatewayTool`
+
+**Client (1):**
+- `AskAttachPWDTool`
+
+**Context (1):**
+- `ContextTool` (marker protocol)
+
+## Documentation
+
+See **[docs/INDEX.md](docs/INDEX.md)** for comprehensive documentation index.
+
+**Quick Links:**
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** — Developer guide (creating tools, endpoints, workflows)
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System architecture deep dive
+- **[docs/CONTEXT_SYSTEM.md](docs/CONTEXT_SYSTEM.md)** — Context assembly pipeline
+- **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)** — MonadServer API endpoints
+- **[docs/workspaces_feature_overview.md](docs/workspaces_feature_overview.md)** — Workspace system
+- **[docs/guides/CORE_GUIDE.md](docs/guides/CORE_GUIDE.md)** — Agent framework guide
