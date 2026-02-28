@@ -67,6 +67,9 @@ Sources/MonadCore/Models/
 │   └── ToolContext/ ContextTool, ToolContext, ToolContextSession
 └── Workspace/     WorkspaceAttachment, WorkspaceLock, WorkspaceProtocol,
                    WorkspaceReference, WorkspaceTool, WorkspaceToolDefinition
+
+Sources/MonadCore/Stores/
+└── WorkspaceStore — Actor cache for hydrated WorkspaceProtocol instances
 ```
 
 **Key Model Notes:**
@@ -75,12 +78,14 @@ Sources/MonadCore/Models/
 - **`Message`** — Includes optional `think` field for Chain of Thought reasoning
 - **`ToolReference`** — Enum: `.known(id)` or `.custom(definition)`
 - **`WorkspaceReference`** — Metadata about a workspace (ID, URI, host type, tools, trust level)
+- **`WorkspaceStore`** — Actor that eagerly loads all workspaces from persistence into memory; used by `FilesAPIController`
 
 **Removed Types:**
 - `MessageDebugInfo` — Removed
 - `SubagentContext` — Removed
 - `CompactificationNode` — Removed
 - `Configuration` wrapper struct — Replaced by `LLMConfiguration`
+- `SessionStore` — Removed (responsibilities fully covered by `SessionManager`)
 
 ---
 

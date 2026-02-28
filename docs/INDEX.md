@@ -7,8 +7,8 @@ Comprehensive guide to Monad documentation.
 ### For Getting Started
 - **[../README.md](../README.md)** — Project overview, quick start, and basic usage
 
-### For Claude Code (AI Assistant)
-- **[../CLAUDE.md](../CLAUDE.md)** — Quick reference: build commands, architecture, conventions, model layout, critical patterns
+### For AI Assistants
+- **[../AGENTS.md](../AGENTS.md)** — Quick reference: build commands, architecture, conventions, model layout, critical patterns
 
 ### For Developers
 - **[../DEVELOPMENT.md](../DEVELOPMENT.md)** — Developer guide: setup, creating tools/endpoints/agents, testing, troubleshooting
@@ -46,6 +46,11 @@ Comprehensive guide to Monad documentation.
 - Security & isolation (jails, trust levels)
 - Workflows (attaching projects, client-managed workspaces)
 
+**[STORES.md](STORES.md)** — State Stores
+- In-memory actor caches for the persistence layer
+- `WorkspaceStore` caching for continuous file access
+- `SessionStore` (removed)
+
 ### API Reference
 
 **[API_REFERENCE.md](API_REFERENCE.md)** — MonadServer HTTP API
@@ -60,9 +65,9 @@ Comprehensive guide to Monad documentation.
 
 ## Documentation by Role
 
-### For Claude Code (AI Assistant)
+### For AI Assistants
 
-Start with **[../CLAUDE.md](../CLAUDE.md)** for:
+Start with **[../AGENTS.md](../AGENTS.md)** for:
 - Build commands and testing (`swift build`, `swift test`, `make lint`)
 - Module architecture and model layout
 - Critical conventions:

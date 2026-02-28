@@ -183,8 +183,6 @@ public struct MonadServerFactory {
                 persistenceService: persistenceService,
                 workspaceCreator: WorkspaceFactory()
             )
-            _ = try await SessionStore(persistenceService: persistenceService)
-
             let filesController = FilesAPIController<AppRequestContext>(
                 workspaceStore: workspaceStore)
             filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))

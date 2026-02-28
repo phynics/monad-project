@@ -47,7 +47,7 @@ public actor WorkspaceStore {
         loadedWorkspaces.removeValue(forKey: id)
     }
 
-    /// Create a new workspace and store it in the database
+    /// Create a new workspace, persist it, and add to the cache
     public func createWorkspace(
         uri: WorkspaceURI,
         hostType: WorkspaceReference.WorkspaceHostType,
@@ -66,5 +66,11 @@ public actor WorkspaceStore {
         let workspace = try workspaceCreator.create(from: reference, connectionManager: nil)
         loadedWorkspaces[reference.id] = workspace
         return workspace
+    }
+
+    /// Delete a workspace from both the cache and persistence
+    public func deleteWorkspace(id: UUID) async throws {
+        loadedWorkspaces.removeValue(forKey: id)
+        try await persistenceService.deleteWorkspace(id: id)
     }
 }

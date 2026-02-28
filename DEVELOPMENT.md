@@ -195,7 +195,7 @@ logger.info("Processing message", metadata: ["sessionId": "\(sessionId)"])
 
 - `Sources/`: Application source code organized by module
 - `Tests/`: Unit and integration tests mirroring source structure
-- Models organized into focused subdirectories (see CLAUDE.md for layout)
+- Models organized into focused subdirectories (see AGENTS.md for layout)
 
 ### Formatting & Linting
 
@@ -572,7 +572,7 @@ final class APITests: XCTestCase {
 
 ## Additional Resources
 
-- **[CLAUDE.md](CLAUDE.md)** — Quick reference for Claude Code
+- **[AGENTS.md](AGENTS.md)** — Quick reference for AI assistants (symlinked as CLAUDE.md)
 - **[docs/INDEX.md](docs/INDEX.md)** — Complete documentation index
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System architecture
 - **[docs/guides/CORE_GUIDE.md](docs/guides/CORE_GUIDE.md)** — Agent framework guide
