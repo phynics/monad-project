@@ -27,7 +27,7 @@ public final class MockJobStore: JobStoreProtocol, @unchecked Sendable {
 
     public func fetchPendingJobs(limit: Int) async throws -> [Job] {
         return Array(jobs.filter { $0.status == .pending }
-            .sorted { 
+            .sorted {
                  if $0.priority != $1.priority { return $0.priority > $1.priority }
                  return $0.createdAt < $1.createdAt
              }

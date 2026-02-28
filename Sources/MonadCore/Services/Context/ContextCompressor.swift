@@ -244,26 +244,26 @@ public actor ContextCompressor {
         let recentMessages = Array(messages.suffix(from: splitIndex))
 
         var processed: [Message] = []
-        var i = 0
+        var index = 0
 
-        while i < olderMessages.count {
-            let msg = olderMessages[i]
+        while index < olderMessages.count {
+            let msg = olderMessages[index]
 
             // Check for tool call
             if msg.role == .assistant, let toolCalls = msg.toolCalls, !toolCalls.isEmpty {
                 // Look ahead for tool results
                 var interactionNodes: [Message] = [msg]
-                var j = i + 1
+                var toolIndex = index + 1
 
                 // Expect a tool message for each tool call
                 // Note: Messages might be interleaved or sequential.
                 // Simple heuristic: Collect subsequent .tool messages until we hit a user/assistant message or run out
 
-                while j < olderMessages.count {
-                    let next = olderMessages[j]
+                while toolIndex < olderMessages.count {
+                    let next = olderMessages[toolIndex]
                     if next.role == .tool {
                         interactionNodes.append(next)
-                        j += 1
+                        toolIndex += 1
                     } else {
                         break
                     }
@@ -278,13 +278,13 @@ public actor ContextCompressor {
                         isSummary: true
                     )
                     processed.append(summary)
-                    i = j
+                    index = toolIndex
                     continue
                 }
             }
 
             processed.append(msg)
-            i += 1
+            index += 1
         }
 
         return processed + recentMessages
@@ -356,7 +356,7 @@ public actor ContextCompressor {
                 chunks.append([msg])
                 continue
             }
-            
+
             currentChunk.append(msg)
 
             // Check if this message initiated a topic change

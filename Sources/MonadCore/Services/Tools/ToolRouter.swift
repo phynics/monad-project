@@ -16,7 +16,10 @@ public actor ToolRouter {
         arguments: [String: AnyCodable],
         sessionId: UUID
     ) async throws -> String {
-        logger.info("Routing execution for tool: \(tool.displayName) in session \(sessionId)")
+        let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
+        let sid = ANSIColors.colorize(sessionId.uuidString.prefix(8).lowercased(), color: ANSIColors.dim)
+        
+        logger.info("Routing 🛠️ \(toolName) in session \(sid)")
 
         // 1. Resolve Tool Location
         guard let workspaceId = try await resolveWorkspace(for: tool, in: sessionId) else {
@@ -44,7 +47,7 @@ public actor ToolRouter {
         guard let wsList = workspaces else { return nil }
 
         var candidates: [UUID] = []
-        if let p = wsList.primary { candidates.append(p.id) }
+        if let primary = wsList.primary { candidates.append(primary.id) }
         candidates.append(contentsOf: wsList.attached.map { $0.id })
 
         return try await sessionManager.findWorkspaceForTool(tool, in: candidates)
@@ -56,7 +59,8 @@ public actor ToolRouter {
         workspace: WorkspaceReference,
         sessionId: UUID
     ) async throws -> String {
-        logger.info("Executing locally: \(tool.displayName)")
+        let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
+        logger.info("Executing locally: \(toolName)")
 
         guard let toolManager = await sessionManager.getToolManager(for: sessionId) else {
             throw ToolError.toolNotFound(tool.displayName)
@@ -74,9 +78,12 @@ public actor ToolRouter {
 
         let result = try await realTool.execute(parameters: params)
         if result.success {
+            logger.info("Success: \(toolName)")
             return result.output
         } else {
-            throw ToolError.executionFailed(result.error ?? "Unknown error")
+            let errorMsg = result.error ?? "Unknown error"
+            logger.error("Failed: \(toolName) - \(errorMsg)")
+            throw ToolError.executionFailed(errorMsg)
         }
     }
 
@@ -85,7 +92,10 @@ public actor ToolRouter {
         arguments: [String: AnyCodable],
         workspace: WorkspaceReference
     ) async throws -> String {
-        logger.info("Executing remotely on client: \(workspace.ownerId?.uuidString ?? "unknown")")
+        let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
+        let client = ANSIColors.colorize(workspace.ownerId?.uuidString.prefix(8).lowercased() ?? "unknown", color: ANSIColors.brightMagenta)
+        
+        logger.info("Executing remotely: \(toolName) on client \(client)")
 
         guard workspace.ownerId != nil else {
             throw ToolError.clientNotConnected

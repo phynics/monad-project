@@ -5,8 +5,8 @@ import Foundation
 public struct ChatDeltaMapper {
     public static func mapEvent(_ event: ChatEvent) -> ChatDelta {
         switch event {
-        case .generationContext(let m):
-            return ChatDelta(type: .generationContext, metadata: m)
+        case .generationContext(let metadata):
+            return ChatDelta(type: .generationContext, metadata: metadata)
         case .delta(let content):
             return ChatDelta(type: .delta, content: content)
         case .thought(let content):
@@ -31,9 +31,9 @@ public struct ChatDeltaMapper {
             var resultStr: String?
 
             switch status {
-            case .attempting(let n, let ref):
+            case .attempting(let toolName, let ref):
                 statusStr = "attempting"
-                name = n
+                name = toolName
                 switch ref {
                 case .known:
                     target = "server"
@@ -74,11 +74,11 @@ public struct ChatDeltaMapper {
                 debugSnapshotData: meta.debugSnapshotData
             )
             return ChatDelta(type: .generationCompleted, responseMetadata: apiMeta)
-        case .error(let e):
-            if e is CancellationError {
+        case .error(let err):
+            if err is CancellationError {
                 return ChatDelta(type: .generationCancelled)
             } else {
-                return ChatDelta(type: .error, error: e.localizedDescription)
+                return ChatDelta(type: .error, error: err.localizedDescription)
             }
         }
     }

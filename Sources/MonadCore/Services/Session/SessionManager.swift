@@ -10,22 +10,22 @@ import Dependencies
 public actor SessionManager {
     /// In-memory cache of active sessions.
     internal var sessions: [UUID: Timeline] = [:]
-    
+
     /// Context managers responsible for RAG and context gathering for each session.
     internal var contextManagers: [UUID: ContextManager] = [:]
-    
+
     /// Tool managers handling tool registration and availability for each session.
     internal var toolManagers: [UUID: SessionToolManager] = [:]
-    
+
     /// Tool executors that perform the actual tool calls for each session.
     internal var toolExecutors: [UUID: ToolExecutor] = [:]
-    
+
     /// State management for tool execution context within a session.
     internal var toolContextSessions: [UUID: ToolContextSession] = [:]
-    
+
     /// Snapshots of tool and context state used for debugging chat turns.
     internal var debugSnapshots: [UUID: DebugSnapshot] = [:]
-    
+
     /// Ongoing generation tasks for each session.
     internal var activeTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -34,7 +34,15 @@ public actor SessionManager {
     @Dependency(\.llmService) private var _llmService
     @Dependency(\.agentRegistry) private var _agentRegistry
 
-    internal var persistenceService: any SessionPersistenceProtocol & MessageStoreProtocol & WorkspacePersistenceProtocol & MemoryStoreProtocol & ToolPersistenceProtocol & JobStoreProtocol & AgentStoreProtocol { _persistenceService }
+    internal var persistenceService: any SessionPersistenceProtocol
+        & MessageStoreProtocol
+        & WorkspacePersistenceProtocol
+        & MemoryStoreProtocol
+        & ToolPersistenceProtocol
+        & JobStoreProtocol
+        & AgentStoreProtocol {
+        _persistenceService
+    }
     internal var embeddingService: any EmbeddingServiceProtocol { _embeddingService }
     internal var llmService: any LLMServiceProtocol { _llmService }
     internal var agentRegistry: AgentRegistry { _agentRegistry }
@@ -59,7 +67,7 @@ public actor SessionManager {
         self.vectorStore = vectorStore
         self.workspaceRoot = workspaceRoot
         self.connectionManager = connectionManager
-        
+
         // Use withDependencies to ensure repository picks up current context if needed,
         // although Dependencies usually works via property wrappers.
         self.workspaceManager = WorkspaceManager(
@@ -68,7 +76,7 @@ public actor SessionManager {
             workspaceCreator: workspaceCreator
         )
     }
-    
+
     // MARK: - Component Setup
     /// Initializes and configures the internal components for a conversation session.
     ///
@@ -114,7 +122,7 @@ public actor SessionManager {
         if let primary = primaryWorkspace {
             await toolManager.registerWorkspace(primary)
         }
-        
+
         // Handle attached workspaces
         let attachedIds = session.attachedWorkspaces
         for attachedId in attachedIds {
@@ -139,8 +147,7 @@ public actor SessionManager {
     /// - Returns: The newly created `Timeline`.
     public func createSession(title: String = "New Conversation")
         async throws
-        -> Timeline
-    {
+        -> Timeline {
         let sessionId = UUID()
 
         let sessionWorkspaceURL = workspaceRoot.appendingPathComponent(
@@ -153,12 +160,12 @@ public actor SessionManager {
 
         let notesDir = sessionWorkspaceURL.appendingPathComponent("Notes", isDirectory: true)
         try FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true)
-        
+
         let welcomeNote = """
         # Welcome to Your Monad Session
-        
+
         This session is your private workspace. You can use the `Notes/` directory in the Primary Workspace to store information that should persist and influence your behavior across turns.
-        
+
         ## System Orientation
         - Primary Workspace: Your server-side sandbox.
         - Attached Workspaces: Directories mapped during this session.
@@ -168,16 +175,16 @@ public actor SessionManager {
 
         let projectNote = """
         # Project Goals & Progress
-        
+
         Use this note to track the active objective and your current progress.
-        
+
         ## Active Objective
         [Describe what the user wants to achieve here]
-        
+
         ## Key Milestones
         - [ ] Milestone 1
         - [ ] Milestone 2
-        
+
         ## Decisions & Context
         Record any critical decisions made during the session here.
         """
@@ -222,11 +229,11 @@ public actor SessionManager {
     ///   - parentId: Optional parent job ID for context.
     public func hydrateSession(id: UUID, parentId: UUID? = nil) async throws {
         if toolExecutors[id] != nil { return }
-        
+
         guard let session = try await persistenceService.fetchSession(id: id) else {
             throw SessionError.sessionNotFound
         }
-        
+
         let sessionWorkspaceURL: URL
         if let wd = session.workingDirectory {
             sessionWorkspaceURL = URL(fileURLWithPath: wd)
@@ -243,7 +250,7 @@ public actor SessionManager {
             parentId: parentId
         )
     }
-    
+
     /// Updates the title of a specific session.
     /// - Parameters:
     ///   - id: The session ID.
@@ -321,7 +328,6 @@ public actor SessionManager {
     public func listSessions() async throws -> [Timeline] {
         return try await persistenceService.fetchAllSessions(includeArchived: false)
     }
-
 
     /// Removes active sessions from memory that have not been updated within the specified interval.
     public func cleanupStaleSessions(maxAge: TimeInterval) {

@@ -12,8 +12,8 @@ public final class MockEmbeddingService: EmbeddingServiceProtocol, @unchecked Se
         if useDistinctEmbeddings {
             let hash = abs(text.hashValue)
             var vector: [Float] = []
-            for i in 1...16 {
-                vector.append(Float((hash / (i * i)) % 100) / 100.0)
+            for idx in 1...16 {
+                vector.append(Float((hash / (idx * idx)) % 100) / 100.0)
             }
             // Normalize manually if VectorMath is Double-only or unavailable
             let magnitude = sqrt(vector.reduce(0) { $0 + $1 * $1 })

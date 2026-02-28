@@ -5,7 +5,7 @@ public struct CreateMemoryRequest: Codable, Sendable {
     public let content: String
     public let title: String?
     public let tags: [String]?
-    
+
     public init(content: String, title: String? = nil, tags: [String]? = nil) {
         self.content = content
         self.title = title

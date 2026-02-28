@@ -161,13 +161,13 @@ public func formatToolsForPrompt(_ tools: [AnyTool]) async -> String {
 public struct ToolResult: Sendable {
     /// Whether the execution was successful.
     public let success: Bool
-    
+
     /// The string output of the tool, shown to the LLM on success.
     public let output: String
-    
+
     /// Optional error message, shown to the LLM on failure.
     public let error: String?
-    
+
     // Optional context provided if the tool launched a subagent or created a background job.
     // public let subagentContext: SubagentContext?
 
@@ -187,7 +187,7 @@ public struct ToolResult: Sendable {
 public struct ToolConfiguration: Codable, Identifiable, Sendable {
     /// The unique identifier of the tool.
     public let id: String
-    
+
     /// Whether the tool is active and can be called by the LLM in this session.
     public var isEnabled: Bool
 
@@ -210,7 +210,7 @@ public struct ToolConfiguration: Codable, Identifiable, Sendable {
 /// ```
 public struct AnyTool: Tool {
     private let wrapped: any Tool
-    
+
     /// Optional metadata about where the tool originated (e.g. workspace name).
     public var provenance: String?
 

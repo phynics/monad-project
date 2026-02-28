@@ -29,15 +29,15 @@ extension ToolReference {
 }
 
 private func mapToAnyJSONDocument(_ value: Any) -> AnyJSONDocument {
-    if let s = value as? String { return .init(s) }
-    if let n = value as? Double { return .init(n) }
-    if let n = value as? Int { return .init(Double(n)) }
-    if let b = value as? Bool { return .init(b) }
-    if let d = value as? [String: Any] {
-        return .init(d.mapValues { mapToAnyJSONDocument($0) })
+    if let str = value as? String { return .init(str) }
+    if let num = value as? Double { return .init(num) }
+    if let num = value as? Int { return .init(Double(num)) }
+    if let bool = value as? Bool { return .init(bool) }
+    if let dict = value as? [String: Any] {
+        return .init(dict.mapValues { mapToAnyJSONDocument($0) })
     }
-    if let a = value as? [Any] {
-        return .init(a.map { mapToAnyJSONDocument($0) })
+    if let arr = value as? [Any] {
+        return .init(arr.map { mapToAnyJSONDocument($0) })
     }
     // Fallback for null or unknown types
     return .init("")

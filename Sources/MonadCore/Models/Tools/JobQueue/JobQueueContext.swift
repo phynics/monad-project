@@ -23,7 +23,7 @@ public actor JobQueueContext: ToolContext {
             AnyTool(ChangePriorityTool(context: self)),
             AnyTool(ListJobsTool(context: self)),
             AnyTool(UpdateJobStatusTool(context: self)),
-            AnyTool(ClearQueueTool(context: self)),
+            AnyTool(ClearQueueTool(context: self))
         ]
     }
 
@@ -44,7 +44,7 @@ public actor JobQueueContext: ToolContext {
         guard let jobs = try? await persistenceService.fetchJobs(for: sessionId) else {
             return "**Job Queue**: Error fetching jobs"
         }
-        
+
         if jobs.isEmpty {
             return "**Job Queue**: Empty"
         }
@@ -82,7 +82,7 @@ public actor JobQueueContext: ToolContext {
         logger.info("Added job: \(job.id)")
         return job
     }
-    
+
     public func launchSubagent(request: AddJobRequest) async throws -> Job {
         let job = Job(
             sessionId: sessionId,
@@ -155,7 +155,7 @@ public actor JobQueueContext: ToolContext {
     /// Returns nil if no pending jobs are available.
     public func dequeueNext() async throws -> Job? {
         let jobs = try await persistenceService.fetchJobs(for: sessionId)
-        
+
         // Find highest priority pending job
         let pending = jobs.filter { $0.status == .pending }
             .sorted { $0.priority > $1.priority }
@@ -168,7 +168,7 @@ public actor JobQueueContext: ToolContext {
         nextJob.status = .inProgress
         nextJob.updatedAt = Date()
         try await persistenceService.saveJob(nextJob)
-        
+
         logger.info("Dequeued job: \(nextJob.title) (priority: \(nextJob.priority))")
         return nextJob
     }
@@ -178,7 +178,7 @@ public actor JobQueueContext: ToolContext {
         let jobs = try await persistenceService.fetchJobs(for: sessionId)
         return jobs.contains { $0.status == .pending }
     }
-    
+
     public func formatPinnedState() async -> String? {
         nil
     }
@@ -265,8 +265,7 @@ public struct RemoveJobTool: ContextTool, Sendable {
             _ = try await context.removeJob(id: job.id)
             return .success("Removed job: \(job.title)")
         } else if let uuid = UUID(uuidString: idString),
-            let job = try await context.removeJob(id: uuid)
-        {
+            let job = try await context.removeJob(id: uuid) {
             return .success("Removed job: \(job.title)")
         }
 

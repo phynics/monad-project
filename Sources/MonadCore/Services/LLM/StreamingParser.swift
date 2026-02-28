@@ -48,8 +48,6 @@ public struct StreamingParser {
         }
     }
 
-
-
     // MARK: - Core Parsing Logic
 
     /// Extracts the next valid text segment from the buffer, updating state

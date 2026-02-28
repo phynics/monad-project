@@ -40,6 +40,8 @@ public final class ChatEngine: @unchecked Sendable {
         systemInstructions: String? = nil,
         maxTurns: Int = 5
     ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
+        let sid = ANSIColors.colorize(sessionId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
+        logger.info("Starting chat stream for session \(sid)")
 
         // Save conversation steps (user message + any tool outputs from previous turn)
         try await saveConversationSteps(sessionId: sessionId, message: message, toolOutputs: toolOutputs)
@@ -119,6 +121,9 @@ public final class ChatEngine: @unchecked Sendable {
 
         while turnCount < maxTurns {
             turnCount += 1
+            let sid = ANSIColors.colorize(sessionId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
+            let turnStr = ANSIColors.colorize("\(turnCount)", color: ANSIColors.brightYellow)
+            logger.info("Starting turn \(turnStr) for session \(sid)")
 
             if Task.isCancelled {
                 continuation.yield(.error(CancellationError()))
@@ -210,7 +215,7 @@ public final class ChatEngine: @unchecked Sendable {
             if let delta = result.choices.first?.delta.content {
                 let oldThinkingCount = parser.thinking.count
                 let oldContentCount = parser.content.count
-                
+
                 parser.process(delta)
 
                 let thinkingChunk: Substring
@@ -284,7 +289,7 @@ public final class ChatEngine: @unchecked Sendable {
                 continuation.yield(.delta(parser.buffer))
             }
         }
-        
+
         if hasEmittedThought {
             continuation.yield(.thoughtCompleted)
             hasEmittedThought = false
@@ -520,7 +525,9 @@ public final class ChatEngine: @unchecked Sendable {
         var debugRecords: [ToolResultRecord] = []
 
         for call in calls {
+            let toolName = ANSIColors.colorize(call.function.name, color: ANSIColors.brightCyan)
             guard let tool = availableTools.first(where: { $0.name == call.function.name }) else {
+                logger.error("Tool not found: \(toolName)")
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: Tool not found")), toolCallId: call.id)))
                 continuation.yield(.toolCallError(toolCallId: call.id, name: call.function.name, error: "Tool not found: \(call.function.name)"))
                 continue
@@ -533,24 +540,30 @@ public final class ChatEngine: @unchecked Sendable {
             let argsData = call.function.arguments.data(using: .utf8) ?? Data()
             let argsDict = (try? JSONSerialization.jsonObject(with: argsData) as? [String: Any]) ?? [:]
 
+            logger.info("Executing tool \(toolName)...")
             do {
                 let result = try await tool.execute(parameters: argsDict)
                 debugRecords.append(ToolResultRecord(toolCallId: call.id, name: call.function.name, output: result.output, turn: turnCount))
                 if result.success {
+                    logger.info("Tool \(toolName) succeeded")
                     continuation.yield(.toolExecution(toolCallId: call.id, status: .success(result)))
                 } else {
                     let errorMsg = result.error ?? "Unknown error"
+                    logger.error("Tool \(toolName) failed: \(errorMsg)")
                     continuation.yield(.toolExecution(toolCallId: call.id, status: .failed(reference: toolRef, error: errorMsg)))
                 }
                 executionResults.append(.tool(.init(content: .textContent(.init(result.output)), toolCallId: call.id)))
             } catch let error as ToolError {
                 if case .clientExecutionRequired = error {
+                    logger.info("Tool \(toolName) requires client execution")
                     requiresClientExecution = true
                     break
                 }
+                logger.error("Tool \(toolName) error: \(error.localizedDescription)")
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: \(error.localizedDescription)")), toolCallId: call.id)))
                 continuation.yield(.toolExecution(toolCallId: call.id, status: .failed(reference: toolRef, error: error.localizedDescription)))
             } catch {
+                logger.error("Tool \(toolName) unexpected error: \(error.localizedDescription)")
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: \(error.localizedDescription)")), toolCallId: call.id)))
                 continuation.yield(.toolExecution(toolCallId: call.id, status: .failed(reference: toolRef, error: error.localizedDescription)))
             }
@@ -568,8 +581,8 @@ public final class ChatEngine: @unchecked Sendable {
                 output += "─── [USER] ───\n\(param.content)\n\n"
             case .assistant(let param):
                 var content = ""
-                if let c = param.content {
-                    content = "\(c)"
+                if let contentValue = param.content {
+                    content = "\(contentValue)"
                 }
                 output += "─── [ASSISTANT] ───\n\(content)\n"
                 if let toolCalls = param.toolCalls {

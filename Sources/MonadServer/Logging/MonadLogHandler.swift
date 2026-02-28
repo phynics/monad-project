@@ -1,0 +1,57 @@
+import Foundation
+import Logging
+import MonadCore
+
+/// A colorful log handler for Monad Server
+public struct MonadLogHandler: LogHandler {
+    private let label: String
+    private let labelPrefix: String
+    public var logLevel: Logger.Level = .info
+    public var metadata = Logger.Metadata()
+
+    public init(label: String) {
+        self.label = label
+        // Extract the last component of the label for cleaner display
+        let module = label.components(separatedBy: ".").last ?? label
+        self.labelPrefix = ANSIColors.colorize("[\(module)]", color: ANSIColors.brightBlue)
+    }
+
+    public func log(level: Logger.Level,
+                    message: Logger.Message,
+                    metadata: Logger.Metadata?,
+                    source: String,
+                    file: String,
+                    function: String,
+                    line: UInt) {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let levelColor = color(for: level)
+        let levelStr = ANSIColors.colorize(level.rawValue.uppercased(), color: levelColor)
+        
+        var messageStr = "\(timestamp) \(levelStr) \(labelPrefix) \(message)"
+        
+        // Add metadata if present
+        let mergedMetadata = self.metadata.merging(metadata ?? [:], uniquingKeysWith: { _, new in new })
+        if !mergedMetadata.isEmpty {
+            let metadataStr = mergedMetadata.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
+            messageStr += " " + ANSIColors.colorize("{\(metadataStr)}", color: ANSIColors.dim)
+        }
+
+        print(messageStr)
+    }
+
+    private func color(for level: Logger.Level) -> String {
+        switch level {
+        case .trace, .debug: return ANSIColors.dim
+        case .info: return ANSIColors.green
+        case .notice: return ANSIColors.brightCyan
+        case .warning: return ANSIColors.yellow
+        case .error: return ANSIColors.red
+        case .critical: return ANSIColors.colorize(ANSIColors.red, color: ANSIColors.bold)
+        }
+    }
+
+    public subscript(metadataKey key: String) -> Logger.MetadataValue? {
+        get { metadata[key] }
+        set { metadata[key] = newValue }
+    }
+}

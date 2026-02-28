@@ -7,7 +7,7 @@ import MonadShared
 extension PersistenceService {
     /// Search archived sessions by title, tags, or message content
     public func searchArchivedSessions(query: String) throws -> [Timeline] {
-        try dbQueue.read { db in
+        try dbQueue.read { database in
             let pattern = "%\(query)%"
 
             // Subquery to find session IDs that have matching messages
@@ -15,7 +15,7 @@ extension PersistenceService {
                 try ConversationMessage
                 .filter(Column("content").like(pattern))
                 .select(Column("sessionId"))
-                .fetchAll(db)
+                .fetchAll(database)
                 .map { $0 as UUID }
 
             return
@@ -26,7 +26,7 @@ extension PersistenceService {
                         || matchingMessageSessionIds.contains(Column("id"))
                 )
                 .order(Column("updatedAt").desc)
-                .fetchAll(db)
+                .fetchAll(database)
         }
     }
 
@@ -35,7 +35,7 @@ extension PersistenceService {
         -> [Timeline] {
         guard !tags.isEmpty else { return [] }
 
-        return try dbQueue.read { db in
+        return try dbQueue.read { database in
             var conditions: [SQLExpression] = []
             for tag in tags {
                 conditions.append(Column("tags").like("%\(tag)%"))
@@ -47,11 +47,11 @@ extension PersistenceService {
                 try Timeline
                 .filter(Column("isArchived") == true)
                 .filter(query)
-                .fetchAll(db)
+                .fetchAll(database)
 
             return candidates.filter {
                 let sessionTags = Set($0.tagArray.map { $0.lowercased() })
-                return !sessionTags.intersection(tags.map { $0.lowercased() }).isEmpty
+                return !sessionTags.isDisjoint(with: tags.map { $0.lowercased() })
             }
         }
     }
@@ -60,7 +60,7 @@ extension PersistenceService {
         olderThan timeInterval: TimeInterval, excluding: [UUID] = [], dryRun: Bool
     )
         async throws -> Int {
-        try await dbQueue.write { db in
+        try await dbQueue.write { database in
             let cutoffDate = Date().addingTimeInterval(-timeInterval)
 
             var query = Timeline.filter(Column("updatedAt") < cutoffDate)
@@ -71,9 +71,9 @@ extension PersistenceService {
             }
 
             if dryRun {
-                return try query.fetchCount(db)
+                return try query.fetchCount(database)
             } else {
-                let candidates = try query.fetchAll(db)
+                let candidates = try query.fetchAll(database)
                 var deletedCount = 0
                 for session in candidates {
                     // Double check before deleting
@@ -84,7 +84,7 @@ extension PersistenceService {
 
                     do {
                         let didDelete = try Timeline.deleteOne(
-                            db, key: ["id": session.id])
+                            database, key: ["id": session.id])
                         deletedCount += (didDelete ? 1 : 0)
                     } catch {
                         // Ignore individual failures to continue pruning
@@ -97,7 +97,7 @@ extension PersistenceService {
 
     public func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws
         -> Int {
-        try await dbQueue.write { db in
+        try await dbQueue.write { database in
             let cutoffDate = Date().addingTimeInterval(-timeInterval)
             let query =
                 ConversationMessage
@@ -106,15 +106,15 @@ extension PersistenceService {
                     sql: "sessionId IN (SELECT id FROM conversationSession WHERE isArchived = 0)")
 
             if dryRun {
-                return try query.fetchCount(db)
+                return try query.fetchCount(database)
             } else {
-                return try query.deleteAll(db)
+                return try query.deleteAll(database)
             }
         }
     }
 
     public func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int {
-        try await dbQueue.write { db in
+        try await dbQueue.write { database in
             let pattern = "%\(query)%"
             let request =
                 Memory
@@ -124,9 +124,9 @@ extension PersistenceService {
                 )
 
             if dryRun {
-                return try request.fetchCount(db)
+                return try request.fetchCount(database)
             } else {
-                return try request.deleteAll(db)
+                return try request.deleteAll(database)
             }
         }
     }
@@ -135,15 +135,15 @@ extension PersistenceService {
         -> Int {
         let cutoffDate = Date().addingTimeInterval(-timeInterval)
 
-        return try await dbQueue.write { db in
+        return try await dbQueue.write { database in
             let request =
                 Memory
                 .filter(Column("createdAt") < cutoffDate)
 
             if dryRun {
-                return try request.fetchCount(db)
+                return try request.fetchCount(database)
             } else {
-                return try request.deleteAll(db)
+                return try request.deleteAll(database)
             }
         }
     }

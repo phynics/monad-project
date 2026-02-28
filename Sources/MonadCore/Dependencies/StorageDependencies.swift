@@ -3,14 +3,14 @@ import Foundation
 
 // MARK: - Dependency Keys
 
-public typealias FullPersistenceService = 
-    MemoryStoreProtocol & 
-    MessageStoreProtocol & 
-    SessionPersistenceProtocol & 
-    JobStoreProtocol & 
-    AgentStoreProtocol & 
-    WorkspacePersistenceProtocol & 
-    ToolPersistenceProtocol & 
+public typealias FullPersistenceService =
+    MemoryStoreProtocol &
+    MessageStoreProtocol &
+    SessionPersistenceProtocol &
+    JobStoreProtocol &
+    AgentStoreProtocol &
+    WorkspacePersistenceProtocol &
+    ToolPersistenceProtocol &
     HealthCheckable
 
 public enum PersistenceServiceKey: DependencyKey {
@@ -40,15 +40,15 @@ extension DependencyValues {
 
 public struct UnconfiguredPersistenceService: FullPersistenceService {
     public init() {}
-    
+
     private func fail() -> Never {
         fatalError("PersistenceService not configured. Call 'MonadCore.configure()'.")
     }
 
     public func getHealthStatus() async -> HealthStatus { .down }
-    public func getHealthDetails() async -> [String : String]? { ["error": "Unconfigured"] }
+    public func getHealthDetails() async -> [String: String]? { ["error": "Unconfigured"] }
     public func checkHealth() async -> HealthStatus { .down }
-    
+
     public func saveMemory(_ memory: Memory, policy: MemorySavePolicy) async throws -> UUID { fail() }
     public func fetchMemory(id: UUID) async throws -> Memory? { fail() }
     public func fetchAllMemories() async throws -> [Memory] { fail() }

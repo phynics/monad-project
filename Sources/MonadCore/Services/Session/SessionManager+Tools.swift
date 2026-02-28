@@ -51,7 +51,7 @@ extension SessionManager {
         guard let session = sessions[sessionId] else { return [] }
 
         var ids: [UUID] = []
-        if let p = session.primaryWorkspaceId { ids.append(p) }
+        if let primaryId = session.primaryWorkspaceId { ids.append(primaryId) }
         ids.append(contentsOf: session.attachedWorkspaces)
 
         let workspaceIds = ids
@@ -93,7 +93,7 @@ extension SessionManager {
         }
 
         var ids: [UUID] = []
-        if let p = session.primaryWorkspaceId { ids.append(p) }
+        if let primaryId = session.primaryWorkspaceId { ids.append(primaryId) }
         ids.append(contentsOf: session.attachedWorkspaces)
 
         return try? await persistenceService.fetchToolSource(

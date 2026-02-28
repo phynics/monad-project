@@ -86,8 +86,8 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
         get { workspacesMock.workspaces }
         set { workspacesMock.workspaces = newValue }
     }
-    public func saveWorkspace(_ workspace: WorkspaceReference) async throws { 
-        try await workspacesMock.saveWorkspace(workspace) 
+    public func saveWorkspace(_ workspace: WorkspaceReference) async throws {
+        try await workspacesMock.saveWorkspace(workspace)
         if let idx = toolsMock.workspaces.firstIndex(where: { $0.id == workspace.id }) {
             toolsMock.workspaces[idx] = workspace
         } else {
@@ -99,22 +99,21 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     public func fetchAllWorkspaces() async throws -> [WorkspaceReference] { try await workspacesMock.fetchAllWorkspaces() }
     public func deleteWorkspace(id: UUID) async throws { try await workspacesMock.deleteWorkspace(id: id) }
 
-
     // MARK: - ToolPersistenceProtocol
-    public func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws { 
-        try await toolsMock.addToolToWorkspace(workspaceId: workspaceId, tool: tool) 
+    public func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws {
+        try await toolsMock.addToolToWorkspace(workspaceId: workspaceId, tool: tool)
     }
-    public func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] { 
-        try await toolsMock.fetchTools(forWorkspaces: workspaceIds) 
+    public func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] {
+        try await toolsMock.fetchTools(forWorkspaces: workspaceIds)
     }
-    public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] { 
-        try await toolsMock.fetchClientTools(clientId: clientId) 
+    public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] {
+        try await toolsMock.fetchClientTools(clientId: clientId)
     }
-    public func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID? { 
-        try await toolsMock.findWorkspaceId(forToolId: toolId, in: workspaceIds) 
+    public func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID? {
+        try await toolsMock.findWorkspaceId(forToolId: toolId, in: workspaceIds)
     }
-    public func fetchToolSource(toolId: String, workspaceIds: [UUID], primaryWorkspaceId: UUID?) async throws -> String? { 
-        try await toolsMock.fetchToolSource(toolId: toolId, workspaceIds: workspaceIds, primaryWorkspaceId: primaryWorkspaceId) 
+    public func fetchToolSource(toolId: String, workspaceIds: [UUID], primaryWorkspaceId: UUID?) async throws -> String? {
+        try await toolsMock.fetchToolSource(toolId: toolId, workspaceIds: workspaceIds, primaryWorkspaceId: primaryWorkspaceId)
     }
 
     public func resetDatabase() async throws {

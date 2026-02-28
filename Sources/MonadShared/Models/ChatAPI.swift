@@ -39,7 +39,7 @@ public enum StreamEventType: String, Sendable, Codable {
 /// A delta or lifecycle event from a streaming chat response
 public struct ChatDelta: Sendable, Codable {
     public let type: StreamEventType
-    
+
     // Payloads
     public let content: String?
     public let thought: String?

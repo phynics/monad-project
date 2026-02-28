@@ -10,7 +10,7 @@ public struct SystemToolRegistry: Sendable {
     private init() {
         var defs: [String: WorkspaceToolDefinition] = [:]
 
-        let ms = WorkspaceToolDefinition(
+        let memorySearch = WorkspaceToolDefinition(
             id: "system_memory_search",
             name: "memory_search",
             description: "Search for memories in the long-term memory store",
@@ -18,9 +18,9 @@ public struct SystemToolRegistry: Sendable {
                 "query": .init("The search query string")
             ]
         )
-        defs[ms.id] = ms
+        defs[memorySearch.id] = memorySearch
 
-        let ws = WorkspaceToolDefinition(
+        let webSearch = WorkspaceToolDefinition(
             id: "system_web_search",
             name: "web_search",
             description: "Search the web for information",
@@ -28,7 +28,7 @@ public struct SystemToolRegistry: Sendable {
                 "query": .init("The search query string")
             ]
         )
-        defs[ws.id] = ws
+        defs[webSearch.id] = webSearch
 
         self.definitions = defs
     }
@@ -42,8 +42,8 @@ public struct SystemToolRegistry: Sendable {
         let def: WorkspaceToolDefinition
         switch ref {
         case .known(let id):
-            guard let d = getDefinition(for: id) else { return nil }
-            def = d
+            guard let definition = getDefinition(for: id) else { return nil }
+            def = definition
         case .custom(let definition):
             def = definition
         }

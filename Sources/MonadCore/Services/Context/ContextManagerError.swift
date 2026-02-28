@@ -11,9 +11,9 @@ public enum ContextManagerError: LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .embeddingFailed(let e): return "Embedding failed: \(e.localizedDescription)"
-        case .persistenceFailed(let e): return "Database error: \(e.localizedDescription)"
-        case .tagGenerationFailed(let e): return "Tag generation failed: \(e.localizedDescription)"
+        case .embeddingFailed(let error): return "Embedding failed: \(error.localizedDescription)"
+        case .persistenceFailed(let error): return "Database error: \(error.localizedDescription)"
+        case .tagGenerationFailed(let error): return "Tag generation failed: \(error.localizedDescription)"
         }
     }
 }

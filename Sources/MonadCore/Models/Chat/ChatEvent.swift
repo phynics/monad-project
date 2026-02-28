@@ -41,17 +41,17 @@ public enum ChatEvent: Sendable {
 
 extension ChatEvent {
     public var generationContext: ChatMetadata? {
-        if case .generationContext(let m) = self { return m }
+        if case .generationContext(let metadata) = self { return metadata }
         return nil
     }
 
     public var delta: String? {
-        if case .delta(let s) = self { return s }
+        if case .delta(let str) = self { return str }
         return nil
     }
 
     public var thought: String? {
-        if case .thought(let s) = self { return s }
+        if case .thought(let str) = self { return str }
         return nil
     }
 
@@ -81,7 +81,7 @@ extension ChatEvent {
     }
 
     public var error: Error? {
-        if case .error(let e) = self { return e }
+        if case .error(let err) = self { return err }
         return nil
     }
 

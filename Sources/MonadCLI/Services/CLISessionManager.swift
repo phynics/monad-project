@@ -58,10 +58,10 @@ struct CLISessionManager {
             }
 
             print("")
-            for (i, s) in sessions.enumerated() {
-                let title = s.title ?? "Untitled"
-                let date = TerminalUI.formatDate(s.updatedAt)
-                print("  [\(i+1)] \(title) (\(s.id.uuidString.prefix(8))) - \(date)")
+            for (idx, session) in sessions.enumerated() {
+                let title = session.title ?? "Untitled"
+                let date = TerminalUI.formatDate(session.updatedAt)
+                print("  [\(idx+1)] \(title) (\(session.id.uuidString.prefix(8))) - \(date)")
             }
             print("")
             print("Select a session [1]: ", terminator: "")
@@ -69,8 +69,8 @@ struct CLISessionManager {
             let index = (Int(indexStr) ?? 1) - 1
 
             if index >= 0 && index < sessions.count {
-                let s = sessions[index]
-                return Session(id: s.id, title: s.title)
+                let session = sessions[index]
+                return Session(id: session.id, title: session.title)
             } else {
                 TerminalUI.printError("Invalid selection.")
                 throw ExitCode.failure

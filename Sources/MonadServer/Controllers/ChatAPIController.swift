@@ -67,7 +67,6 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func chatStream(_ request: Request, context: Context) async throws -> Response {
-        if verbose { Logger.module(named: "chat").debug("chatStream called") }
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else {
             throw HTTPError(.badRequest)
@@ -75,9 +74,14 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
 
+        let sid = ANSIColors.colorize(id.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
+        Logger.module(named: "chat").info("Streaming chat in session \(sid)")
+
         // Hydrate session and resolve tools at the server layer
         try await sessionManager.hydrateSession(id: id)
         let availableTools = await resolveTools(sessionId: id, clientId: chatRequest.clientId)
+        
+        Logger.module(named: "chat").info("Resolved \(ANSIColors.colorize("\(availableTools.count)", color: ANSIColors.green)) tools for session \(sid)")
 
         let chatEngineStream = try await chatEngine.chatStream(
             sessionId: id,
@@ -187,12 +191,12 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                 case .known(let id): def = SystemToolRegistry.shared.getDefinition(for: id)
                 case .custom(let definition): def = definition
                 }
-                guard let d = def else { return nil }
+                guard let definition = def else { return nil }
                 return AnyTool(DelegatingTool(
                     ref: ref,
                     router: toolRouter,
                     sessionId: sessionId,
-                    resolvedDefinition: d
+                    resolvedDefinition: definition
                 ))
             }
         } catch {

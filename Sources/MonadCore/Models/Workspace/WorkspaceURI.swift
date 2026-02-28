@@ -7,7 +7,7 @@ public struct WorkspaceURI: Codable, Sendable, Hashable, CustomStringConvertible
     public let path: String
 
     public var description: String { "\(host):\(path)" }
-    
+
     /// Whether this workspace is hosted on the server
     public var isServer: Bool { host.hasPrefix("monad-") }
 

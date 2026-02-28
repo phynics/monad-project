@@ -168,13 +168,13 @@ struct SessionCommand: SlashCommand {
         print(TerminalUI.bold("Switch Session:"))
         print("")
 
-        for (i, s) in sortedSessions.enumerated() {
-            let title = s.title ?? "Untitled"
-            let isCurrent = s.id == currentId
+        for (idx, session) in sortedSessions.enumerated() {
+            let title = session.title ?? "Untitled"
+            let isCurrent = session.id == currentId
             let marker = isCurrent ? TerminalUI.green("[●]") : "[ ]"
-            let dateStr = TerminalUI.formatDate(s.createdAt)
+            let dateStr = TerminalUI.formatDate(session.createdAt)
 
-            print("  \(i + 1). \(marker) \(title)  \(TerminalUI.dim(dateStr))")
+            print("  \(idx + 1). \(marker) \(title)  \(TerminalUI.dim(dateStr))")
         }
 
         print("")
@@ -245,12 +245,12 @@ struct SessionCommand: SlashCommand {
         print("\n" + TerminalUI.bold("Sessions:") + "\n")
         let currentId = context.session.id
 
-        for s in sessions {
-            let title = s.title ?? "Untitled"
-            let dateStr = TerminalUI.formatDate(s.createdAt)
-            let isCurrent = s.id == currentId
+        for session in sessions {
+            let title = session.title ?? "Untitled"
+            let dateStr = TerminalUI.formatDate(session.createdAt)
+            let isCurrent = session.id == currentId
             let marker = isCurrent ? TerminalUI.green(" ●") : ""
-            let idStr = s.id.uuidString.prefix(8)
+            let idStr = session.id.uuidString.prefix(8)
 
             print(
                 "  \(TerminalUI.dim(String(idStr)))  \(title)  \(TerminalUI.dim(dateStr))\(marker)")

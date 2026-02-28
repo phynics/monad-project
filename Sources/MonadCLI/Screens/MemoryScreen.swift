@@ -84,8 +84,8 @@ class MemoryScreen {
             return
         }
 
-        for (i, memory) in items.enumerated() {
-            let globalIndex = (currentPage * pageSize) + i + 1
+        for (idx, memory) in items.enumerated() {
+            let globalIndex = (currentPage * pageSize) + idx + 1
             let dateStr = TerminalUI.formatDate(memory.createdAt)
 
             // Format content preview (multiline)

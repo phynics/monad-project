@@ -26,7 +26,7 @@ final class LineReader {
 
     /// Read a line of input with support for editing and history
     func readLine(prompt: String? = nil, completion: ((String) -> [String])? = nil) -> String? {
-        if let p = prompt { self.prompt = p }
+        if let newPrompt = prompt { self.prompt = newPrompt }
         enableRawMode()
         defer { disableRawMode() }
 
@@ -105,8 +105,8 @@ final class LineReader {
 
     private func readChar() -> Character? {
         var byte: UInt8 = 0
-        let n = read(STDIN_FILENO, &byte, 1)
-        if n <= 0 { return nil }
+        let bytesRead = read(STDIN_FILENO, &byte, 1)
+        if bytesRead <= 0 { return nil }
         return Character(UnicodeScalar(byte))
     }
 

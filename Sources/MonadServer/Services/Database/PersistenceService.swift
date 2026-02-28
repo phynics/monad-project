@@ -5,17 +5,16 @@ import GRDB
 import Logging
 
 /// Thread-safe persistence service using GRDB
-public actor PersistenceService: 
-    MemoryStoreProtocol, 
-    MessageStoreProtocol, 
+public actor PersistenceService:
+    MemoryStoreProtocol,
+    MessageStoreProtocol,
     SessionPersistenceProtocol,
     JobStoreProtocol,
     AgentStoreProtocol,
     WorkspacePersistenceProtocol,
     ClientStoreProtocol,
     ToolPersistenceProtocol,
-    HealthCheckable 
-{
+    HealthCheckable {
     internal let dbQueue: DatabaseQueue
     internal let logger = Logger.module(named: "database")
 

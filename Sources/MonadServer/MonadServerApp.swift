@@ -53,6 +53,13 @@ struct MonadServer: AsyncParsableCommand {
     var verbose: Bool = false
 
     func run() async throws {
+        // Initialize Logging
+        LoggingSystem.bootstrap { label in
+            var handler = MonadLogHandler(label: label)
+            handler.logLevel = verbose ? .debug : .info
+            return handler
+        }
+
         let logger = Logger.module(named: "server")
 
         let context = try await MonadServerFactory.createServerContext(

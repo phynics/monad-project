@@ -142,48 +142,48 @@ public actor OllamaClient {
             var content = ""
 
             switch msg {
-            case .system(let m):
+            case .system(let message):
                 role = "system"
-                if case .textContent(let text) = m.content {
+                if case .textContent(let text) = message.content {
                     content = text
                 } else {
-                    content = "\(m.content)"
+                    content = "\(message.content)"
                 }
-            case .user(let m):
+            case .user(let message):
                 role = "user"
-                if case .string(let text) = m.content {
+                if case .string(let text) = message.content {
                     content = text
                 } else {
-                    content = "\(m.content)"
+                    content = "\(message.content)"
                 }
-            case .assistant(let m):
+            case .assistant(let message):
                 role = "assistant"
-                if let c = m.content {
-                    if case .textContent(let text) = c {
+                if let messageContent = message.content {
+                    if case .textContent(let text) = messageContent {
                         content = text
                     } else {
-                        content = "\(c)"
+                        content = "\(messageContent)"
                     }
                 } else {
                     content = ""
                 }
-            case .tool(let m):
+            case .tool(let message):
                 role = "tool"
-                if case .textContent(let text) = m.content {
+                if case .textContent(let text) = message.content {
                     content = text
                 } else {
-                    content = "\(m.content)"
+                    content = "\(message.content)"
                 }
-            case .developer(let m):
+            case .developer(let message):
                 role = "system"
-                if case .textContent(let text) = m.content {
+                if case .textContent(let text) = message.content {
                     content = text
                 } else {
-                    content = "\(m.content)"
+                    content = "\(message.content)"
                 }
             }
 
-            return OllamaMessage(role: role, content: content, tool_calls: nil)
+            return OllamaMessage(role: role, content: content, toolCalls: nil)
         }
 
         var format: String?
@@ -221,7 +221,7 @@ public actor OllamaClient {
 
     private func convertToOpenAI(_ response: OllamaChatResponse) -> ChatStreamResult? {
         // Map Ollama tool calls to OpenAI format
-        let openAIToolCalls = response.message.tool_calls?.enumerated().map { (index, tc) in
+        let openAIToolCalls = response.message.toolCalls?.enumerated().map { (index, tc) in
             [
                 "index": index,
                 "id": UUID().uuidString,
@@ -235,8 +235,8 @@ public actor OllamaClient {
 
         // Handle final chunk with usage statistics
         if response.done {
-            let promptEvalCount = response.prompt_eval_count ?? 0
-            let evalCount = response.eval_count ?? 0
+            let promptEvalCount = response.promptEvalCount ?? 0
+            let evalCount = response.evalCount ?? 0
 
             var delta: [String: Any] = [
                 "role": "assistant",
@@ -256,7 +256,7 @@ public actor OllamaClient {
                     [
                         "index": 0,
                         "delta": delta,
-                        "finish_reason": response.message.tool_calls?.isEmpty == false ? "tool_calls" : "stop"
+                        "finish_reason": response.message.toolCalls?.isEmpty == false ? "tool_calls" : "stop"
                     ]
                 ],
                 "usage": [
@@ -276,7 +276,7 @@ public actor OllamaClient {
         }
 
         // Skip empty intermediate chunks WITHOUT tool calls
-        guard !response.message.content.isEmpty || response.message.tool_calls?.isEmpty == false else {
+        guard !response.message.content.isEmpty || response.message.toolCalls?.isEmpty == false else {
             return nil
         }
 
@@ -394,7 +394,13 @@ struct OllamaToolFunction: Codable {
 struct OllamaMessage: Codable {
     let role: String
     let content: String
-    let tool_calls: [OllamaToolCall]?
+    let toolCalls: [OllamaToolCall]?
+
+    enum CodingKeys: String, CodingKey {
+        case role
+        case content
+        case toolCalls = "tool_calls"
+    }
 }
 
 struct OllamaToolCall: Codable {
@@ -408,11 +414,22 @@ struct OllamaToolCallFunction: Codable {
 
 struct OllamaChatResponse: Codable {
     let model: String
-    let created_at: String?
+    let createdAt: String?
     let message: OllamaMessage
     let done: Bool
-    let total_duration: Int64?
-    let load_duration: Int64?
-    let prompt_eval_count: Int?
-    let eval_count: Int?
+    let totalDuration: Int64?
+    let loadDuration: Int64?
+    let promptEvalCount: Int?
+    let evalCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case createdAt = "created_at"
+        case message
+        case done
+        case totalDuration = "total_duration"
+        case loadDuration = "load_duration"
+        case promptEvalCount = "prompt_eval_count"
+        case evalCount = "eval_count"
+    }
 }

@@ -59,8 +59,8 @@ actor PruneSlashCommand: SlashCommand {
                 let days: Int
                 if arg == "all" {
                     days = 0
-                } else if let d = Int(arg) {
-                    days = d
+                } else if let parsed = Int(arg) {
+                    days = parsed
                 } else {
                     TerminalUI.printError("Usage: /prune sessions <older-than-days|all>")
                     return
@@ -167,9 +167,9 @@ actor PruneSlashCommand: SlashCommand {
 
         if matches.count > 1 {
             TerminalUI.printWarning("Multiple memories match '\(idPrefix)':")
-            for m in matches.prefix(5) {
+            for mem in matches.prefix(5) {
                 print(
-                    "  \(m.id.uuidString.prefix(8)) - \(String(m.content.prefix(50)).replacingOccurrences(of: "\n", with: " "))..."
+                    "  \(mem.id.uuidString.prefix(8)) - \(String(mem.content.prefix(50)).replacingOccurrences(of: "\n", with: " "))..."
                 )
             }
             TerminalUI.printInfo("Please provide a longer ID prefix.")

@@ -6,13 +6,13 @@ import Dependencies
 public actor ContextManager: @unchecked Sendable {
     @Dependency(\.persistenceService) private var defaultPersistenceService
     @Dependency(\.embeddingService) private var defaultEmbeddingService
-    
+
     private let explicitPersistenceService: (any MemoryStoreProtocol)?
     private let explicitEmbeddingService: (any EmbeddingServiceProtocol)?
 
     private var persistenceService: any MemoryStoreProtocol { explicitPersistenceService ?? defaultPersistenceService }
     private var embeddingService: any EmbeddingServiceProtocol { explicitEmbeddingService ?? defaultEmbeddingService }
-    
+
     private let vectorStore: (any VectorStoreProtocol)?
     private let workspace: (any WorkspaceProtocol)?
     private let logger = Logger.module(named: "com.monad.ContextManager")
@@ -88,7 +88,7 @@ public actor ContextManager: @unchecked Sendable {
                         tagResults: memoriesData.tagResults,
                         executionTime: duration
                     )
-                    
+
                     continuation.yield(.progress(.complete))
                     continuation.yield(.complete(contextData))
                     continuation.finish()
@@ -97,7 +97,7 @@ public actor ContextManager: @unchecked Sendable {
                     continuation.finish(throwing: error)
                 }
             }
-            
+
             continuation.onTermination = { @Sendable _ in
                 task.cancel()
             }
@@ -200,10 +200,10 @@ public actor ContextManager: @unchecked Sendable {
         onProgress?(.searching)
 
         let searchTags = tags  // Capture local copy for concurrency safety
-        
+
         // Convert Float embedding to Double for PersistenceService (GRDB compatibility)
         let doubleEmbedding = embedding.map { Double($0) }
-        
+
         async let semanticTask = persistenceService.searchMemories(
             embedding: doubleEmbedding,
             limit: limit * 2,  // Search for more to allow for tag-boosted re-ranking

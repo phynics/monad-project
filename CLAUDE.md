@@ -18,8 +18,79 @@ swift test                           # All tests
 swift test --filter MonadCoreTests   # Specific module
 swift run MonadServer                # Start server
 swift run MonadCLI chat              # Interactive CLI
-make lint                            # SwiftLint check
+make lint                            # SwiftLint check (full project)
+swiftlint lint Sources/              # Lint only Sources directory
+swiftlint --fix Sources/             # Auto-fix violations in Sources
 ```
+
+## Code Quality & Linting
+
+SwiftLint enforces code style and quality. Common violations and fixes:
+
+**Running SwiftLint:**
+- `make lint` — lint entire project (includes Tests)
+- `swiftlint lint Sources/` — lint only production code
+- `swiftlint --fix Sources/` — auto-fix formatting issues (whitespace, line breaks, etc.)
+
+**Common Violations:**
+- **Identifier names** — Variables must be 3+ characters. Use descriptive names:
+  - ❌ `let c = ...` → ✅ `let contentValue = ...`
+  - ❌ `let i = 0` → ✅ `let index = 0`
+  - Exception: Builder closures can use `builder` instead of `b`
+- **Line length** — 120 chars (warning), 200 chars (error). Break long lines:
+  ```swift
+  // ❌ Too long
+  func foo(a: String, b: String, c: String, d: String, e: String) -> String
+
+  // ✅ Multi-line
+  func foo(
+      a: String,
+      b: String,
+      c: String
+  ) -> String
+  ```
+- **Large tuples** — Max 2 members. Create named types for 3+ fields:
+  ```swift
+  // ❌ Large tuple
+  func foo() -> (String, Int, Bool)
+
+  // ✅ Named type
+  struct FooResult {
+      let name: String
+      let count: Int
+      let isValid: Bool
+  }
+  func foo() -> FooResult
+  ```
+- **Function parameters** — Max 5 parameters. Group into config objects:
+  ```swift
+  // ❌ Too many parameters
+  func process(a: String, b: Int, c: Bool, d: Double, e: String, f: Int)
+
+  // ✅ Configuration object
+  struct ProcessConfig {
+      let name: String
+      let count: Int
+      let enabled: Bool
+      ...
+  }
+  func process(config: ProcessConfig)
+  ```
+- **Snake_case in JSON models** — Use `// swiftlint:disable:next identifier_name` for API-matching names:
+  ```swift
+  struct APIResponse: Codable {
+      // swiftlint:disable:next identifier_name
+      let created_at: String  // Matches API field name
+  }
+  ```
+- **Set operations** — Prefer `isDisjoint(with:)` over `intersection(_:).isEmpty`
+
+**Workflow:**
+1. `swift build` — ensure code compiles
+2. `swiftlint --fix Sources/` — auto-fix simple issues
+3. `swiftlint lint Sources/` — check remaining violations
+4. Fix manually: identifier names, large tuples, function signatures
+5. Repeat until clean
 
 ## Module Architecture
 

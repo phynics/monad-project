@@ -30,10 +30,10 @@ public struct AgentAsTool: Tool, Sendable {
     }
 
     public var parametersSchema: [String: AnyCodable] {
-        ToolParameterSchema.object { b in
-            b.string("task_title", description: "A short, descriptive title for the task.", required: true)
-            b.string("task_description", description: "A detailed description of what the agent should do.", required: true)
-            b.integer("priority", description: "Priority of the task (0-10, higher is more urgent).")
+        ToolParameterSchema.object { builder in
+            builder.string("task_title", description: "A short, descriptive title for the task.", required: true)
+            builder.string("task_description", description: "A detailed description of what the agent should do.", required: true)
+            builder.integer("priority", description: "Priority of the task (0-10, higher is more urgent).")
         }.schema
     }
 
@@ -45,7 +45,7 @@ public struct AgentAsTool: Tool, Sendable {
         let params = ToolParameters(parameters)
         let title: String
         let taskDescription: String
-        
+
         do {
             title = try params.require("task_title", as: String.self)
             taskDescription = try params.require("task_description", as: String.self)

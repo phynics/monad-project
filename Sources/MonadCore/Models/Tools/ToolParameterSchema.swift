@@ -33,8 +33,8 @@ public struct ToolParameterSchema: Sendable {
 
         public mutating func stringEnum(_ name: String, description: String, values: [String], required isRequired: Bool = false) {
             properties[name] = [
-                "type": .string("string"), 
-                "description": .string(description), 
+                "type": .string("string"),
+                "description": .string(description),
                 "enum": .array(values.map { .string($0) })
             ]
             if isRequired { required.append(name) }
@@ -42,10 +42,10 @@ public struct ToolParameterSchema: Sendable {
 
         func build() -> [String: AnyCodable] {
             var result: [String: AnyCodable] = [
-                "type": .string("object"), 
+                "type": .string("object"),
                 "properties": .dictionary(properties.mapValues { .dictionary($0) })
             ]
-            if !required.isEmpty { 
+            if !required.isEmpty {
                 result["required"] = .array(required.map { .string($0) })
             }
             return result

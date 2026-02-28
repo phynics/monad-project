@@ -1,12 +1,12 @@
 import Foundation
 import Logging
 
-public actor WorkspaceStore: Sendable {
+public actor WorkspaceStore {
     private let persistenceService: any WorkspacePersistenceProtocol
     private let workspaceCreator: any WorkspaceCreating
     private var loadedWorkspaces: [UUID: any WorkspaceProtocol] = [:]
     private let logger = Logger.module(named: "workspace-store")
-    
+
     public init(
         persistenceService: any WorkspacePersistenceProtocol,
         workspaceCreator: any WorkspaceCreating
@@ -15,10 +15,10 @@ public actor WorkspaceStore: Sendable {
         self.workspaceCreator = workspaceCreator
         try await loadWorkspaces()
     }
-    
+
     private func loadWorkspaces() async throws {
         let references = try await persistenceService.fetchAllWorkspaces()
-        
+
         for reference in references {
             do {
                 let workspace = try workspaceCreator.create(from: reference, connectionManager: nil)
@@ -28,21 +28,21 @@ public actor WorkspaceStore: Sendable {
             }
         }
     }
-    
+
     public func getWorkspace(id: UUID) -> (any WorkspaceProtocol)? {
         return loadedWorkspaces[id]
     }
-    
+
     public func reloadWorkspace(id: UUID) async throws {
         guard let reference = try await persistenceService.fetchWorkspace(id: id) else {
             loadedWorkspaces.removeValue(forKey: id)
             return
         }
-        
+
         let workspace = try workspaceCreator.create(from: reference, connectionManager: nil)
         loadedWorkspaces[id] = workspace
     }
-    
+
     public func unloadWorkspace(id: UUID) {
         loadedWorkspaces.removeValue(forKey: id)
     }
@@ -60,9 +60,9 @@ public actor WorkspaceStore: Sendable {
             ownerId: ownerId,
             rootPath: rootPath
         )
-        
+
         try await persistenceService.saveWorkspace(reference)
-        
+
         let workspace = try workspaceCreator.create(from: reference, connectionManager: nil)
         loadedWorkspaces[reference.id] = workspace
         return workspace

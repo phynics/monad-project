@@ -45,10 +45,10 @@ struct DebugCommand: SlashCommand {
                 "tools", "chat_history", "user_query"
             ]
 
-            let sortedKeys = snapshot.structuredContext.keys.sorted { a, b in
-                let aIdx = sectionOrder.firstIndex(of: a) ?? sectionOrder.count
-                let bIdx = sectionOrder.firstIndex(of: b) ?? sectionOrder.count
-                return aIdx < bIdx
+            let sortedKeys = snapshot.structuredContext.keys.sorted { lhs, rhs in
+                let lhsIdx = sectionOrder.firstIndex(of: lhs) ?? sectionOrder.count
+                let rhsIdx = sectionOrder.firstIndex(of: rhs) ?? sectionOrder.count
+                return lhsIdx < rhsIdx
             }
 
             for key in sortedKeys {

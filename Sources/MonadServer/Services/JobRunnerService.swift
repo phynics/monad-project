@@ -93,10 +93,16 @@ public final class JobRunnerService: Service, @unchecked Sendable {
     }
 
     private func processJob(_ job: Job, persistence: any JobStoreProtocol) async throws {
+        let sid = ANSIColors.colorize(job.sessionId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
+        let jid = ANSIColors.colorize(job.id.uuidString.prefix(8).lowercased(), color: ANSIColors.dim)
+        let jobTitle = ANSIColors.colorize(job.title, color: ANSIColors.brightCyan)
+        
+        logger.info("Processing job \(jid) [\(jobTitle)] in session \(sid)")
+
         // 1. Identify Session
         guard let session = await sessionManager.getSession(id: job.sessionId) else {
             let reason = "Session \(job.sessionId) not found"
-            logger.warning("Found pending job \(job.id) but \(reason). Marking as failed.")
+            logger.warning("Found pending job \(jid) but \(reason). Marking as failed.")
             await agentExecutor.failJob(job, reason: reason)
             return
         }
@@ -121,9 +127,12 @@ public final class JobRunnerService: Service, @unchecked Sendable {
         // 5. Resolve Agent
         let agentId = job.agentId
         guard let agent = await agentRegistry.getAgent(id: agentId) else {
+            logger.error("Agent '\(agentId)' not found for job \(jid)")
             await agentExecutor.failJob(job, reason: "Agent '\(agentId)' not found")
             return
         }
+
+        logger.info("Executing job \(jid) with agent \(ANSIColors.colorize(agentId, color: ANSIColors.brightMagenta))")
 
         // 6. Execute
         await agentExecutor.execute(

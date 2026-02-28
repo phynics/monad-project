@@ -17,8 +17,8 @@ extension DatabaseSchema {
         // v2: Add embedding to Memory
         migrator.registerMigration("v2") { db in
             if try !db.columns(in: "memory").contains(where: { $0.name == "embedding" }) {
-                try db.alter(table: "memory") { t in
-                    t.add(column: "embedding", .text).notNull().defaults(to: "[]")
+                try db.alter(table: "memory") { table in
+                    table.add(column: "embedding", .text).notNull().defaults(to: "[]")
                 }
             }
         }
@@ -26,8 +26,8 @@ extension DatabaseSchema {
         // v3: Retry adding embedding column if missing (for dev state consistency)
         migrator.registerMigration("v3") { db in
             if try !db.columns(in: "memory").contains(where: { $0.name == "embedding" }) {
-                try db.alter(table: "memory") { t in
-                    t.add(column: "embedding", .text).notNull().defaults(to: "[]")
+                try db.alter(table: "memory") { table in
+                    table.add(column: "embedding", .text).notNull().defaults(to: "[]")
                 }
             }
         }
@@ -37,8 +37,8 @@ extension DatabaseSchema {
             if try !db.columns(in: "conversationMessage").contains(where: {
                 $0.name == "recalledMemories"
             }) {
-                try db.alter(table: "conversationMessage") { t in
-                    t.add(column: "recalledMemories", .text).notNull().defaults(to: "[]")
+                try db.alter(table: "conversationMessage") { table in
+                    table.add(column: "recalledMemories", .text).notNull().defaults(to: "[]")
                 }
             }
         }
@@ -53,8 +53,8 @@ extension DatabaseSchema {
                 // If it's missing at this stage, it might be because baseline removed it.
                 // But baseline should match the LATEST schema.
                 // Migrations should handle the EVOLUTION.
-                try db.alter(table: "conversationMessage") { t in
-                    t.add(column: "memoryId", .blob).references("memory", onDelete: .setNull)
+                try db.alter(table: "conversationMessage") { table in
+                    table.add(column: "memoryId", .blob).references("memory", onDelete: .setNull)
                 }
             }
         }
@@ -83,8 +83,8 @@ extension DatabaseSchema {
         // v8: Add parentId to conversationMessage for tree structure
         migrator.registerMigration("v8") { db in
             if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "parentId" }) {
-                try db.alter(table: "conversationMessage") { t in
-                    t.add(column: "parentId", .blob).references(
+                try db.alter(table: "conversationMessage") { table in
+                    table.add(column: "parentId", .blob).references(
                         "conversationMessage", onDelete: .setNull)
                 }
             }
@@ -93,14 +93,14 @@ extension DatabaseSchema {
         // v9: Add think and toolCalls to conversationMessage
         migrator.registerMigration("v9") { db in
             if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "think" }) {
-                try db.alter(table: "conversationMessage") { t in
-                    t.add(column: "think", .text)
+                try db.alter(table: "conversationMessage") { table in
+                    table.add(column: "think", .text)
                 }
             }
             if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "toolCalls" }
             ) {
-                try db.alter(table: "conversationMessage") { t in
-                    t.add(column: "toolCalls", .text).notNull().defaults(to: "[]")
+                try db.alter(table: "conversationMessage") { table in
+                    table.add(column: "toolCalls", .text).notNull().defaults(to: "[]")
                 }
             }
         }
@@ -110,8 +110,8 @@ extension DatabaseSchema {
             if try !db.columns(in: "conversationSession").contains(where: {
                 $0.name == "workingDirectory"
             }) {
-                try db.alter(table: "conversationSession") { t in
-                    t.add(column: "workingDirectory", .text)
+                try db.alter(table: "conversationSession") { table in
+                    table.add(column: "workingDirectory", .text)
                 }
             }
         }
@@ -173,23 +173,23 @@ extension DatabaseSchema {
 
         // v13: Add table_directory for self-documenting schema
         migrator.registerMigration("v13") { db in
-            try db.create(table: "table_directory") { t in
-                t.column("name", .text).primaryKey()
-                t.column("description", .text).notNull().defaults(to: "")
-                t.column("createdAt", .datetime).notNull()
+            try db.create(table: "table_directory") { table in
+                table.column("name", .text).primaryKey()
+                table.column("description", .text).notNull().defaults(to: "")
+                table.column("createdAt", .datetime).notNull()
             }
         }
 
         // v14: Add job table for persistent task queue
         migrator.registerMigration("v14") { db in
-            try db.create(table: "job") { t in
-                t.column("id", .blob).primaryKey()
-                t.column("title", .text).notNull()
-                t.column("description", .text)
-                t.column("priority", .integer).notNull().defaults(to: 0)
-                t.column("status", .text).notNull().defaults(to: "pending")
-                t.column("createdAt", .datetime).notNull()
-                t.column("updatedAt", .datetime).notNull()
+            try db.create(table: "job") { table in
+                table.column("id", .blob).primaryKey()
+                table.column("title", .text).notNull()
+                table.column("description", .text)
+                table.column("priority", .integer).notNull().defaults(to: 0)
+                table.column("status", .text).notNull().defaults(to: "pending")
+                table.column("createdAt", .datetime).notNull()
+                table.column("updatedAt", .datetime).notNull()
             }
 
             try db.create(index: "idx_job_status", on: "job", columns: ["status"])
@@ -198,16 +198,16 @@ extension DatabaseSchema {
 
         // v15: Add compactificationNode table for context compression
         migrator.registerMigration("v15") { db in
-            try db.create(table: "compactificationNode") { t in
-                t.column("id", .blob).primaryKey()
-                t.column("sessionId", .blob).notNull()
+            try db.create(table: "compactificationNode") { table in
+                table.column("id", .blob).primaryKey()
+                table.column("sessionId", .blob).notNull()
                     .references("conversationSession", onDelete: .cascade)
-                t.column("type", .text).notNull()
-                t.column("summary", .text).notNull()
-                t.column("displayHint", .text).notNull()
-                t.column("childIds", .text).notNull()
-                t.column("metadata", .text).notNull().defaults(to: "{}")
-                t.column("createdAt", .datetime).notNull()
+                table.column("type", .text).notNull()
+                table.column("summary", .text).notNull()
+                table.column("displayHint", .text).notNull()
+                table.column("childIds", .text).notNull()
+                table.column("metadata", .text).notNull().defaults(to: "{}")
+                table.column("createdAt", .datetime).notNull()
             }
 
             try db.create(
@@ -224,13 +224,13 @@ extension DatabaseSchema {
 
             if try db.tableExists("conversationSession") {
                 let columns = try db.columns(in: "conversationSession").map { $0.name }
-                try db.alter(table: "conversationSession") { t in
+                try db.alter(table: "conversationSession") { table in
                     if !columns.contains("primaryWorkspaceId") {
-                        t.add(column: "primaryWorkspaceId", .blob)
+                        table.add(column: "primaryWorkspaceId", .blob)
                             .references("workspace", onDelete: .setNull)
                     }
                     if !columns.contains("attachedWorkspaceIds") {
-                        t.add(column: "attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
+                        table.add(column: "attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
                     }
                 }
             }
@@ -241,8 +241,8 @@ extension DatabaseSchema {
             if try !db.columns(in: "conversationMessage").contains(where: {
                 $0.name == "toolCallId"
             }) {
-                try db.alter(table: "conversationMessage") { t in
-                    t.add(column: "toolCallId", .text)
+                try db.alter(table: "conversationMessage") { table in
+                    table.add(column: "toolCallId", .text)
                 }
             }
         }
@@ -261,8 +261,8 @@ extension DatabaseSchema {
         // v20: Add persona column to conversationSession
         migrator.registerMigration("v20") { db in
             if try !db.columns(in: "conversationSession").contains(where: { $0.name == "persona" }) {
-                try db.alter(table: "conversationSession") { t in
-                    t.add(column: "persona", .text)
+                try db.alter(table: "conversationSession") { table in
+                    table.add(column: "persona", .text)
                 }
             }
         }
@@ -323,16 +323,16 @@ extension DatabaseSchema {
         migrator.registerMigration("v22") { db in
             try db.drop(table: "job")
 
-            try db.create(table: "job") { t in
-                t.column("id", .blob).primaryKey()
-                t.column("sessionId", .blob).notNull()
+            try db.create(table: "job") { table in
+                table.column("id", .blob).primaryKey()
+                table.column("sessionId", .blob).notNull()
                     .references("conversationSession", onDelete: .cascade)
-                t.column("title", .text).notNull()
-                t.column("description", .text)
-                t.column("priority", .integer).notNull().defaults(to: 0)
-                t.column("status", .text).notNull().defaults(to: "pending")
-                t.column("createdAt", .datetime).notNull()
-                t.column("updatedAt", .datetime).notNull()
+                table.column("title", .text).notNull()
+                table.column("description", .text)
+                table.column("priority", .integer).notNull().defaults(to: 0)
+                table.column("status", .text).notNull().defaults(to: "pending")
+                table.column("createdAt", .datetime).notNull()
+                table.column("updatedAt", .datetime).notNull()
             }
 
             try db.create(index: "idx_job_status", on: "job", columns: ["status"])
@@ -343,8 +343,8 @@ extension DatabaseSchema {
         // v23: Add status to workspace table
         migrator.registerMigration("v23") { db in
             if try !db.columns(in: "workspace").contains(where: { $0.name == "status" }) {
-                try db.alter(table: "workspace") { t in
-                    t.add(column: "status", .text).notNull().defaults(to: "active")
+                try db.alter(table: "workspace") { table in
+                    table.add(column: "status", .text).notNull().defaults(to: "active")
                 }
             }
         }
@@ -353,17 +353,17 @@ extension DatabaseSchema {
         migrator.registerMigration("v24") { db in
             try db.drop(table: "job")
 
-            try db.create(table: "job") { t in
-                t.column("id", .blob).primaryKey()
-                t.column("sessionId", .blob).notNull()
+            try db.create(table: "job") { table in
+                table.column("id", .blob).primaryKey()
+                table.column("sessionId", .blob).notNull()
                     .references("conversationSession", onDelete: .cascade)
-                t.column("title", .text).notNull()
-                t.column("description", .text)
-                t.column("priority", .integer).notNull().defaults(to: 0)
-                t.column("agentId", .text).notNull().defaults(to: "default")
-                t.column("status", .text).notNull().defaults(to: "pending")
-                t.column("createdAt", .datetime).notNull()
-                t.column("updatedAt", .datetime).notNull()
+                table.column("title", .text).notNull()
+                table.column("description", .text)
+                table.column("priority", .integer).notNull().defaults(to: 0)
+                table.column("agentId", .text).notNull().defaults(to: "default")
+                table.column("status", .text).notNull().defaults(to: "pending")
+                table.column("createdAt", .datetime).notNull()
+                table.column("updatedAt", .datetime).notNull()
             }
 
             try db.create(index: "idx_job_status", on: "job", columns: ["status"])
@@ -376,21 +376,21 @@ extension DatabaseSchema {
         migrator.registerMigration("v25") { db in
             try db.drop(table: "job")
 
-            try db.create(table: "job") { t in
-                t.column("id", .blob).primaryKey()
-                t.column("sessionId", .blob).notNull()
+            try db.create(table: "job") { table in
+                table.column("id", .blob).primaryKey()
+                table.column("sessionId", .blob).notNull()
                     .references("conversationSession", onDelete: .cascade)
-                t.column("title", .text).notNull()
-                t.column("description", .text)
-                t.column("priority", .integer).notNull().defaults(to: 0)
-                t.column("agentId", .text).notNull().defaults(to: "default")
-                t.column("status", .text).notNull().defaults(to: "pending")
-                t.column("createdAt", .datetime).notNull()
-                t.column("updatedAt", .datetime).notNull()
-                t.column("logs", .text).notNull().defaults(to: "[]")
-                t.column("retryCount", .integer).notNull().defaults(to: 0)
-                t.column("lastRetryAt", .datetime)
-                t.column("nextRunAt", .datetime)
+                table.column("title", .text).notNull()
+                table.column("description", .text)
+                table.column("priority", .integer).notNull().defaults(to: 0)
+                table.column("agentId", .text).notNull().defaults(to: "default")
+                table.column("status", .text).notNull().defaults(to: "pending")
+                table.column("createdAt", .datetime).notNull()
+                table.column("updatedAt", .datetime).notNull()
+                table.column("logs", .text).notNull().defaults(to: "[]")
+                table.column("retryCount", .integer).notNull().defaults(to: 0)
+                table.column("lastRetryAt", .datetime)
+                table.column("nextRunAt", .datetime)
             }
 
             try db.create(index: "idx_job_status", on: "job", columns: ["status"])
@@ -402,8 +402,8 @@ extension DatabaseSchema {
         // v26: Add parentId to Job table for task trees
         migrator.registerMigration("v26") { db in
             if try !db.columns(in: "job").contains(where: { $0.name == "parentId" }) {
-                try db.alter(table: "job") { t in
-                    t.add(column: "parentId", .blob).references("job", onDelete: .cascade)
+                try db.alter(table: "job") { table in
+                    table.add(column: "parentId", .blob).references("job", onDelete: .cascade)
                 }
             }
             try db.create(index: "idx_job_parent", on: "job", columns: ["parentId"])
@@ -441,8 +441,8 @@ extension DatabaseSchema {
         // v28: Ensure tools column exists on workspace table
         migrator.registerMigration("v28") { db in
             if try db.tableExists("workspace") && !db.columns(in: "workspace").contains(where: { $0.name == "tools" }) {
-                try db.alter(table: "workspace") { t in
-                    t.add(column: "tools", .text).notNull().defaults(to: "[]")
+                try db.alter(table: "workspace") { table in
+                    table.add(column: "tools", .text).notNull().defaults(to: "[]")
                 }
             }
         }
@@ -450,8 +450,8 @@ extension DatabaseSchema {
         // v29: Remove memoryId from conversationMessage
         migrator.registerMigration("v29") { db in
             if try db.columns(in: "conversationMessage").contains(where: { $0.name == "memoryId" }) {
-                try db.alter(table: "conversationMessage") { t in
-                    t.drop(column: "memoryId")
+                try db.alter(table: "conversationMessage") { table in
+                    table.drop(column: "memoryId")
                 }
             }
         }
@@ -459,8 +459,8 @@ extension DatabaseSchema {
         // v30: Add metadata to workspace table
         migrator.registerMigration("v30") { db in
             if try !db.columns(in: "workspace").contains(where: { $0.name == "metadata" }) {
-                try db.alter(table: "workspace") { t in
-                    t.add(column: "metadata", .text).notNull().defaults(to: "{}")
+                try db.alter(table: "workspace") { table in
+                    table.add(column: "metadata", .text).notNull().defaults(to: "{}")
                 }
             }
         }

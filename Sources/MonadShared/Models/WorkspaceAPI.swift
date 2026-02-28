@@ -47,7 +47,7 @@ public struct AttachWorkspaceRequest: Codable, Sendable {
 public struct UpdateWorkspaceRequest: Codable, Sendable {
     public let rootPath: String?
     public let trustLevel: WorkspaceTrustLevel?
-    
+
     public init(rootPath: String? = nil, trustLevel: WorkspaceTrustLevel? = nil) {
         self.rootPath = rootPath
         self.trustLevel = trustLevel

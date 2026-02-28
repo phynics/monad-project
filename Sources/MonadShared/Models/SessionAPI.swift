@@ -77,7 +77,7 @@ public struct SessionResponse: Codable, Sendable, Identifiable {
 
 public struct UpdateSessionRequest: Codable, Sendable {
     public let title: String?
-    
+
     public init(title: String? = nil) {
         self.title = title
     }

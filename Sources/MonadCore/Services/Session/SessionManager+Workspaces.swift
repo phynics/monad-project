@@ -105,13 +105,13 @@ extension SessionManager {
 
         var primary: WorkspaceReference?
         if let pid = primaryId {
-            if var p = try? await getWorkspace(pid) {
-                if p.hostType == .server, let path = p.rootPath {
+            if var primaryWorkspace = try? await getWorkspace(pid) {
+                if primaryWorkspace.hostType == .server, let path = primaryWorkspace.rootPath {
                    if !FileManager.default.fileExists(atPath: path) {
-                       p.status = .missing
+                       primaryWorkspace.status = .missing
                    }
                 }
-                primary = p
+                primary = primaryWorkspace
             }
         }
 

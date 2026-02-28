@@ -30,7 +30,7 @@ public actor MockVectorStore: VectorStoreProtocol {
         logger.info("[MockVectorStore] Searching with query vector")
 
         let sorted = vectors.map { key, storedVector in
-            let dist = cosineDistance(v1: vector, v2: storedVector)
+            let dist = cosineDistance(vector1: vector, vector2: storedVector)
             return (key: key, distance: dist)
         }.sorted { $0.distance < $1.distance }
 
@@ -49,11 +49,11 @@ public actor MockVectorStore: VectorStoreProtocol {
         return vectors.count
     }
 
-    private func cosineDistance(v1: [Float], v2: [Float]) -> Float {
-        guard v1.count == v2.count else { return 1.0 }
-        let dot = zip(v1, v2).map(*).reduce(0, +)
-        let mag1 = sqrt(v1.map { $0 * $0 }.reduce(0, +))
-        let mag2 = sqrt(v2.map { $0 * $0 }.reduce(0, +))
+    private func cosineDistance(vector1: [Float], vector2: [Float]) -> Float {
+        guard vector1.count == vector2.count else { return 1.0 }
+        let dot = zip(vector1, vector2).map(*).reduce(0, +)
+        let mag1 = sqrt(vector1.map { $0 * $0 }.reduce(0, +))
+        let mag2 = sqrt(vector2.map { $0 * $0 }.reduce(0, +))
         if mag1 == 0 || mag2 == 0 { return 1.0 }
         return 1.0 - (dot / (mag1 * mag2))
     }

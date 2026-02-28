@@ -159,8 +159,8 @@ struct WorkspaceSlashCommand: SlashCommand {
         }
 
         print("\nAvailable Workspaces:")
-        for (i, ws) in workspaces.enumerated() {
-            print("  \(i+1). \(ws.uri.description) (\(ws.id.uuidString.prefix(8)))")
+        for (idx, ws) in workspaces.enumerated() {
+            print("  \(idx+1). \(ws.uri.description) (\(ws.id.uuidString.prefix(8)))")
         }
         print("\nSelect workspace to attach (1-\(workspaces.count)): ", terminator: "")
 

@@ -36,7 +36,7 @@ public final class MockToolPersistence: ToolPersistenceProtocol, @unchecked Send
         guard let wsId = try await findWorkspaceId(forToolId: toolId, in: workspaceIds),
               let ws = workspaces.first(where: { $0.id == wsId })
         else { return nil }
-        
+
         if ws.hostType == .client {
             return "Client Workspace"
         } else if ws.id == primaryWorkspaceId {

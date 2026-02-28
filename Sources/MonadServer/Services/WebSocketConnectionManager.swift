@@ -13,12 +13,14 @@ public actor WebSocketConnectionManager: ClientConnectionManagerProtocol {
     public init() {}
 
     public func addConnection(clientId: UUID, writer: WebSocketOutboundWriter) {
-        logger.info("Client connected: \(clientId)")
+        let cid = ANSIColors.colorize(clientId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightMagenta)
+        logger.info("Client connected: \(cid)")
         connections[clientId] = writer
     }
 
     public func removeConnection(clientId: UUID) {
-        logger.info("Client disconnected: \(clientId)")
+        let cid = ANSIColors.colorize(clientId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightMagenta)
+        logger.info("Client disconnected: \(cid)")
         connections.removeValue(forKey: clientId)
     }
 

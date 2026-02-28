@@ -91,8 +91,8 @@ struct MemoryCommand: SlashCommand {
 
         if matches.count > 1 {
             TerminalUI.printWarning("Multiple memories match '\(idPrefix)':")
-            for m in matches.prefix(5) {
-                print("  \(m.id.uuidString.prefix(8)) - \(String(m.content.prefix(30)))...")
+            for mem in matches.prefix(5) {
+                print("  \(mem.id.uuidString.prefix(8)) - \(String(mem.content.prefix(30)))...")
             }
             return
         }

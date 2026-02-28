@@ -27,12 +27,12 @@ public struct LaunchSubagentTool: Tool, Sendable {
     }
 
     public var parametersSchema: [String: AnyCodable] {
-        ToolParameterSchema.object { b in
-            b.string("agent_id", description: "The ID of the agent to launch (e.g. 'default', 'researcher', 'coder').", required: true)
-            b.string("task_title", description: "A short, descriptive title for the task.", required: true)
-            b.string("task_description", description: "A detailed description of what the subagent should do.", required: true)
-            b.integer("priority", description: "Priority of the task (0-10, higher is more urgent).")
-            b.string("parent_id", description: "Optional parent job ID. If not provided, it defaults to the current job ID if applicable.")
+        ToolParameterSchema.object { builder in
+            builder.string("agent_id", description: "The ID of the agent to launch (e.g. 'default', 'researcher', 'coder').", required: true)
+            builder.string("task_title", description: "A short, descriptive title for the task.", required: true)
+            builder.string("task_description", description: "A detailed description of what the subagent should do.", required: true)
+            builder.integer("priority", description: "Priority of the task (0-10, higher is more urgent).")
+            builder.string("parent_id", description: "Optional parent job ID. If not provided, it defaults to the current job ID if applicable.")
         }.schema
     }
 
@@ -45,7 +45,7 @@ public struct LaunchSubagentTool: Tool, Sendable {
         let agentId: String
         let title: String
         let taskDescription: String
-        
+
         do {
             agentId = try params.require("agent_id", as: String.self)
             title = try params.require("task_title", as: String.self)

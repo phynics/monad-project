@@ -12,12 +12,12 @@ public struct ToolParameters: Sendable {
         guard let value = raw[key]?.base else {
             throw ToolError.missingArgument(key)
         }
-        
+
         // Handle numeric conversions if needed (e.g. Double from JSON into Int)
         if T.self == Int.self, let doubleVal = value as? Double {
             return Int(doubleVal) as! T
         }
-        
+
         guard let typed = value as? T else {
             throw ToolError.invalidArgument(key, expected: String(describing: T.self), got: String(describing: Swift.type(of: value)))
         }
@@ -26,16 +26,16 @@ public struct ToolParameters: Sendable {
 
     public func optional<T>(_ key: String, as type: T.Type = T.self) -> T? {
         guard let value = raw[key]?.base else { return nil }
-        
+
         if let typed = value as? T {
             return typed
         }
-        
+
         // Fallback for numeric conversion
         if T.self == Int.self, let doubleVal = value as? Double {
             return Int(doubleVal) as? T
         }
-        
+
         return nil
     }
 }

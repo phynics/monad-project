@@ -135,19 +135,19 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
     }
 
     public var mockIsConfigured: Bool = true
-    public var isConfigured: Bool { 
+    public var isConfigured: Bool {
         get async { mockIsConfigured }
     }
-    
+
     public var configuration: LLMConfiguration {
         get async { mockConfig }
     }
-    
+
     public var mockConfig: LLMConfiguration = .openAI
     public var nextResponse: String = ""
     public var nextTags: [String] = []
     public var mockClient = MockLLMClient()
-    
+
     /// Allows tests to provide a custom stream for chatStream calls.
     public var stubbedStream: AsyncThrowingStream<ChatStreamResult, Error>?
 

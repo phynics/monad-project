@@ -14,18 +14,18 @@ public struct DependencyValidator: Sendable {
         @Dependency(\.persistenceService) var persistence
         @Dependency(\.llmService) var llm
         @Dependency(\.embeddingService) var embedding
-        
+
         var missing: [String] = []
-        
+
         if persistence is UnconfiguredPersistenceService { missing.append("PersistenceService") }
         if llm is UnconfiguredLLMService { missing.append("LLMService") }
         if embedding is UnconfiguredEmbeddingService { missing.append("EmbeddingService") }
-        
+
         if !missing.isEmpty {
             logger.error("Missing critical dependencies: \(missing.joined(separator: ", ")). Did you call MonadCore.configure()?")
             return false
         }
-        
+
         return true
     }
 }

@@ -5,7 +5,7 @@ import MonadCore
 public struct ComponentStatus: Codable, Sendable {
     public let status: HealthStatus
     public let details: [String: String]?
-    
+
     public init(status: HealthStatus, details: [String: String]? = nil) {
         self.status = status
         self.details = details
@@ -18,7 +18,7 @@ public struct StatusResponse: Codable, Sendable {
     public let version: String
     public let uptime: TimeInterval
     public let components: [String: ComponentStatus]
-    
+
     public init(
         status: HealthStatus,
         version: String,
