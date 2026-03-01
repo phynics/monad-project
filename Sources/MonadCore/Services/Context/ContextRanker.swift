@@ -41,10 +41,13 @@ public struct ContextRanker: Sendable {
             return res
         }
 
+        // Pre-calculate query magnitude once
+        let queryMagnitude = VectorMath.magnitude(queryEmbedding)
+
         // Add tag results that aren't already included, with boost
         for memory in tagBased {
             if !existingIds.contains(memory.id) {
-                let sim = VectorMath.cosineSimilarity(queryEmbedding, memory.embeddingVector)
+                let sim = VectorMath.cosineSimilarity(queryEmbedding, memory.embeddingVector, magnitudeA: queryMagnitude)
                 results.append(SemanticSearchResult(memory: memory, similarity: sim + tagBoost))
             }
         }
