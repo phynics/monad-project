@@ -42,7 +42,6 @@ let package = Package(
                 "MonadPrompt",
                 .product(name: "OpenAI", package: "OpenAI"),
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "USearch", package: "USearch"),
                 .product(name: "Dependencies", package: "swift-dependencies")
             ],
             path: "Sources/MonadCore"
@@ -59,7 +58,8 @@ let package = Package(
                 .product(name: "HummingbirdWebSocket", package: "hummingbird-websocket"),
                 .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
-                .product(name: "Logging", package: "swift-log")
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "USearch", package: "USearch")
             ],
             path: "Sources/MonadServer"
         ),
@@ -98,7 +98,8 @@ let package = Package(
                 "MonadCore",
                 "MonadShared",
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
-                .product(name: "Dependencies", package: "swift-dependencies")
+                .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "USearch", package: "USearch")
             ],
             path: "Tests/MonadServerTests"
         ),

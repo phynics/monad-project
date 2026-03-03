@@ -1,6 +1,7 @@
 import Foundation
 import USearch
 import Logging
+import MonadCore
 
 // Mark USearchIndex as unchecked Sendable since we are managing thread safety via serial queue
 extension USearchIndex: @unchecked @retroactive Sendable {}
@@ -140,10 +141,4 @@ public actor VectorStore: VectorStoreProtocol {
             return (try? Int(index.count)) ?? 0
         }
     }
-}
-
-public enum VectorStoreError: Error {
-    case countMismatch
-    case dimensionMismatch
-    case initializationFailed(String)
 }

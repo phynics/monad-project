@@ -1,5 +1,11 @@
 import Foundation
 
+public enum VectorStoreError: Error {
+    case countMismatch
+    case dimensionMismatch
+    case initializationFailed(String)
+}
+
 public protocol VectorStoreProtocol: Actor, Sendable {
     /// Initialize the vector store index
     func initialize() async throws

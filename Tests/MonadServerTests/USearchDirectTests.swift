@@ -12,16 +12,16 @@ import USearch
     //         connectivity: 16,
     //         quantization: .f32
     //     )
-    //     
+    //
     //     // Manual vector creation
     //     let vector: [Float] = [1.0, 0.0, 0.0, 0.0]
     //     let key: UInt64 = 1
-    //     
+    //
     //     try vector.withUnsafeBufferPointer { buffer in
     //         guard let baseAddress = buffer.baseAddress else { return }
     //         try index.addSingle(key: USearchKey(key), vector: baseAddress)
     //     }
-    //     
+    //
     //     #expect(try index.count == 1)
     // }
 }
