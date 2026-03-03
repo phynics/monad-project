@@ -3,68 +3,83 @@ import XCTest
 import Foundation
 
 final class ChatEventTests: XCTestCase {
-    
+
     func testChatEventDelta() {
-        let event = ChatEvent.delta("Hello")
-        XCTAssertEqual(event.delta, "Hello")
-        XCTAssertNil(event.generationContext)
-        XCTAssertFalse(event.isError)
+        let event = ChatEvent.delta(.generation("Hello"))
+        if case .delta(.generation(let text)) = event {
+            XCTAssertEqual(text, "Hello")
+        } else {
+            XCTFail("Expected delta.generation")
+        }
     }
-    
-    func testChatEventThought() {
-        let event = ChatEvent.thought("Thinking...")
-        XCTAssertEqual(event.thought, "Thinking...")
-        XCTAssertFalse(event.isThoughtCompleted)
+
+    func testChatEventThinking() {
+        let event = ChatEvent.delta(.thinking("Thinking..."))
+        if case .delta(.thinking(let text)) = event {
+            XCTAssertEqual(text, "Thinking...")
+        } else {
+            XCTFail("Expected delta.thinking")
+        }
     }
-    
-    func testChatEventThoughtCompleted() {
-        let event = ChatEvent.thoughtCompleted
-        XCTAssertTrue(event.isThoughtCompleted)
-        XCTAssertNil(event.thought)
-    }
-    
+
     func testChatEventToolCall() {
         let delta = ToolCallDelta(index: 0, id: "call1", name: "test", arguments: "{}")
-        let event = ChatEvent.toolCall(delta)
-        XCTAssertNotNil(event.toolCall)
-        XCTAssertEqual(event.toolCall?.id, "call1")
+        let event = ChatEvent.delta(.toolCall(delta))
+        if case .delta(.toolCall(let tc)) = event {
+            XCTAssertEqual(tc.id, "call1")
+        } else {
+            XCTFail("Expected delta.toolCall")
+        }
     }
-    
+
     func testChatEventToolCallError() {
-        let event = ChatEvent.toolCallError(toolCallId: "call1", name: "test", error: "Not found")
-        XCTAssertNotNil(event.toolCallError)
-        XCTAssertEqual(event.toolCallError?.toolCallId, "call1")
-        XCTAssertEqual(event.toolCallError?.error, "Not found")
+        let event = ChatEvent.error(.toolCallError(toolCallId: "call1", name: "test", error: "Not found"))
+        if case .error(.toolCallError(let id, _, let error)) = event {
+            XCTAssertEqual(id, "call1")
+            XCTAssertEqual(error, "Not found")
+        } else {
+            XCTFail("Expected error.toolCallError")
+        }
     }
-    
+
     func testChatEventToolExecution() {
         let ref = ToolReference.known("tool-1")
-        let event = ChatEvent.toolExecution(toolCallId: "123", status: .attempting(name: "test", reference: ref))
-        
-        XCTAssertNotNil(event.toolExecution)
-        XCTAssertEqual(event.toolExecution?.toolCallId, "123")
+        let event = ChatEvent.delta(.toolExecution(toolCallId: "123", status: .attempting(name: "test", reference: ref)))
+        if case .delta(.toolExecution(let id, _)) = event {
+            XCTAssertEqual(id, "123")
+        } else {
+            XCTFail("Expected delta.toolExecution")
+        }
     }
-    
+
     func testChatEventGenerationContext() {
         let metadata = ChatMetadata(memories: [UUID()], files: ["README.md"])
-        let event = ChatEvent.generationContext(metadata)
-        XCTAssertNotNil(event.generationContext)
-        XCTAssertEqual(event.generationContext?.files.count, 1)
+        let event = ChatEvent.meta(.generationContext(metadata))
+        if case .meta(.generationContext(let meta)) = event {
+            XCTAssertEqual(meta.files.count, 1)
+        } else {
+            XCTFail("Expected meta.generationContext")
+        }
     }
-    
+
     func testChatEventGenerationCompleted() {
         let message = Message(content: "Done", role: .assistant)
         let metadata = APIResponseMetadata(model: "test-model", duration: 1.5, tokensPerSecond: 50.0)
-        let event = ChatEvent.generationCompleted(message: message, metadata: metadata)
-        
-        XCTAssertNotNil(event.generationCompleted)
-        XCTAssertEqual(event.generationCompleted?.message.content, "Done")
+        let event = ChatEvent.completion(.generationCompleted(message: message, metadata: metadata))
+        if case .completion(.generationCompleted(let msg, _)) = event {
+            XCTAssertEqual(msg.content, "Done")
+        } else {
+            XCTFail("Expected completion.generationCompleted")
+        }
     }
-    
+
     func testChatEventError() {
         struct MockError: Error, Equatable {}
-        let event = ChatEvent.error(MockError())
-        XCTAssertTrue(event.isError)
-        XCTAssertNotNil(event.error)
+        let event = ChatEvent.error(.error(MockError()))
+        if case .error(.error) = event {
+            // pass
+        } else {
+            XCTFail("Expected error.error")
+        }
     }
 }

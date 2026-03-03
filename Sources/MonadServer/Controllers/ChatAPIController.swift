@@ -53,13 +53,10 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         var fullResponse = ""
         for try await event in stream {
-            switch event {
-            case .delta(let content):
-                fullResponse += content
-            case .generationCompleted(let message, _):
-                fullResponse = message.content
-            default:
-                break
+            if let text = event.textContent {
+                fullResponse += text
+            } else if let completed = event.completedMessage {
+                fullResponse = completed.message.content
             }
         }
 

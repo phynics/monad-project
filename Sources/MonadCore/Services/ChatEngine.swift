@@ -232,16 +232,13 @@ public final class ChatEngine: @unchecked Sendable {
                 if !thinkingChunk.isEmpty {
                     fullThinking += thinkingChunk
                     hasEmittedThought = true
-                    continuation.yield(.thought(String(thinkingChunk)))
+                    continuation.yield(.thinking(String(thinkingChunk)))
                 }
 
                 if !contentChunk.isEmpty {
-                    if hasEmittedThought {
-                        continuation.yield(.thoughtCompleted)
-                        hasEmittedThought = false
-                    }
+                    hasEmittedThought = false
                     fullResponse += contentChunk
-                    continuation.yield(.delta(String(contentChunk)))
+                    continuation.yield(.generation(String(contentChunk)))
                 }
             }
 
@@ -251,10 +248,7 @@ public final class ChatEngine: @unchecked Sendable {
 
             // Accumulate Tool Calls
             if let calls = result.choices.first?.delta.toolCalls {
-                if hasEmittedThought {
-                    continuation.yield(.thoughtCompleted)
-                    hasEmittedThought = false
-                }
+                hasEmittedThought = false
 
                 for call in calls {
                     guard let index = call.index else { continue }
@@ -279,21 +273,15 @@ public final class ChatEngine: @unchecked Sendable {
             if parser.isThinking {
                 fullThinking += parser.buffer
                 hasEmittedThought = true
-                continuation.yield(.thought(parser.buffer))
+                continuation.yield(.thinking(parser.buffer))
             } else {
-                if hasEmittedThought {
-                    continuation.yield(.thoughtCompleted)
-                    hasEmittedThought = false
-                }
+                hasEmittedThought = false
                 fullResponse += parser.buffer
-                continuation.yield(.delta(parser.buffer))
+                continuation.yield(.generation(parser.buffer))
             }
         }
 
-        if hasEmittedThought {
-            continuation.yield(.thoughtCompleted)
-            hasEmittedThought = false
-        }
+        hasEmittedThought = false
 
         // Accumulate raw output for debug
         accumulatedRawOutput += fullThinking
@@ -535,7 +523,7 @@ public final class ChatEngine: @unchecked Sendable {
 
             // Bug 2: Emit attempting event so the CLI can show tool progress
             let toolRef = tool.toolReference
-            continuation.yield(.toolExecution(toolCallId: call.id, status: .attempting(name: tool.name, reference: toolRef)))
+            continuation.yield(.toolProgress(toolCallId: call.id, status: .attempting(name: tool.name, reference: toolRef)))
 
             let argsData = call.function.arguments.data(using: .utf8) ?? Data()
             let argsDict = (try? JSONSerialization.jsonObject(with: argsData) as? [String: Any]) ?? [:]
@@ -546,11 +534,11 @@ public final class ChatEngine: @unchecked Sendable {
                 debugRecords.append(ToolResultRecord(toolCallId: call.id, name: call.function.name, output: result.output, turn: turnCount))
                 if result.success {
                     logger.info("Tool \(toolName) succeeded")
-                    continuation.yield(.toolExecution(toolCallId: call.id, status: .success(result)))
+                    continuation.yield(.toolCompleted(toolCallId: call.id, status: .success(result)))
                 } else {
                     let errorMsg = result.error ?? "Unknown error"
                     logger.error("Tool \(toolName) failed: \(errorMsg)")
-                    continuation.yield(.toolExecution(toolCallId: call.id, status: .failed(reference: toolRef, error: errorMsg)))
+                    continuation.yield(.toolCompleted(toolCallId: call.id, status: .failed(reference: toolRef, error: errorMsg)))
                 }
                 executionResults.append(.tool(.init(content: .textContent(.init(result.output)), toolCallId: call.id)))
             } catch let error as ToolError {
@@ -561,11 +549,11 @@ public final class ChatEngine: @unchecked Sendable {
                 }
                 logger.error("Tool \(toolName) error: \(error.localizedDescription)")
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: \(error.localizedDescription)")), toolCallId: call.id)))
-                continuation.yield(.toolExecution(toolCallId: call.id, status: .failed(reference: toolRef, error: error.localizedDescription)))
+                continuation.yield(.toolCompleted(toolCallId: call.id, status: .failed(reference: toolRef, error: error.localizedDescription)))
             } catch {
                 logger.error("Tool \(toolName) unexpected error: \(error.localizedDescription)")
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: \(error.localizedDescription)")), toolCallId: call.id)))
-                continuation.yield(.toolExecution(toolCallId: call.id, status: .failed(reference: toolRef, error: error.localizedDescription)))
+                continuation.yield(.toolCompleted(toolCallId: call.id, status: .failed(reference: toolRef, error: error.localizedDescription)))
             }
         }
         return (executionResults, requiresClientExecution, debugRecords)

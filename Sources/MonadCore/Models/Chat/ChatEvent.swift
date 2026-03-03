@@ -8,114 +8,102 @@ public enum ToolExecutionStatus: Sendable {
 }
 
 /// Events emitted by ChatEngine during a chat turn.
+///
+/// Events are categorized into four groups:
+/// - `delta`: Incremental streaming events (text, thinking, tool calls, tool progress)
+/// - `meta`: Informational metadata events (context, generation info)
+/// - `error`: Error events (tool errors, general errors)
+/// - `completion`: Terminal events signaling final results
 public enum ChatEvent: Sendable {
-    /// RAG context metadata — emitted once at the start of the loop
-    case generationContext(ChatMetadata)
-
-    /// Incremental content chunk from the LLM
-    case delta(String)
-
-    /// Chain-of-thought reasoning chunk
-    case thought(String)
-
-    /// Chain-of-thought reasoning block finished
-    case thoughtCompleted
-
-    /// Tool call being assembled (streaming deltas)
-    case toolCall(ToolCallDelta)
-
-    /// Tool call failed before execution (e.g. not found, invalid arguments)
-    case toolCallError(toolCallId: String, name: String, error: String)
-
-    /// Asynchronous tool execution status Updates
-    case toolExecution(toolCallId: String, status: ToolExecutionStatus)
-
-    /// Stream completed with final accumulated message and token metadata
-    case generationCompleted(message: Message, metadata: APIResponseMetadata)
-
-    /// Error occurred
-    case error(Error)
-}
-
-public enum NewChatEvent: Sendable {
-    public enum ChatDeltaEvent: Sendable {
+    public enum DeltaEvent: Sendable {
+        /// Chain-of-thought reasoning chunk
         case thinking(String)
+        /// Incremental content chunk from the LLM
         case generation(String)
+        /// Tool call being assembled (streaming deltas)
         case toolCall(ToolCallDelta)
+
+        /// Asynchronous tool execution status update (progress)
         case toolExecution(toolCallId: String, status: ToolExecutionStatus)
     }
 
     public enum MetaEvent: Sendable {
+        /// RAG context metadata — emitted once at the start of the loop
         case generationContext(ChatMetadata)
+        /// Generation completed with metadata (informational)
         case generationCompleted(message: Message, metadata: APIResponseMetadata)
     }
 
     public enum ErrorEvent: Sendable {
+        /// Tool call failed before execution (e.g. not found, invalid arguments)
         case toolCallError(toolCallId: String, name: String, error: String)
+        /// General error occurred
         case error(Error)
     }
 
     public enum CompletionEvent: Sendable {
+        /// Stream completed with final accumulated message and token metadata
         case generationCompleted(message: Message, metadata: APIResponseMetadata)
+        /// Tool execution completed with final status
         case toolExecution(toolCallId: String, status: ToolExecutionStatus)
     }
 
-    case delta(ChatDeltaEvent)
+    case delta(DeltaEvent)
     case meta(MetaEvent)
     case error(ErrorEvent)
     case completion(CompletionEvent)
 }
 
-// MARK: - Convenience Properties
+// MARK: - Factory Methods (Producer Ergonomics)
 
 extension ChatEvent {
-    public var generationContext: ChatMetadata? {
-        if case .generationContext(let metadata) = self { return metadata }
+    // Delta shortcuts
+    public static func thinking(_ text: String) -> ChatEvent { .delta(.thinking(text)) }
+
+    public static func generation(_ text: String) -> ChatEvent { .delta(.generation(text)) }
+    public static func toolCall(_ delta: ToolCallDelta) -> ChatEvent { .delta(.toolCall(delta)) }
+    public static func toolProgress(toolCallId: String, status: ToolExecutionStatus) -> ChatEvent {
+        .delta(.toolExecution(toolCallId: toolCallId, status: status))
+    }
+
+    // Meta shortcuts
+    public static func generationContext(_ metadata: ChatMetadata) -> ChatEvent {
+        .meta(.generationContext(metadata))
+    }
+
+    // Error shortcuts
+    public static func toolCallError(toolCallId: String, name: String, error: String) -> ChatEvent {
+        .error(.toolCallError(toolCallId: toolCallId, name: name, error: error))
+    }
+    public static func error(_ err: Error) -> ChatEvent { .error(.error(err)) }
+
+    // Completion shortcuts
+    public static func generationCompleted(message: Message, metadata: APIResponseMetadata) -> ChatEvent {
+        .completion(.generationCompleted(message: message, metadata: metadata))
+    }
+    public static func toolCompleted(toolCallId: String, status: ToolExecutionStatus) -> ChatEvent {
+        .completion(.toolExecution(toolCallId: toolCallId, status: status))
+    }
+}
+
+// MARK: - Computed Properties (Consumer Ergonomics)
+
+extension ChatEvent {
+    /// The text content if this is a `.delta(.generation(...))` event.
+    public var textContent: String? {
+        if case .delta(.generation(let text)) = self { return text }
         return nil
     }
 
-    public var delta: String? {
-        if case .delta(let str) = self { return str }
+    /// The thinking content if this is a `.delta(.thinking(...))` event.
+    public var thinkingContent: String? {
+        if case .delta(.thinking(let text)) = self { return text }
         return nil
     }
 
-    public var thought: String? {
-        if case .thought(let str) = self { return str }
+    /// The completed message and metadata if this is a `.completion(.generationCompleted(...))` event.
+    public var completedMessage: (message: Message, metadata: APIResponseMetadata)? {
+        if case .completion(.generationCompleted(let msg, let meta)) = self { return (msg, meta) }
         return nil
-    }
-
-    public var isThoughtCompleted: Bool {
-        if case .thoughtCompleted = self { return true }
-        return false
-    }
-
-    public var toolCall: ToolCallDelta? {
-        if case .toolCall(let tc) = self { return tc }
-        return nil
-    }
-
-    public var toolCallError: (toolCallId: String, name: String, error: String)? {
-        if case .toolCallError(let id, let name, let error) = self { return (id, name, error) }
-        return nil
-    }
-
-    public var toolExecution: (toolCallId: String, status: ToolExecutionStatus)? {
-        if case .toolExecution(let id, let status) = self { return (id, status) }
-        return nil
-    }
-
-    public var generationCompleted: (message: Message, metadata: APIResponseMetadata)? {
-        if case .generationCompleted(let msg, let meta) = self { return (msg, meta) }
-        return nil
-    }
-
-    public var error: Error? {
-        if case .error(let err) = self { return err }
-        return nil
-    }
-
-    public var isError: Bool {
-        if case .error = self { return true }
-        return false
     }
 }

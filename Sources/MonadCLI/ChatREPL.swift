@@ -163,8 +163,9 @@ actor ChatREPL: ChatREPLController {
                             fflush(stdout)
                         }
 
+
                     case .thoughtCompleted:
-                        print("\n")
+                        break
 
                     case .toolCall:
                         // Legacy or internal buffering

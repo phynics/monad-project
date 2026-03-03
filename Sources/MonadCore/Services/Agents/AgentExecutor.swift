@@ -67,13 +67,10 @@ public struct AgentExecutor: Sendable {
 
             var fullContent = ""
             for try await event in stream {
-                switch event {
-                case .delta(let content):
-                    fullContent += content
-                case .generationCompleted(let message, _):
-                    fullContent = message.content
-                default:
-                    break
+                if let text = event.textContent {
+                    fullContent += text
+                } else if let completed = event.completedMessage {
+                    fullContent = completed.message.content
                 }
             }
 
