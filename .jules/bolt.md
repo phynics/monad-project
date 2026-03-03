@@ -1,0 +1,3 @@
+## 2024-05-24 - [Pre-calculating Magnitude for Vector Similarity]
+**Learning:** When performing repeated cosine similarity calculations against a single query vector (like in memory searching or context ranking), calculating the Euclidean norm (magnitude) of the query vector each time inside the loop creates an unnecessary `O(N)` performance overhead (where N is the size of the embedding vector).
+**Action:** Overload the `cosineSimilarity` method to accept a pre-calculated magnitude for the first vector. Pre-calculate the magnitude of the query vector once *before* iterating over the memories to search or rank.
