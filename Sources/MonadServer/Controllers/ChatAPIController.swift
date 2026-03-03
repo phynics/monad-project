@@ -80,7 +80,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         // Hydrate session and resolve tools at the server layer
         try await sessionManager.hydrateSession(id: id)
         let availableTools = await resolveTools(sessionId: id, clientId: chatRequest.clientId)
-        
+
         Logger.module(named: "chat").info("Resolved \(ANSIColors.colorize("\(availableTools.count)", color: ANSIColors.green)) tools for session \(sid)")
 
         let chatEngineStream = try await chatEngine.chatStream(

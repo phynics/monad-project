@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Quick reference for Claude Code working with the Monad project.
+Quick reference for agents working with the Monad project.
 
 ## Project Essentials
 
@@ -28,6 +28,7 @@ swiftlint --fix Sources/             # Auto-fix violations in Sources
 SwiftLint enforces code style and quality. Common violations and fixes:
 
 **Running SwiftLint:**
+> **Note:** `swiftlint --fix Sources/` is the recommended way to run the linter to automatically fix formatting issues.
 - `make lint` — lint entire project (includes Tests)
 - `swiftlint lint Sources/` — lint only production code
 - `swiftlint --fix Sources/` — auto-fix formatting issues (whitespace, line breaks, etc.)
@@ -140,7 +141,7 @@ Sources/MonadCore/Services/
 ├── ChatEngine.swift              — Unified chat/agent engine
 ├── Agents/                       — AgentExecutor, AgentRegistry
 ├── Configuration/                — ConfigurationServiceProtocol
-├── Context/                      — ContextManager, ContextRanker, ContextCompressor
+├── Context/                      — ContextManager, ContextRanker
 ├── Database/                     — Persistence protocols (7 store protocols)
 ├── Embeddings/                   — EmbeddingService, LocalEmbeddingService, OpenAIEmbeddingService
 ├── LLM/                          — LLMService, StreamingParser, StreamingCoordinator

@@ -46,8 +46,9 @@ final class MessageTests: XCTestCase {
     }
     
     func testMessageAssistantRole() throws {
+        let date = Date(timeIntervalSince1970: 1000)
         let msg = Message(
-            timestamp: Date(),
+            timestamp: date,
             content: "Response",
             role: .assistant,
             isSummary: true
@@ -59,8 +60,9 @@ final class MessageTests: XCTestCase {
     }
     
     func testMessageSystemRole() throws {
+        let date = Date(timeIntervalSince1970: 1000)
         let msg = Message(
-            timestamp: Date(),
+            timestamp: date,
             content: "System Prompt",
             role: .system
         )

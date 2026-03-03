@@ -11,7 +11,7 @@ public struct LogMiddleware<Context: RequestContext>: MiddlewareProtocol {
         let methodColor = self.color(for: request.method)
         let methodStr = ANSIColors.colorize(request.method.rawValue, color: methodColor)
         let pathStr = ANSIColors.colorize(request.uri.path, color: ANSIColors.brightWhite)
-        
+
         context.logger.info("Request: \(methodStr) \(pathStr)")
 
         do {

@@ -42,13 +42,13 @@ final class LLMConfigurationModelsTests: XCTestCase {
     func testLLMProviderCodableAndStr() throws {
         let p1 = LLMProvider.openAI
         try assertCodable(p1)
-        XCTAssertEqual(p1.rawValue, "openAI")
+        XCTAssertEqual(p1.rawValue, "OpenAI")
         
         let p2 = LLMProvider.openRouter
-        XCTAssertEqual(p2.rawValue, "openRouter")
+        XCTAssertEqual(p2.rawValue, "OpenRouter")
         
         let p3 = LLMProvider.ollama
-        XCTAssertEqual(p3.rawValue, "ollama")
+        XCTAssertEqual(p3.rawValue, "Ollama")
     }
     
     // MARK: - ProviderConfiguration

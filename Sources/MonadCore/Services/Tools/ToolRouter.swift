@@ -18,7 +18,7 @@ public actor ToolRouter {
     ) async throws -> String {
         let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
         let sid = ANSIColors.colorize(sessionId.uuidString.prefix(8).lowercased(), color: ANSIColors.dim)
-        
+
         logger.info("Routing 🛠️ \(toolName) in session \(sid)")
 
         // 1. Resolve Tool Location
@@ -94,7 +94,7 @@ public actor ToolRouter {
     ) async throws -> String {
         let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
         let client = ANSIColors.colorize(workspace.ownerId?.uuidString.prefix(8).lowercased() ?? "unknown", color: ANSIColors.brightMagenta)
-        
+
         logger.info("Executing remotely: \(toolName) on client \(client)")
 
         guard workspace.ownerId != nil else {

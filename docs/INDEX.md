@@ -200,7 +200,7 @@ Core services in `Sources/MonadCore/Services/`:
 ├── ChatEngine.swift              — Unified chat/agent engine
 ├── Agents/                       — AgentExecutor, AgentRegistry
 ├── Configuration/                — ConfigurationServiceProtocol
-├── Context/                      — ContextManager, ContextRanker, ContextCompressor
+├── Context/                      — ContextManager, ContextRanker
 ├── Database/                     — Persistence protocols (7 store protocols)
 ├── Embeddings/                   — EmbeddingService implementations
 ├── LLM/                          — LLMService, StreamingParser, StreamingCoordinator

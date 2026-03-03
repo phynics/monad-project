@@ -19,13 +19,15 @@ final class MemoryModelTests: XCTestCase {
         let memory = Memory(
             title: "User Preferences",
             content: "The user's favorite language is Swift",
+            createdAt: Date(timeIntervalSince1970: 1000),
+            updatedAt: Date(timeIntervalSince1970: 1000),
             tags: ["swift", "preference", "user-profile"],
             metadata: ["context": "Discussing programming languages"],
             embedding: [0.1, 0.2, 0.3]
         )
         try assertCodable(memory)
-        XCTAssertEqual(memory.tags.count, 3)
-        XCTAssertEqual(memory.embedding, "[0.1, 0.2, 0.3]")
+        XCTAssertEqual(memory.tagArray.count, 3)
+        XCTAssertEqual(memory.embedding, "[0.1,0.2,0.3]")
     }
     
     func testMemoryUpdate() {

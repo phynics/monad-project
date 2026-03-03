@@ -98,8 +98,6 @@ public actor SessionManager {
         let primaryWorkspace = try? await workspaceManager.getWorkspace(id: primaryWorkspaceId)
 
         let contextManager = ContextManager(
-            persistenceService: persistenceService,
-            embeddingService: embeddingService,
             vectorStore: vectorStore,
             workspace: primaryWorkspace
         )

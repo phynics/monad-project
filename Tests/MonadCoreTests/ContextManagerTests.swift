@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import MonadCore
 import MonadShared
+import Dependencies
 
 @Suite("Context Manager Tests")
 struct ContextManagerTests {
@@ -10,11 +11,12 @@ struct ContextManagerTests {
     func testGatherContextSemanticRetrieval() async throws {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
-        let contextManager = ContextManager(
-            persistenceService: mockPersistence, 
-            embeddingService: mockEmbedding, 
-            workspace: nil
-        )
+        let contextManager = withDependencies {
+            $0.persistenceService = mockPersistence
+            $0.embeddingService = mockEmbedding
+        } operation: {
+            ContextManager(workspace: nil)
+        }
 
         let expectedMemory = Memory.fixture(
             title: "SwiftUI Guide",
@@ -45,11 +47,12 @@ struct ContextManagerTests {
     func testGatherContextUsesHistoryForTagsButQueryForEmbedding() async throws {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
-        let contextManager = ContextManager(
-            persistenceService: mockPersistence, 
-            embeddingService: mockEmbedding, 
-            workspace: nil
-        )
+        let contextManager = withDependencies {
+            $0.persistenceService = mockPersistence
+            $0.embeddingService = mockEmbedding
+        } operation: {
+            ContextManager(workspace: nil)
+        }
 
         let memory = Memory.fixture(title: "Project Alpha", tags: ["alpha"])
         mockPersistence.memories = [memory]
@@ -83,11 +86,12 @@ struct ContextManagerTests {
     func testRankingLogicWithTagBoost() async throws {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
-        let contextManager = ContextManager(
-            persistenceService: mockPersistence, 
-            embeddingService: mockEmbedding, 
-            workspace: nil
-        )
+        let contextManager = withDependencies {
+            $0.persistenceService = mockPersistence
+            $0.embeddingService = mockEmbedding
+        } operation: {
+            ContextManager(workspace: nil)
+        }
 
         let memory1 = Memory.fixture(title: "Tag Match", tags: ["swift"])
         let memory2 = Memory.fixture(title: "Semantic Match")
@@ -141,11 +145,12 @@ struct ContextManagerTests {
         )
         let workspace = try MockLocalWorkspace(reference: ref)
 
-        let manager = ContextManager(
-            persistenceService: mockPersistence,
-            embeddingService: mockEmbedding,
-            workspace: workspace
-        )
+        let manager = withDependencies {
+            $0.persistenceService = mockPersistence
+            $0.embeddingService = mockEmbedding
+        } operation: {
+            ContextManager(workspace: workspace)
+        }
 
         let stream = await manager.gatherContext(for: "some query")
         let events = try await stream.collect()

@@ -26,9 +26,9 @@ public struct MonadLogHandler: LogHandler {
         let timestamp = ISO8601DateFormatter().string(from: Date())
         let levelColor = color(for: level)
         let levelStr = ANSIColors.colorize(level.rawValue.uppercased(), color: levelColor)
-        
+
         var messageStr = "\(timestamp) \(levelStr) \(labelPrefix) \(message)"
-        
+
         // Add metadata if present
         let mergedMetadata = self.metadata.merging(metadata ?? [:], uniquingKeysWith: { _, new in new })
         if !mergedMetadata.isEmpty {

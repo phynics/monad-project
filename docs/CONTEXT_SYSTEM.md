@@ -376,47 +376,7 @@ Tools hosted by remote clients (e.g., IDE integrations):
 
 ---
 
-## 7. Context Compression
-
-When context exceeds token budget, the system uses intelligent compression.
-
-### Compression Strategies
-
-**Truncation:**
-- Fast, deterministic
-- Loses information at truncation point
-- Used for chat history (old messages dropped)
-- Implementation: String slicing with character/token counting
-
-**Summarization:**
-- Slower (requires LLM call)
-- Preserves key information
-- Used for Context Notes, large memories
-- Implementation: Utility LLM generates summary with specific prompt
-
-### ContextCompressor Service
-
-**Location:** `Sources/MonadCore/Services/Context/ContextCompressor.swift`
-
-**Responsibilities:**
-- Summarize sections exceeding budget
-- Uses utility model (smaller/faster LLM)
-- Caches summaries to avoid re-computation
-
-**Summarization Prompt:**
-```
-Summarize the following content, preserving the most important information
-for understanding the user's project and preferences.
-
-Target length: approximately {targetTokens} tokens.
-
-Content:
-{originalContent}
-```
-
----
-
-## 8. Implementation Details
+## 7. Implementation Details
 
 ### ContextManager Initialization
 

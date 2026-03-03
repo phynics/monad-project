@@ -70,9 +70,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     }
 
     /// Service for generating text embeddings
-    @Dependency(\.embeddingService) private var defaultEmbeddingService
-    private let explicitEmbeddingService: (any EmbeddingServiceProtocol)?
-    public var embeddingService: any EmbeddingServiceProtocol { explicitEmbeddingService ?? defaultEmbeddingService }
+    @Dependency(\.embeddingService) public var embeddingService
 
     private var client: (any LLMClientProtocol)?
     private var utilityClient: (any LLMClientProtocol)?
@@ -81,8 +79,6 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     private let storage: any ConfigurationServiceProtocol
 
     internal let logger = Logger.module(named: "llm")
-
-    private let contextCompressor = ContextCompressor()
 
     // MARK: - Client Accessors
 
@@ -111,13 +107,11 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
 
     public init(
         storage: any ConfigurationServiceProtocol,
-        embeddingService: (any EmbeddingServiceProtocol)? = nil,
         client: (any LLMClientProtocol)? = nil,
         utilityClient: (any LLMClientProtocol)? = nil,
         fastClient: (any LLMClientProtocol)? = nil
     ) {
         self.storage = storage
-        self.explicitEmbeddingService = embeddingService
         self.client = client
         self.utilityClient = utilityClient
         self.fastClient = fastClient

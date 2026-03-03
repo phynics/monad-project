@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import MonadCore
 import MonadShared
+import Dependencies
 
 @Suite("Context Manager Mocking Tests")
 struct ContextManagerMockingTests {
@@ -11,11 +12,12 @@ struct ContextManagerMockingTests {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
 
-        let contextManager = ContextManager(
-            persistenceService: mockPersistence,
-            embeddingService: mockEmbedding,
-            workspace: nil
-        )
+        let contextManager = withDependencies {
+            $0.persistenceService = mockPersistence
+            $0.embeddingService = mockEmbedding
+        } operation: {
+            ContextManager(workspace: nil)
+        }
 
         #expect(contextManager != nil)
     }

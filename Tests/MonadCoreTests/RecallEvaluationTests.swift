@@ -2,6 +2,7 @@ import Foundation
 import MonadCore
 import MonadShared
 import Testing
+import Dependencies
 
 @Suite(.serialized)
 @MainActor
@@ -14,17 +15,12 @@ struct RecallEvaluationTests {
         self.persistence = mock
 
         // Mock embedding service if needed, or use Local (which might not need DB)
-        // Since LocalEmbeddingService was using USearch and might have dependencies,
-        // we can use a dummy or just Local if it's safe.
-        // Assuming LocalEmbeddingService is in MonadCore and safe.
-        // But LocalEmbeddingService was not moved.
-        // Step 1528: LocalEmbeddingService is in MonadCore/Services/Embeddings/
-        // It uses USearch, no GRDB.
-
-        self.contextManager = ContextManager(
-            persistenceService: mock,
-            embeddingService: LocalEmbeddingService()
-        )
+        self.contextManager = withDependencies {
+            $0.persistenceService = mock
+            $0.embeddingService = LocalEmbeddingService()
+        } operation: {
+            ContextManager()
+        }
     }
 
     private func cosineSimilarity(_ a: [Double], _ b: [Double]) -> Double {

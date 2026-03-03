@@ -24,6 +24,12 @@ class MockURLProtocol: URLProtocol, @unchecked Sendable {
         guard let client = self.client else { return }
         let wrapper = ProtocolWrapper(obj: self, client: client)
         
+        // Send synthetic HTTP response
+        if let url = request.url,
+           let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil) {
+            client.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        }
+
         Task {
             for event in events {
                 if event.delay > 0 {

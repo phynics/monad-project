@@ -96,7 +96,7 @@ public final class JobRunnerService: Service, @unchecked Sendable {
         let sid = ANSIColors.colorize(job.sessionId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
         let jid = ANSIColors.colorize(job.id.uuidString.prefix(8).lowercased(), color: ANSIColors.dim)
         let jobTitle = ANSIColors.colorize(job.title, color: ANSIColors.brightCyan)
-        
+
         logger.info("Processing job \(jid) [\(jobTitle)] in session \(sid)")
 
         // 1. Identify Session

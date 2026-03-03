@@ -4,14 +4,8 @@ import Dependencies
 
 /// Manages the retrieval and organization of context for the chat
 public actor ContextManager: @unchecked Sendable {
-    @Dependency(\.persistenceService) private var defaultPersistenceService
-    @Dependency(\.embeddingService) private var defaultEmbeddingService
-
-    private let explicitPersistenceService: (any MemoryStoreProtocol)?
-    private let explicitEmbeddingService: (any EmbeddingServiceProtocol)?
-
-    private var persistenceService: any MemoryStoreProtocol { explicitPersistenceService ?? defaultPersistenceService }
-    private var embeddingService: any EmbeddingServiceProtocol { explicitEmbeddingService ?? defaultEmbeddingService }
+    @Dependency(\.persistenceService) var persistenceService
+    @Dependency(\.embeddingService) var embeddingService
 
     private let vectorStore: (any VectorStoreProtocol)?
     private let workspace: (any WorkspaceProtocol)?
@@ -20,13 +14,9 @@ public actor ContextManager: @unchecked Sendable {
     private let ranker = ContextRanker()
 
     public init(
-        persistenceService: (any MemoryStoreProtocol)? = nil,
-        embeddingService: (any EmbeddingServiceProtocol)? = nil,
         vectorStore: (any VectorStoreProtocol)? = nil,
         workspace: (any WorkspaceProtocol)? = nil
     ) {
-        self.explicitPersistenceService = persistenceService
-        self.explicitEmbeddingService = embeddingService
         self.vectorStore = vectorStore
         self.workspace = workspace
     }
