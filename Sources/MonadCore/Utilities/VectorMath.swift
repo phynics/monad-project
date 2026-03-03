@@ -26,6 +26,38 @@ public enum VectorMath {
         return dotProduct / magnitudes
     }
 
+    /// Calculate magnitude of a vector
+    /// - Parameter vector: Vector
+    /// - Returns: Euclidean norm (magnitude) of the vector
+    public static func magnitude(_ vector: [Double]) -> Double {
+        guard !vector.isEmpty else { return 0.0 }
+        var sumSq: Double = 0.0
+        vDSP_svesqD(vector, 1, &sumSq, vDSP_Length(vector.count))
+        return sqrt(sumSq)
+    }
+
+    /// Optimized calculation of cosine similarity when magnitude of the first vector is already known.
+    /// - Parameters:
+    ///   - vectorA: First vector
+    ///   - vectorB: Second vector
+    ///   - magnitudeA: Pre-calculated magnitude of the first vector
+    /// - Returns: Similarity score from -1.0 to 1.0 (0.0 if invalid)
+    public static func cosineSimilarity(_ vectorA: [Double], _ vectorB: [Double], magnitudeA: Double) -> Double {
+        guard vectorA.count == vectorB.count, !vectorA.isEmpty, magnitudeA > 0 else { return 0.0 }
+
+        var dotProduct: Double = 0.0
+        vDSP_dotprD(vectorA, 1, vectorB, 1, &dotProduct, vDSP_Length(vectorA.count))
+
+        var sumSqB: Double = 0.0
+        vDSP_svesqD(vectorB, 1, &sumSqB, vDSP_Length(vectorB.count))
+        let magnitudeB = sqrt(sumSqB)
+
+        let magnitudes = magnitudeA * magnitudeB
+        guard magnitudes > 0 else { return 0.0 }
+
+        return dotProduct / magnitudes
+    }
+
     /// Normalize a vector to unit length
     /// - Parameter vector: Vector to normalize
     /// - Returns: Normalized vector
