@@ -15,7 +15,7 @@ public struct TokenBudget: Sendable {
     ///   - sections: The sections to process
     ///   - compressor: Optional compressor for .summarize strategy
     /// - Returns: A new list of sections that fits within the budget (best effort)
-    public func apply(to sections: [ContextSection], compressor: SectionCompressor? = nil) async -> [ContextSection] {
+    public func apply(to sections: [ContextSection], compressor _: SectionCompressor? = nil) async -> [ContextSection] {
         let available = maxTokens - reserveForResponse
         let currentTotal = sections.reduce(0) { $0 + $1.estimatedTokens }
 
@@ -62,7 +62,7 @@ public struct TokenBudget: Sendable {
                 switch section.strategy {
                 case .keep:
                     // Must keep. We go into debt if needed (or consume all remaining)
-                    // We'll consume all remaining and technically go over budget, 
+                    // We'll consume all remaining and technically go over budget,
                     // as we can't truncate .keep
                     decisions[index] = .keepOriginal
                     remainingBudget -= size
@@ -99,7 +99,7 @@ public struct TokenBudget: Sendable {
             switch decision {
             case .keepOriginal:
                 result.append(section)
-            case .constrain(let limit):
+            case let .constrain(limit):
                 result.append(section.constrained(to: limit))
             case .drop:
                 break // Skip

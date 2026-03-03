@@ -7,9 +7,7 @@ class MemoryScreen {
     private var searchQuery: String = ""
     private var currentPage: Int = 0
     private let pageSize: Int = 10
-    private var totalCount: Int = 0
-
-    // Cache for list vs search results to avoid refetching list when clearing search
+    /// Cache for list vs search results to avoid refetching list when clearing search
     private var allMemories: [Memory] = []
 
     init(client: MonadClient) {
@@ -22,9 +20,8 @@ class MemoryScreen {
         } else {
             // Initial fetch
             TerminalUI.printLoading("Fetching memories...")
-            self.allMemories = try await client.listMemories()
-            self.memories = self.allMemories
-            self.totalCount = self.memories.count
+            allMemories = try await client.listMemories()
+            memories = allMemories
         }
 
         while true {
@@ -47,7 +44,8 @@ class MemoryScreen {
             } else if input.lowercased().starts(with: "s") {
                 // Handle search
                 let components = input.split(
-                    separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+                    separator: " ", maxSplits: 1, omittingEmptySubsequences: true
+                )
                 if components.count > 1 {
                     let query = String(components[1])
                     try await performSearch(query)
@@ -67,7 +65,7 @@ class MemoryScreen {
         let start = currentPage * pageSize
         let end = min(start + pageSize, memories.count)
         guard start < end else { return [] }
-        return Array(memories[start..<end])
+        return Array(memories[start ..< end])
     }
 
     private func render() {
@@ -109,7 +107,9 @@ class MemoryScreen {
         print("")
         print(
             TerminalUI.dim(
-                "Page \(currentPage + 1) of \(max(1, (memories.count + pageSize - 1) / pageSize))"))
+                "Page \(currentPage + 1) of \(max(1, (memories.count + pageSize - 1) / pageSize))"
+            )
+        )
     }
 
     private func nextPage() {
@@ -126,16 +126,16 @@ class MemoryScreen {
 
     private func performSearch(_ query: String) async throws {
         TerminalUI.printLoading("Searching...")
-        self.searchQuery = query
+        searchQuery = query
         // Use semantic search from client
-        self.memories = try await client.searchMemories(query, limit: 20)
-        self.currentPage = 0
+        memories = try await client.searchMemories(query, limit: 20)
+        currentPage = 0
     }
 
     private func resetSearch() {
-        self.searchQuery = ""
-        self.memories = self.allMemories
-        self.currentPage = 0
+        searchQuery = ""
+        memories = allMemories
+        currentPage = 0
     }
 
     private func viewDetail(memory: Memory) {

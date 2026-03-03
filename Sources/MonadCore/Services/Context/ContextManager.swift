@@ -1,23 +1,20 @@
+import Dependencies
 import Foundation
 import Logging
-import Dependencies
 
 /// Manages the retrieval and organization of context for the chat
 public actor ContextManager: @unchecked Sendable {
     @Dependency(\.persistenceService) var persistenceService
     @Dependency(\.embeddingService) var embeddingService
 
-    private let vectorStore: (any VectorStoreProtocol)?
     private let workspace: (any WorkspaceProtocol)?
     private let logger = Logger.module(named: "com.monad.ContextManager")
 
     private let ranker = ContextRanker()
 
     public init(
-        vectorStore: (any VectorStoreProtocol)? = nil,
         workspace: (any WorkspaceProtocol)? = nil
     ) {
-        self.vectorStore = vectorStore
         self.workspace = workspace
     }
 
@@ -44,7 +41,8 @@ public actor ContextManager: @unchecked Sendable {
             let task = Task {
                 let startTime = CFAbsoluteTimeGetCurrent()
                 logger.debug(
-                    "Gathering context for query length: \(query.count), history count: \(history.count)")
+                    "Gathering context for query length: \(query.count), history count: \(history.count)"
+                )
 
                 continuation.yield(.progress(.augmenting))
                 // Augment query with recent history for better tag generation
@@ -117,7 +115,8 @@ public actor ContextManager: @unchecked Sendable {
                 }
             } catch {
                 logger.warning(
-                    "Failed to fetch notes from workspace: \(error.localizedDescription)")
+                    "Failed to fetch notes from workspace: \(error.localizedDescription)"
+                )
             }
         }
 
@@ -131,10 +130,10 @@ public actor ContextManager: @unchecked Sendable {
         // Exclude tool responses as they might be too technical/long for tag generation context
         let historyContext =
             history
-            .filter { $0.role == .user || $0.role == .assistant }
-            .suffix(3)
-            .map { $0.content }
-            .joined(separator: " ")
+                .filter { $0.role == .user || $0.role == .assistant }
+                .suffix(3)
+                .map { $0.content }
+                .joined(separator: " ")
 
         if historyContext.isEmpty { return query }
 
@@ -189,15 +188,15 @@ public actor ContextManager: @unchecked Sendable {
         // 3. Parallel Retrieval: Vector Search & Tag Search
         onProgress?(.searching)
 
-        let searchTags = tags  // Capture local copy for concurrency safety
+        let searchTags = tags // Capture local copy for concurrency safety
 
         // Convert Float embedding to Double for PersistenceService (GRDB compatibility)
         let doubleEmbedding = embedding.map { Double($0) }
 
         async let semanticTask = persistenceService.searchMemories(
             embedding: doubleEmbedding,
-            limit: limit * 2,  // Search for more to allow for tag-boosted re-ranking
-            minSimilarity: 0.35  // Slightly lower to catch more candidates for re-ranking
+            limit: limit * 2, // Search for more to allow for tag-boosted re-ranking
+            minSimilarity: 0.35 // Slightly lower to catch more candidates for re-ranking
         )
 
         async let tagTask = persistenceService.searchMemories(matchingAnyTag: searchTags)

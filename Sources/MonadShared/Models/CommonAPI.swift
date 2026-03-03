@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 
 public struct PaginationRequest: Codable, Sendable {
     public let page: Int

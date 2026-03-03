@@ -16,11 +16,9 @@ public struct ChangeDirectoryTool: Tool, Sendable {
     }
 
     private let onChange: @Sendable (String) async -> Void
-    private let currentPath: String
     private let root: String
 
     public init(currentPath: String, root: String? = nil, onChange: @escaping @Sendable (String) async -> Void) {
-        self.currentPath = currentPath
         self.root = root ?? currentPath
         self.onChange = onChange
     }

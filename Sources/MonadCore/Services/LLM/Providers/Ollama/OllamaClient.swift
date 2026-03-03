@@ -5,7 +5,6 @@ import OpenAI
 public actor OllamaClient {
     private let endpoint: URL
     private let modelName: String
-    private let timeoutInterval: TimeInterval
     private let maxRetries: Int
     private let session: URLSession
     private let logger = Logger.module(named: "ollama-client")
@@ -32,7 +31,6 @@ public actor OllamaClient {
         }
 
         self.modelName = modelName
-        self.timeoutInterval = timeoutInterval
         self.maxRetries = maxRetries
 
         // Use a custom configuration with longer timeout for local network robustness
@@ -40,7 +38,7 @@ public actor OllamaClient {
         config.timeoutIntervalForRequest = timeoutInterval
         config.timeoutIntervalForResource = timeoutInterval * 5
         config.waitsForConnectivity = true
-        self.session = URLSession(configuration: config)
+        session = URLSession(configuration: config)
         logger.debug("Initialized OllamaClient with model: \(modelName), endpoint: \(self.endpoint.absoluteString), timeout: \(timeoutInterval)s")
     }
 
@@ -49,7 +47,7 @@ public actor OllamaClient {
         tools: [ChatQuery.ChatCompletionToolParam]? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil
     ) -> AsyncThrowingStream<ChatStreamResult, Error> {
-        logger.debug("Ollama chat stream started for model: \(self.modelName)")
+        logger.debug("Ollama chat stream started for model: \(modelName)")
 
         // Capture dependencies
         let session = self.session
@@ -64,7 +62,7 @@ public actor OllamaClient {
                     try await RetryPolicy.retry(
                         maxRetries: maxRetries,
                         shouldRetry: { error in
-                            return !hasYielded.value && RetryPolicy.isTransient(error: error)
+                            !hasYielded.value && RetryPolicy.isTransient(error: error)
                         }
                     ) {
                         // Access self safely inside Task (on actor).
@@ -84,7 +82,7 @@ public actor OllamaClient {
 
                         logger.debug("Ollama response status code: \(httpResponse.statusCode)")
 
-                        guard (200...299).contains(httpResponse.statusCode)
+                        guard (200 ... 299).contains(httpResponse.statusCode)
                         else {
                             // Attempt to read error body
                             var errorBody = ""
@@ -93,7 +91,8 @@ public actor OllamaClient {
                             }
                             logger.error("Ollama error response body: \(errorBody)")
                             throw LLMServiceError.networkError(
-                                "Ollama API Error: \(httpResponse.statusCode) - \(errorBody)")
+                                "Ollama API Error: \(httpResponse.statusCode) - \(errorBody)"
+                            )
                         }
 
                         for try await line in stream.lines {
@@ -101,7 +100,8 @@ public actor OllamaClient {
                             guard let data = line.data(using: .utf8) else { continue }
 
                             if let response = try? JSONDecoder().decode(
-                                OllamaChatResponse.self, from: data) {
+                                OllamaChatResponse.self, from: data
+                            ) {
                                 if let converted = await self.convertToOpenAI(response) {
                                     // Check content or tool calls to mark yielded
                                     if let content = converted.choices.first?.delta.content, !content.isEmpty {
@@ -142,24 +142,24 @@ public actor OllamaClient {
             var content = ""
 
             switch msg {
-            case .system(let message):
+            case let .system(message):
                 role = "system"
-                if case .textContent(let text) = message.content {
+                if case let .textContent(text) = message.content {
                     content = text
                 } else {
                     content = "\(message.content)"
                 }
-            case .user(let message):
+            case let .user(message):
                 role = "user"
-                if case .string(let text) = message.content {
+                if case let .string(text) = message.content {
                     content = text
                 } else {
                     content = "\(message.content)"
                 }
-            case .assistant(let message):
+            case let .assistant(message):
                 role = "assistant"
                 if let messageContent = message.content {
-                    if case .textContent(let text) = messageContent {
+                    if case let .textContent(text) = messageContent {
                         content = text
                     } else {
                         content = "\(messageContent)"
@@ -167,16 +167,16 @@ public actor OllamaClient {
                 } else {
                     content = ""
                 }
-            case .tool(let message):
+            case let .tool(message):
                 role = "tool"
-                if case .textContent(let text) = message.content {
+                if case let .textContent(text) = message.content {
                     content = text
                 } else {
                     content = "\(message.content)"
                 }
-            case .developer(let message):
+            case let .developer(message):
                 role = "system"
-                if case .textContent(let text) = message.content {
+                if case let .textContent(text) = message.content {
                     content = text
                 } else {
                     content = "\(message.content)"
@@ -221,15 +221,15 @@ public actor OllamaClient {
 
     private func convertToOpenAI(_ response: OllamaChatResponse) -> ChatStreamResult? {
         // Map Ollama tool calls to OpenAI format
-        let openAIToolCalls = response.message.toolCalls?.enumerated().map { (index, tc) in
+        let openAIToolCalls = response.message.toolCalls?.enumerated().map { index, tc in
             [
                 "index": index,
                 "id": UUID().uuidString,
                 "type": "function",
                 "function": [
                     "name": tc.function.name,
-                    "arguments": (try? toJsonString(tc.function.arguments)) ?? "{}"
-                ]
+                    "arguments": (try? toJsonString(tc.function.arguments)) ?? "{}",
+                ],
             ]
         }
 
@@ -240,7 +240,7 @@ public actor OllamaClient {
 
             var delta: [String: Any] = [
                 "role": "assistant",
-                "content": response.message.content
+                "content": response.message.content,
             ]
 
             if let tc = openAIToolCalls {
@@ -256,14 +256,14 @@ public actor OllamaClient {
                     [
                         "index": 0,
                         "delta": delta,
-                        "finish_reason": response.message.toolCalls?.isEmpty == false ? "tool_calls" : "stop"
-                    ]
+                        "finish_reason": response.message.toolCalls?.isEmpty == false ? "tool_calls" : "stop",
+                    ],
                 ],
                 "usage": [
                     "prompt_tokens": promptEvalCount,
                     "completion_tokens": evalCount,
-                    "total_tokens": promptEvalCount + evalCount
-                ]
+                    "total_tokens": promptEvalCount + evalCount,
+                ],
             ]
 
             do {
@@ -283,7 +283,7 @@ public actor OllamaClient {
         // Manually construct JSON for intermediate chunks
         var delta: [String: Any] = [
             "role": "assistant",
-            "content": response.message.content
+            "content": response.message.content,
         ]
 
         if let tc = openAIToolCalls {
@@ -299,9 +299,9 @@ public actor OllamaClient {
                 [
                     "index": 0,
                     "delta": delta,
-                    "finish_reason": nil
-                ]
-            ]
+                    "finish_reason": nil,
+                ],
+            ],
         ]
 
         do {
@@ -313,12 +313,12 @@ public actor OllamaClient {
         }
     }
 
-    // Simple helper
+    /// Simple helper
     public func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat? = nil) async throws -> String {
         let maxRetries = self.maxRetries
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
             let messages: [ChatQuery.ChatCompletionMessageParam] = [
-                .user(.init(content: .string(content)))
+                .user(.init(content: .string(content))),
             ]
 
             var fullContent = ""
@@ -351,7 +351,7 @@ public actor OllamaClient {
 
             logger.debug("Ollama models response status: \(httpResponse.statusCode)")
 
-            guard (200...299).contains(httpResponse.statusCode) else {
+            guard (200 ... 299).contains(httpResponse.statusCode) else {
                 throw LLMServiceError.networkError("Ollama API Error: \(httpResponse.statusCode)")
             }
 
@@ -359,6 +359,7 @@ public actor OllamaClient {
                 struct Model: Codable {
                     let name: String
                 }
+
                 let models: [Model]
             }
 

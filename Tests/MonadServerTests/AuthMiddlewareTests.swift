@@ -3,7 +3,6 @@ import Hummingbird
 import HummingbirdTesting
 import Foundation
 @testable import MonadServer
-import MonadShared
 import NIOCore
 
 @Suite struct AuthMiddlewareTests {

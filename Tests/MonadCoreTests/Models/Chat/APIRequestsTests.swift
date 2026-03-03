@@ -1,5 +1,4 @@
 import XCTest
-@testable import MonadCore
 import OpenAI
 import Foundation
 

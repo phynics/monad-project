@@ -1,6 +1,5 @@
 import Foundation
 import MonadCore
-import MonadShared
 import Testing
 
 @testable import MonadServer

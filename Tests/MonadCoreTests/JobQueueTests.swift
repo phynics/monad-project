@@ -1,6 +1,5 @@
 import Foundation
 import MonadCore
-import MonadShared
 import Testing
 
 @Suite(.serialized)
@@ -8,14 +7,12 @@ import Testing
 struct JobQueueTests {
     private let persistence: MockPersistenceService
     private let context: JobQueueContext
-    private let sessionId: UUID
 
     init() async throws {
         let mock = MockPersistenceService()
         let sid = UUID()
-        self.sessionId = sid
-        self.persistence = mock
-        self.context = JobQueueContext(persistenceService: mock, sessionId: sid)
+        persistence = mock
+        context = JobQueueContext(persistenceService: mock, sessionId: sid)
 
         let session = Timeline(id: sid, title: "Test Session")
         try await mock.saveSession(session)
@@ -27,7 +24,7 @@ struct JobQueueTests {
         let result = try await tool.execute(parameters: [
             "title": "Fix bug",
             "description": "Critical UI bug",
-            "priority": 5
+            "priority": 5,
         ])
 
         #expect(result.success)
@@ -59,7 +56,7 @@ struct JobQueueTests {
         let tool = UpdateJobStatusTool(context: context)
         let result = try await tool.execute(parameters: [
             "id": String(idShort),
-            "status": "in_progress"
+            "status": "in_progress",
         ])
 
         #expect(result.success)
@@ -77,7 +74,7 @@ struct JobQueueTests {
         #expect(next?.title == "High")
         #expect(next?.status == .inProgress)
 
-        let updated = try await persistence.fetchJob(id: next!.id)
+        let updated = try await persistence.fetchJob(id: #require(next?.id))
         #expect(updated?.status == .inProgress)
     }
 }

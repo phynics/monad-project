@@ -1,7 +1,6 @@
 import Foundation
 import OpenAI
 import MonadCore
-import MonadShared
 import MonadPrompt
 import Testing
 

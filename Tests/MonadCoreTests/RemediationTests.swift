@@ -1,7 +1,6 @@
 import Testing
 import Foundation
 @testable import MonadCore
-import MonadShared
 
 @Suite("Remediation and Validation Tests")
 struct RemediationTests {

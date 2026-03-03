@@ -4,25 +4,24 @@ import MonadCore
 
 /// A colorful log handler for Monad Server
 public struct MonadLogHandler: LogHandler {
-    private let label: String
     private let labelPrefix: String
     public var logLevel: Logger.Level = .info
     public var metadata = Logger.Metadata()
 
     public init(label: String) {
-        self.label = label
         // Extract the last component of the label for cleaner display
         let module = label.components(separatedBy: ".").last ?? label
-        self.labelPrefix = ANSIColors.colorize("[\(module)]", color: ANSIColors.brightBlue)
+        labelPrefix = ANSIColors.colorize("[\(module)]", color: ANSIColors.brightBlue)
     }
 
     public func log(level: Logger.Level,
                     message: Logger.Message,
                     metadata: Logger.Metadata?,
-                    source: String,
-                    file: String,
-                    function: String,
-                    line: UInt) {
+                    source _: String,
+                    file _: String,
+                    function _: String,
+                    line _: UInt)
+    {
         let timestamp = ISO8601DateFormatter().string(from: Date())
         let levelColor = color(for: level)
         let levelStr = ANSIColors.colorize(level.rawValue.uppercased(), color: levelColor)

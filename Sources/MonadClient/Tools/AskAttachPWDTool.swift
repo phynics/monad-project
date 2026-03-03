@@ -1,6 +1,5 @@
 import Foundation
 import MonadCore
-import MonadShared
 
 public struct AskAttachPWDTool: MonadCore.Tool, Sendable {
     public let id = "ask_attach_pwd"

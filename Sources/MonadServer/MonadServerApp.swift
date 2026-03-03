@@ -1,13 +1,12 @@
 import ArgumentParser
+import Dependencies
 import Foundation
 import Hummingbird
+import HummingbirdWebSocket
 import Logging
 import MonadCore
-import MonadShared
 import ServiceLifecycle
 import UnixSignals
-import HummingbirdWebSocket
-import Dependencies
 
 @main
 @available(macOS 14.0, *)
@@ -16,32 +15,30 @@ struct MonadServer: AsyncParsableCommand {
         commandName: "monad-server",
         abstract: "Monad AI Assistant Server",
         discussion: """
-            A REST API server for the Monad AI Assistant.
+        A REST API server for the Monad AI Assistant.
 
-            EXAMPLES:
-              monad-server                          Start on default port 8080
-              monad-server --port 3000              Start on port 3000
-              monad-server -h 0.0.0.0 -p 8080       Bind to all interfaces
-              monad-server --verbose                Enable verbose logging
+        EXAMPLES:
+          monad-server                          Start on default port 8080
+          monad-server --port 3000              Start on port 3000
+          monad-server -h 0.0.0.0 -p 8080       Bind to all interfaces
+          monad-server --verbose                Enable verbose logging
 
-            API ENDPOINTS:
-              GET  /health                          Health check
-              GET  /api/sessions                    List sessions
-              POST /api/sessions                    Create session
-              POST /api/sessions/:id/chat/stream    Chat with streaming
-              GET  /api/memories                    List memories
-              GET  /api/notes                       List notes
-              GET  /api/tools                       List tools
-              GET  /api/config                      Get LLM configuration
+        API ENDPOINTS:
+          GET  /health                          Health check
+          GET  /api/sessions                    List sessions
+          POST /api/sessions                    Create session
+          POST /api/sessions/:id/chat/stream    Chat with streaming
+          GET  /api/memories                    List memories
+          GET  /api/notes                       List notes
+          GET  /api/tools                       List tools
+          GET  /api/config                      Get LLM configuration
 
-            AUTHENTICATION:
-              All /api/* endpoints require an API key via Authorization header.
-            """,
+        AUTHENTICATION:
+          All /api/* endpoints require an API key via Authorization header.
+        """,
         version: "1.0.0",
         helpNames: [.short, .long]
     )
-
-    typealias AppRequestContext = BasicWebSocketRequestContext
 
     @Option(name: .shortAndLong, help: "Hostname to bind to")
     var hostname: String = "127.0.0.1"

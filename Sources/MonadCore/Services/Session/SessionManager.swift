@@ -1,6 +1,6 @@
+import Dependencies
 import Foundation
 import Logging
-import Dependencies
 
 /// Manages conversation sessions, their associated context, and tool execution environments.
 ///
@@ -9,47 +9,47 @@ import Dependencies
 /// session-specific components like `ContextManager` and `ToolExecutor`.
 public actor SessionManager {
     /// In-memory cache of active sessions.
-    internal var sessions: [UUID: Timeline] = [:]
+    var sessions: [UUID: Timeline] = [:]
 
     /// Context managers responsible for RAG and context gathering for each session.
-    internal var contextManagers: [UUID: ContextManager] = [:]
+    var contextManagers: [UUID: ContextManager] = [:]
 
     /// Tool managers handling tool registration and availability for each session.
-    internal var toolManagers: [UUID: SessionToolManager] = [:]
+    var toolManagers: [UUID: SessionToolManager] = [:]
 
     /// Tool executors that perform the actual tool calls for each session.
-    internal var toolExecutors: [UUID: ToolExecutor] = [:]
+    var toolExecutors: [UUID: ToolExecutor] = [:]
 
     /// State management for tool execution context within a session.
-    internal var toolContextSessions: [UUID: ToolContextSession] = [:]
+    var toolContextSessions: [UUID: ToolContextSession] = [:]
 
     /// Snapshots of tool and context state used for debugging chat turns.
-    internal var debugSnapshots: [UUID: DebugSnapshot] = [:]
+    var debugSnapshots: [UUID: DebugSnapshot] = [:]
 
     /// Ongoing generation tasks for each session.
-    internal var activeTasks: [UUID: Task<Void, Never>] = [:]
+    var activeTasks: [UUID: Task<Void, Never>] = [:]
 
     @Dependency(\.persistenceService) private var _persistenceService
-    @Dependency(\.embeddingService) private var _embeddingService
-    @Dependency(\.llmService) private var _llmService
     @Dependency(\.agentRegistry) private var _agentRegistry
 
-    internal var persistenceService: any SessionPersistenceProtocol
+    var persistenceService: any SessionPersistenceProtocol
         & MessageStoreProtocol
         & WorkspacePersistenceProtocol
         & MemoryStoreProtocol
         & ToolPersistenceProtocol
         & JobStoreProtocol
-        & AgentStoreProtocol {
+        & AgentStoreProtocol
+    {
         _persistenceService
     }
-    internal var embeddingService: any EmbeddingServiceProtocol { _embeddingService }
-    internal var llmService: any LLMServiceProtocol { _llmService }
-    internal var agentRegistry: AgentRegistry { _agentRegistry }
 
-    internal let vectorStore: (any VectorStoreProtocol)?
-    internal let workspaceRoot: URL
-    internal let connectionManager: (any ClientConnectionManagerProtocol)?
+    var agentRegistry: AgentRegistry {
+        _agentRegistry
+    }
+
+    let vectorStore: (any VectorStoreProtocol)?
+    let workspaceRoot: URL
+    let connectionManager: (any ClientConnectionManagerProtocol)?
     public let workspaceManager: WorkspaceManager
 
     /// Initializes a new `SessionManager`.
@@ -70,7 +70,7 @@ public actor SessionManager {
 
         // Use withDependencies to ensure repository picks up current context if needed,
         // although Dependencies usually works via property wrappers.
-        self.workspaceManager = WorkspaceManager(
+        workspaceManager = WorkspaceManager(
             repository: WorkspaceRepository(),
             connectionManager: connectionManager,
             workspaceCreator: workspaceCreator
@@ -78,6 +78,7 @@ public actor SessionManager {
     }
 
     // MARK: - Component Setup
+
     /// Initializes and configures the internal components for a conversation session.
     ///
     /// This method sets up the `ContextManager`, `ToolContextSession`, `SessionToolManager`,
@@ -88,7 +89,7 @@ public actor SessionManager {
     ///   - session: The conversation session to set up components for.
     ///   - workspaceURL: The file system URL for the session's workspace.
     ///   - parentId: An optional parent session ID for context inheritance.
-    internal func setupSessionComponents(
+    func setupSessionComponents(
         session: Timeline,
         workspaceURL: URL,
         parentId: UUID? = nil
@@ -98,7 +99,6 @@ public actor SessionManager {
         let primaryWorkspace = try? await workspaceManager.getWorkspace(id: primaryWorkspaceId)
 
         let contextManager = ContextManager(
-            vectorStore: vectorStore,
             workspace: primaryWorkspace
         )
         contextManagers[session.id] = contextManager
@@ -113,7 +113,8 @@ public actor SessionManager {
             for: session, jailRoot: workspaceURL.path,
             toolContextSession: toolContextSession,
             jobQueueContext: jobQueueContext,
-            parentId: parentId)
+            parentId: parentId
+        )
         toolManagers[session.id] = toolManager
 
         // Hydrate workspaces and register with ToolManager using WorkspaceManager
@@ -145,7 +146,8 @@ public actor SessionManager {
     /// - Returns: The newly created `Timeline`.
     public func createSession(title: String = "New Conversation")
         async throws
-        -> Timeline {
+        -> Timeline
+    {
         let sessionId = UUID()
 
         let sessionWorkspaceURL = workspaceRoot.appendingPathComponent(
@@ -154,7 +156,8 @@ public actor SessionManager {
         .appendingPathComponent(sessionId.uuidString, isDirectory: true)
 
         try FileManager.default.createDirectory(
-            at: sessionWorkspaceURL, withIntermediateDirectories: true)
+            at: sessionWorkspaceURL, withIntermediateDirectories: true
+        )
 
         let notesDir = sessionWorkspaceURL.appendingPathComponent("Notes", isDirectory: true)
         try FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true)
@@ -236,7 +239,7 @@ public actor SessionManager {
         if let wd = session.workingDirectory {
             sessionWorkspaceURL = URL(fileURLWithPath: wd)
         } else {
-             sessionWorkspaceURL = workspaceRoot.appendingPathComponent(
+            sessionWorkspaceURL = workspaceRoot.appendingPathComponent(
                 "sessions", isDirectory: true
             ).appendingPathComponent(id.uuidString, isDirectory: true)
         }
@@ -331,7 +334,7 @@ public actor SessionManager {
     public func cleanupStaleSessions(maxAge: TimeInterval) {
         let now = Date()
         let staleIds = sessions.values.filter { session in
-            return now.timeIntervalSince(session.updatedAt) > maxAge
+            now.timeIntervalSince(session.updatedAt) > maxAge
         }.map { $0.id }
 
         for id in staleIds {

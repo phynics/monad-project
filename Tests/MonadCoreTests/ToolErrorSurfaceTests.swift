@@ -1,7 +1,6 @@
 import Testing
 import Foundation
 @testable import MonadCore
-import MonadShared
 import OpenAI
 
 @Suite("Tool Error Surfacing Tests")

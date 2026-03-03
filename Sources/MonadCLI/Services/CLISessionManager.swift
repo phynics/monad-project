@@ -1,7 +1,6 @@
 import Foundation
 import ArgumentParser
 import MonadClient
-import MonadCore
 import MonadShared
 
 struct CLISessionManager {

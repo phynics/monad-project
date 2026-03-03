@@ -1,12 +1,11 @@
+import Dependencies
 import Foundation
 import Hummingbird
+import HummingbirdWebSocket
 import Logging
 import MonadCore
-import MonadShared
 import ServiceLifecycle
 import UnixSignals
-import HummingbirdWebSocket
-import Dependencies
 
 @available(macOS 14.0, *)
 public struct MonadServerFactory {
@@ -141,7 +140,8 @@ public struct MonadServerFactory {
             }
 
             let sessionController = SessionAPIController<AppRequestContext>(
-                sessionManager: sessionManager)
+                sessionManager: sessionManager
+            )
             sessionController.addRoutes(to: protected.group("/sessions"))
 
             let chatController = ChatAPIController<AppRequestContext>(
@@ -159,7 +159,8 @@ public struct MonadServerFactory {
             memoryController.addRoutes(to: protected.group("/memories"))
 
             let pruneController = PruneAPIController<AppRequestContext>(
-                persistenceService: persistenceService)
+                persistenceService: persistenceService
+            )
             pruneController.addRoutes(to: protected.group("/prune"))
 
             let toolController = ToolAPIController<AppRequestContext>(
@@ -176,7 +177,8 @@ public struct MonadServerFactory {
             let workspacesGroup = protected.group("/workspaces")
 
             let workspaceAPIController = WorkspaceAPIController<AppRequestContext>(
-                persistenceService: persistenceService, logger: logger)
+                persistenceService: persistenceService
+            )
             workspaceAPIController.addRoutes(to: workspacesGroup)
 
             let workspaceStore = try await WorkspaceStore(
@@ -184,11 +186,13 @@ public struct MonadServerFactory {
                 workspaceCreator: WorkspaceFactory()
             )
             let filesController = FilesAPIController<AppRequestContext>(
-                workspaceStore: workspaceStore)
+                workspaceStore: workspaceStore
+            )
             filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
 
             let clientController = ClientAPIController<AppRequestContext>(
-                persistenceService: persistenceService, logger: logger)
+                persistenceService: persistenceService
+            )
             clientController.addRoutes(to: protected.group("/clients"))
 
             let configController = ConfigurationAPIController<AppRequestContext>(llmService: llmService)
@@ -210,7 +214,7 @@ public struct MonadServerFactory {
                         .init(service: app),
                         .init(service: jobRunner),
                         .init(service: orphanCleanup),
-                        .init(service: bonjourAdvertiser)
+                        .init(service: bonjourAdvertiser),
                     ],
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                     logger: logger
@@ -238,9 +242,11 @@ public struct MonadServerFactory {
                 // Fallback
                 let home = fileManager.homeDirectoryForCurrentUser
                 let workspacesDir = home.appendingPathComponent(
-                    ".monad/workspaces", isDirectory: true)
+                    ".monad/workspaces", isDirectory: true
+                )
                 try? fileManager.createDirectory(
-                    at: workspacesDir, withIntermediateDirectories: true)
+                    at: workspacesDir, withIntermediateDirectories: true
+                )
                 return workspacesDir
             }
 

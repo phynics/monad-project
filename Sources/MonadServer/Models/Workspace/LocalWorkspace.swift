@@ -1,5 +1,4 @@
 import MonadCore
-import MonadShared
 import Foundation
 
 /// Implementation of WorkspaceProtocol for workspaces hosted on the local server filesystem

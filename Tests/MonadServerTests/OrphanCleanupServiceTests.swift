@@ -1,6 +1,5 @@
 import XCTest
 import MonadCore
-import MonadShared
 @testable import MonadServer
 import Dependencies
 

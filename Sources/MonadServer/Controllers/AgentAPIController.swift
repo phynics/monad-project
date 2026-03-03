@@ -2,7 +2,6 @@ import Foundation
 import HTTPTypes
 import Hummingbird
 import MonadCore
-import MonadShared
 import NIOCore
 
 /// Controller for discovering available agents in the framework

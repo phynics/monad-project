@@ -1,6 +1,5 @@
 import OpenAI
 @testable import MonadCore
-import MonadShared
 import MonadPrompt
 import Testing
 

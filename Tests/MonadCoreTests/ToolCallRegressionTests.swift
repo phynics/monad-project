@@ -1,7 +1,6 @@
 import Foundation
 import Testing
 @testable import MonadCore
-import MonadShared
 
 // Define MockComplexTool here to verify ToolExecutor logic with complex types
 struct MockComplexTool: Tool, @unchecked Sendable {

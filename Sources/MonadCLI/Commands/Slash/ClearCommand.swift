@@ -1,5 +1,4 @@
 import Foundation
-import MonadClient
 
 /// Clear the terminal screen
 struct ClearCommand: SlashCommand {

@@ -1,6 +1,6 @@
 import Foundation
-import OpenAI
 import Logging
+import OpenAI
 
 /// A specialized client for OpenRouter that handles their specific model discovery API
 /// and ensures the correct /api/v1 path prefix is used for OpenAI compatibility.
@@ -8,7 +8,6 @@ public actor OpenRouterClient {
     private let apiKey: String
     private let modelName: String
     private let endpoint: URL
-    private let timeoutInterval: TimeInterval
     private let maxRetries: Int
     private let logger = Logger.module(named: "openrouter-client")
     private let session: URLSession
@@ -24,13 +23,12 @@ public actor OpenRouterClient {
     ) {
         self.apiKey = apiKey
         self.modelName = modelName
-        self.timeoutInterval = timeoutInterval
         self.maxRetries = maxRetries
 
         // OpenRouter base URL is usually https://openrouter.ai/api
         // We ensure we have the base domain and /api path
         var urlString = "\(scheme)://\(host)"
-        if port != 443 && port != 80 {
+        if port != 443, port != 80 {
             urlString += ":\(port)"
         }
 
@@ -41,15 +39,15 @@ public actor OpenRouterClient {
         }
 
         if let url = URL(string: urlString) {
-            self.endpoint = url
+            endpoint = url
         } else {
             logger.warning("Invalid OpenRouter URL '\(urlString)', falling back to default")
-            self.endpoint = URL(string: "https://openrouter.ai/api")!
+            endpoint = URL(string: "https://openrouter.ai/api")!
         }
 
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = timeoutInterval
-        self.session = URLSession(configuration: config)
+        session = URLSession(configuration: config)
         logger.debug("Initialized OpenRouterClient with model: \(modelName), endpoint: \(urlString), timeout: \(timeoutInterval)s")
     }
 
@@ -78,7 +76,7 @@ public actor OpenRouterClient {
                     try await RetryPolicy.retry(
                         maxRetries: maxRetries,
                         shouldRetry: { error in
-                            return !hasYielded.value && RetryPolicy.isTransient(error: error)
+                            !hasYielded.value && RetryPolicy.isTransient(error: error)
                         }
                     ) {
                         var request = URLRequest(url: chatURL)
@@ -109,7 +107,7 @@ public actor OpenRouterClient {
 
                         logger.debug("OpenRouter response status: \(httpResponse.statusCode)")
 
-                        guard (200...299).contains(httpResponse.statusCode) else {
+                        guard (200 ... 299).contains(httpResponse.statusCode) else {
                             var errorBody = ""
                             for try await line in stream.lines {
                                 errorBody += line
@@ -165,7 +163,7 @@ public actor OpenRouterClient {
 
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
             let messages: [ChatQuery.ChatCompletionMessageParam] = [
-                .user(.init(content: .string(content)))
+                .user(.init(content: .string(content))),
             ]
 
             var fullContent = ""
@@ -198,7 +196,7 @@ public actor OpenRouterClient {
 
             logger.debug("OpenRouter models response status: \(httpResponse.statusCode)")
 
-            guard (200...299).contains(httpResponse.statusCode) else {
+            guard (200 ... 299).contains(httpResponse.statusCode) else {
                 throw LLMServiceError.networkError("OpenRouter API Error: \(httpResponse.statusCode)")
             }
 
@@ -206,6 +204,7 @@ public actor OpenRouterClient {
                 struct Model: Codable {
                     let id: String
                 }
+
                 let data: [Model]
             }
 
@@ -217,5 +216,5 @@ public actor OpenRouterClient {
     }
 }
 
-// Conform to the internal protocol
+/// Conform to the internal protocol
 extension OpenRouterClient: LLMClientProtocol {}

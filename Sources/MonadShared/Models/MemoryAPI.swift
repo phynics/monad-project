@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 
 public struct CreateMemoryRequest: Codable, Sendable {
     public let content: String

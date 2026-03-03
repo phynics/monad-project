@@ -1,7 +1,6 @@
 import Foundation
 import Logging
 import MonadCore
-import MonadShared
 import OpenAI
 import MonadPrompt
 

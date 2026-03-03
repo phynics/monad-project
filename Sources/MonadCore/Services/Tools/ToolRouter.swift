@@ -1,6 +1,6 @@
+import Dependencies
 import Foundation
 import Logging
-import Dependencies
 
 /// Routes tool execution requests to the appropriate handler (local or remote)
 public actor ToolRouter {
@@ -56,7 +56,7 @@ public actor ToolRouter {
     private func executeLocally(
         tool: ToolReference,
         arguments: [String: AnyCodable],
-        workspace: WorkspaceReference,
+        workspace _: WorkspaceReference,
         sessionId: UUID
     ) async throws -> String {
         let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
@@ -67,7 +67,7 @@ public actor ToolRouter {
         }
 
         guard let realTool = await toolManager.getTool(id: tool.toolId) else {
-             throw ToolError.toolNotFound(tool.displayName)
+            throw ToolError.toolNotFound(tool.displayName)
         }
 
         // Convert arguments to [String: Any] for the tool
@@ -89,7 +89,7 @@ public actor ToolRouter {
 
     private func executeRemotely(
         tool: ToolReference,
-        arguments: [String: AnyCodable],
+        arguments _: [String: AnyCodable],
         workspace: WorkspaceReference
     ) async throws -> String {
         let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
@@ -101,7 +101,7 @@ public actor ToolRouter {
             throw ToolError.clientNotConnected
         }
 
-        // In the core framework, we throw this special error to tell the 
+        // In the core framework, we throw this special error to tell the
         // transport layer (Server/CLI) that client intervention is needed.
         throw ToolError.clientExecutionRequired
     }

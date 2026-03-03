@@ -1,5 +1,4 @@
 import MonadCore
-import MonadShared
 import Testing
 
 @Suite struct TokenEstimatorTests {

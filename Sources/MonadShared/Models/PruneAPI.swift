@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 
 public struct PruneMemoriesRequest: Codable, Sendable {
     public let query: String?

@@ -1,6 +1,5 @@
 import Foundation
 import MonadCore
-import MonadShared
 import Hummingbird
 import HummingbirdWebSocket
 import Logging

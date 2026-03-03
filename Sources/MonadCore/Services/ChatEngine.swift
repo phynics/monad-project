@@ -1,8 +1,8 @@
+import Dependencies
 import Foundation
 import Logging
-import OpenAI
-import Dependencies
 import MonadPrompt
+import OpenAI
 
 /// Unified chat engine that handles both interactive chat and autonomous agent execution.
 /// Returns `AsyncThrowingStream<ChatEvent>` for all use cases — callers decide how to consume.
@@ -146,7 +146,7 @@ public final class ChatEngine: @unchecked Sendable {
                 )
 
                 switch result {
-                case .continue(let newMessages):
+                case let .continue(newMessages):
                     currentMessages.append(contentsOf: newMessages)
                 case .finish:
                     continuation.finish()
@@ -246,7 +246,7 @@ public final class ChatEngine: @unchecked Sendable {
             }
 
             // Forward separate reasoning_content if model supports it out of band
-            // OpenAI type doesn't officially wrap reasoning_content locally yet unless we mapped it, 
+            // OpenAI type doesn't officially wrap reasoning_content locally yet unless we mapped it,
             // but for now StreamingParser handles standard <think> tags locally.
 
             // Accumulate Tool Calls
@@ -480,7 +480,7 @@ public final class ChatEngine: @unchecked Sendable {
             )
 
             for try await event in stream {
-                if case .complete(let data) = event {
+                if case let .complete(data) = event {
                     return data
                 }
             }
@@ -491,7 +491,7 @@ public final class ChatEngine: @unchecked Sendable {
     }
 
     private func buildPrompt(
-        session: Timeline?,
+        session _: Timeline?,
         message: String,
         contextData: ContextData,
         history: [Message],
@@ -575,11 +575,11 @@ public final class ChatEngine: @unchecked Sendable {
         var output = ""
         for message in messages {
             switch message {
-            case .system(let param):
+            case let .system(param):
                 output += "─── [SYSTEM] ───\n\(param.content)\n\n"
-            case .user(let param):
+            case let .user(param):
                 output += "─── [USER] ───\n\(param.content)\n\n"
-            case .assistant(let param):
+            case let .assistant(param):
                 var content = ""
                 if let contentValue = param.content {
                     content = "\(contentValue)"
@@ -591,9 +591,9 @@ public final class ChatEngine: @unchecked Sendable {
                     }
                 }
                 output += "\n"
-            case .tool(let param):
+            case let .tool(param):
                 output += "─── [TOOL: \(param.toolCallId)] ───\n\(param.content)\n\n"
-            case .developer(let param):
+            case let .developer(param):
                 output += "─── [DEVELOPER] ───\n\(param.content)\n\n"
             @unknown default:
                 output += "─── [UNKNOWN] ───\n\(message)\n\n"

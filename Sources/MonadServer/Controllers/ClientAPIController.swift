@@ -8,11 +8,9 @@ import MonadShared
 /// Controller for managing client identities
 public struct ClientAPIController<Context: RequestContext>: Sendable {
     let persistenceService: any ClientStoreProtocol & WorkspacePersistenceProtocol & ToolPersistenceProtocol
-    let logger: Logger
 
-    public init(persistenceService: any ClientStoreProtocol & WorkspacePersistenceProtocol & ToolPersistenceProtocol, logger: Logger) {
+    public init(persistenceService: any ClientStoreProtocol & WorkspacePersistenceProtocol & ToolPersistenceProtocol) {
         self.persistenceService = persistenceService
-        self.logger = logger
     }
 
     public func addRoutes(to group: RouterGroup<Context>) {
@@ -45,7 +43,7 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
             uri: workspaceUri,
             hostType: .client,
             ownerId: id,
-            rootPath: nil,  // Unknown until client reports it, or assume home
+            rootPath: nil, // Unknown until client reports it, or assume home
             trustLevel: .full
         )
 
@@ -58,12 +56,13 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
         }
 
         let response = ClientRegistrationResponse(
-            client: client, defaultWorkspace: defaultWorkspace)
+            client: client, defaultWorkspace: defaultWorkspace
+        )
         return try response.response(status: .created, from: request, context: context)
     }
 
     /// GET /clients/:id
-    @Sendable func get(request: Request, context: Context) async throws -> ClientIdentity {
+    @Sendable func get(request _: Request, context: Context) async throws -> ClientIdentity {
         let id = try context.parameters.require("id", as: UUID.self)
         let client = try await persistenceService.fetchClient(id: id)
 
@@ -75,12 +74,12 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
     }
 
     /// GET /clients
-    @Sendable func list(request: Request, context: Context) async throws -> [ClientIdentity] {
+    @Sendable func list(request _: Request, context _: Context) async throws -> [ClientIdentity] {
         return try await persistenceService.fetchAllClients()
     }
 
     /// DELETE /clients/:id
-    @Sendable func delete(request: Request, context: Context) async throws -> HTTPResponse.Status {
+    @Sendable func delete(request _: Request, context: Context) async throws -> HTTPResponse.Status {
         let id = try context.parameters.require("id", as: UUID.self)
         let deleted = try await persistenceService.deleteClient(id: id)
 
@@ -93,4 +92,5 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
 }
 
 // MARK: - GRDB Conformance for ClientIdentity
+
 // Extended in MonadCore

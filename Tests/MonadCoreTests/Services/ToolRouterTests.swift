@@ -1,7 +1,6 @@
 import XCTest
 import Foundation
 @testable import MonadCore
-import MonadShared
 import Dependencies
 
 final class ToolRouterTests: XCTestCase {

@@ -1,6 +1,5 @@
 import Testing
 @testable import MonadCore
-import MonadShared
 import Foundation
 
 @Suite("Retry Policy Tests")

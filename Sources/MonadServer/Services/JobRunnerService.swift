@@ -1,9 +1,8 @@
-import MonadCore
-import MonadShared
+import Dependencies
 import Foundation
 import Logging
+import MonadCore
 import ServiceLifecycle
-import Dependencies
 
 /// Service that monitors and executes background jobs
 public final class JobRunnerService: Service, @unchecked Sendable {
@@ -27,11 +26,11 @@ public final class JobRunnerService: Service, @unchecked Sendable {
     public func run() async throws {
         logger.info("Job Runner Service started (Event Driven)")
 
-        let persistence = await self.sessionManager.getPersistenceService()
+        let persistence = await sessionManager.getPersistenceService()
 
         // Initial scan
         do {
-            try await self.processPendingJobs(persistence)
+            try await processPendingJobs(persistence)
         } catch {
             logger.error("Initial job scan failed: \(error)")
         }
@@ -43,20 +42,20 @@ public final class JobRunnerService: Service, @unchecked Sendable {
                     for await event in await persistence.monitorJobs() {
                         if Task.isCancelled { break }
                         switch event {
-                        case .jobAdded(let job), .jobUpdated(let job):
-                             if job.status == .pending {
-                                 // Immediate processing if ready and no schedule delay
-                                 if let nextRun = job.nextRunAt, nextRun > Date() {
-                                     continue
-                                 }
-                                 do {
-                                     try await self.processJob(job, persistence: persistence)
-                                 } catch {
-                                     self.logger.error("Failed to process event-driven job \(job.id): \(error)")
-                                 }
-                             }
+                        case let .jobAdded(job), let .jobUpdated(job):
+                            if job.status == .pending {
+                                // Immediate processing if ready and no schedule delay
+                                if let nextRun = job.nextRunAt, nextRun > Date() {
+                                    continue
+                                }
+                                do {
+                                    try await self.processJob(job, persistence: persistence)
+                                } catch {
+                                    self.logger.error("Failed to process event-driven job \(job.id): \(error)")
+                                }
+                            }
                         case .jobDeleted:
-                             break
+                            break
                         }
                     }
                 }
@@ -92,7 +91,7 @@ public final class JobRunnerService: Service, @unchecked Sendable {
         }
     }
 
-    private func processJob(_ job: Job, persistence: any JobStoreProtocol) async throws {
+    private func processJob(_ job: Job, persistence _: any JobStoreProtocol) async throws {
         let sid = ANSIColors.colorize(job.sessionId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
         let jid = ANSIColors.colorize(job.id.uuidString.prefix(8).lowercased(), color: ANSIColors.dim)
         let jobTitle = ANSIColors.colorize(job.title, color: ANSIColors.brightCyan)

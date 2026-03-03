@@ -1,20 +1,18 @@
 import Foundation
 import GRDB
+import HTTPTypes
 import Hummingbird
 import Logging
 import MonadCore
 import MonadShared
-import HTTPTypes
 import NIOCore
 
 /// Controller for managing workspaces
 public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     let persistenceService: any WorkspacePersistenceProtocol & ToolPersistenceProtocol
-    let logger: Logger
 
-    public init(persistenceService: any WorkspacePersistenceProtocol & ToolPersistenceProtocol, logger: Logger) {
+    public init(persistenceService: any WorkspacePersistenceProtocol & ToolPersistenceProtocol) {
         self.persistenceService = persistenceService
-        self.logger = logger
     }
 
     public func addRoutes(to group: RouterGroup<Context>) {
@@ -55,7 +53,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     }
 
     /// GET /workspaces
-    @Sendable func list(request: Request, context: Context) async throws -> some ResponseGenerator {
+    @Sendable func list(request: Request, context _: Context) async throws -> some ResponseGenerator {
         let pagination = request.getPagination()
         let page = pagination.page
         let perPage = pagination.perPage
@@ -68,7 +66,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         let paginatedWorkspaces: [WorkspaceReference]
         if start < total {
             let end = min(start + perPage, total)
-            paginatedWorkspaces = Array(workspaces[start..<end])
+            paginatedWorkspaces = Array(workspaces[start ..< end])
         } else {
             paginatedWorkspaces = []
         }
@@ -82,7 +80,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     }
 
     /// GET /workspaces/:id
-    @Sendable func get(request: Request, context: Context) async throws -> WorkspaceReference {
+    @Sendable func get(request _: Request, context: Context) async throws -> WorkspaceReference {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         let workspace = try await getWorkspace(id: id)
 
@@ -115,7 +113,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     }
 
     /// DELETE /workspaces/:id
-    @Sendable func delete(request: Request, context: Context) async throws -> HTTPResponse.Status {
+    @Sendable func delete(request _: Request, context: Context) async throws -> HTTPResponse.Status {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         try await persistenceService.deleteWorkspace(id: id)
         return .noContent
@@ -132,7 +130,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     }
 
     /// GET /workspaces/:id/tools
-    @Sendable func listTools(request: Request, context: Context) async throws -> [ToolReference] {
+    @Sendable func listTools(request _: Request, context: Context) async throws -> [ToolReference] {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
 
         return try await persistenceService.fetchTools(forWorkspaces: [id])

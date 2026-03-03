@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 
 public struct ToolInfo: Codable, Sendable, Identifiable {
     public let id: String

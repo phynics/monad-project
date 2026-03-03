@@ -4,7 +4,6 @@ import HummingbirdTesting
 import Foundation
 @testable import MonadServer
 import MonadCore
-import MonadShared
 import NIOCore
 
 @Suite struct ConfigurationControllerTests {

@@ -1,7 +1,6 @@
 /// Protocol for managing remote client identities and their connection state.
 
 import Foundation
-import MonadCore
 import MonadShared
 
 public protocol ClientStoreProtocol: Sendable {

@@ -1,5 +1,4 @@
 import Foundation
-import MonadClient
 
 /// Debug command to display the raw context delivered to the LLM
 struct DebugCommand: SlashCommand {

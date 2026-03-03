@@ -13,13 +13,11 @@ public enum MemoryVacuumPolicy: Sendable {
 public actor ConversationArchiver {
     private let persistence: any SessionPersistenceProtocol & MemoryStoreProtocol & MessageStoreProtocol
     private let llmService: LLMService
-    private let contextManager: ContextManager
     private let logger = Logger.module(named: "ConversationArchiver")
 
-    public init(persistence: any SessionPersistenceProtocol & MemoryStoreProtocol & MessageStoreProtocol, llmService: LLMService, contextManager: ContextManager) {
+    public init(persistence: any SessionPersistenceProtocol & MemoryStoreProtocol & MessageStoreProtocol, llmService: LLMService) {
         self.persistence = persistence
         self.llmService = llmService
-        self.contextManager = contextManager
     }
 
     /// Archive a conversation and index its messages as semantic memories
@@ -98,7 +96,7 @@ public actor ConversationArchiver {
         // 4. Update Summary? (Future improvement)
 
         // 5. Memory Vacuum (Cleanup redundancies)
-        if case .run(let threshold) = vacuumPolicy {
+        if case let .run(threshold) = vacuumPolicy {
             _ = try await persistence.vacuumMemories(threshold: threshold)
         }
 

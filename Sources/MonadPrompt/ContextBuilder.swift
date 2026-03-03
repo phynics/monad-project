@@ -3,7 +3,6 @@ import Foundation
 /// A result builder for composing prompt context sections declaratively
 @resultBuilder
 public enum ContextBuilder {
-
     public static func buildBlock(_ sections: [ContextSection]...) -> [ContextSection] {
         sections.flatMap { $0 }
     }
@@ -32,8 +31,8 @@ public enum ContextBuilder {
         components.flatMap { $0 }
     }
 
-    // Support for void/empty expressions (e.g. print statements in builder)
-    public static func buildExpression(_ expression: Void) -> [ContextSection] {
+    /// Support for void/empty expressions (e.g. print statements in builder)
+    public static func buildExpression(_: Void) -> [ContextSection] {
         []
     }
 }

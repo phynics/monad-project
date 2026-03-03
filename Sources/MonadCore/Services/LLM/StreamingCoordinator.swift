@@ -43,7 +43,7 @@ public final class StreamingCoordinator {
 
     public func stopStreaming() {
         isStreaming = false
-        logger.debug("Stopped streaming. Final content length: \(self.streamingContent.count)")
+        logger.debug("Stopped streaming. Final content length: \(streamingContent.count)")
     }
 
     public func updateMetadata(from result: ChatStreamResult) {
@@ -68,8 +68,8 @@ public final class StreamingCoordinator {
         }
     }
 
-    // Check for native tool calls in the stream delta
-    // Using [Any] to avoid deep type nesting issues with OpenAI library
+    /// Check for native tool calls in the stream delta
+    /// Using [Any] to avoid deep type nesting issues with OpenAI library
     public func processToolCalls(_ toolCalls: [Any]) {
         logger.debug("Received \(toolCalls.count) native tool call deltas")
         for toolCall in toolCalls {
@@ -143,10 +143,6 @@ public final class StreamingCoordinator {
             if let arguments = arguments {
                 accumulatedToolCalls[idx]?.arguments += arguments
             }
-
-            if let id = id {
-                accumulatedToolCalls[idx]?.id = id
-            }
         }
     }
 
@@ -179,14 +175,15 @@ public final class StreamingCoordinator {
                 // Parse arguments JSON
                 var args: [String: AnyCodable] = [:]
                 if let data = accumulator.arguments.data(using: .utf8),
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                {
                     // Convert [String: Any] -> [String: AnyCodable]
                     args = json.mapValues { AnyCodable($0) }
                 } else if !accumulator.arguments.isEmpty {
-                     // Fallback for simple string arguments if JSON parsing fails but content exists
-                     // This might happen if the LLM produces malformed JSON.
-                     // For now, we leave it empty or could try to fix it.
-                     // But strictly, ToolCall expects [String: AnyCodable]
+                    // Fallback for simple string arguments if JSON parsing fails but content exists
+                    // This might happen if the LLM produces malformed JSON.
+                    // For now, we leave it empty or could try to fix it.
+                    // But strictly, ToolCall expects [String: AnyCodable]
                 }
 
                 return ToolCall(
@@ -208,20 +205,6 @@ public final class StreamingCoordinator {
             logger.notice("Streaming cancelled")
         }
 
-        let duration = startTime.map { Date().timeIntervalSince($0) }
-
-        let completionTokens = if let usageTokens = usage?.completionTokens {
-            usageTokens
-        } else {
-            TokenEstimator.estimate(text: streamingContent + streamingThinking)
-        }
-
-        let tokensPerSecond = if let duration = duration, duration > 0 {
-            Double(completionTokens) / duration
-        } else {
-            nil as Double?
-        }
-
         // Create final message
         return Message(
             content: contentWithoutTools,
@@ -235,7 +218,6 @@ public final class StreamingCoordinator {
 // MARK: - Helper Types
 
 private struct ToolCallAccumulator {
-    var id: String?
     var name: String = ""
     var arguments: String = ""
 }

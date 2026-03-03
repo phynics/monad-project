@@ -2,7 +2,6 @@ import Testing
 import Foundation
 import Dependencies
 @testable import MonadCore
-import MonadShared
 
 @Suite("Test Helper Tests")
 struct TestHelperTests {

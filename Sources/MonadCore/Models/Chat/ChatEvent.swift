@@ -37,6 +37,35 @@ public enum ChatEvent: Sendable {
     case error(Error)
 }
 
+public enum NewChatEvent: Sendable {
+    public enum ChatDeltaEvent: Sendable {
+        case thinking(String)
+        case generation(String)
+        case toolCall(ToolCallDelta)
+        case toolExecution(toolCallId: String, status: ToolExecutionStatus)
+    }
+
+    public enum MetaEvent: Sendable {
+        case generationContext(ChatMetadata)
+        case generationCompleted(message: Message, metadata: APIResponseMetadata)
+    }
+
+    public enum ErrorEvent: Sendable {
+        case toolCallError(toolCallId: String, name: String, error: String)
+        case error(Error)
+    }
+
+    public enum CompletionEvent: Sendable {
+        case generationCompleted(message: Message, metadata: APIResponseMetadata)
+        case toolExecution(toolCallId: String, status: ToolExecutionStatus)
+    }
+
+    case delta(ChatDeltaEvent)
+    case meta(MetaEvent)
+    case error(ErrorEvent)
+    case completion(CompletionEvent)
+}
+
 // MARK: - Convenience Properties
 
 extension ChatEvent {

@@ -7,7 +7,7 @@ public enum ToolExecutorError: LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .toolNotFound(let name):
+        case let .toolNotFound(name):
             return "Tool '\(name)' not found"
         }
     }
@@ -73,7 +73,7 @@ public actor ToolExecutor {
             logger.warning("Loop detected for tool: \(toolCall.name)")
             return Message(
                 content:
-                    "Error: Loop detected. Tool '\(toolCall.name)' has been called \(count) times with the exact same parameters. Please try a different approach or verify your logic.",
+                "Error: Loop detected. Tool '\(toolCall.name)' has been called \(count) times with the exact same parameters. Please try a different approach or verify your logic.",
                 role: .tool,
                 think: nil
             )
@@ -115,7 +115,8 @@ public actor ToolExecutor {
 
             // Append context state if a context is active and this is a context tool
             if await contextSession.hasActiveContext && isContextTool,
-                let context = await contextSession.activeContext {
+               let context = await contextSession.activeContext
+            {
                 let contextState = await context.formatState()
                 if !contextState.isEmpty {
                     responseContent += "\n\n---\n\(contextState)"
@@ -149,8 +150,9 @@ public actor ToolExecutor {
     ///   - toolCall: The tool call to execute
     ///   - assistantMessageId: ID of the assistant message that triggered this call
     /// - Returns: ToolExecutionResult containing message and optional compactification node
-    public func executeWithSummary(_ toolCall: ToolCall, assistantMessageId: UUID) async throws
-        -> ToolExecutionResult {
+    public func executeWithSummary(_ toolCall: ToolCall, assistantMessageId _: UUID) async throws
+        -> ToolExecutionResult
+    {
         let message = try await execute(toolCall)
 
         // Generate compactification node
@@ -184,7 +186,7 @@ public actor ToolExecutor {
                     } catch {
                         let errorMessage = Message(
                             content:
-                                "Failed to execute tool \(toolCall.name): \(error.localizedDescription)",
+                            "Failed to execute tool \(toolCall.name): \(error.localizedDescription)",
                             role: .tool,
                             think: nil
                         )

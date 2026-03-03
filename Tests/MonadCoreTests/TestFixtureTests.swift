@@ -1,7 +1,6 @@
 import Testing
 import Foundation
 @testable import MonadCore
-import MonadShared
 
 @Suite("Test Fixtures and Builders Tests")
 struct TestFixtureTests {

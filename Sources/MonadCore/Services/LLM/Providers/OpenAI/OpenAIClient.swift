@@ -1,12 +1,11 @@
 import Foundation
-import OpenAI
 import Logging
+import OpenAI
 
 /// A wrapper around the OpenAI SDK that provides a clean interface for the Monad Assistant
 public actor OpenAIClient {
     private let client: OpenAI
     private let modelName: String
-    private let timeoutInterval: TimeInterval
     private let maxRetries: Int
     private let logger = Logger.module(named: "com.monad.openai-client")
 
@@ -26,9 +25,8 @@ public actor OpenAIClient {
             scheme: scheme,
             timeoutInterval: timeoutInterval
         )
-        self.client = OpenAI(configuration: configuration)
+        client = OpenAI(configuration: configuration)
         self.modelName = modelName
-        self.timeoutInterval = timeoutInterval
         self.maxRetries = maxRetries
         logger.debug("Initialized OpenAIClient with model: \(modelName), host: \(host), port: \(port), scheme: \(scheme), timeout: \(timeoutInterval)s, maxRetries: \(maxRetries)")
     }
@@ -70,7 +68,7 @@ public actor OpenAIClient {
                         shouldRetry: { error in
                             // Only retry if we haven't started yielding data to avoid duplication
                             // and if the error is transient
-                            return !hasYielded.value && RetryPolicy.isTransient(error: error)
+                            !hasYielded.value && RetryPolicy.isTransient(error: error)
                         }
                     ) {
                         // Create a new stream for each attempt
@@ -105,9 +103,9 @@ public actor OpenAIClient {
 
 // MARK: - Convenience Extensions
 
-extension OpenAIClient {
+public extension OpenAIClient {
     /// Simple helper to send a user message via stream (collects all content)
-    public func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat? = nil) async throws -> String {
+    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat? = nil) async throws -> String {
         // We wrap the entire operation in retry because for a non-streaming result,
         // we can retry even if it failed midway (as we discard the partial result).
         // Capture maxRetries to avoid actor isolation issues in closure
@@ -115,7 +113,7 @@ extension OpenAIClient {
 
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
             let messages: [ChatQuery.ChatCompletionMessageParam] = [
-                .user(.init(content: .string(content)))
+                .user(.init(content: .string(content))),
             ]
 
             var fullContent = ""
@@ -133,7 +131,7 @@ extension OpenAIClient {
     }
 
     /// Fetch available models from the service
-    public func fetchAvailableModels() async throws -> [String]? {
+    func fetchAvailableModels() async throws -> [String]? {
         let maxRetries = self.maxRetries
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
             let models = try await self.client.models()

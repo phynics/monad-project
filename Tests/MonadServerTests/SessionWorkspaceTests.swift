@@ -1,7 +1,6 @@
 import XCTest
 import GRDB
 @testable import MonadCore
-import MonadShared
 @testable import MonadServer
 import Dependencies
 

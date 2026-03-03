@@ -1,5 +1,4 @@
 import MonadCore
-import MonadShared
 import Foundation
 
 /// Factory for resolving WorkspaceReference into a concrete WorkspaceProtocol implementation.

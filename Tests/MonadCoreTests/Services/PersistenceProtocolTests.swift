@@ -1,7 +1,6 @@
 import Testing
 import Foundation
 @testable import MonadCore
-import MonadShared
 
 @Suite("Persistence Protocol Tests")
 struct PersistenceProtocolTests {

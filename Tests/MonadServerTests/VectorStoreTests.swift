@@ -1,8 +1,5 @@
 import Testing
 import Foundation
-@testable import MonadServer
-import MonadCore
-import MonadShared
 
 @Suite struct VectorStoreTests {
 
