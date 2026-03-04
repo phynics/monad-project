@@ -3,6 +3,19 @@ import XCTest
 
 final class VectorMathTests: XCTestCase {
     
+    // MARK: - Magnitude
+
+    func testMagnitude() {
+        let v1 = [3.0, 4.0]
+        XCTAssertEqual(VectorMath.magnitude(v1), 5.0, accuracy: 0.0001)
+
+        let v2 = [0.0, 0.0]
+        XCTAssertEqual(VectorMath.magnitude(v2), 0.0, accuracy: 0.0001)
+
+        let v3: [Double] = []
+        XCTAssertEqual(VectorMath.magnitude(v3), 0.0, accuracy: 0.0001)
+    }
+
     // MARK: - Cosine Similarity
     
     func testCosineSimilarityIdenticalVectors() {
@@ -53,6 +66,29 @@ final class VectorMathTests: XCTestCase {
         XCTAssertEqual(sim, 0.0)
     }
     
+    // MARK: - Cosine Similarity with Pre-calculated Magnitude
+
+    func testCosineSimilarityWithPrecalculatedMagnitude() {
+        let v1 = [1.0, 2.0, 3.0]
+        let v2 = [1.0, 2.0, 3.0]
+        let mag1 = VectorMath.magnitude(v1)
+
+        let sim = VectorMath.cosineSimilarity(v1, magnitudeA: mag1, v2)
+        XCTAssertEqual(sim, 1.0, accuracy: 0.0001)
+
+        let v3 = [-1.0, -2.0, -3.0]
+        let simOpposite = VectorMath.cosineSimilarity(v1, magnitudeA: mag1, v3)
+        XCTAssertEqual(simOpposite, -1.0, accuracy: 0.0001)
+    }
+
+    func testCosineSimilarityPrecalculatedMagnitudeZero() {
+        let v1 = [0.0, 0.0]
+        let v2 = [1.0, 2.0]
+
+        let sim = VectorMath.cosineSimilarity(v1, magnitudeA: 0.0, v2)
+        XCTAssertEqual(sim, 0.0)
+    }
+
     // MARK: - Normalization
     
     func testNormalizeVector() {
