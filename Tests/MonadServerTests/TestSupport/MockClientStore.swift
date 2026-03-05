@@ -1,5 +1,6 @@
+@testable import MonadCore
 import Foundation
-import MonadShared
+@testable import MonadShared
 @testable import MonadServer
 
 public final class MockClientStore: ClientStoreProtocol, @unchecked Sendable {

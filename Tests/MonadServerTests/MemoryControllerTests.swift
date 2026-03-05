@@ -3,6 +3,7 @@ import Hummingbird
 import HummingbirdTesting
 import Foundation
 import Dependencies
+import MonadTestSupport
 @testable import MonadServer
 import MonadCore
 import MonadShared

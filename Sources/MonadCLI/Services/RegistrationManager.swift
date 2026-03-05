@@ -73,9 +73,7 @@ struct RegistrationManager {
         let platform = "macos"  // Detect dynamically if needed
 
         // Define client tools
-        let tools: [ToolReference] = [
-            .custom(definition: WorkspaceToolDefinition(from: AskAttachPWDTool()))
-        ]
+        let tools: [ToolReference] = []
 
         let response = try await client.registerClient(
             hostname: hostname,

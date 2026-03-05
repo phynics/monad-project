@@ -1,6 +1,7 @@
 import Foundation
 import MonadCore
 
+// TODO: Does Client properly react to this?
 public struct AskAttachPWDTool: MonadCore.Tool, Sendable {
     public let id = "ask_attach_pwd"
     public let name = "ask_attach_pwd"

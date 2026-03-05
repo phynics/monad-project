@@ -1,4 +1,5 @@
 import OpenAI
+import MonadTestSupport
 @testable import MonadCore
 import MonadPrompt
 import Testing

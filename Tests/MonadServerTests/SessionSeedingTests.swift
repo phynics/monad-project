@@ -1,6 +1,7 @@
 import XCTest
 import MonadCore
 import Dependencies
+import MonadTestSupport
 @testable import MonadServer
 
 final class SessionSeedingTests: XCTestCase {

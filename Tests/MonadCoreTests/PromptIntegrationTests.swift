@@ -1,5 +1,6 @@
 import Foundation
 import OpenAI
+import MonadTestSupport
 import MonadCore
 import MonadPrompt
 import Testing

@@ -101,9 +101,9 @@ Returns detailed health status of all system components.
   "toolOutputs": [...] 
 }
 ```
-**Response:** Server-Sent Events (SSE) stream of `ChatDelta` objects.
+**Response:** Server-Sent Events (SSE) stream of `ChatEvent` objects.
 
-Each event in the SSE stream parses into a `ChatDelta` object with a specific `type` indicating the phase of generation:
+Each event in the SSE stream parses into a `ChatEvent` object with a specific nested structure indicating the phase of generation:
 
 ```json
 {

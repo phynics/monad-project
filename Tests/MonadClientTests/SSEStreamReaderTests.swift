@@ -1,6 +1,7 @@
 import XCTest
 import Logging
 @testable import MonadClient
+import MonadCore
 import MonadShared
 
 struct ProtocolWrapper: @unchecked Sendable {
@@ -72,8 +73,8 @@ final class SSEStreamReaderTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Stream completes")
         
         MockURLProtocol.mockEvents = [
-            (0, "data: {\"type\":\"delta\",\"content\":\"Hello\"}\n\n"),
-            (0, "data: [DONE]\n\n"),
+            (0, "data: {\"delta\":{\"generation\":\"Hello\"}}\n\n"),
+            (0, "data: {\"completion\":\"streamCompleted\"}\n\n"),
             (0, nil)
         ]
         
@@ -83,13 +84,13 @@ final class SSEStreamReaderTests: XCTestCase {
         let reader = SSEStreamReader()
         let events = reader.events(from: bytes, logger: logger)
         
-        var receivedDeltas: [ChatDelta] = []
-        for try await delta in events {
-            receivedDeltas.append(delta)
+        var receivedEvents: [ChatEvent] = []
+        for try await event in events {
+            receivedEvents.append(event)
         }
         
-        XCTAssertEqual(receivedDeltas.count, 1)
-        XCTAssertEqual(receivedDeltas.first?.content, "Hello")
+        XCTAssertEqual(receivedEvents.count, 1)
+        XCTAssertEqual(receivedEvents.first?.textContent, "Hello")
         expectation.fulfill()
         
         await fulfillment(of: [expectation], timeout: 2.0)
@@ -99,10 +100,10 @@ final class SSEStreamReaderTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Stream completes")
         
         MockURLProtocol.mockEvents = [
-            (0, "data: {\"type\":\"delta\",\"content\":\"Hel\"}\n"),
+            (0, "data: {\"delta\":{\"generation\":\"Hel\"}}\n"),
             (0.01, "\n"),
-            (0.01, "data: {\"type\":\"delta\",\"content\":\"lo\"}\n\n"),
-            (0, "data: [DONE]\n\n"),
+            (0.01, "data: {\"delta\":{\"generation\":\"lo\"}}\n\n"),
+            (0, "data: {\"completion\":\"streamCompleted\"}\n\n"),
             (0, nil)
         ]
         
@@ -113,48 +114,13 @@ final class SSEStreamReaderTests: XCTestCase {
         let events = reader.events(from: bytes, logger: logger)
         
         var contents: [String] = []
-        for try await delta in events {
-            if let c = delta.content { contents.append(c) }
+        for try await event in events {
+            if let c = event.textContent { contents.append(c) }
         }
         
         XCTAssertEqual(contents, ["Hel", "lo"])
         expectation.fulfill()
         
-        await fulfillment(of: [expectation], timeout: 2.0)
-    }
-    
-    func testSSEStreamReader_OpenAILegacyFormat() async throws {
-        let expectation = XCTestExpectation(description: "Stream completes")
-        
-        let openaiJSON = """
-        data: {"choices": [{"delta": {"content": "Legacy format", "tool_calls": [{"index": 0, "id": "call_1", "function": {"name": "test_tool", "arguments": "{}"}}]}}]}
-        
-
-        """
-        
-        MockURLProtocol.mockEvents = [
-            (0, openaiJSON),
-            (0, "data: [DONE]\n\n"),
-            (0, nil)
-        ]
-        
-        let url = URL(string: "https://test.local")!
-        let (bytes, _) = try await session.bytes(from: url)
-        
-        let reader = SSEStreamReader()
-        let events = reader.events(from: bytes, logger: logger)
-        
-        var receivedDeltas: [ChatDelta] = []
-        for try await delta in events {
-            receivedDeltas.append(delta)
-        }
-        
-        XCTAssertEqual(receivedDeltas.count, 1)
-        XCTAssertEqual(receivedDeltas[0].content, "Legacy format")
-        XCTAssertNotNil(receivedDeltas[0].toolCalls)
-        XCTAssertEqual(receivedDeltas[0].toolCalls?.first?.name, "test_tool")
-        
-        expectation.fulfill()
         await fulfillment(of: [expectation], timeout: 2.0)
     }
 }

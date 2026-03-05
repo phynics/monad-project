@@ -99,7 +99,7 @@ Six targets with strict dependency hierarchy:
 
 1. **MonadPrompt** — Standalone DSL for prompt construction (`@ContextBuilder`). No dependencies.
 2. **MonadCore** — Core business logic. Contains `ChatEngine`, `SessionManager`, `ContextManager`, `ToolRouter`/`ToolExecutor`, LLM providers (OpenAI/Ollama/OpenRouter), embeddings, persistence. **Works as a standalone library.**
-3. **MonadShared** — Common types for client/server (`ToolReference`, `WorkspaceReference`, `AnyCodable`, `ChatDelta`).
+3. **MonadShared** — Common types for client/server (`ToolReference`, `WorkspaceReference`, `AnyCodable`, `ChatEvent`).
 4. **MonadServer** — Hummingbird REST API, SSE streaming, GRDB persistence, WebSocket, service lifecycle.
 5. **MonadClient** — Client library with Bonjour auto-discovery.
 6. **MonadCLI** — Command-line interface with slash commands.

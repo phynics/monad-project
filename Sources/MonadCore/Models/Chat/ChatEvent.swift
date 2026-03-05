@@ -1,10 +1,10 @@
 import Foundation
 
-public enum ToolExecutionStatus: Sendable {
+public enum ToolExecutionStatus: Sendable, Codable {
     case attempting(name: String, reference: ToolReference)
     case success(ToolResult)
     case failed(reference: ToolReference, error: String)
-    case failure(Error)
+    case failure(String)
 }
 
 /// Events emitted by ChatEngine during a chat turn.
@@ -14,8 +14,8 @@ public enum ToolExecutionStatus: Sendable {
 /// - `meta`: Informational metadata events (context, generation info)
 /// - `error`: Error events (tool errors, general errors)
 /// - `completion`: Terminal events signaling final results
-public enum ChatEvent: Sendable {
-    public enum DeltaEvent: Sendable {
+public enum ChatEvent: Sendable, Codable {
+    public enum DeltaEvent: Sendable, Codable {
         /// Chain-of-thought reasoning chunk
         case thinking(String)
         /// Incremental content chunk from the LLM
@@ -27,25 +27,29 @@ public enum ChatEvent: Sendable {
         case toolExecution(toolCallId: String, status: ToolExecutionStatus)
     }
 
-    public enum MetaEvent: Sendable {
+    public enum MetaEvent: Sendable, Codable {
         /// RAG context metadata — emitted once at the start of the loop
         case generationContext(ChatMetadata)
         /// Generation completed with metadata (informational)
         case generationCompleted(message: Message, metadata: APIResponseMetadata)
     }
 
-    public enum ErrorEvent: Sendable {
+    public enum ErrorEvent: Sendable, Codable {
         /// Tool call failed before execution (e.g. not found, invalid arguments)
         case toolCallError(toolCallId: String, name: String, error: String)
         /// General error occurred
-        case error(Error)
+        case error(String)
+        /// Generation was explicitly cancelled
+        case cancelled
     }
 
-    public enum CompletionEvent: Sendable {
+    public enum CompletionEvent: Sendable, Codable {
         /// Stream completed with final accumulated message and token metadata
         case generationCompleted(message: Message, metadata: APIResponseMetadata)
         /// Tool execution completed with final status
         case toolExecution(toolCallId: String, status: ToolExecutionStatus)
+        /// The entire stream is complete (terminal event)
+        case streamCompleted
     }
 
     case delta(DeltaEvent)
@@ -75,7 +79,9 @@ extension ChatEvent {
     public static func toolCallError(toolCallId: String, name: String, error: String) -> ChatEvent {
         .error(.toolCallError(toolCallId: toolCallId, name: name, error: error))
     }
-    public static func error(_ err: Error) -> ChatEvent { .error(.error(err)) }
+    public static func error(_ err: Error) -> ChatEvent { .error(.error(err.localizedDescription)) }
+    public static func error(_ msg: String) -> ChatEvent { .error(.error(msg)) }
+    public static func cancelled() -> ChatEvent { .error(.cancelled) }
 
     // Completion shortcuts
     public static func generationCompleted(message: Message, metadata: APIResponseMetadata) -> ChatEvent {
@@ -83,6 +89,9 @@ extension ChatEvent {
     }
     public static func toolCompleted(toolCallId: String, status: ToolExecutionStatus) -> ChatEvent {
         .completion(.toolExecution(toolCallId: toolCallId, status: status))
+    }
+    public static func streamCompleted() -> ChatEvent {
+        .completion(.streamCompleted)
     }
 }
 

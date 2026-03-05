@@ -6,11 +6,11 @@ extension MonadClient {
     // MARK: - Chat API
 
     /// Send a chat message (non-streaming)
-    public func chat(sessionId: UUID, message: String) async throws -> ChatResponse {
+    public func chat(sessionId: UUID, message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientTools: [ToolReference]? = nil) async throws -> ChatResponse {
         var request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/chat", method: "POST")
         request.httpBody = try encoder.encode(
-            ChatRequest(message: message, clientId: configuration.clientId))
+            ChatRequest(message: message, toolOutputs: toolOutputs, clientId: configuration.clientId, clientTools: clientTools))
         return try await perform(request)
     }
 
@@ -22,14 +22,14 @@ extension MonadClient {
     }
 
     /// Send a chat message with streaming response
-    public func chatStream(sessionId: UUID, message: String) async throws -> AsyncThrowingStream<
-        ChatDelta, Error
+    public func chatStream(sessionId: UUID, message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientTools: [ToolReference]? = nil) async throws -> AsyncThrowingStream<
+        ChatEvent, Error
     > {
         configuration.logger.debug("chatStream called for session \(sessionId)")
         var request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/chat/stream", method: "POST")
         request.httpBody = try encoder.encode(
-            ChatRequest(message: message, clientId: configuration.clientId))
+            ChatRequest(message: message, toolOutputs: toolOutputs, clientId: configuration.clientId, clientTools: clientTools))
 
         configuration.logger.debug(
             "Sending request to \(request.url?.absoluteString ?? "unknown")")

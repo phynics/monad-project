@@ -91,7 +91,7 @@ struct Query: AsyncParsableCommand {
         let stream = try await client.chatStream(sessionId: targetSession.id, message: questionText)
 
         for try await delta in stream {
-            if let content = delta.content {
+            if let content = delta.textContent {
                 print(content, terminator: "")
                 fflush(stdout)
             }

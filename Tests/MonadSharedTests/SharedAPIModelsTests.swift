@@ -33,9 +33,9 @@ final class SharedAPIModelsTests: XCTestCase {
         let data = try JSONEncoder().encode(req)
         XCTAssertGreaterThan(data.count, 0)
         
-        let delta = ChatDelta(type: .generationCompleted, content: "Pong")
-        let dData = try JSONEncoder().encode(delta)
-        XCTAssertGreaterThan(dData.count, 0)
+        let event = ChatEvent.generation("Pong")
+        let eData = try JSONEncoder().encode(event)
+        XCTAssertGreaterThan(eData.count, 0)
     }
     
     // MARK: - WorkspaceAPI Tests

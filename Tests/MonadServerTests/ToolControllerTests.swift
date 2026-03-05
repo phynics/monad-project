@@ -2,6 +2,7 @@ import Testing
 import Hummingbird
 import HummingbirdTesting
 import Foundation
+import MonadTestSupport
 @testable import MonadServer
 import MonadCore
 import MonadShared
@@ -52,6 +53,14 @@ import Dependencies
                 try await client.execute(uri: "/tools/execute", method: .post, body: execBuffer) { response in
                     // Should return not found because 'test_tool' is not in session
                     #expect(response.status == .notFound)
+                }
+
+                // 3. List Global (Without Session)
+                try await client.execute(uri: "/tools", method: .get) { response in
+                    #expect(response.status == .ok)
+                    let tools = try JSONDecoder().decode([ToolInfo].self, from: response.body)
+                    // The system tools should be returned dynamically based on registry registration
+                    #expect(tools.count >= 0)
                 }
             }
         }

@@ -1,5 +1,6 @@
 import Foundation
 import Logging
+import OpenAI
 
 /// Policy for vacuuming memories during archival
 public enum MemoryVacuumPolicy: Sendable {
@@ -12,12 +13,18 @@ public enum MemoryVacuumPolicy: Sendable {
 /// Service to archive conversations and index them for semantic recall
 public actor ConversationArchiver {
     private let persistence: any SessionPersistenceProtocol & MemoryStoreProtocol & MessageStoreProtocol
-    private let llmService: LLMService
+    private let llmService: any LLMServiceProtocol
+    private let embeddingService: any EmbeddingServiceProtocol
     private let logger = Logger.module(named: "ConversationArchiver")
 
-    public init(persistence: any SessionPersistenceProtocol & MemoryStoreProtocol & MessageStoreProtocol, llmService: LLMService) {
+    public init(
+        persistence: any SessionPersistenceProtocol & MemoryStoreProtocol & MessageStoreProtocol,
+        llmService: any LLMServiceProtocol,
+        embeddingService: any EmbeddingServiceProtocol
+    ) {
         self.persistence = persistence
         self.llmService = llmService
+        self.embeddingService = embeddingService
     }
 
     /// Archive a conversation and index its messages as semantic memories
@@ -60,7 +67,7 @@ public actor ConversationArchiver {
             if msg.content.count > 20 {
                 do {
                     let tags = try await llmService.generateTags(for: msg.content)
-                    let embedding = try await llmService.embeddingService.generateEmbedding(for: msg.content)
+                    let embedding = try await embeddingService.generateEmbedding(for: msg.content)
 
                     let memory = Memory(
                         title: title,
@@ -104,20 +111,14 @@ public actor ConversationArchiver {
     }
 
     private func generateTitle(for userMessage: String) async throws -> String {
-        let utilityClient = await llmService.getUtilityClient()
-        let defaultClient = await llmService.getClient()
-        guard let client = utilityClient ?? defaultClient else {
-            return String(userMessage.prefix(40))
-        }
-
         let prompt = """
         Generate a very short, descriptive title (max 5 words) for a conversation that starts with:
         \(userMessage)
         Title:
         """
 
-        return try await client.sendMessage(prompt, responseFormat: nil)
-            .replacingOccurrences(of: "\"", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let response = try await llmService.sendMessage(prompt, responseFormat: nil as ChatQuery.ResponseFormat?, useUtilityModel: true)
+        return response.replacingOccurrences(of: "\"", with: "")
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
 }

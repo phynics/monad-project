@@ -133,6 +133,8 @@ actor ChatREPL: ChatREPLController {
                 let stream = try await client.chatStream(sessionId: sessionId, message: message)
 
                 var assistantStartPrinted = false
+                // Accumulate streamed argument JSON fragments per toolCallId for display
+                var toolCallArgs: [String: String] = [:]
 
                 for try await event in stream {
                     if Task.isCancelled { break }
@@ -154,11 +156,9 @@ actor ChatREPL: ChatREPLController {
                         switch delta {
                         case let .thinking(thought):
                             if !assistantStartPrinted {
-                                // Indicate reasoning phase
                                 print(TerminalUI.dim("🤔 Thinking..."))
                                 assistantStartPrinted = true
                             }
-                            // Optionally print thinking chunk-by-chunk if verbose, or just keep it silent/dim
                             print(TerminalUI.dim(thought), terminator: "")
                             fflush(stdout)
 
@@ -170,19 +170,20 @@ actor ChatREPL: ChatREPLController {
                             print(content, terminator: "")
                             fflush(stdout)
 
-                        case .toolCall:
-                            // Streamed tool calls are usually buffered internally or just shown via toolExecution
-                            break
+                        case let .toolCall(delta):
+                            // Accumulate argument JSON fragments so we can display them on execution
+                            if let callId = delta.id {
+                                toolCallArgs[callId] = (toolCallArgs[callId] ?? "") + (delta.arguments ?? "")
+                            }
 
-                        case let .toolExecution(_, status):
+                        case let .toolExecution(toolCallId, status):
                             switch status {
                             case let .attempting(name, ref):
-                                let targetInfo: String
-                                switch ref {
-                                case .known: targetInfo = " on server"
-                                case .custom: targetInfo = " on client"
-                                }
-                                print(TerminalUI.yellow("🔄 Running \(name)\(targetInfo)..."))
+                                // End any in-progress streaming line before the tool block
+                                if assistantStartPrinted { print("") }
+                                assistantStartPrinted = false
+                                let args = toolCallArgs[toolCallId] ?? ""
+                                printToolAttempt(name: name, argsJSON: args, reference: ref)
                             default:
                                 break
                             }
@@ -191,7 +192,7 @@ actor ChatREPL: ChatREPLController {
                     case let .error(err):
                         switch err {
                         case let .toolCallError(_, name, error):
-                            print(TerminalUI.red("❌ Tool Error (\(name)): \(error)"))
+                            print(TerminalUI.red("  ✗ Tool Error (\(name)): \(error)"))
                         case let .error(message):
                             print("\n")
                             TerminalUI.printError("Stream Error: \(message)")
@@ -206,25 +207,23 @@ actor ChatREPL: ChatREPLController {
                             if let snapshotData = meta.debugSnapshotData {
                                 updateDebugSnapshot(snapshotData)
                             }
-
                             let tokens = meta.totalTokens ?? 0
                             let dur = String(format: "%.1fs", meta.duration ?? 0)
                             print(TerminalUI.dim("\n[Generated in \(dur), \(tokens) tokens]"))
 
                         case let .toolExecution(_, status):
                             switch status {
-                            case .success:
-                                print(TerminalUI.green("✅ Tool completed"))
+                            case let .success(result):
+                                printToolResult(result.output)
                             case let .failed(_, error):
-                                print(TerminalUI.red("❌ Tool failed: \(error)"))
+                                print(TerminalUI.red("  ✗ \(error)"))
                             case let .failure(error):
-                                print(TerminalUI.red("❌ Tool failed: \(error)"))
+                                print(TerminalUI.red("  ✗ \(error)"))
                             default:
                                 break
                             }
 
                         case .streamCompleted:
-                            // Terminal event, loop will end naturally
                             break
                         }
                     }
@@ -239,6 +238,53 @@ actor ChatREPL: ChatREPLController {
         }
         await currentGenerationTask?.value
         currentGenerationTask = nil
+    }
+
+    // MARK: - Tool Display Helpers
+
+    private func printToolAttempt(name: String, argsJSON: String, reference: ToolReference) {
+        let location: String
+        switch reference {
+        case .known: location = "server"
+        case .custom: location = "local"
+        }
+        let paramsStr = formatToolArgs(argsJSON)
+        let header = TerminalUI.blue("⟩ \(name)")
+        let params = paramsStr.isEmpty ? "" : "  " + TerminalUI.dim(paramsStr)
+        let loc = "  " + TerminalUI.dim("[\(location)]")
+        print(header + params + loc)
+    }
+
+    private func printToolResult(_ output: String) {
+        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            print(TerminalUI.dim("  ✓ (no output)"))
+            return
+        }
+        let lines = trimmed.components(separatedBy: .newlines)
+        let maxLines = 8
+        for line in lines.prefix(maxLines) {
+            let display = line.count > 120 ? String(line.prefix(120)) + "…" : line
+            print(TerminalUI.dim("  \(display)"))
+        }
+        if lines.count > maxLines {
+            print(TerminalUI.dim("  ↳ +\(lines.count - maxLines) more lines"))
+        }
+    }
+
+    private func formatToolArgs(_ json: String) -> String {
+        guard !json.isEmpty,
+              let data = json.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              !dict.isEmpty
+        else { return "" }
+        let parts = dict.keys.sorted().map { key -> String in
+            let value = String(describing: dict[key]!)
+            let truncated = value.count > 60 ? String(value.prefix(60)) + "…" : value
+            return "\(key)=\(truncated)"
+        }
+        let joined = parts.joined(separator: "  ")
+        return joined.count > 120 ? String(joined.prefix(120)) + "…" : joined
     }
 
     private func updateDebugSnapshot(_ data: Data) {

@@ -42,7 +42,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         // Hydrate session and resolve tools at the server layer
         try await sessionManager.hydrateSession(id: id)
-        let availableTools = await resolveTools(sessionId: id, clientId: chatRequest.clientId)
+        let availableTools = await resolveTools(sessionId: id, clientTools: chatRequest.clientTools)
 
         let stream = try await chatEngine.chatStream(
             sessionId: id,
@@ -76,7 +76,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         // Hydrate session and resolve tools at the server layer
         try await sessionManager.hydrateSession(id: id)
-        let availableTools = await resolveTools(sessionId: id, clientId: chatRequest.clientId)
+        let availableTools = await resolveTools(sessionId: id, clientTools: chatRequest.clientTools)
 
         Logger.module(named: "chat").info("Resolved \(ANSIColors.colorize("\(availableTools.count)", color: ANSIColors.green)) tools for session \(sid)")
 
@@ -95,9 +95,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                             throw CancellationError()
                         }
 
-                        let apiDelta = ChatDeltaMapper.mapEvent(event)
-
-                        if let data = try? SerializationUtils.jsonEncoder.encode(apiDelta) {
+                        if let data = try? SerializationUtils.jsonEncoder.encode(event) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))
                         }
@@ -108,8 +106,8 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                     }
 
                     // Signal end of stream
-                    let doneDelta = ChatDelta(type: .streamCompleted)
-                    if let data = try? SerializationUtils.jsonEncoder.encode(doneDelta) {
+                    let doneEvent = ChatEvent.streamCompleted()
+                    if let data = try? SerializationUtils.jsonEncoder.encode(doneEvent) {
                         let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                         continuation.yield(ByteBuffer(string: sseString))
                     }
@@ -117,15 +115,15 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                     continuation.finish()
                 } catch {
                     if error is CancellationError {
-                        let cancelDelta = ChatDelta(type: .generationCancelled)
-                        if let data = try? SerializationUtils.jsonEncoder.encode(cancelDelta) {
+                        let cancelEvent = ChatEvent.cancelled()
+                        if let data = try? SerializationUtils.jsonEncoder.encode(cancelEvent) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))
                         }
                     } else {
                         Logger.module(named: "chat").error("Stream error: \(error)")
-                        let errorDelta = ChatDelta(type: .error, error: error.localizedDescription)
-                        if let data = try? SerializationUtils.jsonEncoder.encode(errorDelta) {
+                        let errorEvent = ChatEvent.error(error.localizedDescription)
+                        if let data = try? SerializationUtils.jsonEncoder.encode(errorEvent) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))
                         }
@@ -177,10 +175,10 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
     // MARK: - Tool Resolution (Server-Layer Concern)
 
-    private func resolveTools(sessionId: UUID, clientId: UUID?) async -> [AnyTool] {
+    private func resolveTools(sessionId: UUID, clientTools: [ToolReference]?) async -> [AnyTool] {
         var availableTools: [AnyTool] = []
         do {
-            let references = try await sessionManager.getAllToolReferences(sessionId: sessionId, clientId: clientId)
+            let references = try await sessionManager.getAllToolReferences(sessionId: sessionId, clientTools: clientTools)
 
             availableTools = references.compactMap { (ref: ToolReference) -> AnyTool? in
                 var def: WorkspaceToolDefinition?

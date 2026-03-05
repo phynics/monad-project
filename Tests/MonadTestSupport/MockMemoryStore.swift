@@ -1,3 +1,4 @@
+@testable import MonadCore
 import Foundation
 
 public final class MockMemoryStore: MemoryStoreProtocol, @unchecked Sendable {

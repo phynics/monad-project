@@ -8,6 +8,7 @@ import OpenAI
 import Testing
 import Dependencies
 
+import MonadTestSupport
 @testable import MonadServer
 
 @Suite struct ChatControllerStreamingTests {
@@ -71,7 +72,7 @@ import Dependencies
                             let body = try await String(buffer: await response.body)
                             // SSE format check
                             #expect(body.contains("data:"))
-                            #expect(body.contains("\"type\":\"streamCompleted\""))
+                            #expect(body.contains("\"streamCompleted\""))
                         }
                     }
                 }
@@ -123,7 +124,7 @@ import Dependencies
                             ) { response in
                                 #expect(response.status == .ok)
                                 let body = try await String(buffer: await response.body)
-                                #expect(body.contains("\"type\":\"generationCancelled\""))
+                                #expect(body.contains("\"cancelled\""))
                             }
                         }
 

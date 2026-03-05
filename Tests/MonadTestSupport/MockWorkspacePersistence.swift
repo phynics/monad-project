@@ -1,3 +1,4 @@
+@testable import MonadCore
 import Foundation
 
 public final class MockWorkspacePersistence: WorkspacePersistenceProtocol, @unchecked Sendable {

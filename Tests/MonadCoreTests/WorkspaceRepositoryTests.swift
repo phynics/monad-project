@@ -1,6 +1,7 @@
 import Testing
 import Dependencies
 import Foundation
+import MonadTestSupport
 @testable import MonadCore
 
 @Suite("Workspace Repository Tests")

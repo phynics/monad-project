@@ -8,6 +8,7 @@ import NIOCore
 import Testing
 import Dependencies
 
+import MonadTestSupport
 @testable import MonadServer
 
 @Suite struct EndpointEdgeCaseTests {

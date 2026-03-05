@@ -1,6 +1,7 @@
 import XCTest
 import Dependencies
 @testable import MonadCore
+import MonadTestSupport
 @testable import MonadServer
 
 final class WorkspaceManagerTests: XCTestCase {

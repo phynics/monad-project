@@ -1,3 +1,4 @@
+@testable import MonadCore
 import Foundation
 
 public final class MockToolPersistence: ToolPersistenceProtocol, @unchecked Sendable {

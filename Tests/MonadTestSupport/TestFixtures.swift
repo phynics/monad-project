@@ -1,3 +1,4 @@
+@testable import MonadCore
 import Foundation
 
 #if DEBUG

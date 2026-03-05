@@ -5,17 +5,21 @@ import MonadShared
 /// HTTP client for communicating with MonadServer
 public actor MonadClient {
     let configuration: ClientConfiguration
-    let session: URLSession
+    let session: any URLSessionProtocol
     let decoder: JSONDecoder
     let encoder: JSONEncoder
     let sseReader: SSEStreamReader
 
-    public init(configuration: ClientConfiguration = .fromEnvironment()) {
+    public init(configuration: ClientConfiguration = .fromEnvironment(), session: (any URLSessionProtocol)? = nil) {
         self.configuration = configuration
 
-        let sessionConfig = URLSessionConfiguration.default
-        sessionConfig.timeoutIntervalForRequest = configuration.timeout
-        self.session = URLSession(configuration: sessionConfig)
+        if let session = session {
+            self.session = session
+        } else {
+            let sessionConfig = URLSessionConfiguration.default
+            sessionConfig.timeoutIntervalForRequest = configuration.timeout
+            self.session = URLSession(configuration: sessionConfig)
+        }
 
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .iso8601

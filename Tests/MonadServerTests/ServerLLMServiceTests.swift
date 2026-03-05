@@ -3,6 +3,7 @@ import MonadCore
 import Testing
 import OpenAI
 
+import MonadTestSupport
 @testable import MonadServer
 
 @Suite struct ServerLLMServiceTests {

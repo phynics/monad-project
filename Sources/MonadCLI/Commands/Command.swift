@@ -100,7 +100,7 @@ struct Command: AsyncParsableCommand {
         let stream = try await client.chatStream(sessionId: targetSession.id, message: prompt)
 
         for try await delta in stream {
-            if let content = delta.content {
+            if let content = delta.textContent {
                 fullResponse += content
                 print(content, terminator: "")
                 fflush(stdout)
@@ -167,7 +167,7 @@ struct Command: AsyncParsableCommand {
                 var editResponse = ""
                 let stream = try await client.chatStream(sessionId: session.id, message: editPrompt)
                 for try await delta in stream {
-                    if let content = delta.content {
+                    if let content = delta.textContent {
                         editResponse += content
                         print(content, terminator: "")
                         fflush(stdout)

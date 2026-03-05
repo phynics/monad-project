@@ -100,7 +100,7 @@ Lightweight, dependency-free models used by all modules to prevent circular depe
 
 **Key Types:**
 API contract types in `Sources/MonadShared/Models/`:
-- `ChatAPI.swift` — ChatRequest, ChatResponse, ChatDelta, StreamEventType
+- `ChatAPI.swift` — ChatRequest, ChatResponse
 - `ClientAPI.swift` — Client connection types
 - `MemoryAPI.swift` — Memory CRUD types
 - `SessionAPI.swift` — Session management types
@@ -158,7 +158,7 @@ The backend server hosting the agent and exposing the brain to clients.
 - `OrphanCleanupService` — Maintenance tasks
 - `ServerLLMService` — Server-specific LLM service wrapper
 - `ConfigurationStorage` — Configuration persistence
-- `ChatDeltaMapper` — Maps `ChatEvent` to `ChatDelta` for API
+- `ChatEvent.swift` — Unified streaming event model
 
 **Database Schema:**
 - Migrations managed via GRDB
@@ -273,14 +273,13 @@ MonadServer → [MonadCore, MonadShared, MonadPrompt, MonadClient,
 
 7. **Streaming to Client**:
    - `ChatEngine` yields `ChatEvent` objects
-   - `ChatDeltaMapper` converts to `ChatDelta` for API
-   - SSE stream sends events to client:
-     - `generationContext` — Initial metadata
-     - `thought` / `delta` — LLM output
-     - `toolCall` — Tool requests
-     - `toolExecution` — Tool status (attempting/success/failed)
-     - `generationCompleted` — Final message + metadata
-     - `streamCompleted` — End of stream
+   - SSE stream sends events to client (Codable JSON):
+     - `meta.generationContext` — Initial metadata
+     - `delta.thinking` / `delta.generation` — LLM output
+     - `delta.toolCall` — Tool requests
+     - `delta.toolExecution` — Tool status (attempting/success/failed)
+     - `completion.generationCompleted` — Final message + metadata
+     - `completion.streamCompleted` — End of stream
 
 8. **Persistence**:
    - Messages saved to database via `PersistenceService`

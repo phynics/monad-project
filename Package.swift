@@ -81,14 +81,30 @@ let package = Package(
             ],
             path: "Sources/MonadCLI"
         ),
+        .target(
+            name: "MonadTestSupport",
+            dependencies: [
+                "MonadCore",
+                "MonadShared",
+                "MonadPrompt",
+                .product(name: "OpenAI", package: "OpenAI"),
+                .product(name: "Dependencies", package: "swift-dependencies")
+            ],
+            path: "Tests/MonadTestSupport"
+        ),
         .testTarget(
             name: "MonadCoreTests",
-            dependencies: ["MonadCore", "MonadShared", .product(name: "Dependencies", package: "swift-dependencies")],
+            dependencies: [
+                "MonadCore",
+                "MonadShared",
+                "MonadTestSupport",
+                .product(name: "Dependencies", package: "swift-dependencies")
+            ],
             path: "Tests/MonadCoreTests"
         ),
         .testTarget(
             name: "MonadPromptTests",
-            dependencies: ["MonadPrompt"],
+            dependencies: ["MonadPrompt", "MonadTestSupport"],
             path: "Tests/MonadPromptTests"
         ),
         .testTarget(
@@ -97,6 +113,7 @@ let package = Package(
                 "MonadServer",
                 "MonadCore",
                 "MonadShared",
+                "MonadTestSupport",
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
                 .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "USearch", package: "USearch")
@@ -105,17 +122,17 @@ let package = Package(
         ),
         .testTarget(
             name: "MonadCLITests",
-            dependencies: ["MonadCLI", "MonadClient"],
+            dependencies: ["MonadCLI", "MonadClient", "MonadTestSupport"],
             path: "Tests/MonadCLITests"
         ),
         .testTarget(
             name: "MonadSharedTests",
-            dependencies: ["MonadShared"],
+            dependencies: ["MonadShared", "MonadTestSupport"],
             path: "Tests/MonadSharedTests"
         ),
         .testTarget(
             name: "MonadClientTests",
-            dependencies: ["MonadClient", "MonadCore"],
+            dependencies: ["MonadClient", "MonadCore", "MonadTestSupport"],
             path: "Tests/MonadClientTests"
         )
     ]

@@ -1,6 +1,7 @@
+@testable import MonadCore
 import Foundation
 import OpenAI
-import MonadPrompt
+@testable import MonadPrompt
 
 public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     public var nextResponse: String = ""

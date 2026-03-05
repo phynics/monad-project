@@ -74,10 +74,9 @@ final class ChatEventTests: XCTestCase {
     }
 
     func testChatEventError() {
-        struct MockError: Error, Equatable {}
-        let event = ChatEvent.error(.error(MockError()))
-        if case .error(.error) = event {
-            // pass
+        let event = ChatEvent.error(.error("Test error"))
+        if case .error(.error(let msg)) = event {
+            XCTAssertEqual(msg, "Test error")
         } else {
             XCTFail("Expected error.error")
         }
