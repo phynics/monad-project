@@ -146,6 +146,7 @@ import MonadTestSupport
             memories: [],
             chatHistory: [],
             tools: [],
+            workspaces: [],
             systemInstructions: nil as String?,
             responseFormat: nil as ChatQuery.ResponseFormat?,
             useFastModel: false

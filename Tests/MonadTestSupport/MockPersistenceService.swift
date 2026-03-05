@@ -13,6 +13,12 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     public var mockHealthStatus: HealthStatus = .ok
     public var mockHealthDetails: [String: String]? = ["mock": "true"]
 
+    // Mocks
+    public var saveClientMock: ((ClientIdentity) async throws -> Void)?
+    public var fetchClientMock: ((UUID) async throws -> ClientIdentity?)?
+    public var fetchAllClientsMock: (() async throws -> [ClientIdentity])?
+    public var deleteClientMock: ((UUID) async throws -> Bool)?
+    
     public init() {}
 
     public func getHealthStatus() async -> HealthStatus { mockHealthStatus }
@@ -115,6 +121,27 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     }
     public func fetchToolSource(toolId: String, workspaceIds: [UUID], primaryWorkspaceId: UUID?) async throws -> String? {
         try await toolsMock.fetchToolSource(toolId: toolId, workspaceIds: workspaceIds, primaryWorkspaceId: primaryWorkspaceId)
+    }
+
+    // MARK: - ClientStoreProtocol
+
+    public func saveClient(_ client: ClientIdentity) async throws {
+        if let mock = saveClientMock { try await mock(client) }
+    }
+
+    public func fetchClient(id: UUID) async throws -> ClientIdentity? {
+        if let mock = fetchClientMock { return try await mock(id) }
+        return nil
+    }
+
+    public func fetchAllClients() async throws -> [ClientIdentity] {
+        if let mock = fetchAllClientsMock { return try await mock() }
+        return []
+    }
+
+    public func deleteClient(id: UUID) async throws -> Bool {
+        if let mock = deleteClientMock { return try await mock(id) }
+        return false
     }
 
     public func resetDatabase() async throws {

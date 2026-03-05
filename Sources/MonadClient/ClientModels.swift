@@ -44,7 +44,7 @@ public typealias ChatMetadata = MonadCore.ChatMetadata
 
 // MARK: - Client API Models
 
-public typealias ClientIdentity = MonadShared.ClientIdentity
+public typealias ClientIdentity = MonadCore.ClientIdentity
 public typealias WorkspaceReference = MonadCore.WorkspaceReference
 public typealias WorkspaceURI = MonadCore.WorkspaceURI
 public typealias WorkspaceTrustLevel = MonadCore.WorkspaceTrustLevel

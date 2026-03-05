@@ -210,6 +210,20 @@ struct WorkspaceSlashCommand: SlashCommand {
         if let wsId = targetWorkspaceId {
             try await context.client.attachWorkspace(wsId, to: context.session.id, isPrimary: false)
 
+            // Register File System tools to the attached local working directory workspace
+            let localTools: [ToolReference] = [
+                .known(id: ReadFileTool().id),
+                .known(id: ListDirectoryTool().id),
+                .known(id: SearchFileContentTool().id),
+                .known(id: SearchFilesTool().id),
+                .known(id: FindFileTool().id),
+                .known(id: InspectFileTool().id)
+            ]
+
+            for tool in localTools {
+                try await context.client.addWorkspaceTool(tool, workspaceId: wsId)
+            }
+
             // Persist the local reference
             LocalConfigManager.shared.saveClientWorkspace(uri: uriString, id: wsId.uuidString)
 

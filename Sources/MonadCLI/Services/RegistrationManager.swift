@@ -72,8 +72,15 @@ struct RegistrationManager {
         let displayName = NSUserName()
         let platform = "macos"  // Detect dynamically if needed
 
-        // Define client tools
-        let tools: [ToolReference] = []
+        // Define client tools from MonadCore filesystem tools
+        let tools: [ToolReference] = [
+            .known(id: ReadFileTool().id),
+            .known(id: ListDirectoryTool().id),
+            .known(id: SearchFileContentTool().id),
+            .known(id: SearchFilesTool().id),
+            .known(id: FindFileTool().id),
+            .known(id: InspectFileTool().id)
+        ]
 
         let response = try await client.registerClient(
             hostname: hostname,

@@ -222,6 +222,10 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         memories: [Memory],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?
     ) async -> Prompt {
         let instructions = systemInstructions ?? DefaultInstructions.system()
@@ -235,6 +239,14 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
 
             // Tools
             Tools(tools)
+
+            // Workspaces
+            WorkspacesContext(
+                workspaces: workspaces,
+                primaryWorkspace: primaryWorkspace,
+                clientName: clientName,
+                connectedClients: connectedClients
+            )
 
             // Conversation
             ChatHistory(optimizeHistory(chatHistory, availableTokens: 120000 - 4000)) // Reserve ~4k for other sections
@@ -280,6 +292,10 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         memories: [Memory],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
@@ -293,6 +309,10 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
             memories: memories,
             chatHistory: chatHistory,
             tools: tools,
+            workspaces: workspaces,
+            primaryWorkspace: primaryWorkspace,
+            clientName: clientName,
+            connectedClients: connectedClients,
             systemInstructions: systemInstructions
         )
 

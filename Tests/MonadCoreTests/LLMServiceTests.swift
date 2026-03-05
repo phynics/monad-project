@@ -42,6 +42,7 @@ struct LLMServiceTests {
             memories: [],
             chatHistory: history,
             tools: [],
+            workspaces: [],
             systemInstructions: "System rules"
         )
 
@@ -116,6 +117,7 @@ struct LLMServiceTests {
             memories: [],
             chatHistory: [],
             tools: [],
+            workspaces: [],
             systemInstructions: "System Only"
         )
         let messages = await prompt.toMessages()

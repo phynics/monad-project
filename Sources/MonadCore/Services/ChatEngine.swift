@@ -58,12 +58,33 @@ public final class ChatEngine: @unchecked Sendable {
 
         // Build prompt
         let session = await sessionManager.getSession(id: sessionId)
+        let workspaces = await sessionManager.getWorkspaces(for: sessionId)
+        let attachedWorkspaces = workspaces?.attached ?? []
+        let primaryWorkspaceId = workspaces?.primary?.id
+
+        var clientName: String? = nil
+        var connectedClients = Set<UUID>()
+        
+        // Find which workspaces are connected
+        if let primaryWorkspace = workspaces?.primary {
+             if let ownerId = primaryWorkspace.ownerId {
+                 // Try to get client
+                 if let client = try? await persistenceService.fetchClient(id: ownerId) {
+                     clientName = client.displayName
+                 }
+             }
+        }
+        
         let (initialMessages, structuredContext) = await buildPrompt(
             session: session,
             message: message,
             contextData: contextData,
             history: history,
             availableTools: tools,
+            workspaces: attachedWorkspaces,
+            primaryWorkspace: workspaces?.primary,
+            clientName: clientName,
+            connectedClients: connectedClients,
             systemInstructions: systemInstructions
         )
 
@@ -241,10 +262,6 @@ public final class ChatEngine: @unchecked Sendable {
                     continuation.yield(.generation(String(contentChunk)))
                 }
             }
-
-            // Forward separate reasoning_content if model supports it out of band
-            // OpenAI type doesn't officially wrap reasoning_content locally yet unless we mapped it,
-            // but for now StreamingParser handles standard <think> tags locally.
 
             // Accumulate Tool Calls
             if let calls = result.choices.first?.delta.toolCalls {
@@ -484,6 +501,10 @@ public final class ChatEngine: @unchecked Sendable {
         contextData: ContextData,
         history: [Message],
         availableTools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?
     ) async -> (messages: [ChatQuery.ChatCompletionMessageParam], structuredContext: [String: String]) {
         let prompt = await llmService.buildContext(
@@ -492,6 +513,10 @@ public final class ChatEngine: @unchecked Sendable {
             memories: contextData.memories.map { $0.memory },
             chatHistory: history,
             tools: availableTools,
+            workspaces: workspaces,
+            primaryWorkspace: primaryWorkspace,
+            clientName: clientName,
+            connectedClients: connectedClients,
             systemInstructions: systemInstructions
         )
 

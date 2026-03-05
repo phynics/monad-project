@@ -11,7 +11,8 @@ public typealias FullPersistenceService =
     AgentStoreProtocol &
     WorkspacePersistenceProtocol &
     ToolPersistenceProtocol &
-    HealthCheckable
+    HealthCheckable &
+    ClientStoreProtocol
 
 public enum PersistenceServiceKey: DependencyKey {
     public static let liveValue: any FullPersistenceService = UnconfiguredPersistenceService()
@@ -89,4 +90,10 @@ public struct UnconfiguredPersistenceService: FullPersistenceService {
     public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] { fail() }
     public func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID? { fail() }
     public func fetchToolSource(toolId: String, workspaceIds: [UUID], primaryWorkspaceId: UUID?) async throws -> String? { fail() }
+    
+    // ClientStoreProtocol
+    public func saveClient(_ client: ClientIdentity) async throws { fail() }
+    public func fetchClient(id: UUID) async throws -> ClientIdentity? { fail() }
+    public func fetchAllClients() async throws -> [ClientIdentity] { fail() }
+    public func deleteClient(id: UUID) async throws -> Bool { fail() }
 }

@@ -76,6 +76,10 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         memories: [Memory],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?,
         responseFormat: ChatQuery.ResponseFormat?,
         useFastModel: Bool
@@ -101,6 +105,10 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         memories: [Memory],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
@@ -116,6 +124,10 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         memories: [Memory],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?
     ) async -> Prompt {
         fail()

@@ -210,3 +210,83 @@ public struct UserQuery: ContextSection {
         TokenEstimator.estimate(text: query)
     }
 }
+
+/// Attached Workspaces wrapper
+public struct WorkspacesContext: ContextSection {
+    public let id = "workspaces"
+    public let priority = 75
+    public let strategy: CompressionStrategy = .keep
+    public let type: ContextSectionType = .text
+    public let workspaces: [WorkspaceReference]
+    public let primaryWorkspace: WorkspaceReference?
+    public let clientName: String?
+    public let connectedClients: Set<UUID>
+
+    public init(
+        workspaces: [WorkspaceReference], primaryWorkspace: WorkspaceReference?,
+        clientName: String?, connectedClients: Set<UUID> = []
+    ) {
+        self.workspaces = workspaces
+        self.primaryWorkspace = primaryWorkspace
+        self.clientName = clientName
+        self.connectedClients = connectedClients
+    }
+
+    public func render() async -> String? {
+        var output = ""
+
+        if let clientName = clientName {
+            output += "User Query Origin: **\(clientName)**\n\n"
+        }
+
+        let allWorkspaces = 
+            (primaryWorkspace != nil ? [primaryWorkspace!] : []) +
+            workspaces.filter { $0.id != primaryWorkspace?.id }
+
+        guard !allWorkspaces.isEmpty else { return output.isEmpty ? nil : output }
+
+        output += "## Available Workspaces\n"
+        output += "You have access to the following attached workspaces natively within this session:\n\n"
+
+        for ws in allWorkspaces {
+            let isPrimary = ws.id == primaryWorkspace?.id
+            let isConnected = isPrimary || connectedClients.contains(ws.ownerId ?? UUID())
+            let statusStr = isConnected ? "🟢 Connected" : "🔴 Disconnected"
+            
+            output.append("- Workspace ID: `")
+            output.append(ws.id.uuidString)
+            output.append("`\n  Location: `")
+            output.append(ws.uri.description)
+            output.append("`\n  Environment: ")
+            
+            if isPrimary {
+                 output.append("Server (Primary)\n")
+            } else {
+                 output.append("Client (\(statusStr))\n")
+            }
+
+            if !ws.tools.isEmpty {
+                 output.append("  Available Tools:\n")
+                 for tool in ws.tools {
+                     output.append("    - `")
+                     output.append(tool.toolId)
+                     output.append("`\n")
+                 }
+            } else {
+                 if !isConnected {
+                     output.append("  Available Tools: Offline. Cannot execute tools on this workspace until client reconnects.\n")
+                 } else {
+                     output.append("  Available Tools: None specific to this workspace\n")
+                 }
+            }
+            output += "\n"
+        }
+
+        output += "When a user asks you to operate on files or perform actions in these workspaces, you can use the appropriate tools with the workspace's URI or ID."
+        return output
+    }
+
+    public var estimatedTokens: Int {
+        TokenEstimator.estimate(text: "Workspaces section placeholder") + workspaces.count * 50
+    }
+}

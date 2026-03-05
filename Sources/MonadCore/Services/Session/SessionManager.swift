@@ -39,6 +39,7 @@ public actor SessionManager {
         & ToolPersistenceProtocol
         & JobStoreProtocol
         & AgentStoreProtocol
+        & ClientStoreProtocol
     {
         _persistenceService
     }
@@ -307,7 +308,7 @@ public actor SessionManager {
     }
 
     /// Returns the underlying persistence service.
-    public func getPersistenceService() -> any SessionPersistenceProtocol & MessageStoreProtocol & WorkspacePersistenceProtocol & MemoryStoreProtocol & ToolPersistenceProtocol & JobStoreProtocol & AgentStoreProtocol {
+    public func getPersistenceService() -> any SessionPersistenceProtocol & MessageStoreProtocol & WorkspacePersistenceProtocol & MemoryStoreProtocol & ToolPersistenceProtocol & JobStoreProtocol & AgentStoreProtocol & ClientStoreProtocol {
         return persistenceService
     }
 

@@ -10,6 +10,10 @@ extension LLMService {
         memories: [Memory] = [],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil,
         useFastModel: Bool = false
@@ -27,13 +31,16 @@ extension LLMService {
             return (stream, "Error: Not configured", [:])
         }
 
-        // Build prompt with all components
         let prompt = await buildContext(
             userQuery: userQuery,
             contextNotes: contextNotes,
             memories: memories,
             chatHistory: chatHistory,
             tools: tools,
+            workspaces: workspaces,
+            primaryWorkspace: primaryWorkspace,
+            clientName: clientName,
+            connectedClients: connectedClients,
             systemInstructions: systemInstructions
         )
 

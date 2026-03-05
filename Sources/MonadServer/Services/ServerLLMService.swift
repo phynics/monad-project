@@ -238,6 +238,10 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
         memories: [Memory],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?,
         responseFormat: ChatQuery.ResponseFormat?,
         useFastModel: Bool
@@ -255,13 +259,16 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
             return (stream, "Error: Not configured", [:])
         }
 
-        // Build prompt with all components
         let prompt = await buildContext(
             userQuery: userQuery,
             contextNotes: contextNotes,
             memories: memories,
             chatHistory: chatHistory,
             tools: tools,
+            workspaces: workspaces,
+            primaryWorkspace: primaryWorkspace,
+            clientName: clientName,
+            connectedClients: connectedClients,
             systemInstructions: systemInstructions
         )
 
@@ -283,6 +290,10 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
         memories: [Memory],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
@@ -295,6 +306,10 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
             memories: memories,
             chatHistory: chatHistory,
             tools: tools,
+            workspaces: workspaces,
+            primaryWorkspace: primaryWorkspace,
+            clientName: clientName,
+            connectedClients: connectedClients,
             systemInstructions: systemInstructions
         )
 
@@ -312,6 +327,10 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
         memories: [Memory],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?
     ) async -> Prompt {
         let instructions = systemInstructions ?? DefaultInstructions.system()
@@ -319,7 +338,17 @@ public actor ServerLLMService: LLMServiceProtocol, HealthCheckable {
             SystemInstructions(instructions)
             ContextNotes(contextNotes)
             Memories(memories)
+            // Tools
             Tools(tools)
+
+            // Workspaces
+            WorkspacesContext(
+                workspaces: workspaces,
+                primaryWorkspace: primaryWorkspace,
+                clientName: clientName,
+                connectedClients: connectedClients
+            )
+
             ChatHistory(chatHistory)
             UserQuery(userQuery)
         }

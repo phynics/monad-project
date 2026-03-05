@@ -19,6 +19,7 @@ struct PromptIntegrationTests {
             memories: [],
             chatHistory: history,
             tools: [],
+            workspaces: [],
             systemInstructions: nil
         )
         let messages = await prompt.toMessages()
@@ -48,6 +49,7 @@ struct PromptIntegrationTests {
             memories: [],
             chatHistory: history,
             tools: [],
+            workspaces: [],
             systemInstructions: nil
         )
         let messages = await prompt.toMessages()
@@ -72,6 +74,7 @@ struct PromptIntegrationTests {
             memories: [],
             chatHistory: history,
             tools: [],
+            workspaces: [],
             systemInstructions: nil
         )
         let messages = await prompt.toMessages()

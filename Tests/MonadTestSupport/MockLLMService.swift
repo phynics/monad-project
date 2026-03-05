@@ -181,6 +181,10 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         memories: [Memory],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?,
         responseFormat: ChatQuery.ResponseFormat?,
         useFastModel: Bool
@@ -212,6 +216,10 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         memories: [Memory],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
@@ -227,6 +235,10 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         memories: [Memory],
         chatHistory: [Message],
         tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        connectedClients: Set<UUID>,
         systemInstructions: String?
     ) async -> Prompt {
         return Prompt(sections: [])
