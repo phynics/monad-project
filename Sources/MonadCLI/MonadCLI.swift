@@ -8,30 +8,30 @@ struct MonadCLI: AsyncParsableCommand {
         commandName: "monad",
         abstract: "Monad AI Assistant CLI",
         discussion: """
-            An interactive AI assistant for your terminal.
+        An interactive AI assistant for your terminal.
 
-            COMMANDS:
-              chat                          Start an interactive REPL (Default)
-              status                        Show server and component status
+        COMMANDS:
+          chat                          Start an interactive REPL (Default)
+          status                        Show server and component status
 
-            INTERACTIVE COMMANDS (Slash commands):
-              /help                         Show available commands
-              /status                       Show server status
-              /config                       View/edit configuration
-              /debug                        Show rendered prompt & raw output
-              /quit                         Exit (or :q)
+        INTERACTIVE COMMANDS (Slash commands):
+          /help                         Show available commands
+          /status                       Show server status
+          /config                       View/edit configuration
+          /debug                        Show rendered prompt & raw output
+          /quit                         Exit (or :q)
 
-              SESSION & WORKSPACE:
-              /new                          Start a new session
-              /session info/list/switch     Manage chat sessions
-              /workspace all/list/attach    Manage workspaces
-              /workspace attach-pwd         Attach current local directory
+          SESSION & WORKSPACE:
+          /new                          Start a new session
+          /session info/list/switch     Manage chat sessions
+          /workspace all/list/attach    Manage workspaces
+          /workspace attach-pwd         Attach current local directory
 
-              FILES & CONTEXT:
-              /ls, /cat, /write, /edit      Explore & modify workspace files
-              /memory list/add/search       Manage session memories
-              /job list/add                 Track tasks for the assistant
-            """,
+          FILES & CONTEXT:
+          /ls, /cat, /write, /edit      Explore & modify workspace files
+          /memory list/add/search       Manage session memories
+          /job list/add                 Track tasks for the assistant
+        """,
         version: "1.0.0",
         subcommands: [Chat.self, Status.self, Query.self, Command.self],
         defaultSubcommand: Chat.self
@@ -75,7 +75,7 @@ struct Chat: AsyncParsableCommand {
             verbose: verbose
         )
 
-        let client = MonadClient(configuration: config)
+        var client = MonadClient(configuration: config)
 
         // Check server health
         do {
@@ -85,7 +85,8 @@ struct Chat: AsyncParsableCommand {
         } catch {
             print("")
             TerminalUI.printError(
-                "Could not connect to Monad Server at \(config.baseURL.absoluteString)")
+                "Could not connect to Monad Server at \(config.baseURL.absoluteString)"
+            )
             print("")
             print("  \(TerminalUI.bold("Troubleshooting:"))")
             print("  1. Ensure the server is running:")
@@ -99,6 +100,20 @@ struct Chat: AsyncParsableCommand {
                 print("")
             }
             throw ExitCode.failure
+        }
+
+        // Register this client (idempotent — reuses stored identity on re-runs) and recreate the
+        // client with the resolved clientId so it's included in every chat request, allowing the
+        // server to look up and include client-side tools (e.g. ask_attach_pwd).
+        if let identity = try? await RegistrationManager.shared.ensureRegistered(client: client) {
+            let configWithId = ClientConfiguration(
+                baseURL: config.baseURL,
+                apiKey: config.apiKey,
+                clientId: identity.clientId,
+                timeout: config.timeout,
+                verbose: config.verbose
+            )
+            client = MonadClient(configuration: configWithId)
         }
 
         // Save successful configuration
@@ -126,7 +141,8 @@ struct Chat: AsyncParsableCommand {
         // Persist successful session ID and handle re-attachment
         LocalConfigManager.shared.updateLastSessionId(finalSession.id.uuidString)
         await cliSessionManager.handleWorkspaceReattachment(
-            session: finalSession, localConfig: localConfig)
+            session: finalSession, localConfig: localConfig
+        )
 
         TerminalUI.printWelcome()
 

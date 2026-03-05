@@ -34,32 +34,12 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         group.post("/{id}/{name}/disable", use: disable)
     }
 
-    @Sendable func listSystemTools(_ request: Request, context: Context) async throws -> [ToolInfo] {
-        // Since system tools are constant, we can fetch from a fresh SessionManager or utility.
-        // However, SessionManager calculates available tools per session.
-        // For "system tools", we can list the default ones.
-        // SessionManager.listSystemTools? It doesn't exist.
-        // We can create a temporary ToolManager or add a method to SessionManager.
-        // For now, I'll hardcode list or invoke a new method on SessionManager. 
-        // I should check SessionManager again. It has `createToolManager`.
-        // Let's assume we want to list tools available to ANY session by default.
-        // I will add `getAllAvailableSystemTools` to SessionManager or just return defaults here.
-        // To avoid modifying `SessionManager` extensively, I'll list known system tools manually here or return empty for V1 if not critical? 
-        // User asked for "GET / to list system tools".
-        // I'll update `SessionManager` to expose `defaultTools`.
-        // For now, I'll return a placeholder list to satisfy API contract if SessionManager update is too deep.
-        // Actually, `SessionManager` initializes tools inside `createToolManager`.
-        // I'll skip implementing dynamic system tool list for now and return empty or a static list if I can.
-        // Or I can just fetch it from a dummy session if one exists? No.
-
-        // I'll return empty list for now and mark TODO, as `SessionManager` refactor is risky.
-        // But wait, user explicit request `GET /` to list system tools.
-        // I should probably implement it properly. `SessionManager` line 148 has `availableTools`.
-        // I can extract that list to a static property or method.
-        return []
+    @Sendable func listSystemTools(_: Request, context _: Context) async throws -> [ToolInfo] {
+        let tools = await sessionManager.systemTools()
+        return tools.map { ToolInfo(id: $0.id, name: $0.name, description: $0.description) }
     }
 
-    @Sendable func enable(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
+    @Sendable func enable(_: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         let name = try context.parameters.require("name")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
@@ -72,7 +52,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         return .ok
     }
 
-    @Sendable func disable(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
+    @Sendable func disable(_: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         let name = try context.parameters.require("name")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
@@ -85,7 +65,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         return .ok
     }
 
-    @Sendable func listSessionTools(_ request: Request, context: Context) async throws -> [ToolInfo] {
+    @Sendable func listSessionTools(_: Request, context: Context) async throws -> [ToolInfo] {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else {
             throw HTTPError(.badRequest)
@@ -104,7 +84,9 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
             toolInfos.append(
                 ToolInfo(
                     id: tool.id, name: tool.name, description: tool.description, isEnabled: true,
-                    source: source))
+                    source: source
+                )
+            )
         }
 
         // 2. Workspace Tools
@@ -117,20 +99,22 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
             var description = "Workspace tool"
 
             switch toolRef {
-            case .known(let toolId):
+            case let .known(toolId):
                 if let sysTool = await toolManager.getAvailableTools().first(where: {
                     $0.id == toolId
                 }) {
                     description = sysTool.description
                 }
-            case .custom(let def):
+            case let .custom(def):
                 description = def.description
             }
 
             toolInfos.append(
                 ToolInfo(
                     id: toolRef.toolId, name: name, description: description, isEnabled: true,
-                    source: source))
+                    source: source
+                )
+            )
         }
 
         return toolInfos
@@ -140,12 +124,11 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         let execReq = try await request.decode(as: ExecuteToolRequest.self, context: context)
 
         do {
-            let output = try await toolRouter.execute(
+            return try await toolRouter.execute(
                 tool: .known(execReq.name),
                 arguments: execReq.arguments,
                 sessionId: execReq.sessionId
             )
-            return output
         } catch let error as ToolError {
             if case .toolNotFound = error {
                 throw HTTPError(.notFound)

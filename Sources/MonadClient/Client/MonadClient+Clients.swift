@@ -2,10 +2,10 @@ import Foundation
 import MonadCore
 import MonadShared
 
-extension MonadClient {
+public extension MonadClient {
     // MARK: - Client API
 
-    public func registerClient(
+    func registerClient(
         hostname: String,
         displayName: String,
         platform: String,
@@ -23,12 +23,17 @@ extension MonadClient {
         return try await perform(request)
     }
 
-    public func listClients() async throws -> [ClientIdentity] {
+    func getClient(id: UUID) async throws -> ClientIdentity {
+        let request = try buildRequest(path: "/api/clients/\(id.uuidString)", method: "GET")
+        return try await perform(request)
+    }
+
+    func listClients() async throws -> [ClientIdentity] {
         let request = try buildRequest(path: "/api/clients", method: "GET")
         return try await perform(request)
     }
 
-    public func deleteClient(_ id: UUID) async throws {
+    func deleteClient(_ id: UUID) async throws {
         let request = try buildRequest(path: "/api/clients/\(id.uuidString)", method: "DELETE")
         _ = try await performRaw(request)
     }

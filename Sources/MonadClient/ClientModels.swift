@@ -4,7 +4,7 @@ import MonadShared
 
 // MARK: - Type Aliases from MonadCore
 
-// Session Models
+/// Session Models
 public typealias Session = MonadShared.SessionResponse
 
 // Chat Models
@@ -20,8 +20,11 @@ public typealias HealthStatus = MonadCore.HealthStatus
 public typealias Memory = MonadCore.Memory
 public typealias MemorySearchRequest = MonadShared.MemorySearchRequest
 
-// Tool Models
+/// Tool Models
 public typealias Tool = MonadShared.ToolInfo
+
+/// Agent Models
+public typealias Agent = MonadCore.Agent
 
 // Message Models
 public typealias Message = MonadCore.Message
@@ -33,9 +36,6 @@ public typealias AddJobRequest = MonadCore.AddJobRequest
 
 // MARK: - Client-Specific Models
 
-/// A delta from a streaming chat response
-public typealias ChatDelta = MonadShared.ChatDelta
-
 /// A delta for a tool call in a streaming response
 public typealias ToolCallDelta = MonadCore.ToolCallDelta
 
@@ -43,6 +43,7 @@ public typealias ToolCallDelta = MonadCore.ToolCallDelta
 public typealias ChatMetadata = MonadCore.ChatMetadata
 
 // MARK: - Client API Models
+
 public typealias ClientIdentity = MonadShared.ClientIdentity
 public typealias WorkspaceReference = MonadCore.WorkspaceReference
 public typealias WorkspaceURI = MonadCore.WorkspaceURI
@@ -68,11 +69,11 @@ public enum MonadClientError: Error, LocalizedError {
         switch self {
         case .invalidURL:
             return "Invalid URL"
-        case .networkError(let error):
+        case let .networkError(error):
             return "Network error: \(error.localizedDescription)"
-        case .httpError(let statusCode, let message):
+        case let .httpError(statusCode, message):
             return "HTTP \(statusCode): \(message ?? "Unknown error")"
-        case .decodingError(let error):
+        case let .decodingError(error):
             return "Failed to decode response: \(error.localizedDescription)"
         case .serverNotReachable:
             return "Server is not reachable"
@@ -80,7 +81,7 @@ public enum MonadClientError: Error, LocalizedError {
             return "Unauthorized - check your API key"
         case .notFound:
             return "Resource not found"
-        case .unknown(let message):
+        case let .unknown(message):
             return message
         }
     }

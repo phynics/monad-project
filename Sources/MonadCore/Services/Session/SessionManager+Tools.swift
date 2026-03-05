@@ -1,6 +1,6 @@
 import Foundation
 
-extension SessionManager {
+public extension SessionManager {
     // MARK: - Tool Management
 
     internal func createToolManager(
@@ -19,7 +19,8 @@ extension SessionManager {
                 root: jailRoot,
                 onChange: { _ in
                     // Update working directory logic
-                })),
+                }
+            )),
             AnyTool(ListDirectoryTool(currentDirectory: currentWD, jailRoot: jailRoot)),
             AnyTool(FindFileTool(currentDirectory: currentWD, jailRoot: jailRoot)),
             AnyTool(SearchFileContentTool(currentDirectory: currentWD, jailRoot: jailRoot)),
@@ -35,19 +36,38 @@ extension SessionManager {
             )),
 
             // Job Queue Gateway
-            AnyTool(JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession))
+            AnyTool(JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession)),
         ]
 
         return SessionToolManager(
-            availableTools: availableTools, contextSession: toolContextSession)
+            availableTools: availableTools, contextSession: toolContextSession
+        )
     }
 
-    public func findWorkspaceForTool(_ tool: ToolReference, in workspaceIds: [UUID]) async throws
-        -> UUID? {
+    /// Returns the set of system tools available to any session, using the workspace root as a
+    /// placeholder path. Intended for metadata queries (listing), not actual execution.
+    func systemTools() async -> [AnyTool] {
+        let jailRoot = workspaceRoot.path
+        let dummyId = UUID()
+        let toolContextSession = ToolContextSession()
+        let jobQueueContext = JobQueueContext(persistenceService: persistenceService, sessionId: dummyId)
+        let dummySession = Timeline(id: dummyId, workingDirectory: jailRoot)
+        let manager = await createToolManager(
+            for: dummySession,
+            jailRoot: jailRoot,
+            toolContextSession: toolContextSession,
+            jobQueueContext: jobQueueContext
+        )
+        return await manager.availableTools
+    }
+
+    func findWorkspaceForTool(_ tool: ToolReference, in workspaceIds: [UUID]) async throws
+        -> UUID?
+    {
         return try await persistenceService.findWorkspaceId(forToolId: tool.toolId, in: workspaceIds)
     }
 
-    public func getAggregatedTools(for sessionId: UUID) async throws -> [ToolReference] {
+    func getAggregatedTools(for sessionId: UUID) async throws -> [ToolReference] {
         guard let session = sessions[sessionId] else { return [] }
 
         var ids: [UUID] = []
@@ -60,16 +80,15 @@ extension SessionManager {
         return try await persistenceService.fetchTools(forWorkspaces: workspaceIds)
     }
 
-    public func getClientTools(clientId: UUID) async throws -> [ToolReference] {
+    func getClientTools(clientId: UUID) async throws -> [ToolReference] {
         return try await persistenceService.fetchClientTools(clientId: clientId)
     }
 
     /// Aggregates all available tool references for a session, including those from the client.
-    public func getAllToolReferences(sessionId: UUID, clientId: UUID? = nil) async throws -> [ToolReference] {
+    func getAllToolReferences(sessionId: UUID, clientTools: [ToolReference]? = nil) async throws -> [ToolReference] {
         var references = try await getAggregatedTools(for: sessionId)
 
-        if let clientId = clientId {
-            let clientTools = try await getClientTools(clientId: clientId)
+        if let clientTools = clientTools {
             references.append(contentsOf: clientTools)
         }
 
@@ -82,7 +101,7 @@ extension SessionManager {
         }
     }
 
-    public func getToolSource(toolId: String, for sessionId: UUID) async -> String? {
+    func getToolSource(toolId: String, for sessionId: UUID) async -> String? {
         guard let session = sessions[sessionId] else { return nil }
 
         if let toolManager = toolManagers[sessionId] {

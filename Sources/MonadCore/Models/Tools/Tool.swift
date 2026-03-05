@@ -55,12 +55,14 @@ public protocol Tool: Sendable, PromptFormattable {
 
 // MARK: - Default Implementation
 
-extension Tool {
+public extension Tool {
     /// Default: no usage example provided.
-    public var usageExample: String? { nil }
+    var usageExample: String? {
+        nil
+    }
 
     /// Default summarize implementation that generates a compact description of inputs and outputs.
-    public func summarize(parameters: [String: Any], result: ToolResult) -> String {
+    func summarize(parameters: [String: Any], result: ToolResult) -> String {
         // Extract key parameter values (max 3, truncated)
         let paramSummary = parameters.keys.sorted().prefix(3).compactMap { key -> String? in
             guard let value = parameters[key] else { return nil }
@@ -85,11 +87,13 @@ extension Tool {
     }
 
     /// Converts the tool's parameter schema into an OpenAI-compatible JSONSchema.
-    public func toToolParam() -> ChatQuery.ChatCompletionToolParam {
-        // Convert [String: Any] parametersSchema to JSONSchema using JSONSerialization/Decoder
+    func toToolParam() -> ChatQuery.ChatCompletionToolParam {
+        // parametersSchema is [String: AnyCodable] — use JSONEncoder (Codable-aware) not
+        // JSONSerialization, which cannot handle the AnyCodable wrapper (__SwiftValue crash).
         let schema: JSONSchema
-        if let data = try? JSONSerialization.data(withJSONObject: parametersSchema),
-            let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data) {
+        if let data = try? JSONEncoder().encode(parametersSchema),
+           let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data)
+        {
             schema = decoded
         } else {
             let logger = Logger.module(named: "tool-schema")
@@ -108,19 +112,19 @@ extension Tool {
     }
 
     /// Wraps the current tool in an ``AnyTool`` container.
-    public func toAnyTool() -> AnyTool {
+    func toAnyTool() -> AnyTool {
         AnyTool(self)
     }
 }
 
-extension Tool {
+public extension Tool {
     /// Standard prompt representation for tools.
-    public var promptString: String {
+    var promptString: String {
         promptString(provenance: nil)
     }
 
     /// Formatted content for inclusion in LLM prompt with optional provenance (e.g. workspace name).
-    public func promptString(provenance: String?) -> String {
+    func promptString(provenance: String?) -> String {
         let label = provenance.map { " [\($0)]" } ?? ""
         return "- `\(id)`\(label): \(description)"
     }
@@ -142,23 +146,23 @@ public func formatToolsForPrompt(_ tools: [AnyTool]) async -> String {
     guard !toolSpecs.isEmpty else { return "" }
 
     return """
-        Available tools:
-        \(toolSpecs.joined(separator: "\n"))
+    Available tools:
+    \(toolSpecs.joined(separator: "\n"))
 
-        Rules:
-        - Use tools only for missing context.
-        - Create memories frequently via `create_memory`.
-        - `launch_subagent` for isolated tasks.
-        - Path Resolution: If a tool provenance indicates a specific workspace (e.g. `[Workspace: project-x]`), all file paths passed to it MUST be relative to that workspace root.
-        - System Tools: Tools labeled `[System]` have global scope or session-specific sandbox scope.
-        - Summarize the result if it is excessively long.
-        - If a tool call fails, you can attempt to recover by correcting the parameters and trying again.
-        - Be specific.
-        """
+    Rules:
+    - Use tools only for missing context.
+    - Create memories frequently via `create_memory`.
+    - `launch_subagent` for isolated tasks.
+    - Path Resolution: If a tool provenance indicates a specific workspace (e.g. `[Workspace: project-x]`), all file paths passed to it MUST be relative to that workspace root.
+    - System Tools: Tools labeled `[System]` have global scope or session-specific sandbox scope.
+    - Summarize the result if it is excessively long.
+    - If a tool call fails, you can attempt to recover by correcting the parameters and trying again.
+    - Be specific.
+    """
 }
 
 /// Encapsulates the outcome of a tool execution.
-public struct ToolResult: Sendable {
+public struct ToolResult: Sendable, Codable {
     /// Whether the execution was successful.
     public let success: Bool
 
@@ -173,7 +177,8 @@ public struct ToolResult: Sendable {
 
     /// Creates a successful tool result.
     public static func success(_ output: String)
-        -> ToolResult {
+        -> ToolResult
+    {
         ToolResult(success: true, output: output, error: nil)
     }
 
@@ -192,7 +197,7 @@ public struct ToolConfiguration: Codable, Identifiable, Sendable {
     public var isEnabled: Bool
 
     public init(toolId: String, isEnabled: Bool = true) {
-        self.id = toolId
+        id = toolId
         self.isEnabled = isEnabled
     }
 }
@@ -215,16 +220,33 @@ public struct AnyTool: Tool {
     public var provenance: String?
 
     public init(_ tool: any Tool, provenance: String? = nil) {
-        self.wrapped = tool
+        wrapped = tool
         self.provenance = provenance
     }
 
-    public var id: String { wrapped.id }
-    public var name: String { wrapped.name }
-    public var description: String { wrapped.description }
-    public var requiresPermission: Bool { wrapped.requiresPermission }
-    public var usageExample: String? { wrapped.usageExample }
-    public var parametersSchema: [String: AnyCodable] { wrapped.parametersSchema }
+    public var id: String {
+        wrapped.id
+    }
+
+    public var name: String {
+        wrapped.name
+    }
+
+    public var description: String {
+        wrapped.description
+    }
+
+    public var requiresPermission: Bool {
+        wrapped.requiresPermission
+    }
+
+    public var usageExample: String? {
+        wrapped.usageExample
+    }
+
+    public var parametersSchema: [String: AnyCodable] {
+        wrapped.parametersSchema
+    }
 
     public func canExecute() async -> Bool {
         await wrapped.canExecute()

@@ -68,9 +68,6 @@ actor ChatREPL: ChatREPLController {
         // Register commands first
         await registerCommands()
 
-        // Ensure client is registered and intrinsic tools are active
-        _ = try? await RegistrationManager.shared.ensureRegistered(client: client)
-
         // Show active context (memories, documents) at startup
         await showContext()
         await checkAndRestoreWorkspaces()
@@ -113,12 +110,12 @@ actor ChatREPL: ChatREPLController {
             }
         }
         source.resume()
-        self.signalSource = source
+        signalSource = source
         // Ignore SIGINT in the main process to prevent it from killing us
         signal(SIGINT, SIG_IGN)
     }
 
-    public func cancelCurrentGeneration() async {
+    func cancelCurrentGeneration() async {
         if let task = currentGenerationTask {
             task.cancel()
             currentGenerationTask = nil
@@ -135,24 +132,27 @@ actor ChatREPL: ChatREPLController {
 
                 let stream = try await client.chatStream(sessionId: sessionId, message: message)
 
-                var toolCallState: [Int: (name: String, args: String)] = [:]
                 var assistantStartPrinted = false
 
-                for try await delta in stream {
+                for try await event in stream {
                     if Task.isCancelled { break }
 
-                    switch delta.type {
-                    case .generationContext:
-                        if let metadata = delta.metadata {
+                    switch event {
+                    case let .meta(meta):
+                        switch meta {
+                        case let .generationContext(metadata):
                             if !metadata.memories.isEmpty || !metadata.files.isEmpty {
                                 let memories = metadata.memories.count
                                 let files = metadata.files.count
                                 print(TerminalUI.dim("Using \(memories) memories and \(files) files"))
                             }
+                        case .generationCompleted:
+                            break
                         }
 
-                    case .thought:
-                        if let thought = delta.thought {
+                    case let .delta(delta):
+                        switch delta {
+                        case let .thinking(thought):
                             if !assistantStartPrinted {
                                 // Indicate reasoning phase
                                 print(TerminalUI.dim("🤔 Thinking..."))
@@ -161,79 +161,72 @@ actor ChatREPL: ChatREPLController {
                             // Optionally print thinking chunk-by-chunk if verbose, or just keep it silent/dim
                             print(TerminalUI.dim(thought), terminator: "")
                             fflush(stdout)
-                        }
 
-
-                    case .thoughtCompleted:
-                        break
-
-                    case .toolCall:
-                        // Legacy or internal buffering
-                        if let toolCalls = delta.toolCalls {
-                            for call in toolCalls {
-                                let index = call.index
-                                var state = toolCallState[index] ?? ("", "")
-                                if let name = call.name { state.name += name }
-                                if let args = call.arguments { state.args += args }
-                                toolCallState[index] = state
-                            }
-                        }
-
-                    case .toolCallError:
-                        if let err = delta.toolCallError {
-                            print(TerminalUI.red("❌ Tool Error (\(err.name)): \(err.error)"))
-                        }
-
-                    case .toolExecution:
-                        if let execution = delta.toolExecution {
-                            switch execution.status {
-                            case "attempting":
-                                let targetInfo = execution.target != nil ? " on \(execution.target!)" : ""
-                                print(TerminalUI.yellow("🔄 Running \(execution.name ?? "tool")\(targetInfo)..."))
-                            case "success":
-                                print(TerminalUI.green("✅ Tool completed"))
-                            case "failure":
-                                print(TerminalUI.red("❌ Tool failed: \(execution.result ?? "Unknown error")"))
-                            default:
-                                break
-                            }
-                        }
-
-                    case .delta:
-                        if let content = delta.content {
+                        case let .generation(content):
                             if !assistantStartPrinted {
                                 TerminalUI.printAssistantStart()
                                 assistantStartPrinted = true
                             }
                             print(content, terminator: "")
                             fflush(stdout)
+
+                        case .toolCall:
+                            // Streamed tool calls are usually buffered internally or just shown via toolExecution
+                            break
+
+                        case let .toolExecution(_, status):
+                            switch status {
+                            case let .attempting(name, ref):
+                                let targetInfo: String
+                                switch ref {
+                                case .known: targetInfo = " on server"
+                                case .custom: targetInfo = " on client"
+                                }
+                                print(TerminalUI.yellow("🔄 Running \(name)\(targetInfo)..."))
+                            default:
+                                break
+                            }
                         }
 
-                    case .generationCompleted:
-                        if let meta = delta.responseMetadata {
+                    case let .error(err):
+                        switch err {
+                        case let .toolCallError(_, name, error):
+                            print(TerminalUI.red("❌ Tool Error (\(name)): \(error)"))
+                        case let .error(message):
+                            print("\n")
+                            TerminalUI.printError("Stream Error: \(message)")
+                            return
+                        case .cancelled:
+                            print(TerminalUI.yellow("\n[Generation cancelled]"))
+                        }
+
+                    case let .completion(completion):
+                        switch completion {
+                        case let .generationCompleted(_, meta):
                             if let snapshotData = meta.debugSnapshotData {
-                                await updateDebugSnapshot(snapshotData)
+                                updateDebugSnapshot(snapshotData)
                             }
 
                             let tokens = meta.totalTokens ?? 0
                             let dur = String(format: "%.1fs", meta.duration ?? 0)
                             print(TerminalUI.dim("\n[Generated in \(dur), \(tokens) tokens]"))
-                        } else {
-                            print("\n")
+
+                        case let .toolExecution(_, status):
+                            switch status {
+                            case .success:
+                                print(TerminalUI.green("✅ Tool completed"))
+                            case let .failed(_, error):
+                                print(TerminalUI.red("❌ Tool failed: \(error)"))
+                            case let .failure(error):
+                                print(TerminalUI.red("❌ Tool failed: \(error)"))
+                            default:
+                                break
+                            }
+
+                        case .streamCompleted:
+                            // Terminal event, loop will end naturally
+                            break
                         }
-
-                    case .generationCancelled:
-                        print(TerminalUI.yellow("\n[Generation cancelled]"))
-
-                    case .error:
-                        if let error = delta.error {
-                            print("\n")
-                            TerminalUI.printError("Stream Error: \(error)")
-                            return
-                        }
-
-                    case .streamCompleted:
-                        break
                     }
                 }
 
@@ -249,7 +242,7 @@ actor ChatREPL: ChatREPLController {
     }
 
     private func updateDebugSnapshot(_ data: Data) {
-        self.lastDebugSnapshot = try? SerializationUtils.jsonDecoder.decode(DebugSnapshot.self, from: data)
+        lastDebugSnapshot = try? SerializationUtils.jsonDecoder.decode(DebugSnapshot.self, from: data)
     }
 
     // MARK: - ChatREPLController Protocol
@@ -260,7 +253,7 @@ actor ChatREPL: ChatREPLController {
 
     func switchSession(_ session: Session) async {
         self.session = session
-        self.selectedWorkspaceId = nil
+        selectedWorkspaceId = nil
         LocalConfigManager.shared.updateLastSessionId(session.id.uuidString)
         TerminalUI.printInfo("Switched to session \(session.id.uuidString.prefix(8))")
         await showContext()
@@ -268,14 +261,14 @@ actor ChatREPL: ChatREPLController {
     }
 
     func setSelectedWorkspace(_ id: UUID?) async {
-        self.selectedWorkspaceId = id
+        selectedWorkspaceId = id
     }
 
-    public func getSelectedWorkspace() -> UUID? {
+    func getSelectedWorkspace() -> UUID? {
         return selectedWorkspaceId
     }
 
-    public func getLastDebugSnapshot() -> DebugSnapshot? {
+    func getLastDebugSnapshot() -> DebugSnapshot? {
         return lastDebugSnapshot
     }
 
@@ -298,17 +291,17 @@ actor ChatREPL: ChatREPLController {
             if let identity = RegistrationManager.shared.getIdentity() {
                 for ws in sessionWS.attached {
                     if ws.hostType == .client, ws.ownerId == identity.clientId {
-                         // Check local existence
-                         // URI format: file://hostname/path
-                         if let url = URL(string: ws.uri.description), url.host == identity.hostname {
-                             let path = url.path
-                             if !FileManager.default.fileExists(atPath: path) {
-                                 workspacesToRestore.append(ws)
-                             } else {
-                                 // Add active ones to local tracking if they exist
-                                 LocalConfigManager.shared.saveClientWorkspace(uri: ws.uri.description, id: ws.id.uuidString)
-                             }
-                         }
+                        // Check local existence
+                        // URI format: file://hostname/path
+                        if let url = URL(string: ws.uri.description), url.host == identity.hostname {
+                            let path = url.path
+                            if !FileManager.default.fileExists(atPath: path) {
+                                workspacesToRestore.append(ws)
+                            } else {
+                                // Add active ones to local tracking if they exist
+                                LocalConfigManager.shared.saveClientWorkspace(uri: ws.uri.description, id: ws.id.uuidString)
+                            }
+                        }
                     }
                 }
             }
@@ -330,14 +323,14 @@ actor ChatREPL: ChatREPLController {
                             TerminalUI.printSuccess("Restored server workspace: \(ws.uri.description)")
                         } else {
                             // Client workspace
-                             if let url = URL(string: ws.uri.description) {
-                                 try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-                                 TerminalUI.printSuccess("Created local directory: \(url.path)")
-                             }
+                            if let url = URL(string: ws.uri.description) {
+                                try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+                                TerminalUI.printSuccess("Created local directory: \(url.path)")
+                            }
                         }
                     }
                 } else {
-                     print("Skipping restoration.")
+                    print("Skipping restoration.")
                 }
                 print(TerminalUI.dim("------------------------------------------------"))
                 print("")
@@ -378,7 +371,8 @@ actor ChatREPL: ChatREPLController {
                 completion: { text in
                     guard text.hasPrefix("/") else { return [] }
                     return allCandidates.filter { $0.hasPrefix(text) }
-                })
+                }
+            )
         else {
             running = false
             return nil
@@ -421,24 +415,35 @@ actor ChatREPL: ChatREPLController {
             let memories = try await client.listMemories()
             let config = try await client.getConfiguration()
 
-            if !memories.isEmpty || config.documentContextLimit > 0 {
-                print(TerminalUI.dim("─────────────────────────────────────────"))
+            print(TerminalUI.dim("─────────────────────────────────────────"))
 
-                if !memories.isEmpty {
-                    let limit = config.memoryContextLimit
-                    let activeCount = min(memories.count, limit)
-                    print(
-                        TerminalUI.dim(
-                            "📚 \(activeCount) memories active (of \(memories.count) total)"))
-                }
-
-                if config.documentContextLimit > 0 {
-                    print(TerminalUI.dim("📄 Document context: \(config.documentContextLimit) max"))
-                }
-
-                print(TerminalUI.dim("─────────────────────────────────────────"))
-                print("")
+            // Models
+            let providerName = config.activeProvider.rawValue
+            print(TerminalUI.dim("🤖 Provider: \(providerName)"))
+            print(TerminalUI.dim("   Main:    \(config.modelName)"))
+            if !config.utilityModel.isEmpty {
+                print(TerminalUI.dim("   Utility: \(config.utilityModel)"))
             }
+            if !config.fastModel.isEmpty, config.fastModel != config.utilityModel {
+                print(TerminalUI.dim("   Fast:    \(config.fastModel)"))
+            }
+
+            if !memories.isEmpty {
+                let limit = config.memoryContextLimit
+                let activeCount = min(memories.count, limit)
+                print(
+                    TerminalUI.dim(
+                        "📚 \(activeCount) memories active (of \(memories.count) total)"
+                    )
+                )
+            }
+
+            if config.documentContextLimit > 0 {
+                print(TerminalUI.dim("📄 Document context: \(config.documentContextLimit) max"))
+            }
+
+            print(TerminalUI.dim("─────────────────────────────────────────"))
+            print("")
         } catch {
             TerminalUI.printWarning("Could not load context: \(error.localizedDescription)")
         }
@@ -449,12 +454,12 @@ actor ChatREPL: ChatREPLController {
         guard let cmdName = parts.first.map(String.init) else { return }
 
         let args = commandLine.split(separator: " ", omittingEmptySubsequences: true).map(
-            String.init)
+            String.init
+        )
 
         // Find command
         // registry.getCommand handles aliases and prefix stripping
         if let command = await registry.getCommand(cmdName) {
-
             // Context construction
             // We pass 'self' as the controller. BUT 'self' is actor.
             // SlashCommand run is async.
@@ -464,7 +469,8 @@ actor ChatREPL: ChatREPLController {
             // ChatREPLController is Sendable. Actor type is Sendable.
 
             let context = ChatContext(
-                client: client, session: session, output: StandardOutput(), repl: self)
+                client: client, session: session, output: StandardOutput(), repl: self
+            )
 
             do {
                 try await command.run(args: Array(args.dropFirst()), context: context)
@@ -489,15 +495,15 @@ actor ChatREPL: ChatREPLController {
                 TerminalUI.printError("Server not reachable. Please ensure the server is running.")
             case .notFound:
                 TerminalUI.printError("Resource not found.")
-            case .httpError(let statusCode, let message):
+            case let .httpError(statusCode, message):
                 TerminalUI.printError("HTTP Error \(statusCode): \(message ?? "Unknown")")
-            case .networkError(let err):
+            case let .networkError(err):
                 TerminalUI.printError("Network Error: \(err.localizedDescription)")
-            case .decodingError(let err):
+            case let .decodingError(err):
                 TerminalUI.printError("Decoding Error: \(err.localizedDescription)")
             case .invalidURL:
-                 TerminalUI.printError("Invalid URL.")
-            case .unknown(let msg):
+                TerminalUI.printError("Invalid URL.")
+            case let .unknown(msg):
                 TerminalUI.printError("Error: \(msg)")
             }
         } else {
