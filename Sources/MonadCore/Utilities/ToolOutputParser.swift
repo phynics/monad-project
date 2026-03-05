@@ -27,6 +27,11 @@ public struct ToolOutputParser {
             self.name = name
             self.arguments = args
         }
+
+        public init(name: String, arguments: [String: AnyCodable]) {
+            self.name = name
+            self.arguments = arguments
+        }
     }
 
     /// Attempts to parse tool calls from a string that might contain XML-style tags or JSON code blocks.
@@ -34,9 +39,34 @@ public struct ToolOutputParser {
     /// - Returns: An array of FallbackToolCall objects.
     public static func parse(from content: String) -> [FallbackToolCall] {
         var foundCalls: [FallbackToolCall] = []
+
+        // A. Check for pipe-delimited tool call markers (e.g. Qwen models)
+        // Format: <|tool_call_begin|> functions.name:index <|tool_call_argument_begin|> {...} <|tool_call_end|>
+        if content.contains("<|tool_call_begin|>") || content.contains("tool_call_begin") {
+            let pipePattern = #"(?:(?:<\|tool_call_begin\|>)|(?:tool_call_begin))\s*(?:functions\.)?(\w+)(?::\d+)?\s*(?:<\|tool_call_argument_begin\|>)?\s*(\{[^}]*(?:\{[^}]*\}[^}]*)?\})\s*(?:<\|tool_call_end\|>)?"#
+
+            if let regex = try? NSRegularExpression(pattern: pipePattern, options: [.dotMatchesLineSeparators]) {
+                let matches = regex.matches(in: content, options: [], range: NSRange(content.startIndex..., in: content))
+
+                for match in matches {
+                    if let nameRange = Range(match.range(at: 1), in: content),
+                       let argsRange = Range(match.range(at: 2), in: content) {
+                        let name = String(content[nameRange])
+                        let argsString = String(content[argsRange])
+                        if let data = argsString.data(using: .utf8),
+                           let args = try? JSONDecoder().decode([String: AnyCodable].self, from: data) {
+                            foundCalls.append(FallbackToolCall(name: name, arguments: args))
+                        }
+                    }
+                }
+            }
+
+            if !foundCalls.isEmpty { return foundCalls }
+        }
+
         var cleaned = content
 
-        // A. Check for XML-style <tool_call> tags
+        // B. Check for XML-style <tool_call> tags
         // Loop through all matches
         if let regex = try? NSRegularExpression(pattern: "(?s)<tool_call>(.*?)</tool_call>", options: []) {
             let matches = regex.matches(in: content, options: [], range: NSRange(content.startIndex..., in: content))
@@ -57,7 +87,7 @@ public struct ToolOutputParser {
             return foundCalls
         }
 
-        // B. Check for markdown code blocks (legacy/single call fallback)
+        // C. Check for markdown code blocks (legacy/single call fallback)
         if let range = cleaned.range(of: "```json", options: .caseInsensitive),
            let endRange = cleaned.range(of: "```", options: .backwards) {
             if range.upperBound < endRange.lowerBound {

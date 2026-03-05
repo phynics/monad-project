@@ -33,7 +33,7 @@ public struct SSEStreamReader: Sendable {
                                 }
                                 continuation.yield(event)
                             } else {
-                                logger.error("Failed to parse SSE message")
+                                logger.debug("Skipping unparseable SSE message")
                             }
                         }
                     }
@@ -55,11 +55,9 @@ public struct SSEStreamReader: Sendable {
             if line.hasPrefix("data: ") {
                 let data = String(line.dropFirst(6))
 
-                // Try to parse JSON
+                // Try to parse JSON using the shared decoder (ISO 8601 dates)
                 if let jsonData = data.data(using: .utf8) {
-                    if let event = try? JSONDecoder().decode(ChatEvent.self, from: jsonData) {
-                        return event
-                    }
+                    return try? SerializationUtils.jsonDecoder.decode(ChatEvent.self, from: jsonData)
                 }
             }
         }

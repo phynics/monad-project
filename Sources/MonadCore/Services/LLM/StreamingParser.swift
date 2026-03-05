@@ -26,6 +26,10 @@ public struct StreamingParser {
         buffer += chunk
         rawBuffer += chunk
 
+        // Strip LLM formatting tokens like <|tool_calls_section_begin|>, <|tool_call_begin|>, etc.
+        // Some models (e.g. Qwen) emit tool calls as raw text with these pipe-delimited markers.
+        stripPipeDelimitedMarkers()
+
         // Process buffer exhaustively
         while let result = extractNextSegment() {
             if result.isThinking {
@@ -45,6 +49,25 @@ public struct StreamingParser {
                     content += result.text
                 }
             }
+        }
+    }
+
+    // MARK: - Pipe-Delimited Marker Stripping
+
+    /// Known LLM formatting token markers to strip from streaming output.
+    private static let pipeMarkerPattern = try! NSRegularExpression(
+        pattern: #"<\|[a-z_]+\|>"#,
+        options: []
+    )
+
+    /// Removes pipe-delimited markers like `<|tool_call_begin|>` from the buffer.
+    private mutating func stripPipeDelimitedMarkers() {
+        let range = NSRange(buffer.startIndex..., in: buffer)
+        let cleaned = Self.pipeMarkerPattern.stringByReplacingMatches(
+            in: buffer, options: [], range: range, withTemplate: ""
+        )
+        if cleaned != buffer {
+            buffer = cleaned
         }
     }
 

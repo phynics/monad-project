@@ -109,4 +109,25 @@ final class StreamingParserTests: XCTestCase {
         XCTAssertEqual(tools[0].name, "toolA")
         XCTAssertEqual(tools[1].name, "toolB")
     }
+
+    // MARK: - Pipe-Delimited Marker Stripping
+
+    func testStreamingParserStripsPipeDelimitedMarkers() {
+        var parser = StreamingParser()
+
+        parser.process("A: I'll help you. <|tool_calls_section_begin|> <|tool_call_begin|> functions.list_workspaces:0 <|tool_call_argument_begin|> {} <|tool_call_end|> <|tool_calls_section_end|>")
+
+        // The pipe-delimited markers should be stripped; only visible text remains
+        XCTAssertFalse(parser.content.contains("<|"))
+        XCTAssertFalse(parser.content.contains("|>"))
+        XCTAssertTrue(parser.content.contains("I'll help you"))
+    }
+
+    func testStreamingParserPreservesNormalAngleBrackets() {
+        var parser = StreamingParser()
+        parser.process("Use <div> tags in HTML")
+
+        // Regular angle brackets should remain
+        XCTAssertTrue(parser.content.contains("<div>"))
+    }
 }
