@@ -6,7 +6,7 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     private let messagesMock = MockMessageStore()
     private let sessionsMock = MockSessionPersistence()
     private let jobsMock = MockJobStore()
-    private let agentsMock = MockAgentStore()
+    private let msAgentsMock = MockMSAgentStore()
     private let workspacesMock = MockWorkspacePersistence()
     private let toolsMock = MockToolPersistence()
 
@@ -77,16 +77,16 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     public func deleteJob(id: UUID) async throws { try await jobsMock.deleteJob(id: id) }
     public func monitorJobs() async -> AsyncStream<JobEvent> { await jobsMock.monitorJobs() }
 
-    // MARK: - AgentStoreProtocol
-    public var agents: [Agent] {
-        get { agentsMock.agents }
-        set { agentsMock.agents = newValue }
+    // MARK: - MSAgentStoreProtocol
+    public var msAgents: [MSAgent] {
+        get { msAgentsMock.msAgents }
+        set { msAgentsMock.msAgents = newValue }
     }
-    public func saveAgent(_ agent: Agent) async throws { try await agentsMock.saveAgent(agent) }
-    public func fetchAgent(id: UUID) async throws -> Agent? { try await agentsMock.fetchAgent(id: id) }
-    public func fetchAgent(key: String) async throws -> Agent? { try await agentsMock.fetchAgent(key: key) }
-    public func fetchAllAgents() async throws -> [Agent] { try await agentsMock.fetchAllAgents() }
-    public func hasAgent(id: String) async -> Bool { await agentsMock.hasAgent(id: id) }
+    public func saveMSAgent(_ agent: MSAgent) async throws { try await msAgentsMock.saveMSAgent(agent) }
+    public func fetchMSAgent(id: UUID) async throws -> MSAgent? { try await msAgentsMock.fetchMSAgent(id: id) }
+    public func fetchMSAgent(key: String) async throws -> MSAgent? { try await msAgentsMock.fetchMSAgent(key: key) }
+    public func fetchAllMSAgents() async throws -> [MSAgent] { try await msAgentsMock.fetchAllMSAgents() }
+    public func hasMSAgent(id: String) async -> Bool { await msAgentsMock.hasMSAgent(id: id) }
 
     // MARK: - WorkspacePersistenceProtocol
     public var workspaces: [WorkspaceReference] {
@@ -153,7 +153,7 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
         messages = []
         sessions = []
         jobs = []
-        agents = []
+        msAgents = []
         workspaces = []
     }
 }

@@ -33,16 +33,16 @@ extension Job: FetchableRecord, PersistableRecord {
     public static var databaseTableName: String { "job" }
 }
 
-// MARK: - Agent
+// MARK: - MSAgent
 
-extension Agent: FetchableRecord, PersistableRecord {
+extension MSAgent: FetchableRecord, PersistableRecord {
     public static var databaseTableName: String { "agent" }
 }
 
-extension Agent {
+extension MSAgent {
     /// Helper to fetch the default agent from the database
-    public static func fetchDefault(in db: Database) throws -> Agent? {
-        return try Agent.fetchOne(db, key: "default")
+    public static func fetchDefault(in db: Database) throws -> MSAgent? {
+        return try MSAgent.fetchOne(db, key: "default")
     }
 }
 

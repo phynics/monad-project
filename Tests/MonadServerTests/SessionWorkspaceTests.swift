@@ -31,7 +31,7 @@ final class SessionWorkspaceTests: XCTestCase {
             $0.persistenceService = persistenceService
             $0.embeddingService = embeddingService
             $0.llmService = llmService
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot

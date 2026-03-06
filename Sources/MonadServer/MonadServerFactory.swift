@@ -73,7 +73,7 @@ public struct MonadServerFactory {
         let connectionManager = WebSocketConnectionManager()
 
         // Initialize Core Services
-        let agentRegistry = AgentRegistry()
+        let msAgentRegistry = MSAgentRegistry()
         let sessionManager = SessionManager(
             workspaceRoot: workspaceRoot,
             connectionManager: connectionManager,
@@ -82,14 +82,14 @@ public struct MonadServerFactory {
 
         let toolRouter = ToolRouter()
         let chatEngine = ChatEngine()
-        let agentExecutor = AgentExecutor(
+        let msAgentExecutor = MSAgentExecutor(
             persistenceService: persistenceService,
             chatEngine: chatEngine
         )
         let jobRunner = JobRunnerService(
             sessionManager: sessionManager,
-            agentRegistry: agentRegistry,
-            agentExecutor: agentExecutor
+            msAgentRegistry: msAgentRegistry,
+            msAgentExecutor: msAgentExecutor
         )
         let orphanCleanup = OrphanCleanupService(
             workspaceRoot: workspaceRoot,
@@ -101,11 +101,11 @@ public struct MonadServerFactory {
             $0.llmService = llmService
             $0.embeddingService = embeddingService
             $0.vectorStore = vectorStore
-            $0.agentRegistry = agentRegistry
+            $0.msAgentRegistry = msAgentRegistry
             $0.sessionManager = sessionManager
             $0.toolRouter = toolRouter
             $0.chatEngine = chatEngine
-            $0.agentExecutor = agentExecutor
+            $0.msAgentExecutor = msAgentExecutor
         } operation: {
             // Public routes
             router.get("/health") { _, _ -> String in
@@ -169,10 +169,10 @@ public struct MonadServerFactory {
             )
             toolController.addRoutes(to: protected.group("/tools"))
 
-            let agentController = AgentAPIController<AppRequestContext>(
-                agentRegistry: agentRegistry
+            let msAgentController = MSAgentAPIController<AppRequestContext>(
+                msAgentRegistry: msAgentRegistry
             )
-            agentController.addRoutes(to: protected.group("/agents"))
+            msAgentController.addRoutes(to: protected.group("/msAgents"))
 
             let workspacesGroup = protected.group("/workspaces")
 

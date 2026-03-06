@@ -13,18 +13,18 @@ public struct LaunchSubagentTool: MonadShared.Tool, Sendable {
     private let persistenceService: any JobStoreProtocol
     private let sessionId: UUID
     private let parentId: UUID?
-    private let agentRegistry: AgentRegistry
+    private let msAgentRegistry: MSAgentRegistry
 
     public init(
         persistenceService: any JobStoreProtocol,
         sessionId: UUID,
         parentId: UUID? = nil,
-        agentRegistry: AgentRegistry
+        msAgentRegistry: MSAgentRegistry
     ) {
         self.persistenceService = persistenceService
         self.sessionId = sessionId
         self.parentId = parentId
-        self.agentRegistry = agentRegistry
+        self.msAgentRegistry = msAgentRegistry
     }
 
     public var parametersSchema: [String: AnyCodable] {
@@ -64,9 +64,9 @@ public struct LaunchSubagentTool: MonadShared.Tool, Sendable {
         }
 
         // Verify agent exists
-        guard await agentRegistry.hasAgent(id: agentId) else {
-            let available = await agentRegistry.listAgents().map { "\($0.id) (\($0.name))" }.joined(separator: ", ")
-            return .failure("Agent '\(agentId)' not found. Available agents: \(available)")
+        guard await msAgentRegistry.hasMSAgent(id: agentId) else {
+            let available = await msAgentRegistry.listMSAgents().map { "\($0.id) (\($0.name))" }.joined(separator: ", ")
+            return .failure("MSAgent '\(agentId)' not found. Available msAgents: \(available)")
         }
 
         // Create the job

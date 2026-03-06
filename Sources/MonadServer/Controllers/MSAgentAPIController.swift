@@ -4,12 +4,12 @@ import Hummingbird
 import MonadCore
 import NIOCore
 
-/// Controller for discovering available agents in the framework
-public struct AgentAPIController<Context: RequestContext>: Sendable {
-    public let agentRegistry: AgentRegistry
+/// Controller for discovering available msAgents in the framework
+public struct MSAgentAPIController<Context: RequestContext>: Sendable {
+    public let msAgentRegistry: MSAgentRegistry
 
-    public init(agentRegistry: AgentRegistry) {
-        self.agentRegistry = agentRegistry
+    public init(msAgentRegistry: MSAgentRegistry) {
+        self.msAgentRegistry = msAgentRegistry
     }
 
     public func addRoutes(to group: RouterGroup<Context>) {
@@ -18,9 +18,9 @@ public struct AgentAPIController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func list(_ request: Request, context: Context) async throws -> Response {
-        let agents = await agentRegistry.listAgents()
+        let msAgents = await msAgentRegistry.listMSAgents()
 
-        let data = try SerializationUtils.jsonEncoder.encode(agents)
+        let data = try SerializationUtils.jsonEncoder.encode(msAgents)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
         return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
@@ -29,7 +29,7 @@ public struct AgentAPIController<Context: RequestContext>: Sendable {
     @Sendable func get(_ request: Request, context: Context) async throws -> Response {
         let id = try context.parameters.require("id")
 
-        guard let agent = await agentRegistry.getAgent(id: id) else {
+        guard let agent = await msAgentRegistry.getMSAgent(id: id) else {
             throw HTTPError(.notFound)
         }
 

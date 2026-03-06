@@ -10,7 +10,7 @@ public actor PersistenceService:
     MessageStoreProtocol,
     SessionPersistenceProtocol,
     JobStoreProtocol,
-    AgentStoreProtocol,
+    MSAgentStoreProtocol,
     WorkspacePersistenceProtocol,
     ClientStoreProtocol,
     ToolPersistenceProtocol,
@@ -183,44 +183,44 @@ public actor PersistenceService:
             }
         }
     }
-    // MARK: - Agents
+    // MARK: - MSAgents
 
-    public func saveAgent(_ agent: Agent) async throws {
+    public func saveMSAgent(_ agent: MSAgent) async throws {
         try await dbQueue.write { db in
             try agent.save(db)
         }
     }
 
-    public func fetchAgent(id: UUID) async throws -> Agent? {
+    public func fetchMSAgent(id: UUID) async throws -> MSAgent? {
         try await dbQueue.read { db in
-            try Agent.fetchOne(db, key: id)
+            try MSAgent.fetchOne(db, key: id)
         }
     }
 
-    public func fetchAgent(key: String) async throws -> Agent? {
+    public func fetchMSAgent(key: String) async throws -> MSAgent? {
          try await dbQueue.read { db in
              // Try to parse UUID first, if fails assume it's a key lookup if widely supported, 
-             // but Agent primary key is UUID. 
+             // but MSAgent primary key is UUID. 
              // If 'key' is meant to be 'id' string:
              if let uuid = UUID(uuidString: key) {
-                 return try Agent.fetchOne(db, key: uuid)
+                 return try MSAgent.fetchOne(db, key: uuid)
              }
              // Fallback: maybe we want to search by name? Or if we had a string ID.
-             // For now, return nil if not UUID, as Agent.id is UUID.
+             // For now, return nil if not UUID, as MSAgent.id is UUID.
              return nil
          }
     }
 
-    public func fetchAllAgents() async throws -> [Agent] {
+    public func fetchAllMSAgents() async throws -> [MSAgent] {
         try await dbQueue.read { db in
-            try Agent.fetchAll(db)
+            try MSAgent.fetchAll(db)
         }
     }
 
-    public func hasAgent(id: String) async -> Bool {
+    public func hasMSAgent(id: String) async -> Bool {
         guard let uuid = UUID(uuidString: id) else { return false }
         return await (try? dbQueue.read { db in
-            try Agent.exists(db, key: uuid)
+            try MSAgent.exists(db, key: uuid)
         }) ?? false
     }
 

@@ -28,12 +28,12 @@ public extension SessionManager {
             AnyTool(SearchFilesTool(currentDirectory: currentWD, jailRoot: jailRoot)),
             AnyTool(ReadFileTool(currentDirectory: currentWD, jailRoot: jailRoot)),
 
-            // Agent Coordination
+            // MSAgent Coordination
             AnyTool(LaunchSubagentTool(
                 persistenceService: persistenceService,
                 sessionId: session.id,
                 parentId: parentId,
-                agentRegistry: agentRegistry
+                msAgentRegistry: msAgentRegistry
             )),
 
             // Job Queue Gateway

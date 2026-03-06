@@ -25,7 +25,7 @@ import NIOCore
             $0.persistenceService = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot
@@ -81,7 +81,7 @@ import NIOCore
             $0.persistenceService = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot

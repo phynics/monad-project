@@ -5,86 +5,86 @@ import Testing
 import Dependencies
 
 @Suite(.serialized)
-struct AgentRegistryTests {
+struct MSAgentRegistryTests {
     private let persistence: MockPersistenceService
-    private let registry: AgentRegistry
+    private let registry: MSAgentRegistry
 
     init() async throws {
         let mock = MockPersistenceService()
 
-        // Seed default agents
-        let defaultAgent = Agent(
+        // Seed default msAgents
+        let defaultMSAgent = MSAgent(
             id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
             name: "Default Assistant",
             description: "A helpful assistant",
             systemPrompt: "You are a helpful assistant."
         )
-        let coordinatorAgent = Agent(
+        let coordinatorMSAgent = MSAgent(
             id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
-            name: "Agent Coordinator",
-            description: "Coordinates other agents",
+            name: "MSAgent Coordinator",
+            description: "Coordinates other msAgents",
             systemPrompt: "You are a coordinator."
         )
 
-        try await mock.saveAgent(defaultAgent)
-        try await mock.saveAgent(coordinatorAgent)
+        try await mock.saveMSAgent(defaultMSAgent)
+        try await mock.saveMSAgent(coordinatorMSAgent)
 
         self.persistence = mock
 
         self.registry = withDependencies {
             $0.persistenceService = mock
         } operation: {
-            AgentRegistry()
+            MSAgentRegistry()
         }
     }
 
-    @Test("Default agents are seeded")
+    @Test("Default msAgents are seeded")
     func testDefaultSeeds() async throws {
-        let agents = await registry.listAgents()
-        #expect(agents.count >= 2)
+        let msAgents = await registry.listMSAgents()
+        #expect(msAgents.count >= 2)
 
-        let ids = agents.map { $0.id }
+        let ids = msAgents.map { $0.id }
         #expect(ids.contains(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!))
         #expect(ids.contains(UUID(uuidString: "00000000-0000-0000-0000-000000000002")!))
 
-        let defaultAgent = await registry.getAgent(id: "00000000-0000-0000-0000-000000000001")
-        #expect(defaultAgent?.name == "Default Assistant")
-        #expect(defaultAgent?.systemPrompt.contains("assistant") == true)
+        let defaultMSAgent = await registry.getMSAgent(id: "00000000-0000-0000-0000-000000000001")
+        #expect(defaultMSAgent?.name == "Default Assistant")
+        #expect(defaultMSAgent?.systemPrompt.contains("assistant") == true)
     }
 
     @Test("Fetch agent by ID")
     func testFetchById() async throws {
         let idRaw = "00000000-0000-0000-0000-000000000002"
         let id = UUID(uuidString: idRaw)!
-        let agent = await registry.getAgent(id: idRaw)
+        let agent = await registry.getMSAgent(id: idRaw)
         #expect(agent != nil)
         #expect(agent?.id == id)
-        #expect(agent?.name == "Agent Coordinator")
+        #expect(agent?.name == "MSAgent Coordinator")
     }
 
     @Test("Has agent")
-    func testHasAgent() async throws {
+    func testHasMSAgent() async throws {
         let idRaw = "00000000-0000-0000-0000-000000000001"
-        let exists = await registry.hasAgent(id: idRaw)
+        let exists = await registry.hasMSAgent(id: idRaw)
         #expect(exists)
 
-        let missing = await registry.hasAgent(id: UUID().uuidString)
+        let missing = await registry.hasMSAgent(id: UUID().uuidString)
         #expect(!missing)
     }
 
     @Test("Custom agent persistence")
-    func testCustomAgent() async throws {
+    func testCustomMSAgent() async throws {
         let customId = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
-        let customAgent = Agent(
+        let customMSAgent = MSAgent(
             id: customId,
             name: "Swift Coder",
             description: "Expert in Swift programming",
             systemPrompt: "You are a senior Swift developer."
         )
 
-        try await persistence.saveAgent(customAgent)
+        try await persistence.saveMSAgent(customMSAgent)
 
-        let fetched = await registry.getAgent(id: customId.uuidString)
+        let fetched = await registry.getMSAgent(id: customId.uuidString)
         #expect(fetched?.name == "Swift Coder")
         #expect(fetched?.systemPrompt == "You are a senior Swift developer.")
     }

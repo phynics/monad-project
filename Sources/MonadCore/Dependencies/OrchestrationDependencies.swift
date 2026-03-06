@@ -3,8 +3,8 @@ import Foundation
 
 // MARK: - Dependency Keys
 
-public enum AgentRegistryKey: DependencyKey {
-    public static let liveValue = AgentRegistry()
+public enum MSAgentRegistryKey: DependencyKey {
+    public static let liveValue = MSAgentRegistry()
 }
 
 public enum SessionManagerKey: DependencyKey {
@@ -21,8 +21,8 @@ public enum ChatEngineKey: DependencyKey {
     public static let liveValue = ChatEngine()
 }
 
-public enum AgentExecutorKey: DependencyKey {
-    public static let liveValue = AgentExecutor(
+public enum MSAgentExecutorKey: DependencyKey {
+    public static let liveValue = MSAgentExecutor(
         persistenceService: UnconfiguredPersistenceService(),
         chatEngine: ChatEngine()
     )
@@ -31,9 +31,9 @@ public enum AgentExecutorKey: DependencyKey {
 // MARK: - Dependency Values
 
 extension DependencyValues {
-    public var agentRegistry: AgentRegistry {
-        get { self[AgentRegistryKey.self] }
-        set { self[AgentRegistryKey.self] = newValue }
+    public var msAgentRegistry: MSAgentRegistry {
+        get { self[MSAgentRegistryKey.self] }
+        set { self[MSAgentRegistryKey.self] = newValue }
     }
 
     public var sessionManager: SessionManager {
@@ -51,8 +51,8 @@ extension DependencyValues {
         set { self[ChatEngineKey.self] = newValue }
     }
 
-    public var agentExecutor: AgentExecutor {
-        get { self[AgentExecutorKey.self] }
-        set { self[AgentExecutorKey.self] = newValue }
+    public var msAgentExecutor: MSAgentExecutor {
+        get { self[MSAgentExecutorKey.self] }
+        set { self[MSAgentExecutorKey.self] = newValue }
     }
 }

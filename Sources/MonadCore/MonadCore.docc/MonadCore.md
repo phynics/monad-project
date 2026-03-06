@@ -8,7 +8,7 @@ MonadCore provides the core engine for session management, context gathering, to
 
 ### Key Components
 
-- **ChatEngine**: Orchestrates the interaction between users, agents, and LLMs.
+- **ChatEngine**: Orchestrates the interaction between users, msAgents, and LLMs.
 - **ContextManager**: Handles semantic retrieval and context window optimization.
 - **Persistence Layer**: A suite of domain-specific protocols for SQLite/GRDB storage.
 - **Tool System**: Type-safe DSL for defining and executing AI tools.

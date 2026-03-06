@@ -27,7 +27,7 @@ import MonadTestSupport
             $0.persistenceService = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot
@@ -94,7 +94,7 @@ import MonadTestSupport
             $0.persistenceService = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
             let sessionManager = SessionManager(workspaceRoot: workspaceRoot)
             let session = try await sessionManager.createSession()
@@ -157,7 +157,7 @@ import MonadTestSupport
             $0.persistenceService = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot

@@ -18,7 +18,7 @@ import Testing
             $0.persistenceService = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
             $0.sessionManager = SessionManager(workspaceRoot: workspaceRoot)
         } operation: {
             SessionManager(workspaceRoot: workspaceRoot)
@@ -34,7 +34,7 @@ import Testing
             $0.persistenceService = MockPersistenceService()
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
             $0.sessionManager = manager
         } operation: {
             try await manager.createSession().id

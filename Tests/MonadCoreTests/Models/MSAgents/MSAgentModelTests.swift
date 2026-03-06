@@ -3,7 +3,7 @@ import XCTest
 @testable import MonadShared
 import Foundation
 
-final class AgentModelTests: XCTestCase {
+final class MSAgentModelTests: XCTestCase {
     private func assertCodable<T: Codable & Equatable>(_ value: T) throws {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
@@ -13,9 +13,9 @@ final class AgentModelTests: XCTestCase {
         XCTAssertEqual(value, decoded)
     }
     
-    func testAgentCodable() throws {
-        // Agent initialization
-        let agent = Agent(
+    func testMSAgentCodable() throws {
+        // MSAgent initialization
+        let agent = MSAgent(
             id: UUID(),
             name: "Worker",
             description: "Does tasks.",

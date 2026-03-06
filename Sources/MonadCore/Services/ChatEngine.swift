@@ -9,7 +9,7 @@ import OpenAI
 /// Returns `AsyncThrowingStream<ChatEvent>` for all use cases — callers decide how to consume.
 ///
 /// - Interactive chat (MonadServer): streams deltas to the client via SSE.
-/// - Autonomous agents (AgentExecutor): consumes the stream internally for state tracking.
+/// - Autonomous msAgents (MSAgentExecutor): consumes the stream internally for state tracking.
 ///
 /// Tool resolution is the caller's responsibility. The engine accepts pre-resolved tools.
 /// Session hydration is also the caller's responsibility for autonomous use cases.

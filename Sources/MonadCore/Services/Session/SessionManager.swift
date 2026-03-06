@@ -30,7 +30,7 @@ public actor SessionManager {
     var activeTasks: [UUID: Task<Void, Never>] = [:]
 
     @Dependency(\.persistenceService) private var _persistenceService
-    @Dependency(\.agentRegistry) private var _agentRegistry
+    @Dependency(\.msAgentRegistry) private var _msAgentRegistry
 
     var persistenceService: any SessionPersistenceProtocol
         & MessageStoreProtocol
@@ -38,13 +38,13 @@ public actor SessionManager {
         & MemoryStoreProtocol
         & ToolPersistenceProtocol
         & JobStoreProtocol
-        & AgentStoreProtocol
+        & MSAgentStoreProtocol
         & ClientStoreProtocol {
         _persistenceService
     }
 
-    var agentRegistry: AgentRegistry {
-        _agentRegistry
+    var msAgentRegistry: MSAgentRegistry {
+        _msAgentRegistry
     }
 
     let vectorStore: (any VectorStoreProtocol)?
@@ -306,7 +306,7 @@ public actor SessionManager {
     }
 
     /// Returns the underlying persistence service.
-    public func getPersistenceService() -> any SessionPersistenceProtocol & MessageStoreProtocol & WorkspacePersistenceProtocol & MemoryStoreProtocol & ToolPersistenceProtocol & JobStoreProtocol & AgentStoreProtocol & ClientStoreProtocol {
+    public func getPersistenceService() -> any SessionPersistenceProtocol & MessageStoreProtocol & WorkspacePersistenceProtocol & MemoryStoreProtocol & ToolPersistenceProtocol & JobStoreProtocol & MSAgentStoreProtocol & ClientStoreProtocol {
         return persistenceService
     }
 

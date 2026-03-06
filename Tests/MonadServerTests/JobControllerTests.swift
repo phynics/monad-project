@@ -18,7 +18,7 @@ import Testing
             $0.persistenceService = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
             let manager = SessionManager(workspaceRoot: workspaceRoot)
             let router = Router()
@@ -63,7 +63,7 @@ import Testing
     }
 
     @Test("POST /{id}/jobs uses provided agentId")
-    func createJob_usesProvidedAgentId() async throws {
+    func createJob_usesProvidedMSAgentId() async throws {
         let (app, _, _) = try await makeApp()
         let sessionId = UUID()
         let body = try JSONEncoder().encode(AddJobRequest(

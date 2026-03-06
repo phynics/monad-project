@@ -408,12 +408,12 @@ extension DatabaseSchema {
             try db.create(index: "idx_job_parent", on: "job", columns: ["parentId"])
         }
 
-        // v27: Add agent table for simplified, data-driven agents
+        // v27: Add agent table for simplified, data-driven msAgents
         migrator.registerMigration("v27") { db in
-            try createAgentTable(in: db)
+            try createMSAgentTable(in: db)
 
             // Seed with default agent
-            let defaultAgent = Agent(
+            let defaultMSAgent = MSAgent(
                 id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
                 name: "Default Assistant",
                 description: "A general purpose assistant focused on helpfulness and accuracy.",
@@ -422,19 +422,19 @@ extension DatabaseSchema {
                 Your goal is to assist the user with their tasks while being concise and professional.
                 """
             )
-            try defaultAgent.insert(db)
+            try defaultMSAgent.insert(db)
 
             // Seed with coordinator agent
-            let coordinatorAgent = Agent(
+            let coordinatorMSAgent = MSAgent(
                 id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
-                name: "Agent Coordinator",
-                description: "Coordinates multiple agents and complex workflows.",
+                name: "MSAgent Coordinator",
+                description: "Coordinates multiple msAgents and complex workflows.",
                 systemPrompt: """
                 You are the Monad Coordinator. Your role is to break down complex tasks into smaller sub-tasks
-                and delegate them to specialized agents.
+                and delegate them to specialized msAgents.
                 """
             )
-            try coordinatorAgent.insert(db)
+            try coordinatorMSAgent.insert(db)
         }
 
         // v28: Ensure tools column exists on workspace table

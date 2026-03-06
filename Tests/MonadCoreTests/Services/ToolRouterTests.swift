@@ -31,7 +31,7 @@ final class ToolRouterTests: XCTestCase {
             $0.persistenceService = mockPersistence
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
             SessionManager(workspaceRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         }

@@ -22,8 +22,8 @@ public typealias MemorySearchRequest = MonadShared.MemorySearchRequest
 /// Tool Models
 public typealias Tool = MonadShared.ToolInfo
 
-/// Agent Models
-public typealias Agent = MonadShared.Agent
+/// MSAgent Models
+public typealias MSAgent = MonadShared.MSAgent
 
 // Message Models
 public typealias Message = MonadShared.Message

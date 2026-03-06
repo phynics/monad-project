@@ -24,7 +24,7 @@ import Dependencies
             $0.persistenceService = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
             $0.sessionManager = sessionManager
         } operation: {
             let toolRouter = ToolRouter()

@@ -8,7 +8,7 @@ public typealias FullPersistenceService =
     MessageStoreProtocol &
     SessionPersistenceProtocol &
     JobStoreProtocol &
-    AgentStoreProtocol &
+    MSAgentStoreProtocol &
     WorkspacePersistenceProtocol &
     ToolPersistenceProtocol &
     HealthCheckable &
@@ -74,11 +74,11 @@ public struct UnconfiguredPersistenceService: FullPersistenceService {
     public func fetchPendingJobs(limit: Int) async throws -> [Job] { fail() }
     public func deleteJob(id: UUID) async throws { fail() }
     public func monitorJobs() async -> AsyncStream<JobEvent> { fail() }
-    public func saveAgent(_ agent: Agent) async throws { fail() }
-    public func fetchAgent(id: UUID) async throws -> Agent? { fail() }
-    public func fetchAgent(key: String) async throws -> Agent? { fail() }
-    public func fetchAllAgents() async throws -> [Agent] { fail() }
-    public func hasAgent(id: String) async -> Bool { fail() }
+    public func saveMSAgent(_ agent: MSAgent) async throws { fail() }
+    public func fetchMSAgent(id: UUID) async throws -> MSAgent? { fail() }
+    public func fetchMSAgent(key: String) async throws -> MSAgent? { fail() }
+    public func fetchAllMSAgents() async throws -> [MSAgent] { fail() }
+    public func hasMSAgent(id: String) async -> Bool { fail() }
     public func saveWorkspace(_ workspace: WorkspaceReference) async throws { fail() }
     public func fetchWorkspace(id: UUID) async throws -> WorkspaceReference? { fail() }
     public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? { fail() }

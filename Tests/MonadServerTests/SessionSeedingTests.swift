@@ -19,7 +19,7 @@ final class SessionSeedingTests: XCTestCase {
             $0.persistenceService = persistence
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()
-            $0.agentRegistry = AgentRegistry()
+            $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
             let sessionManager = SessionManager(
                 workspaceRoot: workspaceRoot

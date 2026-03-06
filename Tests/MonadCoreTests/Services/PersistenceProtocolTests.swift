@@ -17,7 +17,7 @@ struct PersistenceProtocolTests {
         #expect(mock is MessageStoreProtocol)
         #expect(mock is SessionPersistenceProtocol)
         #expect(mock is JobStoreProtocol)
-        #expect(mock is AgentStoreProtocol)
+        #expect(mock is MSAgentStoreProtocol)
         #expect(mock is WorkspacePersistenceProtocol)
         #expect(mock is ToolPersistenceProtocol)
     }
@@ -29,7 +29,7 @@ final class MockPersistenceStore:
     MessageStoreProtocol,
     SessionPersistenceProtocol,
     JobStoreProtocol,
-    AgentStoreProtocol,
+    MSAgentStoreProtocol,
     WorkspacePersistenceProtocol,
     ToolPersistenceProtocol,
     @unchecked Sendable {
@@ -65,12 +65,12 @@ final class MockPersistenceStore:
     func deleteJob(id: UUID) async throws {}
     func monitorJobs() async -> AsyncStream<JobEvent> { .init { _ in } }
 
-    // AgentStoreProtocol
-    func saveAgent(_ agent: Agent) async throws {}
-    func fetchAgent(id: UUID) async throws -> Agent? { nil }
-    func fetchAgent(key: String) async throws -> Agent? { nil }
-    func fetchAllAgents() async throws -> [Agent] { [] }
-    func hasAgent(id: String) async -> Bool { false }
+    // MSAgentStoreProtocol
+    func saveMSAgent(_ agent: MSAgent) async throws {}
+    func fetchMSAgent(id: UUID) async throws -> MSAgent? { nil }
+    func fetchMSAgent(key: String) async throws -> MSAgent? { nil }
+    func fetchAllMSAgents() async throws -> [MSAgent] { [] }
+    func hasMSAgent(id: String) async -> Bool { false }
 
     // WorkspacePersistenceProtocol
     func saveWorkspace(_ workspace: WorkspaceReference) async throws {}
