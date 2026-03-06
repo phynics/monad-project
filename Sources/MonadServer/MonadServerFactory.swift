@@ -64,7 +64,7 @@ public struct MonadServerFactory {
         let configURL = appSupportDir.appendingPathComponent("config.json")
         let storage = ConfigurationStorage(configURL: configURL)
         await storage.migrateIfNeeded()
-        let llmService = ServerLLMService(storage: storage)
+        let llmService = LLMService(storage: storage)
         await llmService.loadConfiguration()
 
         let workspaceRoot = try defaultWorkspacePath()
@@ -214,7 +214,7 @@ public struct MonadServerFactory {
                         .init(service: app),
                         .init(service: jobRunner),
                         .init(service: orphanCleanup),
-                        .init(service: bonjourAdvertiser),
+                        .init(service: bonjourAdvertiser)
                     ],
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                     logger: logger

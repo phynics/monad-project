@@ -1,6 +1,5 @@
 import Foundation
 import MonadClient
-import MonadCore
 import MonadShared
 
 struct StoredIdentity: Codable {
@@ -36,7 +35,8 @@ struct RegistrationManager {
                 configHome = URL(fileURLWithPath: xdgConfig)
             } else {
                 configHome = fileManager.homeDirectoryForCurrentUser.appendingPathComponent(
-                    ".config")
+                    ".config"
+                )
             }
 
             let dir = configHome.appendingPathComponent(appName.lowercased())
@@ -70,17 +70,9 @@ struct RegistrationManager {
         // Register
         let hostname = ProcessInfo.processInfo.hostName
         let displayName = NSUserName()
-        let platform = "macos"  // Detect dynamically if needed
+        let platform = "macos" // Detect dynamically if needed
 
-        // Define client tools from MonadCore filesystem tools
-        let tools: [ToolReference] = [
-            .known(id: ReadFileTool().id),
-            .known(id: ListDirectoryTool().id),
-            .known(id: SearchFileContentTool().id),
-            .known(id: SearchFilesTool().id),
-            .known(id: FindFileTool().id),
-            .known(id: InspectFileTool().id)
-        ]
+        let tools = ClientConstants.filesystemToolReferences
 
         let response = try await client.registerClient(
             hostname: hostname,

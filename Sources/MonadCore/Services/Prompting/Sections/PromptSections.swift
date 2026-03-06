@@ -239,7 +239,7 @@ public struct WorkspacesContext: ContextSection {
             output += "User Query Origin: **\(clientName)**\n\n"
         }
 
-        let allWorkspaces = 
+        let allWorkspaces =
             (primaryWorkspace != nil ? [primaryWorkspace!] : []) +
             workspaces.filter { $0.id != primaryWorkspace?.id }
 
@@ -252,13 +252,13 @@ public struct WorkspacesContext: ContextSection {
             let isPrimary = ws.id == primaryWorkspace?.id
             let isConnected = isPrimary || connectedClients.contains(ws.ownerId ?? UUID())
             let statusStr = isConnected ? "🟢 Connected" : "🔴 Disconnected"
-            
+
             output.append("- Workspace ID: `")
             output.append(ws.id.uuidString)
             output.append("`\n  Location: `")
             output.append(ws.uri.description)
             output.append("`\n  Environment: ")
-            
+
             if isPrimary {
                  output.append("Server (Primary)\n")
             } else {

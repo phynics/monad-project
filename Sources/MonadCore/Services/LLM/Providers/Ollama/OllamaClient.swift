@@ -228,8 +228,8 @@ public actor OllamaClient {
                 "type": "function",
                 "function": [
                     "name": tc.function.name,
-                    "arguments": (try? toJsonString(tc.function.arguments)) ?? "{}",
-                ],
+                    "arguments": (try? toJsonString(tc.function.arguments)) ?? "{}"
+                ]
             ]
         }
 
@@ -240,7 +240,7 @@ public actor OllamaClient {
 
             var delta: [String: Any] = [
                 "role": "assistant",
-                "content": response.message.content,
+                "content": response.message.content
             ]
 
             if let tc = openAIToolCalls {
@@ -256,14 +256,14 @@ public actor OllamaClient {
                     [
                         "index": 0,
                         "delta": delta,
-                        "finish_reason": response.message.toolCalls?.isEmpty == false ? "tool_calls" : "stop",
-                    ],
+                        "finish_reason": response.message.toolCalls?.isEmpty == false ? "tool_calls" : "stop"
+                    ]
                 ],
                 "usage": [
                     "prompt_tokens": promptEvalCount,
                     "completion_tokens": evalCount,
-                    "total_tokens": promptEvalCount + evalCount,
-                ],
+                    "total_tokens": promptEvalCount + evalCount
+                ]
             ]
 
             do {
@@ -283,7 +283,7 @@ public actor OllamaClient {
         // Manually construct JSON for intermediate chunks
         var delta: [String: Any] = [
             "role": "assistant",
-            "content": response.message.content,
+            "content": response.message.content
         ]
 
         if let tc = openAIToolCalls {
@@ -299,9 +299,9 @@ public actor OllamaClient {
                 [
                     "index": 0,
                     "delta": delta,
-                    "finish_reason": nil,
-                ],
-            ],
+                    "finish_reason": nil
+                ]
+            ]
         ]
 
         do {
@@ -318,7 +318,7 @@ public actor OllamaClient {
         let maxRetries = self.maxRetries
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
             let messages: [ChatQuery.ChatCompletionMessageParam] = [
-                .user(.init(content: .string(content))),
+                .user(.init(content: .string(content)))
             ]
 
             var fullContent = ""

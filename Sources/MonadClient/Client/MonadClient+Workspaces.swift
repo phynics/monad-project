@@ -69,8 +69,7 @@ public extension MonadClient {
     }
 
     func attachWorkspace(_ workspaceId: UUID, to sessionId: UUID, isPrimary: Bool)
-        async throws
-    {
+        async throws {
         var request = try buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "POST"
         )

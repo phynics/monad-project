@@ -36,7 +36,7 @@ public extension SessionManager {
             )),
 
             // Job Queue Gateway
-            AnyTool(JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession)),
+            AnyTool(JobQueueGatewayTool(context: jobQueueContext, contextSession: toolContextSession))
         ]
 
         return SessionToolManager(
@@ -62,8 +62,7 @@ public extension SessionManager {
     }
 
     func findWorkspaceForTool(_ tool: ToolReference, in workspaceIds: [UUID]) async throws
-        -> UUID?
-    {
+        -> UUID? {
         return try await persistenceService.findWorkspaceId(forToolId: tool.toolId, in: workspaceIds)
     }
 

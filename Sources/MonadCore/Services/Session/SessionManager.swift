@@ -39,8 +39,7 @@ public actor SessionManager {
         & ToolPersistenceProtocol
         & JobStoreProtocol
         & AgentStoreProtocol
-        & ClientStoreProtocol
-    {
+        & ClientStoreProtocol {
         _persistenceService
     }
 
@@ -147,8 +146,7 @@ public actor SessionManager {
     /// - Returns: The newly created `Timeline`.
     public func createSession(title: String = "New Conversation")
         async throws
-        -> Timeline
-    {
+        -> Timeline {
         let sessionId = UUID()
 
         let sessionWorkspaceURL = workspaceRoot.appendingPathComponent(

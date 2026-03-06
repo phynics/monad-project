@@ -90,7 +90,7 @@ public struct UnconfiguredPersistenceService: FullPersistenceService {
     public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] { fail() }
     public func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID? { fail() }
     public func fetchToolSource(toolId: String, workspaceIds: [UUID], primaryWorkspaceId: UUID?) async throws -> String? { fail() }
-    
+
     // ClientStoreProtocol
     public func saveClient(_ client: ClientIdentity) async throws { fail() }
     public func fetchClient(id: UUID) async throws -> ClientIdentity? { fail() }

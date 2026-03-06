@@ -1,16 +1,5 @@
 import Foundation
-
-// MARK: - Chat Types
-
-public struct ToolOutputSubmission: Codable, Sendable {
-    public let toolCallId: String
-    public let output: String
-
-    public init(toolCallId: String, output: String) {
-        self.toolCallId = toolCallId
-        self.output = output
-    }
-}
+@_exported import struct MonadShared.ToolOutputSubmission
 
 /// A delta for a tool call in a streaming response
 public struct ToolCallDelta: Sendable, Codable {

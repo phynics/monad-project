@@ -1,6 +1,5 @@
 import Foundation
 import MonadClient
-import MonadCore
 import MonadShared
 
 /// Protocol for a slash command in the chat REPL
@@ -15,9 +14,17 @@ protocol SlashCommand: Sendable {
 }
 
 extension SlashCommand {
-    var aliases: [String] { [] }
-    var usage: String { "/\(name)" }
-    var category: String? { nil }
+    var aliases: [String] {
+        []
+    }
+
+    var usage: String {
+        "/\(name)"
+    }
+
+    var category: String? {
+        nil
+    }
 }
 
 /// Context passed to slash commands
@@ -82,9 +89,22 @@ protocol TerminalOutput: Sendable {
 }
 
 struct StandardOutput: TerminalOutput {
-    func printsystem(_ text: String) { TerminalUI.printInfo(text) }  // Mapping system to info/dim for now or create specific
-    func printError(_ text: String) { TerminalUI.printError(text) }
-    func printSuccess(_ text: String) { TerminalUI.printSuccess(text) }
-    func printInfo(_ text: String) { TerminalUI.printInfo(text) }
-    func printWarning(_ text: String) { TerminalUI.printWarning(text) }
+    func printsystem(_ text: String) {
+        TerminalUI.printInfo(text)
+    } // Mapping system to info/dim for now or create specific
+    func printError(_ text: String) {
+        TerminalUI.printError(text)
+    }
+
+    func printSuccess(_ text: String) {
+        TerminalUI.printSuccess(text)
+    }
+
+    func printInfo(_ text: String) {
+        TerminalUI.printInfo(text)
+    }
+
+    func printWarning(_ text: String) {
+        TerminalUI.printWarning(text)
+    }
 }

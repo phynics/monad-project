@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 
 public struct ClientRegistrationRequest: Codable, Sendable {
     public let hostname: String

@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "MonadProject",
     platforms: [
-        .macOS(.v15)
+        .macOS(.v15),
     ],
     products: [
         .library(name: "MonadCore", targets: ["MonadCore"]),
@@ -12,7 +12,7 @@ let package = Package(
         .library(name: "MonadClient", targets: ["MonadClient"]),
         .executable(name: "MonadServer", targets: ["MonadServer"]),
         .executable(name: "MonadCLI", targets: ["MonadCLI"]),
-        .library(name: "MonadShared", targets: ["MonadShared"])
+        .library(name: "MonadShared", targets: ["MonadShared"]),
     ],
     dependencies: [
         .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main"),
@@ -23,12 +23,12 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
         .package(url: "https://github.com/unum-cloud/USearch", from: "2.0.0"),
-        .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.0.0")
+        .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.0.0"),
     ],
     targets: [
         .target(
             name: "MonadShared",
-            dependencies: ["MonadCore"],
+            dependencies: [],
             path: "Sources/MonadShared"
         ),
         .target(
@@ -39,10 +39,11 @@ let package = Package(
         .target(
             name: "MonadCore",
             dependencies: [
+                "MonadShared",
                 "MonadPrompt",
                 .product(name: "OpenAI", package: "OpenAI"),
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "Dependencies", package: "swift-dependencies")
+                .product(name: "Dependencies", package: "swift-dependencies"),
             ],
             path: "Sources/MonadCore"
         ),
@@ -52,14 +53,13 @@ let package = Package(
                 "MonadCore",
                 "MonadShared",
                 "MonadPrompt",
-                "MonadClient",
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "HummingbirdWebSocket", package: "hummingbird-websocket"),
                 .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "USearch", package: "USearch")
+                .product(name: "USearch", package: "USearch"),
             ],
             path: "Sources/MonadServer"
         ),
@@ -69,7 +69,7 @@ let package = Package(
                 "MonadCore",
                 "MonadShared",
 
-                .product(name: "Logging", package: "swift-log")
+                .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MonadClient"
         ),
@@ -77,7 +77,7 @@ let package = Package(
             name: "MonadCLI",
             dependencies: [
                 "MonadClient",
-                .product(name: "ArgumentParser", package: "swift-argument-parser")
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             path: "Sources/MonadCLI"
         ),
@@ -88,7 +88,7 @@ let package = Package(
                 "MonadShared",
                 "MonadPrompt",
                 .product(name: "OpenAI", package: "OpenAI"),
-                .product(name: "Dependencies", package: "swift-dependencies")
+                .product(name: "Dependencies", package: "swift-dependencies"),
             ],
             path: "Tests/MonadTestSupport"
         ),
@@ -98,7 +98,7 @@ let package = Package(
                 "MonadCore",
                 "MonadShared",
                 "MonadTestSupport",
-                .product(name: "Dependencies", package: "swift-dependencies")
+                .product(name: "Dependencies", package: "swift-dependencies"),
             ],
             path: "Tests/MonadCoreTests"
         ),
@@ -116,7 +116,7 @@ let package = Package(
                 "MonadTestSupport",
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
                 .product(name: "Dependencies", package: "swift-dependencies"),
-                .product(name: "USearch", package: "USearch")
+                .product(name: "USearch", package: "USearch"),
             ],
             path: "Tests/MonadServerTests"
         ),
@@ -134,6 +134,6 @@ let package = Package(
             name: "MonadClientTests",
             dependencies: ["MonadClient", "MonadCore", "MonadTestSupport"],
             path: "Tests/MonadClientTests"
-        )
+        ),
     ]
 )

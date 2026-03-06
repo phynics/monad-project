@@ -175,8 +175,7 @@ public final class StreamingCoordinator {
                 // Parse arguments JSON
                 var args: [String: AnyCodable] = [:]
                 if let data = accumulator.arguments.data(using: .utf8),
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-                {
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     // Convert [String: Any] -> [String: AnyCodable]
                     args = json.mapValues { AnyCodable($0) }
                 } else if !accumulator.arguments.isEmpty {

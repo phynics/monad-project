@@ -62,9 +62,9 @@ public final class ChatEngine: @unchecked Sendable {
         let attachedWorkspaces = workspaces?.attached ?? []
         let primaryWorkspaceId = workspaces?.primary?.id
 
-        var clientName: String? = nil
+        var clientName: String?
         var connectedClients = Set<UUID>()
-        
+
         // Find which workspaces are connected
         if let primaryWorkspace = workspaces?.primary {
              if let ownerId = primaryWorkspace.ownerId {
@@ -74,7 +74,7 @@ public final class ChatEngine: @unchecked Sendable {
                  }
              }
         }
-        
+
         let (initialMessages, structuredContext) = await buildPrompt(
             session: session,
             message: message,

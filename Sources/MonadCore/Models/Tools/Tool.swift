@@ -92,8 +92,7 @@ public extension Tool {
         // JSONSerialization, which cannot handle the AnyCodable wrapper (__SwiftValue crash).
         let schema: JSONSchema
         if let data = try? JSONEncoder().encode(parametersSchema),
-           let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data)
-        {
+           let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data) {
             schema = decoded
         } else {
             let logger = Logger.module(named: "tool-schema")
@@ -177,8 +176,7 @@ public struct ToolResult: Sendable, Codable {
 
     /// Creates a successful tool result.
     public static func success(_ output: String)
-        -> ToolResult
-    {
+        -> ToolResult {
         ToolResult(success: true, output: output, error: nil)
     }
 

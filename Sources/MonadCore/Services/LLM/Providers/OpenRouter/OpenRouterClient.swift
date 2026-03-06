@@ -163,7 +163,7 @@ public actor OpenRouterClient {
 
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
             let messages: [ChatQuery.ChatCompletionMessageParam] = [
-                .user(.init(content: .string(content))),
+                .user(.init(content: .string(content)))
             ]
 
             var fullContent = ""

@@ -20,8 +20,7 @@ public struct MonadLogHandler: LogHandler {
                     source _: String,
                     file _: String,
                     function _: String,
-                    line _: UInt)
-    {
+                    line _: UInt) {
         let timestamp = ISO8601DateFormatter().string(from: Date())
         let levelColor = color(for: level)
         let levelStr = ANSIColors.colorize(level.rawValue.uppercased(), color: levelColor)

@@ -2,7 +2,7 @@ import Foundation
 import MonadCore
 import MonadShared
 
-// MARK: - Type Aliases from MonadCore
+// MARK: - Type Aliases from MonadShared
 
 /// Session Models
 public typealias Session = MonadShared.SessionResponse
@@ -14,7 +14,7 @@ public typealias ChatResponse = MonadShared.ChatResponse
 // Status Models
 public typealias StatusResponse = MonadShared.StatusResponse
 public typealias ComponentStatus = MonadShared.ComponentStatus
-public typealias HealthStatus = MonadCore.HealthStatus
+public typealias HealthStatus = MonadShared.HealthStatus
 
 // Memory Models
 public typealias Memory = MonadCore.Memory
@@ -44,13 +44,13 @@ public typealias ChatMetadata = MonadCore.ChatMetadata
 
 // MARK: - Client API Models
 
-public typealias ClientIdentity = MonadCore.ClientIdentity
-public typealias WorkspaceReference = MonadCore.WorkspaceReference
-public typealias WorkspaceURI = MonadCore.WorkspaceURI
-public typealias WorkspaceTrustLevel = MonadCore.WorkspaceTrustLevel
-public typealias ToolReference = MonadCore.ToolReference
-public typealias WorkspaceToolDefinition = MonadCore.WorkspaceToolDefinition
-public typealias AnyCodable = MonadCore.AnyCodable
+public typealias ClientIdentity = MonadShared.ClientIdentity
+public typealias WorkspaceReference = MonadShared.WorkspaceReference
+public typealias WorkspaceURI = MonadShared.WorkspaceURI
+public typealias WorkspaceTrustLevel = MonadShared.WorkspaceTrustLevel
+public typealias ToolReference = MonadShared.ToolReference
+public typealias WorkspaceToolDefinition = MonadShared.WorkspaceToolDefinition
+public typealias AnyCodable = MonadShared.AnyCodable
 
 // MARK: - Error Models
 

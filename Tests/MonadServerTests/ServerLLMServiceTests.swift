@@ -1,19 +1,19 @@
 import Foundation
-import MonadCore
+@testable import MonadCore
 @testable import MonadServer
 import MonadTestSupport
 import OpenAI
 import Testing
 
-@Suite struct ServerLLMServiceTests {
-    @Test("Test ServerLLMService Initialization and Config Load")
+@Suite struct LLMServiceTests {
+    @Test("Test LLMService Initialization and Config Load")
     func initialization() async throws {
-        let defaults = try #require(UserDefaults(suiteName: "TestServerLLMService"))
-        defaults.removePersistentDomain(forName: "TestServerLLMService")
+        let defaults = try #require(UserDefaults(suiteName: "TestLLMService"))
+        defaults.removePersistentDomain(forName: "TestLLMService")
 
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let storage = ConfigurationStorage(configURL: tempURL, userDefaults: defaults)
-        let service = ServerLLMService(storage: storage)
+        let service = LLMService(storage: storage)
 
         await service.loadConfiguration()
 
@@ -41,21 +41,16 @@ import Testing
     @Test("Test generateTags")
     func testGenerateTags() async throws {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let storage = try ConfigurationStorage(configURL: tempURL, userDefaults: #require(UserDefaults(suiteName: "TestTags")))
-        let service = ServerLLMService(storage: storage)
+        let storage = try ConfigurationStorage(
+            configURL: tempURL,
+            userDefaults: #require(UserDefaults(suiteName: "TestTags"))
+        )
+        let service = LLMService(storage: storage)
 
         // Setup mock config
         var config = LLMConfiguration.openAI
         config.providers[.openAI]?.apiKey = "test-key"
         try await service.updateConfiguration(config)
-
-        // Access internal or force mock injection if possible,
-        // but since we only have public API, we might need a way to inject mock client.
-        // ServerLLMService uses `setClients` internally.
-        // We can use a trick: `ServerTestMocks.swift` defines `MockLLMClient`.
-        // But `ServerLLMService` creates concrete clients based on config.
-        // WAITING: We need to be able to inject a mock client into ServerLLMService for unit testing without real network calls.
-        // Inspecting ServerLLMService, `setClients` is internal. We can use `@testable import`.
 
         let mockClient = MockLLMClient()
         mockClient.nextResponse = """
@@ -77,8 +72,11 @@ import Testing
     @Test("Test generateTitle")
     func testGenerateTitle() async throws {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let storage = try ConfigurationStorage(configURL: tempURL, userDefaults: #require(UserDefaults(suiteName: "TestTitle")))
-        let service = ServerLLMService(storage: storage)
+        let storage = try ConfigurationStorage(
+            configURL: tempURL,
+            userDefaults: #require(UserDefaults(suiteName: "TestTitle"))
+        )
+        let service = LLMService(storage: storage)
 
         let mockClient = MockLLMClient()
         mockClient.nextResponse = "Test Conversation"
@@ -99,8 +97,11 @@ import Testing
     @Test("Test evaluateRecallPerformance")
     func testEvaluateRecallPerformance() async throws {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let storage = try ConfigurationStorage(configURL: tempURL, userDefaults: #require(UserDefaults(suiteName: "TestRecall")))
-        let service = ServerLLMService(storage: storage)
+        let storage = try ConfigurationStorage(
+            configURL: tempURL,
+            userDefaults: #require(UserDefaults(suiteName: "TestRecall"))
+        )
+        let service = LLMService(storage: storage)
 
         let mockClient = MockLLMClient()
         mockClient.nextResponse = """
@@ -116,13 +117,9 @@ import Testing
             id: UUID(), title: "Mem1", content: "Content1", tags: [], embedding: []
         )
 
-        // We'll just verify parsing, the map keys won't match UUIDs generated above unless we mock the response to match.
-        // Actually, we can just check if *result* matches our mock.
-
         let scores = try await service.evaluateRecallPerformance(
             transcript: "chat", recalledMemories: [memory1]
         )
-        // The mock response keys "uuid-1" won't match memory1.id, but the function returns the map as-is.
         #expect(scores["uuid-1"] == 1.0)
         #expect(scores["uuid-2"] == -0.5)
 
@@ -132,8 +129,11 @@ import Testing
     @Test("Test chatStreamWithContext")
     func testChatStreamWithContext() async throws {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let storage = try ConfigurationStorage(configURL: tempURL, userDefaults: #require(UserDefaults(suiteName: "TestStream")))
-        let service = ServerLLMService(storage: storage)
+        let storage = try ConfigurationStorage(
+            configURL: tempURL,
+            userDefaults: #require(UserDefaults(suiteName: "TestStream"))
+        )
+        let service = LLMService(storage: storage)
 
         let mockClient = MockLLMClient()
         mockClient.nextResponse = "Hello"
@@ -173,8 +173,11 @@ import Testing
     @Test("Test Provider Configuration (OpenRouter)")
     func providerConfiguration() async throws {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let storage = try ConfigurationStorage(configURL: tempURL, userDefaults: #require(UserDefaults(suiteName: "TestConfig")))
-        let service = ServerLLMService(storage: storage)
+        let storage = try ConfigurationStorage(
+            configURL: tempURL,
+            userDefaults: #require(UserDefaults(suiteName: "TestConfig"))
+        )
+        let service = LLMService(storage: storage)
 
         var config = LLMConfiguration.openAI
         config.activeProvider = .openRouter
@@ -186,8 +189,6 @@ import Testing
         let client = await service.getClient()
         #expect(client != nil)
 
-        // Verify internal state if possible, or just trust getClient() != nil
-        // Ideally we check if it is indeed an OpenRouterClient, but type eraser hides it.
         try? FileManager.default.removeItem(at: tempURL)
     }
 }

@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 
 public struct ChatRequest: Codable, Sendable {
     public let message: String

@@ -1,6 +1,5 @@
 import Foundation
 import MonadClient
-import MonadCore
 import MonadShared
 
 struct WorkspaceSlashCommand: SlashCommand {
@@ -27,7 +26,8 @@ struct WorkspaceSlashCommand: SlashCommand {
             if args.count > 1 {
                 if let uuid = UUID(uuidString: args[1]) {
                     try await context.client.attachWorkspace(
-                        uuid, to: context.session.id, isPrimary: false)
+                        uuid, to: context.session.id, isPrimary: false
+                    )
                     TerminalUI.printSuccess("Attached workspace \(uuid.uuidString).")
                 } else {
                     // Try to match by URI/Name logic if needed, but UUID is safest for now
@@ -57,7 +57,8 @@ struct WorkspaceSlashCommand: SlashCommand {
 
     private func showSessionWorkspaces(context: ChatContext) async throws {
         let sessionWS = try await context.client.listSessionWorkspaces(
-            sessionId: context.session.id)
+            sessionId: context.session.id
+        )
 
         let primaryWorkspace = sessionWS.primary
         let attachedWorkspaces = sessionWS.attached
@@ -67,7 +68,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         if let primary = primaryWorkspace {
             printWorkspace(primary, marker: "★", color: "green")
         } else {
-             print("  \(TerminalUI.dim("No primary workspace"))")
+            print("  \(TerminalUI.dim("No primary workspace"))")
         }
 
         for ws in attachedWorkspaces {
@@ -83,7 +84,8 @@ struct WorkspaceSlashCommand: SlashCommand {
     private func listAllWorkspaces(context: ChatContext) async throws {
         let allWorkspaces = try await context.client.listWorkspaces()
         let sessionWS = try await context.client.listSessionWorkspaces(
-            sessionId: context.session.id)
+            sessionId: context.session.id
+        )
 
         let primaryId = sessionWS.primary?.id
         let attachedIds = Set(sessionWS.attached.map { $0.id })
@@ -97,7 +99,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         if let primary = primaryWorkspace {
             printWorkspace(primary, marker: "★", color: "green")
         } else {
-             print("  \(TerminalUI.dim("No primary workspace"))")
+            print("  \(TerminalUI.dim("No primary workspace"))")
         }
 
         for ws in attachedWorkspaces {
@@ -132,8 +134,8 @@ struct WorkspaceSlashCommand: SlashCommand {
         if !ws.tools.isEmpty {
             let toolNames = ws.tools.map { (ref: ToolReference) -> String in
                 switch ref {
-                case .known(let id): return id
-                case .custom(let def): return def.name
+                case let .known(id): return id
+                case let .custom(def): return def.name
                 }
             }
             print("     Tools: \(toolNames.joined(separator: ", "))")
@@ -160,14 +162,15 @@ struct WorkspaceSlashCommand: SlashCommand {
 
         print("\nAvailable Workspaces:")
         for (idx, ws) in workspaces.enumerated() {
-            print("  \(idx+1). \(ws.uri.description) (\(ws.id.uuidString.prefix(8)))")
+            print("  \(idx + 1). \(ws.uri.description) (\(ws.id.uuidString.prefix(8)))")
         }
         print("\nSelect workspace to attach (1-\(workspaces.count)): ", terminator: "")
 
-        if let input = readLine(), let index = Int(input), index > 0 && index <= workspaces.count {
+        if let input = readLine(), let index = Int(input), index > 0, index <= workspaces.count {
             let selected = workspaces[index - 1]
             try await context.client.attachWorkspace(
-                selected.id, to: context.session.id, isPrimary: false)
+                selected.id, to: context.session.id, isPrimary: false
+            )
             TerminalUI.printSuccess("Attached \(selected.uri.description)")
         } else {
             print("Aborted.")
@@ -211,16 +214,7 @@ struct WorkspaceSlashCommand: SlashCommand {
             try await context.client.attachWorkspace(wsId, to: context.session.id, isPrimary: false)
 
             // Register File System tools to the attached local working directory workspace
-            let localTools: [ToolReference] = [
-                .known(id: ReadFileTool().id),
-                .known(id: ListDirectoryTool().id),
-                .known(id: SearchFileContentTool().id),
-                .known(id: SearchFilesTool().id),
-                .known(id: FindFileTool().id),
-                .known(id: InspectFileTool().id)
-            ]
-
-            for tool in localTools {
+            for tool in ClientConstants.filesystemToolReferences {
                 try await context.client.addWorkspaceTool(tool, workspaceId: wsId)
             }
 

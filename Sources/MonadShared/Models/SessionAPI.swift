@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 
 public struct CreateSessionRequest: Codable, Sendable {
     public let title: String?
@@ -65,13 +64,13 @@ public struct SessionResponse: Codable, Sendable, Identifiable {
     public init(id: UUID, title: String?) {
         self.id = id
         self.title = title
-        self.createdAt = Date()
-        self.updatedAt = Date()
-        self.isArchived = false
-        self.tags = []
-        self.workingDirectory = nil
-        self.primaryWorkspaceId = nil
-        self.attachedWorkspaceIds = []
+        createdAt = Date()
+        updatedAt = Date()
+        isArchived = false
+        tags = []
+        workingDirectory = nil
+        primaryWorkspaceId = nil
+        attachedWorkspaceIds = []
     }
 }
 

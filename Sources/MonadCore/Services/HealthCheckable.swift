@@ -1,11 +1,4 @@
-import Foundation
-
-/// Internal health status for core services.
-public enum HealthStatus: String, Sendable, Codable {
-    case ok
-    case degraded
-    case down
-}
+@_exported import enum MonadShared.HealthStatus
 
 /// Protocol for services that can report their health status.
 public protocol HealthCheckable: Sendable {

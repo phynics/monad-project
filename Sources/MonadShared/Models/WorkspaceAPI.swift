@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 
 public struct CreateWorkspaceRequest: Codable, Sendable {
     public let uri: String

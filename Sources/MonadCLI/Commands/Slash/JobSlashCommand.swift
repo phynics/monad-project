@@ -1,6 +1,5 @@
 import Foundation
 import MonadClient
-import MonadCore
 import MonadShared
 
 struct JobSlashCommand: SlashCommand {
@@ -97,12 +96,12 @@ struct JobSlashCommand: SlashCommand {
             print("Created: \(job.createdAt)")
             print("Updated: \(job.updatedAt)")
         } catch {
-             TerminalUI.printError("Job not found or error: \(error)")
+            TerminalUI.printError("Job not found or error: \(error)")
         }
     }
 
     private func deleteJob(args: [String], context: ChatContext) async throws {
-         guard let idString = args.first, let id = UUID(uuidString: idString) else {
+        guard let idString = args.first, let id = UUID(uuidString: idString) else {
             TerminalUI.printError("Invalid Job ID")
             return
         }

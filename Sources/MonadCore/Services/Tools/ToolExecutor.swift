@@ -115,8 +115,7 @@ public actor ToolExecutor {
 
             // Append context state if a context is active and this is a context tool
             if await contextSession.hasActiveContext && isContextTool,
-               let context = await contextSession.activeContext
-            {
+               let context = await contextSession.activeContext {
                 let contextState = await context.formatState()
                 if !contextState.isEmpty {
                     responseContent += "\n\n---\n\(contextState)"
@@ -151,8 +150,7 @@ public actor ToolExecutor {
     ///   - assistantMessageId: ID of the assistant message that triggered this call
     /// - Returns: ToolExecutionResult containing message and optional compactification node
     public func executeWithSummary(_ toolCall: ToolCall, assistantMessageId _: UUID) async throws
-        -> ToolExecutionResult
-    {
+        -> ToolExecutionResult {
         let message = try await execute(toolCall)
 
         // Generate compactification node
