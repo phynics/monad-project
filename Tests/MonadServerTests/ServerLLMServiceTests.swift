@@ -1,16 +1,14 @@
 import Foundation
 import MonadCore
-import Testing
-import OpenAI
-
-import MonadTestSupport
 @testable import MonadServer
+import MonadTestSupport
+import OpenAI
+import Testing
 
 @Suite struct ServerLLMServiceTests {
-
     @Test("Test ServerLLMService Initialization and Config Load")
-    func testInitialization() async throws {
-        let defaults = UserDefaults(suiteName: "TestServerLLMService")!
+    func initialization() async throws {
+        let defaults = try #require(UserDefaults(suiteName: "TestServerLLMService"))
         defaults.removePersistentDomain(forName: "TestServerLLMService")
 
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -43,7 +41,7 @@ import MonadTestSupport
     @Test("Test generateTags")
     func testGenerateTags() async throws {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let storage = ConfigurationStorage(configURL: tempURL, userDefaults: UserDefaults(suiteName: "TestTags")!)
+        let storage = try ConfigurationStorage(configURL: tempURL, userDefaults: #require(UserDefaults(suiteName: "TestTags")))
         let service = ServerLLMService(storage: storage)
 
         // Setup mock config
@@ -61,10 +59,10 @@ import MonadTestSupport
 
         let mockClient = MockLLMClient()
         mockClient.nextResponse = """
-            {
-                "tags": ["swift", "testing", "llm"]
-            }
-            """
+        {
+            "tags": ["swift", "testing", "llm"]
+        }
+        """
 
         // Inject mock
         await service.setClients(main: mockClient, utility: mockClient, fast: mockClient)
@@ -79,7 +77,7 @@ import MonadTestSupport
     @Test("Test generateTitle")
     func testGenerateTitle() async throws {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let storage = ConfigurationStorage(configURL: tempURL, userDefaults: UserDefaults(suiteName: "TestTitle")!)
+        let storage = try ConfigurationStorage(configURL: tempURL, userDefaults: #require(UserDefaults(suiteName: "TestTitle")))
         let service = ServerLLMService(storage: storage)
 
         let mockClient = MockLLMClient()
@@ -89,7 +87,7 @@ import MonadTestSupport
 
         let messages: [Message] = [
             Message(content: "Hello", role: .user),
-            Message(content: "Hi there", role: .assistant)
+            Message(content: "Hi there", role: .assistant),
         ]
 
         let title = try await service.generateTitle(for: messages)
@@ -101,27 +99,29 @@ import MonadTestSupport
     @Test("Test evaluateRecallPerformance")
     func testEvaluateRecallPerformance() async throws {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let storage = ConfigurationStorage(configURL: tempURL, userDefaults: UserDefaults(suiteName: "TestRecall")!)
+        let storage = try ConfigurationStorage(configURL: tempURL, userDefaults: #require(UserDefaults(suiteName: "TestRecall")))
         let service = ServerLLMService(storage: storage)
 
         let mockClient = MockLLMClient()
         mockClient.nextResponse = """
-            {
-                "uuid-1": 1.0,
-                "uuid-2": -0.5
-            }
-            """
+        {
+            "uuid-1": 1.0,
+            "uuid-2": -0.5
+        }
+        """
 
         await service.setClients(main: mockClient, utility: mockClient, fast: mockClient)
 
         let memory1 = Memory(
-            id: UUID(), title: "Mem1", content: "Content1", tags: [], embedding: [])
+            id: UUID(), title: "Mem1", content: "Content1", tags: [], embedding: []
+        )
 
         // We'll just verify parsing, the map keys won't match UUIDs generated above unless we mock the response to match.
         // Actually, we can just check if *result* matches our mock.
 
         let scores = try await service.evaluateRecallPerformance(
-            transcript: "chat", recalledMemories: [memory1])
+            transcript: "chat", recalledMemories: [memory1]
+        )
         // The mock response keys "uuid-1" won't match memory1.id, but the function returns the map as-is.
         #expect(scores["uuid-1"] == 1.0)
         #expect(scores["uuid-2"] == -0.5)
@@ -132,7 +132,7 @@ import MonadTestSupport
     @Test("Test chatStreamWithContext")
     func testChatStreamWithContext() async throws {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let storage = ConfigurationStorage(configURL: tempURL, userDefaults: UserDefaults(suiteName: "TestStream")!)
+        let storage = try ConfigurationStorage(configURL: tempURL, userDefaults: #require(UserDefaults(suiteName: "TestStream")))
         let service = ServerLLMService(storage: storage)
 
         let mockClient = MockLLMClient()
@@ -147,6 +147,9 @@ import MonadTestSupport
             chatHistory: [],
             tools: [],
             workspaces: [],
+            primaryWorkspace: nil,
+            clientName: nil,
+            connectedClients: [],
             systemInstructions: nil as String?,
             responseFormat: nil as ChatQuery.ResponseFormat?,
             useFastModel: false
@@ -168,9 +171,9 @@ import MonadTestSupport
     }
 
     @Test("Test Provider Configuration (OpenRouter)")
-    func testProviderConfiguration() async throws {
+    func providerConfiguration() async throws {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let storage = ConfigurationStorage(configURL: tempURL, userDefaults: UserDefaults(suiteName: "TestConfig")!)
+        let storage = try ConfigurationStorage(configURL: tempURL, userDefaults: #require(UserDefaults(suiteName: "TestConfig")))
         let service = ServerLLMService(storage: storage)
 
         var config = LLMConfiguration.openAI

@@ -1,7 +1,7 @@
-import OpenAI
-import MonadTestSupport
 @testable import MonadCore
 import MonadPrompt
+import MonadTestSupport
+import OpenAI
 import Testing
 
 @Suite @MainActor
@@ -27,13 +27,13 @@ struct LLMServiceTests {
     }
 
     @Test("Test prompt building logic and structure")
-    func promptBuilding() async throws {
+    func promptBuilding() async {
         let contextFiles = [
-            ContextFile(name: "Test Note", content: "Note Content", source: "note")
+            ContextFile(name: "Test Note", content: "Note Content", source: "note"),
         ]
         let history = [
             Message(content: "Previous user message", role: .user),
-            Message(content: "Previous assistant message", role: .assistant)
+            Message(content: "Previous assistant message", role: .assistant),
         ]
 
         let prompt = await llmService.buildContext(
@@ -43,6 +43,9 @@ struct LLMServiceTests {
             chatHistory: history,
             tools: [],
             workspaces: [],
+            primaryWorkspace: nil,
+            clientName: nil,
+            connectedClients: [],
             systemInstructions: "System rules"
         )
 
@@ -75,7 +78,7 @@ struct LLMServiceTests {
         // Find "Previous user message"
         var foundHistoryUser = false
         for msg in historyStart {
-            if case .user(let m) = msg, case .string(let content) = m.content {
+            if case let .user(m) = msg, case let .string(content) = m.content {
                 if content == "Previous user message" {
                     foundHistoryUser = true
                     break
@@ -87,7 +90,7 @@ struct LLMServiceTests {
         // Find "Previous assistant message"
         var foundHistoryAssistant = false
         for msg in historyStart {
-             if case .assistant(let m) = msg, let contentWrap = m.content, case .textContent(let content) = contentWrap {
+            if case let .assistant(m) = msg, let contentWrap = m.content, case let .textContent(content) = contentWrap {
                 if content == "Previous assistant message" {
                     foundHistoryAssistant = true
                     break
@@ -102,7 +105,7 @@ struct LLMServiceTests {
             return
         }
 
-        if case .user(let m) = lastMessage, case .string(let content) = m.content {
+        if case let .user(m) = lastMessage, case let .string(content) = m.content {
             #expect(content == "Current question")
         } else {
             #expect(Bool(false), "Last message should be user query")
@@ -110,7 +113,7 @@ struct LLMServiceTests {
     }
 
     @Test("Test prompt building with empty context")
-    func promptBuildingEmptyContext() async throws {
+    func promptBuildingEmptyContext() async {
         let prompt = await llmService.buildContext(
             userQuery: "Hello",
             contextNotes: [],
@@ -118,36 +121,40 @@ struct LLMServiceTests {
             chatHistory: [],
             tools: [],
             workspaces: [],
+            primaryWorkspace: nil,
+            clientName: nil,
+            connectedClients: [],
             systemInstructions: "System Only"
         )
         let messages = await prompt.toMessages()
 
         #expect(messages.count >= 2) // System + User
 
-        if let first = messages.first, case .system(let s) = first, case .textContent(let content) = s.content {
+        if let first = messages.first, case let .system(s) = first, case let .textContent(content) = s.content {
             #expect(content.contains("System Only"))
         } else {
-             #expect(Bool(false), "First message should be system")
+            #expect(Bool(false), "First message should be system")
         }
 
-        if let last = messages.last, case .user(let u) = last, case .string(let content) = u.content {
+        if let last = messages.last, case let .user(u) = last, case let .string(content) = u.content {
             #expect(content == "Hello")
         } else {
-             #expect(Bool(false), "Last message should be user query")
+            #expect(Bool(false), "Last message should be user query")
         }
     }
 
     @Test("Test history optimization (truncation)")
-    func promptTruncation() async throws {
+    func promptTruncation() async {
         // Create a large history that should be truncated
         // make sure it exceeds the limit we pass
         let limit = 100
 
-        let largeHistory = (1...10).map { i in
+        let largeHistory = (1 ... 10).map { i in
             Message(
                 content:
-                    "Message \(i) with significant length to trigger early truncation logic. ....................................................................",
-                role: .user)
+                "Message \(i) with significant length to trigger early truncation logic. ....................................................................",
+                role: .user
+            )
         }
 
         // Call optimizeHistory directly
@@ -185,7 +192,7 @@ struct LLMServiceTests {
 
         let messages = [
             Message(content: "How do I use SwiftUI?", role: .user),
-            Message(content: "You use it by declaring views.", role: .assistant)
+            Message(content: "You use it by declaring views.", role: .assistant),
         ]
 
         let title = try await service.generateTitle(for: messages)
@@ -193,7 +200,7 @@ struct LLMServiceTests {
 
         // Verify transcript was sent in the prompt
         if let lastMessage = mockClient.lastMessages.last {
-            if case .user(let m) = lastMessage, case .string(let content) = m.content {
+            if case let .user(m) = lastMessage, case let .string(content) = m.content {
                 #expect(content.contains("How do I use SwiftUI?"))
                 #expect(content.contains("You use it by declaring views."))
             }
