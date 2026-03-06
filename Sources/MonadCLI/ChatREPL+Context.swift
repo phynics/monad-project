@@ -1,0 +1,152 @@
+import Foundation
+import MonadClient
+import MonadShared
+
+// Needed for fflush
+#if canImport(Glibc)
+    import Glibc
+#elseif canImport(Darwin)
+    import Darwin
+#endif
+
+extension ChatREPL {
+    func getContextSummary() async -> String {
+        // Quick health check — short-circuit if server is down
+        let serverOnline: Bool
+        do {
+            serverOnline = try await client.healthCheck()
+        } catch {
+            serverOnline = false
+        }
+        lastServerStatus = serverOnline
+
+        guard serverOnline else {
+            return TerminalUI.red("✗ Server offline")
+                + "  "
+                + TerminalUI.dim("— /status to check, Ctrl-C to exit")
+        }
+
+        do {
+            let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
+            var wsSummary = "No Workspace"
+
+            let displayId = selectedWorkspaceId ?? sessionWS.primary?.id
+
+            if let targetId = displayId {
+                let ws = try await client.getWorkspace(targetId)
+                let icon = selectedWorkspaceId == nil ? "📂" : "🎯"
+                wsSummary = "\(icon) \(ws.uri.description)"
+
+                if selectedWorkspaceId == nil && !sessionWS.attached.isEmpty {
+                    wsSummary += " (+\(sessionWS.attached.count) attached)"
+                }
+            }
+
+            let config = try await client.getConfiguration()
+            let memories = try await client.listMemories()
+            let activeCount = min(memories.count, config.memoryContextLimit)
+
+            return "\(wsSummary) | 🧠 \(activeCount) active memories"
+        } catch {
+            return TerminalUI.yellow("⚠️ Context unavailable")
+        }
+    }
+
+    func showContext() async {
+        do {
+            let memories = try await client.listMemories()
+            let config = try await client.getConfiguration()
+
+            print(TerminalUI.dim("─────────────────────────────────────────"))
+
+            let providerName = config.activeProvider.rawValue
+            print(TerminalUI.dim("🤖 Provider: \(providerName)"))
+            print(TerminalUI.dim("   Main:    \(config.modelName)"))
+            if !config.utilityModel.isEmpty {
+                print(TerminalUI.dim("   Utility: \(config.utilityModel)"))
+            }
+            if !config.fastModel.isEmpty, config.fastModel != config.utilityModel {
+                print(TerminalUI.dim("   Fast:    \(config.fastModel)"))
+            }
+
+            if !memories.isEmpty {
+                let limit = config.memoryContextLimit
+                let activeCount = min(memories.count, limit)
+                print(TerminalUI.dim("📚 \(activeCount) memories active (of \(memories.count) total)"))
+            }
+
+            if config.documentContextLimit > 0 {
+                print(TerminalUI.dim("📄 Document context: \(config.documentContextLimit) max"))
+            }
+
+            print(TerminalUI.dim("─────────────────────────────────────────"))
+            print("")
+        } catch {
+            TerminalUI.printWarning("Could not load context: \(error.localizedDescription)")
+        }
+    }
+
+    func checkAndRestoreWorkspaces() async {
+        do {
+            let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
+            var workspacesToRestore: [WorkspaceReference] = []
+
+            if let primary = sessionWS.primary, primary.status == .missing, primary.hostType == .server {
+                workspacesToRestore.append(primary)
+            }
+
+            if let identity = RegistrationManager.shared.getIdentity() {
+                for ws in sessionWS.attached {
+                    if ws.hostType == .client, ws.ownerId == identity.clientId {
+                        if let url = URL(string: ws.uri.description), url.host == identity.hostname {
+                            let path = url.path
+                            if !FileManager.default.fileExists(atPath: path) {
+                                workspacesToRestore.append(ws)
+                            } else {
+                                LocalConfigManager.shared.saveClientWorkspace(
+                                    uri: ws.uri.description, id: ws.id.uuidString
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            guard !workspacesToRestore.isEmpty else { return }
+
+            print(TerminalUI.dim("------------------------------------------------"))
+            TerminalUI.printWarning("Missing Workspaces Detected:")
+            for ws in workspacesToRestore {
+                print(" - \(ws.uri.description) (\(ws.hostType == .server ? "Server" : "Client"))")
+            }
+            print("")
+            print("Do you want to restore these workspaces? [y/N] ", terminator: "")
+            fflush(stdout)
+
+            if let input = lineReader.readLine(prompt: "", completion: nil)?
+                .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y"
+            {
+                for ws in workspacesToRestore {
+                    if ws.hostType == .server {
+                        try await client.restoreWorkspace(sessionId: session.id, workspaceId: ws.id)
+                        TerminalUI.printSuccess("Restored server workspace: \(ws.uri.description)")
+                    } else {
+                        if let url = URL(string: ws.uri.description) {
+                            try FileManager.default.createDirectory(
+                                at: url, withIntermediateDirectories: true
+                            )
+                            TerminalUI.printSuccess("Created local directory: \(url.path)")
+                        }
+                    }
+                }
+            } else {
+                print("Skipping restoration.")
+            }
+            print(TerminalUI.dim("------------------------------------------------"))
+            print("")
+
+        } catch {
+            // Ignore errors here to not block startup
+        }
+    }
+}
