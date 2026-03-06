@@ -101,7 +101,7 @@ Six targets with strict dependency hierarchy:
 2. **MonadCore** — Core business logic. Contains `ChatEngine`, `SessionManager`, `ContextManager`, `ToolRouter`/`ToolExecutor`, LLM providers (OpenAI/Ollama/OpenRouter), embeddings, persistence. **Works as a standalone library.**
 3. **MonadShared** — Common types for client/server (`ToolReference`, `WorkspaceReference`, `AnyCodable`, `ChatEvent`).
 4. **MonadServer** — Hummingbird REST API, SSE streaming, GRDB persistence, WebSocket, service lifecycle.
-5. **MonadClient** — Client library with Bonjour auto-discovery.
+5. **MonadClient** — Core HTTP/SSE networking layer and base client. Exposes `chat` and `workspace` facades for domain-specific operations.
 6. **MonadCLI** — Command-line interface with slash commands.
 
 ### MonadCore Model Layout

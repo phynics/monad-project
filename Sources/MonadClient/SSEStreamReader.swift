@@ -1,7 +1,6 @@
 import Foundation
-import MonadCore
-import MonadShared
 import Logging
+import MonadShared
 
 /// Parses Server-Sent Events (SSE) from an async byte stream
 public struct SSEStreamReader: Sendable {

@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 import MonadShared
 
 public extension MonadClient {

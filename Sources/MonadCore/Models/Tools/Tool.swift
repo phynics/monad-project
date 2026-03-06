@@ -1,6 +1,9 @@
 import Foundation
 import Logging
+import MonadShared
 import OpenAI
+
+@_exported import struct MonadShared.ToolResult
 
 /// A tool that the LLM can call to interact with the external world or perform computations.
 ///
@@ -160,31 +163,7 @@ public func formatToolsForPrompt(_ tools: [AnyTool]) async -> String {
     """
 }
 
-/// Encapsulates the outcome of a tool execution.
-public struct ToolResult: Sendable, Codable {
-    /// Whether the execution was successful.
-    public let success: Bool
-
-    /// The string output of the tool, shown to the LLM on success.
-    public let output: String
-
-    /// Optional error message, shown to the LLM on failure.
-    public let error: String?
-
-    // Optional context provided if the tool launched a subagent or created a background job.
-    // public let subagentContext: SubagentContext?
-
-    /// Creates a successful tool result.
-    public static func success(_ output: String)
-        -> ToolResult {
-        ToolResult(success: true, output: output, error: nil)
-    }
-
-    /// Creates a failed tool result with an error message.
-    public static func failure(_ error: String) -> ToolResult {
-        ToolResult(success: false, output: "", error: error)
-    }
-}
+// ToolResult is now defined in MonadShared and re-exported via @_exported import above.
 
 /// Persistent configuration for a specific tool within a chat session.
 public struct ToolConfiguration: Codable, Identifiable, Sendable {

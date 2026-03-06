@@ -50,12 +50,12 @@ struct JobSlashCommand: SlashCommand {
 
         let jobTitle = args.joined(separator: " ")
 
-        let job = try await context.client.addJob(sessionId: context.session.id, title: jobTitle, priority: 0)
+        let job = try await context.client.chat.addJob(sessionId: context.session.id, title: jobTitle, priority: 0)
         TerminalUI.printSuccess("Job added: \(job.title) (ID: \(job.id))")
     }
 
     private func listJobs(context: ChatContext) async throws {
-        let jobs = try await context.client.listJobs(sessionId: context.session.id)
+        let jobs = try await context.client.chat.listJobs(sessionId: context.session.id)
         if jobs.isEmpty {
             print("No jobs found for this session.")
             return
@@ -84,7 +84,7 @@ struct JobSlashCommand: SlashCommand {
         // Fetch specific or search in list?
         // Client has `getJob`.
         do {
-            let job = try await context.client.getJob(sessionId: context.session.id, jobId: id)
+            let job = try await context.client.chat.getJob(sessionId: context.session.id, jobId: id)
             print(TerminalUI.bold("Job Details:"))
             print("ID: \(job.id)")
             print("Title: \(job.title)")
@@ -106,7 +106,7 @@ struct JobSlashCommand: SlashCommand {
             return
         }
 
-        try await context.client.deleteJob(sessionId: context.session.id, jobId: id)
+        try await context.client.chat.deleteJob(sessionId: context.session.id, jobId: id)
         TerminalUI.printSuccess("Job deleted.")
     }
 }

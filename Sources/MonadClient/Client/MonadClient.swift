@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 import MonadShared
 
 /// HTTP client for communicating with MonadServer
@@ -21,19 +20,21 @@ public actor MonadClient {
             self.session = URLSession(configuration: sessionConfig)
         }
 
-        self.decoder = JSONDecoder()
-        self.decoder.dateDecodingStrategy = .iso8601
+        decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
 
-        self.encoder = JSONEncoder()
-        self.encoder.dateEncodingStrategy = .iso8601
+        encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
 
-        self.sseReader = SSEStreamReader()
+        sseReader = SSEStreamReader()
     }
 
-    // MARK: - Private Helpers
+    public nonisolated var chat: MonadChatClient { MonadChatClient(client: self) }
+    public nonisolated var workspace: MonadWorkspaceClient { MonadWorkspaceClient(client: self) }
 
-    func buildRequest(path: String, method: String, requiresAuth: Bool = true) throws
-        -> URLRequest {
+    // MARK: - Internal Helpers for Extracted Clients
+
+    public func buildRequest(path: String, method: String, requiresAuth: Bool = true) throws -> URLRequest {
         guard let url = URL(string: path, relativeTo: configuration.baseURL) else {
             throw MonadClientError.invalidURL
         }
@@ -50,7 +51,11 @@ public actor MonadClient {
         return request
     }
 
-    func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
+    public func encode<T: Encodable>(_ value: T) throws -> Data {
+        try encoder.encode(value)
+    }
+
+    public func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
         let (data, _) = try await performRaw(request)
 
         do {
@@ -60,7 +65,7 @@ public actor MonadClient {
         }
     }
 
-    func performRaw(_ request: URLRequest) async throws -> (Data, URLResponse) {
+    public func performRaw(_ request: URLRequest) async throws -> (Data, URLResponse) {
         let (data, response): (Data, URLResponse)
 
         do {
@@ -77,7 +82,7 @@ public actor MonadClient {
         let url = request.url?.path ?? "unknown"
 
         switch httpResponse.statusCode {
-        case 200...299:
+        case 200 ... 299:
             return (data, response)
         case 401:
             let body = String(data: data, encoding: .utf8) ?? "No response body"
@@ -89,8 +94,13 @@ public actor MonadClient {
         default:
             let message = String(data: data, encoding: .utf8)
             configuration.logger.error(
-                "HTTP \(httpResponse.statusCode) for \(url): \(message ?? "no body")")
+                "HTTP \(httpResponse.statusCode) for \(url): \(message ?? "no body")"
+            )
             throw MonadClientError.httpError(statusCode: httpResponse.statusCode, message: message)
         }
+    }
+    
+    public func fetchStreamBytes(request: URLRequest) async throws -> (URLSession.AsyncBytes, URLResponse) {
+        return try await session.bytes(for: request)
     }
 }

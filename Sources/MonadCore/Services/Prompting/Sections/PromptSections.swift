@@ -271,6 +271,9 @@ public struct WorkspacesContext: ContextSection {
                      output.append("    - `")
                      output.append(tool.toolId)
                      output.append("`\n")
+                     if let toolInjection = tool.contextInjection, !toolInjection.isEmpty {
+                         output.append("      Instructions: \(toolInjection)\n")
+                     }
                  }
             } else {
                  if !isConnected {
@@ -278,6 +281,9 @@ public struct WorkspacesContext: ContextSection {
                  } else {
                      output.append("  Available Tools: None specific to this workspace\n")
                  }
+            }
+            if let wsInjection = ws.contextInjection, !wsInjection.isEmpty {
+                output.append("  Workspace Instructions: \(wsInjection)\n")
             }
             output += "\n"
         }

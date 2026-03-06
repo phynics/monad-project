@@ -27,13 +27,13 @@ extension ChatREPL {
         }
 
         do {
-            let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
+            let sessionWS = try await client.workspace.listSessionWorkspaces(sessionId: session.id)
             var wsSummary = "No Workspace"
 
             let displayId = selectedWorkspaceId ?? sessionWS.primary?.id
 
             if let targetId = displayId {
-                let ws = try await client.getWorkspace(targetId)
+                let ws = try await client.workspace.getWorkspace(targetId)
                 let icon = selectedWorkspaceId == nil ? "📂" : "🎯"
                 wsSummary = "\(icon) \(ws.uri.description)"
 
@@ -43,7 +43,7 @@ extension ChatREPL {
             }
 
             let config = try await client.getConfiguration()
-            let memories = try await client.listMemories()
+            let memories = try await client.chat.listMemories()
             let activeCount = min(memories.count, config.memoryContextLimit)
 
             return "\(wsSummary) | 🧠 \(activeCount) active memories"
@@ -54,7 +54,7 @@ extension ChatREPL {
 
     func showContext() async {
         do {
-            let memories = try await client.listMemories()
+            let memories = try await client.chat.listMemories()
             let config = try await client.getConfiguration()
 
             print(TerminalUI.dim("─────────────────────────────────────────"))
@@ -88,7 +88,7 @@ extension ChatREPL {
 
     func checkAndRestoreWorkspaces() async {
         do {
-            let sessionWS = try await client.listSessionWorkspaces(sessionId: session.id)
+            let sessionWS = try await client.workspace.listSessionWorkspaces(sessionId: session.id)
             var workspacesToRestore: [WorkspaceReference] = []
 
             if let primary = sessionWS.primary, primary.status == .missing, primary.hostType == .server {
@@ -124,11 +124,10 @@ extension ChatREPL {
             fflush(stdout)
 
             if let input = lineReader.readLine(prompt: "", completion: nil)?
-                .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y"
-            {
+                .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y" {
                 for ws in workspacesToRestore {
                     if ws.hostType == .server {
-                        try await client.restoreWorkspace(sessionId: session.id, workspaceId: ws.id)
+                        try await client.workspace.restoreWorkspace(sessionId: session.id, workspaceId: ws.id)
                         TerminalUI.printSuccess("Restored server workspace: \(ws.uri.description)")
                     } else {
                         if let url = URL(string: ws.uri.description) {

@@ -10,7 +10,7 @@ struct ResolvedPath {
 }
 
 private func resolvePath(_ input: String?, context: ChatContext) async throws -> ResolvedPath {
-    let sessionWS = try await context.client.listSessionWorkspaces(sessionId: context.session.id)
+    let sessionWS = try await context.client.workspace.listSessionWorkspaces(sessionId: context.session.id)
 
     let targetWorkspaceId: UUID
     let wsName: String
@@ -39,7 +39,7 @@ private func resolvePath(_ input: String?, context: ChatContext) async throws ->
         let wsRef = String(components[0])
         let path = components.count > 1 ? String(components[1]) : ""
 
-        let allWorkspaces = try await context.client.listWorkspaces()
+        let allWorkspaces = try await context.client.workspace.listWorkspaces()
         if let ws = allWorkspaces.first(where: {
             $0.id.uuidString.lowercased().hasPrefix(wsRef.lowercased())
         }) {
@@ -68,7 +68,7 @@ struct LsCommand: SlashCommand {
     func run(args: [String], context: ChatContext) async throws {
         do {
             let resolved = try await resolvePath(args.first, context: context)
-            let files = try await context.client.listFiles(workspaceId: resolved.workspaceId)
+            let files = try await context.client.workspace.listFiles(workspaceId: resolved.workspaceId)
 
             let prefix =
                 resolved.path.hasSuffix("/") || resolved.path.isEmpty
@@ -109,7 +109,7 @@ struct CatCommand: SlashCommand {
         }
         do {
             let resolved = try await resolvePath(pathInput, context: context)
-            let content = try await context.client.getFileContent(
+            let content = try await context.client.workspace.getFileContent(
                 workspaceId: resolved.workspaceId, path: resolved.path)
             print("\n" + TerminalUI.renderMarkdown(content) + "\n")
         } catch {
@@ -134,7 +134,7 @@ struct RmCommand: SlashCommand {
                 "Are you sure you want to delete \(resolved.workspaceName):\(resolved.path)? (y/n): ",
                 terminator: "")
             if readLine()?.lowercased() == "y" {
-                try await context.client.deleteFile(
+                try await context.client.workspace.deleteFile(
                     workspaceId: resolved.workspaceId, path: resolved.path)
                 TerminalUI.printSuccess("Deleted \(resolved.path)")
             }
@@ -162,7 +162,7 @@ struct WriteCommand: SlashCommand {
                 if line.isEmpty { break }
                 content += line + "\n"
             }
-            try await context.client.writeFileContent(
+            try await context.client.workspace.writeFileContent(
                 workspaceId: resolved.workspaceId, path: resolved.path, content: content)
             TerminalUI.printSuccess("Wrote \(resolved.path)")
         } catch {
@@ -183,7 +183,7 @@ struct EditCommand: SlashCommand {
         }
         do {
             let resolved = try await resolvePath(pathInput, context: context)
-            let content = try await context.client.getFileContent(
+            let content = try await context.client.workspace.getFileContent(
                 workspaceId: resolved.workspaceId, path: resolved.path)
 
             let filename = URL(fileURLWithPath: resolved.path).lastPathComponent
@@ -200,7 +200,7 @@ struct EditCommand: SlashCommand {
 
             let updatedContent = try String(contentsOf: tempFile, encoding: .utf8)
             if updatedContent != content {
-                try await context.client.writeFileContent(
+                try await context.client.workspace.writeFileContent(
                     workspaceId: resolved.workspaceId, path: resolved.path, content: updatedContent)
                 TerminalUI.printSuccess("Updated \(resolved.path)")
             } else {

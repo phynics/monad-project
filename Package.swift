@@ -66,7 +66,6 @@ let package = Package(
         .target(
             name: "MonadClient",
             dependencies: [
-                "MonadCore",
                 "MonadShared",
 
                 .product(name: "Logging", package: "swift-log"),

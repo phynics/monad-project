@@ -25,6 +25,16 @@ public enum ToolReference: Codable, Sendable, Hashable {
         }
     }
 
+    /// Workspace-specific instructions for this tool
+    public var contextInjection: String? {
+        switch self {
+        case .known:
+            return nil  // Server tools don't have injected context yet
+        case .custom(let definition):
+            return definition.contextInjection
+        }
+    }
+
     /// Create a known tool reference
     public static func known(_ id: String) -> ToolReference {
         .known(id: id)

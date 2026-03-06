@@ -52,7 +52,7 @@ struct MemoryCommand: SlashCommand {
     }
 
     private func listActive(context: ChatContext) async throws {
-        let memories = try await context.client.listMemories()
+        let memories = try await context.client.chat.listMemories()
         let config = try await context.client.getConfiguration()
         let limit = config.memoryContextLimit
         let activeMemories = Array(memories.prefix(limit))
@@ -78,7 +78,7 @@ struct MemoryCommand: SlashCommand {
     }
 
     private func viewMemory(_ idPrefix: String, context: ChatContext) async throws {
-        let memories = try await context.client.listMemories()
+        let memories = try await context.client.chat.listMemories()
 
         let matches = memories.filter {
             $0.id.uuidString.lowercased().hasPrefix(idPrefix.lowercased())

@@ -1,8 +1,7 @@
 import Foundation
-import MonadCore
 import MonadShared
 
-public extension MonadClient {
+public extension MonadWorkspaceClient {
     // MARK: - Workspace API
 
     func createWorkspace(
@@ -12,8 +11,8 @@ public extension MonadClient {
         rootPath: String?,
         trustLevel: WorkspaceTrustLevel?
     ) async throws -> WorkspaceReference {
-        var request = try buildRequest(path: "/api/workspaces", method: "POST")
-        request.httpBody = try encoder.encode(
+        var request = try await client.buildRequest(path: "/api/workspaces", method: "POST")
+        request.httpBody = try await client.encode(
             CreateWorkspaceRequest(
                 uri: uri.description,
                 hostType: hostType,
@@ -22,18 +21,18 @@ public extension MonadClient {
                 trustLevel: trustLevel
             )
         )
-        return try await perform(request)
+        return try await client.perform(request)
     }
 
     func listWorkspaces() async throws -> [WorkspaceReference] {
-        let request = try buildRequest(path: "/api/workspaces", method: "GET")
-        let response: PaginatedResponse<WorkspaceReference> = try await perform(request)
+        let request = try await client.buildRequest(path: "/api/workspaces", method: "GET")
+        let response: PaginatedResponse<WorkspaceReference> = try await client.perform(request)
         return response.items
     }
 
     func getWorkspace(_ id: UUID) async throws -> WorkspaceReference {
-        let request = try buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "GET")
-        return try await perform(request)
+        let request = try await client.buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "GET")
+        return try await client.perform(request)
     }
 
     func updateWorkspace(
@@ -41,77 +40,77 @@ public extension MonadClient {
         rootPath: String? = nil,
         trustLevel: WorkspaceTrustLevel? = nil
     ) async throws -> WorkspaceReference {
-        var request = try buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "PATCH")
-        request.httpBody = try encoder.encode(
+        var request = try await client.buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "PATCH")
+        request.httpBody = try await client.encode(
             UpdateWorkspaceRequest(rootPath: rootPath, trustLevel: trustLevel)
         )
-        return try await perform(request)
+        return try await client.perform(request)
     }
 
     func deleteWorkspace(_ id: UUID) async throws {
-        let request = try buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "DELETE")
-        _ = try await performRaw(request)
+        let request = try await client.buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "DELETE")
+        _ = try await client.performRaw(request)
     }
 
     func addWorkspaceTool(_ tool: ToolReference, workspaceId: UUID) async throws {
-        var request = try buildRequest(
+        var request = try await client.buildRequest(
             path: "/api/workspaces/\(workspaceId.uuidString)/tools", method: "POST"
         )
-        request.httpBody = try encoder.encode(RegisterToolRequest(tool: tool))
-        _ = try await performRaw(request)
+        request.httpBody = try await client.encode(RegisterToolRequest(tool: tool))
+        _ = try await client.performRaw(request)
     }
 
     /// Atomically replaces all tools for a workspace with the provided set.
     /// Workspace providers should call this on every connect/reconnect to push their current tool list.
     func syncWorkspaceTools(_ tools: [ToolReference], workspaceId: UUID) async throws {
-        var request = try buildRequest(
+        var request = try await client.buildRequest(
             path: "/api/workspaces/\(workspaceId.uuidString)/tools", method: "PUT"
         )
-        request.httpBody = try encoder.encode(SyncToolsRequest(tools: tools))
-        _ = try await performRaw(request)
+        request.httpBody = try await client.encode(SyncToolsRequest(tools: tools))
+        _ = try await client.performRaw(request)
     }
 
     func listWorkspaceTools(workspaceId: UUID) async throws -> [ToolReference] {
-        let request = try buildRequest(
+        let request = try await client.buildRequest(
             path: "/api/workspaces/\(workspaceId.uuidString)/tools", method: "GET"
         )
-        return try await perform(request)
+        return try await client.perform(request)
     }
 
     func attachWorkspace(_ workspaceId: UUID, to sessionId: UUID, isPrimary: Bool)
         async throws {
-        var request = try buildRequest(
+        var request = try await client.buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "POST"
         )
-        request.httpBody = try encoder.encode(
+        request.httpBody = try await client.encode(
             AttachWorkspaceRequest(workspaceId: workspaceId, isPrimary: isPrimary)
         )
-        _ = try await performRaw(request)
+        _ = try await client.performRaw(request)
     }
 
     func detachWorkspace(_ workspaceId: UUID, from sessionId: UUID) async throws {
-        let request = try buildRequest(
+        let request = try await client.buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/workspaces/\(workspaceId.uuidString)",
             method: "DELETE"
         )
-        _ = try await performRaw(request)
+        _ = try await client.performRaw(request)
     }
 
     func listSessionWorkspaces(sessionId: UUID) async throws -> (
         primary: WorkspaceReference?, attached: [WorkspaceReference]
     ) {
-        let request = try buildRequest(
+        let request = try await client.buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "GET"
         )
-        let response: SessionWorkspacesResponse = try await perform(request)
+        let response: SessionWorkspacesResponse = try await client.perform(request)
         return (response.primaryWorkspace, response.attachedWorkspaces)
     }
 
     func restoreWorkspace(sessionId: UUID, workspaceId: UUID) async throws {
-        let request = try buildRequest(
+        let request = try await client.buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/workspaces/\(workspaceId.uuidString)/restore",
             method: "POST"
         )
-        _ = try await performRaw(request)
+        _ = try await client.performRaw(request)
     }
 }

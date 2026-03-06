@@ -15,7 +15,7 @@ struct CLISessionManager {
         // 1. Try to resume from flag
         if let sessionId = explicitId, let uuid = UUID(uuidString: sessionId) {
             do {
-                _ = try await client.getHistory(sessionId: uuid)
+                _ = try await client.chat.getHistory(sessionId: uuid)
                 TerminalUI.printInfo("Resuming session \(uuid.uuidString.prefix(8))...")
                 return Session(id: uuid, title: nil)
             } catch {
@@ -27,7 +27,7 @@ struct CLISessionManager {
         // 2. Try to resume from config (automatic)
         if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
             do {
-                _ = try await client.getHistory(sessionId: uuid)
+                _ = try await client.chat.getHistory(sessionId: uuid)
                 TerminalUI.printInfo("Resumed session \(uuid.uuidString.prefix(8))")
                 return Session(id: uuid, title: nil)
             } catch {
@@ -50,7 +50,7 @@ struct CLISessionManager {
         let choice = readLine()?.trimmingCharacters(in: .whitespaces) ?? "1"
 
         if choice == "2" {
-            let sessions = try await client.listSessions()
+            let sessions = try await client.chat.listSessions()
             if sessions.isEmpty {
                 print("No sessions found. Creating new one.")
                 return try await createNewSessionFlow()
@@ -80,7 +80,7 @@ struct CLISessionManager {
     }
 
     private func createNewSessionFlow() async throws -> Session {
-        let session = try await client.createSession()
+        let session = try await client.chat.createSession()
         TerminalUI.printSuccess("Created new session \(session.id.uuidString.prefix(8))")
         return session
     }
@@ -107,7 +107,7 @@ struct CLISessionManager {
                 do {
                     // Verify workspace exists on server and is linked to this client
                     // Actually, we can just attempt to attach. If it fails, it might be gone.
-                    try await client.attachWorkspace(wsId, to: session.id, isPrimary: false)
+                    try await client.workspace.attachWorkspace(wsId, to: session.id, isPrimary: false)
                     TerminalUI.printSuccess("Attached \(uri)")
                 } catch {
                     TerminalUI.printError("Failed to re-attach \(uri): \(error.localizedDescription)")

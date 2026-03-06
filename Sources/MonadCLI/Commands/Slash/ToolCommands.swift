@@ -15,14 +15,14 @@ struct ToolCommand: SlashCommand {
             try await listTools(context: context)
         case "enable":
             if args.count > 1 {
-                try await context.client.enableTool(args[1], sessionId: context.session.id)
+                try await context.client.workspace.enableTool(args[1], sessionId: context.session.id)
                 TerminalUI.printSuccess("Enabled tool: \(args[1])")
             } else {
                 TerminalUI.printError("Usage: /tool enable <name>")
             }
         case "disable":
             if args.count > 1 {
-                try await context.client.disableTool(args[1], sessionId: context.session.id)
+                try await context.client.workspace.disableTool(args[1], sessionId: context.session.id)
                 TerminalUI.printSuccess("Disabled tool: \(args[1])")
             } else {
                 TerminalUI.printError("Usage: /tool disable <name>")
@@ -33,7 +33,7 @@ struct ToolCommand: SlashCommand {
     }
 
     private func listTools(context: ChatContext) async throws {
-        let tools = try await context.client.listTools(sessionId: context.session.id)
+        let tools = try await context.client.workspace.listTools(sessionId: context.session.id)
         if tools.isEmpty {
             TerminalUI.printInfo("No tools available.")
             return

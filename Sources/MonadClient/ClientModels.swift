@@ -1,5 +1,4 @@
 import Foundation
-import MonadCore
 import MonadShared
 
 // MARK: - Type Aliases from MonadShared
@@ -17,30 +16,30 @@ public typealias ComponentStatus = MonadShared.ComponentStatus
 public typealias HealthStatus = MonadShared.HealthStatus
 
 // Memory Models
-public typealias Memory = MonadCore.Memory
+public typealias Memory = MonadShared.Memory
 public typealias MemorySearchRequest = MonadShared.MemorySearchRequest
 
 /// Tool Models
 public typealias Tool = MonadShared.ToolInfo
 
 /// Agent Models
-public typealias Agent = MonadCore.Agent
+public typealias Agent = MonadShared.Agent
 
 // Message Models
-public typealias Message = MonadCore.Message
-public typealias MessageRole = MonadCore.Message.MessageRole
+public typealias Message = MonadShared.Message
+public typealias MessageRole = MonadShared.Message.MessageRole
 
 // Job Models
-public typealias Job = MonadCore.Job
-public typealias AddJobRequest = MonadCore.AddJobRequest
+public typealias Job = MonadShared.Job
+public typealias AddJobRequest = MonadShared.AddJobRequest
 
 // MARK: - Client-Specific Models
 
 /// A delta for a tool call in a streaming response
-public typealias ToolCallDelta = MonadCore.ToolCallDelta
+public typealias ToolCallDelta = MonadShared.ToolCallDelta
 
 /// Metadata about the context used for a chat response
-public typealias ChatMetadata = MonadCore.ChatMetadata
+public typealias ChatMetadata = MonadShared.ChatMetadata
 
 // MARK: - Client API Models
 

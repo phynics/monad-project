@@ -20,7 +20,7 @@ extension ChatREPL {
             do {
                 print("")
 
-                let stream = try await client.chatStream(sessionId: sessionId, message: message)
+                let stream = try await client.chat.chatStream(sessionId: sessionId, message: message)
 
                 var assistantStartPrinted = false
                 // Accumulate streamed argument JSON fragments per toolCallId for display

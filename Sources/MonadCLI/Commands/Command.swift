@@ -72,21 +72,21 @@ struct Command: AsyncParsableCommand {
         // Resolve session
         let targetSession: Session
         if let sessionId = session, let uuid = UUID(uuidString: sessionId) {
-            let sessions = try await client.listSessions()
+            let sessions = try await client.chat.listSessions()
             guard let found = sessions.first(where: { $0.id == uuid }) else {
                 TerminalUI.printError("Session not found: \(sessionId)")
                 throw ExitCode.failure
             }
             targetSession = found
         } else if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
-            let sessions = try await client.listSessions()
+            let sessions = try await client.chat.listSessions()
             if let found = sessions.first(where: { $0.id == uuid }) {
                 targetSession = found
             } else {
-                targetSession = try await client.createSession()
+                targetSession = try await client.chat.createSession()
             }
         } else {
-            targetSession = try await client.createSession()
+            targetSession = try await client.chat.createSession()
         }
 
         // Build command generation prompt
@@ -97,7 +97,7 @@ struct Command: AsyncParsableCommand {
         print("")
 
         var fullResponse = ""
-        let stream = try await client.chatStream(sessionId: targetSession.id, message: prompt)
+        let stream = try await client.chat.chatStream(sessionId: targetSession.id, message: prompt)
 
         for try await delta in stream {
             if let content = delta.textContent {
@@ -165,7 +165,7 @@ struct Command: AsyncParsableCommand {
                 print("")
 
                 var editResponse = ""
-                let stream = try await client.chatStream(sessionId: session.id, message: editPrompt)
+                let stream = try await client.chat.chatStream(sessionId: session.id, message: editPrompt)
                 for try await delta in stream {
                     if let content = delta.textContent {
                         editResponse += content

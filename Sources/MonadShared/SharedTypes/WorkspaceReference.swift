@@ -17,6 +17,7 @@ public struct WorkspaceReference: Codable, Sendable, Identifiable {
     public var lastModifiedBy: UUID?  // Session ID that last modified
     public var status: WorkspaceStatus
     public var metadata: [String: AnyCodable]
+    public var contextInjection: String?
     public let createdAt: Date
 
     public enum WorkspaceHostType: String, Codable, Sendable {
@@ -42,6 +43,7 @@ public struct WorkspaceReference: Codable, Sendable, Identifiable {
         lastModifiedBy: UUID? = nil,
         status: WorkspaceStatus = .active,
         metadata: [String: AnyCodable] = [:],
+        contextInjection: String? = nil,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -54,6 +56,7 @@ public struct WorkspaceReference: Codable, Sendable, Identifiable {
         self.lastModifiedBy = lastModifiedBy
         self.status = status
         self.metadata = metadata
+        self.contextInjection = contextInjection
         self.createdAt = createdAt
     }
 

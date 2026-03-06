@@ -8,6 +8,7 @@ public struct WorkspaceToolDefinition: Codable, Sendable, Hashable, Identifiable
     public let parametersSchema: [String: AnyCodable]
     public var usageExample: String?
     public var requiresPermission: Bool
+    public var contextInjection: String?
 
     public init(
         id: String,
@@ -15,7 +16,8 @@ public struct WorkspaceToolDefinition: Codable, Sendable, Hashable, Identifiable
         description: String,
         parametersSchema: [String: AnyCodable] = [:],
         usageExample: String? = nil,
-        requiresPermission: Bool = false
+        requiresPermission: Bool = false,
+        contextInjection: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -23,5 +25,6 @@ public struct WorkspaceToolDefinition: Codable, Sendable, Hashable, Identifiable
         self.parametersSchema = parametersSchema
         self.usageExample = usageExample
         self.requiresPermission = requiresPermission
+        self.contextInjection = contextInjection
     }
 }

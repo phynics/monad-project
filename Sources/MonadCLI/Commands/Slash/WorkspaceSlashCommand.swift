@@ -25,7 +25,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         case "attach":
             if args.count > 1 {
                 if let uuid = UUID(uuidString: args[1]) {
-                    try await context.client.attachWorkspace(
+                    try await context.client.workspace.attachWorkspace(
                         uuid, to: context.session.id, isPrimary: false
                     )
                     TerminalUI.printSuccess("Attached workspace \(uuid.uuidString).")
@@ -40,7 +40,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         case "detach":
             if args.count > 1 {
                 if let uuid = UUID(uuidString: args[1]) {
-                    try await context.client.detachWorkspace(uuid, from: context.session.id)
+                    try await context.client.workspace.detachWorkspace(uuid, from: context.session.id)
                     TerminalUI.printSuccess("Detached workspace \(uuid.uuidString).")
                 } else {
                     TerminalUI.printError("Invalid UUID")
@@ -56,7 +56,7 @@ struct WorkspaceSlashCommand: SlashCommand {
     }
 
     private func showSessionWorkspaces(context: ChatContext) async throws {
-        let sessionWS = try await context.client.listSessionWorkspaces(
+        let sessionWS = try await context.client.workspace.listSessionWorkspaces(
             sessionId: context.session.id
         )
 
@@ -82,8 +82,8 @@ struct WorkspaceSlashCommand: SlashCommand {
     }
 
     private func listAllWorkspaces(context: ChatContext) async throws {
-        let allWorkspaces = try await context.client.listWorkspaces()
-        let sessionWS = try await context.client.listSessionWorkspaces(
+        let allWorkspaces = try await context.client.workspace.listWorkspaces()
+        let sessionWS = try await context.client.workspace.listSessionWorkspaces(
             sessionId: context.session.id
         )
 
@@ -144,7 +144,7 @@ struct WorkspaceSlashCommand: SlashCommand {
 
     private func selectWorkspace(_ idStr: String, context: ChatContext) async throws {
         // Simple select by ID prefix
-        let workspaces = try await context.client.listWorkspaces()
+        let workspaces = try await context.client.workspace.listWorkspaces()
         if let match = workspaces.first(where: { $0.id.uuidString.hasPrefix(idStr) }) {
             await context.repl.setSelectedWorkspace(match.id)
             TerminalUI.printSuccess("Selected workspace for context: \(match.uri.description)")
@@ -154,7 +154,7 @@ struct WorkspaceSlashCommand: SlashCommand {
     }
 
     private func interactiveAttach(context: ChatContext) async throws {
-        let workspaces = try await context.client.listWorkspaces()
+        let workspaces = try await context.client.workspace.listWorkspaces()
         guard !workspaces.isEmpty else {
             TerminalUI.printWarning("No workspaces available to attach.")
             return
@@ -168,7 +168,7 @@ struct WorkspaceSlashCommand: SlashCommand {
 
         if let input = readLine(), let index = Int(input), index > 0, index <= workspaces.count {
             let selected = workspaces[index - 1]
-            try await context.client.attachWorkspace(
+            try await context.client.workspace.attachWorkspace(
                 selected.id, to: context.session.id, isPrimary: false
             )
             TerminalUI.printSuccess("Attached \(selected.uri.description)")
@@ -188,7 +188,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         }
 
         // Check if workspace already exists
-        let allWorkspaces = try await context.client.listWorkspaces()
+        let allWorkspaces = try await context.client.workspace.listWorkspaces()
         var targetWorkspaceId: UUID?
 
         if let existing = allWorkspaces.first(where: { $0.uri.description == uriString }) {
@@ -200,7 +200,7 @@ struct WorkspaceSlashCommand: SlashCommand {
                 return
             }
 
-            let newWs = try await context.client.createWorkspace(
+            let newWs = try await context.client.workspace.createWorkspace(
                 uri: uri,
                 hostType: .client,
                 ownerId: myId,
@@ -211,10 +211,10 @@ struct WorkspaceSlashCommand: SlashCommand {
         }
 
         if let wsId = targetWorkspaceId {
-            try await context.client.attachWorkspace(wsId, to: context.session.id, isPrimary: false)
+            try await context.client.workspace.attachWorkspace(wsId, to: context.session.id, isPrimary: false)
 
             // Push all filesystem tools in a single sync operation
-            try await context.client.syncWorkspaceTools(
+            try await context.client.workspace.syncWorkspaceTools(
                 ClientConstants.filesystemToolReferences, workspaceId: wsId
             )
 

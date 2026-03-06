@@ -67,7 +67,7 @@ struct RegistrationManager {
         if let existing = getIdentity() {
             // Always sync tools on connect to keep the server's DB current
             // (tool set may have changed since last registration)
-            try await client.syncWorkspaceTools(tools, workspaceId: existing.shellWorkspaceId)
+            try await client.workspace.syncWorkspaceTools(tools, workspaceId: existing.shellWorkspaceId)
             return existing
         }
 

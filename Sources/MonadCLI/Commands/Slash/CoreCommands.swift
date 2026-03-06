@@ -66,7 +66,7 @@ struct NewSessionCommand: SlashCommand {
 
     func run(args: [String], context: ChatContext) async throws {
         do {
-            let session = try await context.client.createSession()
+            let session = try await context.client.chat.createSession()
             await context.repl.switchSession(session)
             TerminalUI.printSuccess("Started new session \(session.id.uuidString.prefix(8))")
         } catch {
@@ -121,8 +121,8 @@ struct SessionCommand: SlashCommand {
 
     private func showInfo(context: ChatContext) async throws {
         let session = context.session
-        let messages = try await context.client.getHistory(sessionId: session.id)
-        let sessionWS = try await context.client.listSessionWorkspaces(sessionId: session.id)
+        let messages = try await context.client.chat.getHistory(sessionId: session.id)
+        let sessionWS = try await context.client.workspace.listSessionWorkspaces(sessionId: session.id)
 
         print("")
         print(TerminalUI.bold("Current Session"))
@@ -155,7 +155,7 @@ struct SessionCommand: SlashCommand {
     }
 
     private func interactiveSwitch(context: ChatContext) async throws {
-        let sessions = try await context.client.listSessions()
+        let sessions = try await context.client.chat.listSessions()
         guard !sessions.isEmpty else {
             TerminalUI.printInfo("No other sessions found.")
             return
@@ -206,7 +206,7 @@ struct SessionCommand: SlashCommand {
     }
 
     private func showHistory(context: ChatContext) async throws {
-        let messages = try await context.client.getHistory(sessionId: context.session.id)
+        let messages = try await context.client.chat.getHistory(sessionId: context.session.id)
         if messages.isEmpty {
             TerminalUI.printInfo("No messages in this session yet.")
             return
@@ -236,7 +236,7 @@ struct SessionCommand: SlashCommand {
     }
 
     private func listSessions(context: ChatContext) async throws {
-        let sessions = try await context.client.listSessions()
+        let sessions = try await context.client.chat.listSessions()
         if sessions.isEmpty {
             TerminalUI.printInfo("No sessions found.")
             return
@@ -260,17 +260,17 @@ struct SessionCommand: SlashCommand {
 
     private func deleteSession(_ idStr: String, context: ChatContext) async throws {
         if let uuid = UUID(uuidString: idStr) {
-            try await context.client.deleteSession(uuid)
+            try await context.client.chat.deleteSession(uuid)
             TerminalUI.printSuccess("Deleted session \(uuid.uuidString.prefix(8))")
             return
         }
 
         // Partial match
-        let sessions = try await context.client.listSessions()
+        let sessions = try await context.client.chat.listSessions()
         if let match = sessions.first(where: {
             $0.id.uuidString.hasPrefix(idStr) || $0.id.uuidString.hasPrefix(idStr.uppercased())
         }) {
-            try await context.client.deleteSession(match.id)
+            try await context.client.chat.deleteSession(match.id)
             TerminalUI.printSuccess("Deleted session \(match.id.uuidString.prefix(8))")
         } else {
             TerminalUI.printError("Invalid session ID or no match: \(idStr)")
@@ -278,12 +278,12 @@ struct SessionCommand: SlashCommand {
     }
 
     private func renameSession(_ title: String, context: ChatContext) async throws {
-        try await context.client.updateSessionTitle(title, sessionId: context.session.id)
+        try await context.client.chat.updateSessionTitle(title, sessionId: context.session.id)
         TerminalUI.printSuccess("Renamed session to: \(title)")
     }
 
     private func switchSession(_ idStr: String, context: ChatContext) async throws {
-        let sessions = try await context.client.listSessions()
+        let sessions = try await context.client.chat.listSessions()
         if let match = sessions.first(where: { $0.id.uuidString.hasPrefix(idStr) }) {
             await context.repl.switchSession(match)
             TerminalUI.printSuccess("Switched to session: \(match.title ?? match.id.uuidString)")

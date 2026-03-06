@@ -320,7 +320,6 @@ public actor PersistenceService:
         }
     }
 
-
     public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? {
         try await dbQueue.read { db in
             guard let workspace = try WorkspaceReference.fetchOne(db, key: id) else {

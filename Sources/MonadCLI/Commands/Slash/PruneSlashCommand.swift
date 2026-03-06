@@ -87,7 +87,7 @@ actor PruneSlashCommand: SlashCommand {
 
     private func planPruneMemories(query: String, context: ChatContext) async throws {
         TerminalUI.printLoading("Checking memories...")
-        let count = try await context.client.pruneMemories(query: query, dryRun: true)
+        let count = try await context.client.chat.pruneMemories(query: query, dryRun: true)
 
         if count == 0 {
             TerminalUI.printInfo("No memories found matching '\(query)'.")
@@ -107,7 +107,7 @@ actor PruneSlashCommand: SlashCommand {
 
     private func planPruneMemories(days: Int, context: ChatContext) async throws {
         TerminalUI.printLoading("Checking memories...")
-        let count = try await context.client.pruneMemories(olderThanDays: days, dryRun: true)
+        let count = try await context.client.chat.pruneMemories(olderThanDays: days, dryRun: true)
 
         if count == 0 {
             TerminalUI.printInfo("No memories found older than \(days) days.")
@@ -129,7 +129,7 @@ actor PruneSlashCommand: SlashCommand {
         TerminalUI.printLoading("Checking sessions...")
         // Exclude current session for count accuracy check
         let currentSessionId = context.session.id
-        let count = try await context.client.pruneSessions(
+        let count = try await context.client.chat.pruneSessions(
             olderThanDays: days, excluding: [currentSessionId], dryRun: true)
 
         if count == 0 {
@@ -153,7 +153,7 @@ actor PruneSlashCommand: SlashCommand {
 
     private func planPruneSingleMemory(idPrefix: String, context: ChatContext) async throws {
         TerminalUI.printLoading("Finding memory...")
-        let memories = try await context.client.listMemories()
+        let memories = try await context.client.chat.listMemories()
 
         let matches = memories.filter {
             $0.id.uuidString.lowercased().hasPrefix(idPrefix.lowercased())
@@ -203,24 +203,24 @@ actor PruneSlashCommand: SlashCommand {
         switch operation {
         case .memoriesQuery(let query):
             TerminalUI.printLoading("Deleting memories...")
-            let count = try await context.client.pruneMemories(query: query, dryRun: false)
+            let count = try await context.client.chat.pruneMemories(query: query, dryRun: false)
             TerminalUI.printSuccess("Deleted \(count) memories.")
 
         case .memoriesDays(let days):
             TerminalUI.printLoading("Deleting memories...")
-            let count = try await context.client.pruneMemories(olderThanDays: days, dryRun: false)
+            let count = try await context.client.chat.pruneMemories(olderThanDays: days, dryRun: false)
             TerminalUI.printSuccess("Deleted \(count) memories.")
 
         case .sessions(let days):
             TerminalUI.printLoading("Deleting sessions...")
             let currentSessionId = context.session.id
-            let count = try await context.client.pruneSessions(
+            let count = try await context.client.chat.pruneSessions(
                 olderThanDays: days, excluding: [currentSessionId], dryRun: false)
             TerminalUI.printSuccess("Deleted \(count) sessions.")
 
         case .memory(let memory):
             TerminalUI.printLoading("Deleting memory...")
-            try await context.client.deleteMemory(memory.id)
+            try await context.client.chat.deleteMemory(memory.id)
             TerminalUI.printSuccess("Deleted memory \(memory.id.uuidString.prefix(8)).")
         }
 

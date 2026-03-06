@@ -1,9 +1,9 @@
 import Foundation
-import MonadCore
+import MonadShared
 
-// MARK: - Type Aliases from MonadCore
+// MARK: - Type Aliases from MonadShared
 
-public typealias LLMProvider = MonadCore.LLMProvider
-public typealias ToolCallFormat = MonadCore.ToolCallFormat
-public typealias ProviderConfiguration = MonadCore.ProviderConfiguration
-public typealias LLMConfiguration = MonadCore.LLMConfiguration
+public typealias LLMProvider = MonadShared.LLMProvider
+public typealias ToolCallFormat = MonadShared.ToolCallFormat
+public typealias ProviderConfiguration = MonadShared.ProviderConfiguration
+public typealias LLMConfiguration = MonadShared.LLMConfiguration

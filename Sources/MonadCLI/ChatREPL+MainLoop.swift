@@ -45,7 +45,7 @@ extension ChatREPL {
 
         var wsName: String?
         if let selectedId = selectedWorkspaceId {
-            wsName = (try? await client.getWorkspace(selectedId))?.uri.description
+            wsName = (try? await client.workspace.getWorkspace(selectedId))?.uri.description
         }
 
         let prompt = TerminalUI.getPromptString(workspace: wsName)

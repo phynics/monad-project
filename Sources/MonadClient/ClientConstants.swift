@@ -1,4 +1,3 @@
-import MonadCore
 import MonadShared
 
 // MARK: - Filesystem Tool References
@@ -11,11 +10,20 @@ public enum ClientConstants {
         .known(id: "grep"),
         .known(id: "search_files"),
         .known(id: "find"),
-        .known(id: "inspect_file")
+        .known(id: "inspect_file"),
+        .custom(
+            WorkspaceToolDefinition(
+                id: "dummy_tool",
+                name: "Dummy Tool Text",
+                description: "A test tool",
+                parametersSchema: [:],
+                contextInjection: "This tool does absolutely nothing but tests context injection."
+            )
+        )
     ]
 }
 
 // MARK: - Re-exports for CLI consumers
 
-public typealias DebugSnapshot = MonadCore.DebugSnapshot
-public typealias SerializationUtils = MonadCore.SerializationUtils
+public typealias DebugSnapshot = MonadShared.DebugSnapshot
+public typealias SerializationUtils = MonadShared.SerializationUtils

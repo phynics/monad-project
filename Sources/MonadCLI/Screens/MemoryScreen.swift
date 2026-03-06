@@ -20,7 +20,7 @@ class MemoryScreen {
         } else {
             // Initial fetch
             TerminalUI.printLoading("Fetching memories...")
-            allMemories = try await client.listMemories()
+            allMemories = try await client.chat.listMemories()
             memories = allMemories
         }
 
@@ -128,7 +128,7 @@ class MemoryScreen {
         TerminalUI.printLoading("Searching...")
         searchQuery = query
         // Use semantic search from client
-        memories = try await client.searchMemories(query, limit: 20)
+        memories = try await client.chat.searchMemories(query, limit: 20)
         currentPage = 0
     }
 
