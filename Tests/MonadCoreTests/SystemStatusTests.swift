@@ -1,6 +1,8 @@
 import Testing
 import Foundation
 @testable import MonadCore
+@testable import MonadShared
+@testable import MonadShared
 import MonadShared
 
 @Suite("System Status Tests")

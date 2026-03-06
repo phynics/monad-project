@@ -3,6 +3,8 @@ import Foundation
 import Dependencies
 import MonadTestSupport
 @testable import MonadCore
+@testable import MonadShared
+@testable import MonadShared
 @Suite struct SessionManagerTests {
 
     @Test("Test Session Creation and Context Manager Access")

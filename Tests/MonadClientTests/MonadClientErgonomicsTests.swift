@@ -63,14 +63,14 @@ public actor MockSession: URLSessionProtocol {
         memEncoder.dateEncodingStrategy = .iso8601
         await mockSession.setMockData(try memEncoder.encode(mockMemory))
 
-        _ = try await client.getMemory(id: memoryId)
+        _ = try await client.chat.getMemory(id: memoryId)
         var lastReq = await mockSession.lastRequest
         #expect(lastReq?.url?.path == "/api/memories/\(memoryId.uuidString)")
         #expect(lastReq?.httpMethod == "GET")
 
         // 2. Agents Test
         try await mockSession.setMockData(JSONEncoder().encode([] as [Agent]))
-        _ = try await client.listAgents()
+        _ = try await client.chat.listAgents()
         lastReq = await mockSession.lastRequest
         #expect(lastReq?.url?.path == "/api/agents")
         #expect(lastReq?.httpMethod == "GET")

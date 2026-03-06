@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import MonadCore
+@testable import MonadShared
 import OpenAI
 
 @Suite("Tool Error Surfacing Tests")
@@ -8,7 +8,7 @@ struct ToolErrorSurfaceTests {
     
     // MARK: - Helper Tool
     
-    struct FailingTool: MonadCore.Tool {
+    struct FailingTool: MonadShared.Tool {
         let id = "fail_tool"
         let name = "fail_tool"
         let description = "Always fails"

@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import MonadCore
+@testable import MonadShared
 
 @Suite("Tool Parameters Extraction Tests")
 struct ToolParametersTests {

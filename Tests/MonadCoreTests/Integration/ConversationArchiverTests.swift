@@ -1,6 +1,7 @@
 import Dependencies
 import Foundation
 @testable import MonadCore
+@testable import MonadShared
 import MonadTestSupport
 import Testing
 

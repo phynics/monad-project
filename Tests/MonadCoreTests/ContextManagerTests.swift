@@ -2,6 +2,8 @@ import Testing
 import Foundation
 import MonadTestSupport
 @testable import MonadCore
+@testable import MonadShared
+@testable import MonadShared
 import Dependencies
 
 @Suite("Context Manager Tests")

@@ -1,5 +1,5 @@
 import XCTest
-@testable import MonadCore
+@testable import MonadShared
 import Foundation
 
 final class ToolErrorSurfacesTests: XCTestCase {

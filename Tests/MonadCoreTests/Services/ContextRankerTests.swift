@@ -1,5 +1,6 @@
 import XCTest
 @testable import MonadCore
+@testable import MonadShared
 
 final class ContextRankerTests: XCTestCase {
     var ranker: ContextRanker!

@@ -49,7 +49,7 @@ import Testing
     func toolError_toolNotFound_maps404() async throws {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
-        router.get("/err") { _, _ -> String in throw MonadCore.ToolError.toolNotFound("my_tool") }
+        router.get("/err") { _, _ -> String in throw ToolError.toolNotFound("my_tool") }
         let app = Application(router: router)
 
         try await app.test(.router) { client in
@@ -65,7 +65,7 @@ import Testing
     func toolError_workspaceNotFound_maps404() async throws {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
-        router.get("/err") { _, _ -> String in throw MonadCore.ToolError.workspaceNotFound(UUID()) }
+        router.get("/err") { _, _ -> String in throw ToolError.workspaceNotFound(UUID()) }
         let app = Application(router: router)
 
         try await app.test(.router) { client in
@@ -81,7 +81,7 @@ import Testing
     func toolError_missingArgument_maps400() async throws {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
-        router.get("/err") { _, _ -> String in throw MonadCore.ToolError.missingArgument("path") }
+        router.get("/err") { _, _ -> String in throw ToolError.missingArgument("path") }
         let app = Application(router: router)
 
         try await app.test(.router) { client in
@@ -98,7 +98,7 @@ import Testing
         let router = Router()
         router.add(middleware: ErrorMiddleware())
         router.get("/err") { _, _ -> String in
-            throw MonadCore.ToolError.invalidArgument("param", expected: "String", got: "Int")
+            throw ToolError.invalidArgument("param", expected: "String", got: "Int")
         }
         let app = Application(router: router)
 
@@ -115,7 +115,7 @@ import Testing
     func toolError_clientNotConnected_maps503() async throws {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
-        router.get("/err") { _, _ -> String in throw MonadCore.ToolError.clientNotConnected }
+        router.get("/err") { _, _ -> String in throw ToolError.clientNotConnected }
         let app = Application(router: router)
 
         try await app.test(.router) { client in
@@ -131,7 +131,7 @@ import Testing
     func toolError_executionFailed_maps500() async throws {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
-        router.get("/err") { _, _ -> String in throw MonadCore.ToolError.executionFailed("timeout") }
+        router.get("/err") { _, _ -> String in throw ToolError.executionFailed("timeout") }
         let app = Application(router: router)
 
         try await app.test(.router) { client in
@@ -147,7 +147,7 @@ import Testing
     func toolError_clientExecutionRequired_maps500() async throws {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
-        router.get("/err") { _, _ -> String in throw MonadCore.ToolError.clientExecutionRequired }
+        router.get("/err") { _, _ -> String in throw ToolError.clientExecutionRequired }
         let app = Application(router: router)
 
         try await app.test(.router) { client in

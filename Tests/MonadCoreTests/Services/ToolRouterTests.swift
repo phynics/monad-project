@@ -2,11 +2,12 @@ import XCTest
 import Foundation
 import MonadTestSupport
 @testable import MonadCore
+@testable import MonadShared
 import Dependencies
 
 final class ToolRouterTests: XCTestCase {
     
-    struct MockTool: MonadCore.Tool, @unchecked Sendable {
+    struct MockTool: MonadShared.Tool, @unchecked Sendable {
         let id: String
         let name: String
         let description = "A mock tool for testing"

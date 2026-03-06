@@ -35,7 +35,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
     func request_includesAuthorizationHeader() async throws {
         let (client, mockSession) = makeClient()
         try await mockSession.setMockData(makePaginatedMemories())
-        _ = try await client.listMemories()
+        _ = try await client.chat.listMemories()
         let req = await mockSession.lastRequest
         #expect(req?.value(forHTTPHeaderField: "Authorization") == "Bearer test-key")
     }
@@ -53,7 +53,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
     func request_setsContentTypeHeader() async throws {
         let (client, mockSession) = makeClient()
         try await mockSession.setMockData(makePaginatedMemories())
-        _ = try await client.listMemories()
+        _ = try await client.chat.listMemories()
         let req = await mockSession.lastRequest
         #expect(req?.value(forHTTPHeaderField: "Content-Type") == "application/json")
     }
@@ -67,7 +67,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
         try await mockSession.setMockData(encoder.encode(session))
 
-        _ = try await client.createSession()
+        _ = try await client.chat.createSession()
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/sessions")
         #expect(req?.httpMethod == "POST")
@@ -78,7 +78,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let (client, mockSession) = makeClient()
         try await mockSession.setMockData(makePaginatedSessions())
 
-        _ = try await client.listSessions()
+        _ = try await client.chat.listSessions()
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/sessions")
         #expect(req?.httpMethod == "GET")
@@ -92,7 +92,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
         try await mockSession.setMockData(encoder.encode(sessionResp))
 
-        _ = try await client.getSession(id: sessionId)
+        _ = try await client.chat.getSession(id: sessionId)
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/sessions/\(sessionId.uuidString)")
         #expect(req?.httpMethod == "GET")
@@ -104,7 +104,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let sessionId = UUID()
         await mockSession.setMockData(Data())
 
-        try await client.deleteSession(sessionId)
+        try await client.chat.deleteSession(sessionId)
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/sessions/\(sessionId.uuidString)")
         #expect(req?.httpMethod == "DELETE")
@@ -116,7 +116,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let sessionId = UUID()
         await mockSession.setMockData(Data())
 
-        try await client.updateSessionTitle("New Title", sessionId: sessionId)
+        try await client.chat.updateSessionTitle("New Title", sessionId: sessionId)
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/sessions/\(sessionId.uuidString)")
         #expect(req?.httpMethod == "PATCH")
@@ -131,7 +131,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
         try await mockSession.setMockData(encoder.encode(mem))
 
-        _ = try await client.createMemory(content: "Test content")
+        _ = try await client.chat.createMemory(content: "Test content")
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/memories")
         #expect(req?.httpMethod == "POST")
@@ -144,7 +144,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let (client, mockSession) = makeClient()
         try await mockSession.setMockData(makePaginatedMemories())
 
-        _ = try await client.listMemories()
+        _ = try await client.chat.listMemories()
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/memories")
         #expect(req?.httpMethod == "GET")
@@ -158,7 +158,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
         try await mockSession.setMockData(encoder.encode(mem))
 
-        _ = try await client.getMemory(id: memId)
+        _ = try await client.chat.getMemory(id: memId)
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/memories/\(memId.uuidString)")
         #expect(req?.httpMethod == "GET")
@@ -170,7 +170,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let memId = UUID()
         await mockSession.setMockData(Data())
 
-        try await client.deleteMemory(memId)
+        try await client.chat.deleteMemory(memId)
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/memories/\(memId.uuidString)")
         #expect(req?.httpMethod == "DELETE")
@@ -198,7 +198,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let resp = try #require(HTTPURLResponse(url: url, statusCode: 401, httpVersion: nil, headerFields: nil))
         try await mockSession.setMockResponse(resp)
         do {
-            _ = try await client.listMemories()
+            _ = try await client.chat.listMemories()
             Issue.record("Expected unauthorized error")
         } catch MonadClientError.unauthorized { /* expected */ }
         catch { Issue.record("Expected unauthorized, got \(error)") }
@@ -211,7 +211,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let resp = try #require(HTTPURLResponse(url: url, statusCode: 404, httpVersion: nil, headerFields: nil))
         try await mockSession.setMockResponse(resp)
         do {
-            _ = try await client.listMemories()
+            _ = try await client.chat.listMemories()
             Issue.record("Expected notFound error")
         } catch MonadClientError.notFound { /* expected */ }
         catch { Issue.record("Expected notFound, got \(error)") }
@@ -224,7 +224,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let resp = try #require(HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil))
         try await mockSession.setMockResponse(resp)
         do {
-            _ = try await client.listMemories()
+            _ = try await client.chat.listMemories()
             Issue.record("Expected error to be thrown")
         } catch let error as MonadClientError {
             if case let .httpError(code, _) = error {
@@ -242,7 +242,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         await mockSession.setMockError(NetError())
 
         do {
-            _ = try await client.listMemories()
+            _ = try await client.chat.listMemories()
             Issue.record("Expected error to be thrown")
         } catch let error as MonadClientError {
             if case .networkError = error { /* expected */ }

@@ -1,11 +1,12 @@
 import Foundation
+import MonadShared
 import MonadCore
 import Testing
 
 @Suite struct ToolExecutorTests {
 
     // Mock Tool for testing
-    struct MockTool: MonadCore.Tool {
+    struct MockTool: MonadShared.Tool {
         let id: String
         let name: String
         let description: String

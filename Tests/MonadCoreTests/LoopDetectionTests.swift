@@ -1,11 +1,13 @@
 import Foundation
 import Testing
 @testable import MonadCore
+@testable import MonadShared
+@testable import MonadShared
 
 @Suite @MainActor
 struct LoopDetectionTests {
 
-    struct MockTool: MonadCore.Tool, @unchecked Sendable {
+    struct MockTool: MonadShared.Tool, @unchecked Sendable {
         let id = "mock_tool"
         let name = "Mock Tool"
         let description = "A mock tool"

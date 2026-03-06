@@ -4,6 +4,8 @@ import Foundation
 import Dependencies
 import MonadTestSupport
 @testable import MonadCore
+@testable import MonadShared
+@testable import MonadShared
 
 @Suite @MainActor
 struct ChatEngineTests {
@@ -128,7 +130,7 @@ struct ChatEngineTests {
 
     // MARK: - Group 3: Structured Tool Calls
 
-    struct MockTool: MonadCore.Tool, @unchecked Sendable {
+    struct MockTool: MonadShared.Tool, @unchecked Sendable {
         let id = "mock_tool"
         let name = "mock_tool"
         let description = "A mock tool for testing"

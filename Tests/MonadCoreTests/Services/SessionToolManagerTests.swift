@@ -1,10 +1,11 @@
 import XCTest
 import Foundation
 @testable import MonadCore
+@testable import MonadShared
 
 final class SessionToolManagerTests: XCTestCase {
     
-    struct MockTool: MonadCore.Tool, @unchecked Sendable {
+    struct MockTool: MonadShared.Tool, @unchecked Sendable {
         let id: String
         let name: String
         let description = "A mock tool for testing"

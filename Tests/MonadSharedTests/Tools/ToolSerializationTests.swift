@@ -1,11 +1,11 @@
 import Foundation
 import OpenAI
 import Testing
-@testable import MonadCore
+@testable import MonadShared
 
 @Suite struct ToolSerializationTests {
     
-    struct ComplexMockTool: MonadCore.Tool {
+    struct ComplexMockTool: MonadShared.Tool {
         let id = "complex_tool"
         let name = "Complex Tool"
         let description = "A tool with nested parameters"
