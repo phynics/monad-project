@@ -16,6 +16,16 @@ public final class MockToolPersistence: ToolPersistenceProtocol, @unchecked Send
         }
     }
 
+    public func syncTools(workspaceId: UUID, tools: [ToolReference]) async throws {
+        if let index = workspaces.firstIndex(where: { $0.id == workspaceId }) {
+            var ws = workspaces[index]
+            ws.tools = tools
+            workspaces[index] = ws
+        } else {
+            throw ToolError.workspaceNotFound(workspaceId)
+        }
+    }
+
     public func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] {
         return workspaces.filter { workspaceIds.contains($0.id) }.flatMap { $0.tools }
     }

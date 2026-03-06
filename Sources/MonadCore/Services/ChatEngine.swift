@@ -539,7 +539,7 @@ public final class ChatEngine: @unchecked Sendable {
 
         for call in calls {
             let toolName = ANSIColors.colorize(call.function.name, color: ANSIColors.brightCyan)
-            guard let tool = availableTools.first(where: { $0.name == call.function.name }) else {
+            guard let tool = availableTools.first(where: { $0.id == call.function.name }) else {
                 logger.error("Tool not found: \(toolName)")
                 executionResults.append(.tool(.init(content: .textContent(.init("Error: Tool not found")), toolCallId: call.id)))
                 continuation.yield(.toolCallError(toolCallId: call.id, name: call.function.name, error: "Tool not found: \(call.function.name)"))

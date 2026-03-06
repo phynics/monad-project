@@ -61,6 +61,16 @@ public extension MonadClient {
         _ = try await performRaw(request)
     }
 
+    /// Atomically replaces all tools for a workspace with the provided set.
+    /// Workspace providers should call this on every connect/reconnect to push their current tool list.
+    func syncWorkspaceTools(_ tools: [ToolReference], workspaceId: UUID) async throws {
+        var request = try buildRequest(
+            path: "/api/workspaces/\(workspaceId.uuidString)/tools", method: "PUT"
+        )
+        request.httpBody = try encoder.encode(SyncToolsRequest(tools: tools))
+        _ = try await performRaw(request)
+    }
+
     func listWorkspaceTools(workspaceId: UUID) async throws -> [ToolReference] {
         let request = try buildRequest(
             path: "/api/workspaces/\(workspaceId.uuidString)/tools", method: "GET"

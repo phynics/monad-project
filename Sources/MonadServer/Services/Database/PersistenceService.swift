@@ -291,6 +291,36 @@ public actor PersistenceService:
         }
     }
 
+    public func syncTools(workspaceId: UUID, tools: [ToolReference]) async throws {
+        try await dbQueue.write { db in
+            guard try WorkspaceReference.exists(db, key: workspaceId) else {
+                throw MonadCore.ToolError.workspaceNotFound(workspaceId)
+            }
+
+            let incomingIds = Set(tools.map { $0.toolId })
+
+            // Remove tools no longer declared by the workspace provider
+            let existing = try WorkspaceTool
+                .filter(Column("workspaceId") == workspaceId)
+                .fetchAll(db)
+
+            for record in existing where !incomingIds.contains(record.toolId) {
+                try record.delete(db)
+            }
+
+            // Insert or replace tools from the incoming set
+            let existingIds = Set(existing.map { $0.toolId })
+            for tool in tools {
+                if !existingIds.contains(tool.toolId) {
+                    let workspaceTool = try WorkspaceTool(workspaceId: workspaceId, toolReference: tool)
+                    try workspaceTool.insert(db)
+                }
+                // If already present, leave it (preserves any future preference columns)
+            }
+        }
+    }
+
+
     public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? {
         try await dbQueue.read { db in
             guard let workspace = try WorkspaceReference.fetchOne(db, key: id) else {

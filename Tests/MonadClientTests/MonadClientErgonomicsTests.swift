@@ -69,7 +69,7 @@ public actor MockSession: URLSessionProtocol {
         #expect(lastReq?.httpMethod == "GET")
 
         // 2. Agents Test
-        try await mockSession.setMockData(JSONEncoder().encode([Agent]()))
+        try await mockSession.setMockData(JSONEncoder().encode([] as [Agent]))
         _ = try await client.listAgents()
         lastReq = await mockSession.lastRequest
         #expect(lastReq?.url?.path == "/api/agents")

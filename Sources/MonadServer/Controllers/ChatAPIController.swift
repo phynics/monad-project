@@ -180,19 +180,21 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         do {
             let references = try await sessionManager.getAllToolReferences(sessionId: sessionId, clientTools: clientTools)
 
-            availableTools = references.compactMap { (ref: ToolReference) -> AnyTool? in
+            for ref in references {
                 var def: WorkspaceToolDefinition?
                 switch ref {
                 case .known(let id): def = SystemToolRegistry.shared.getDefinition(for: id)
                 case .custom(let definition): def = definition
                 }
-                guard let definition = def else { return nil }
-                return AnyTool(DelegatingTool(
+                guard let definition = def else { continue }
+                var toolWrapper = AnyTool(DelegatingTool(
                     ref: ref,
                     router: toolRouter,
                     sessionId: sessionId,
                     resolvedDefinition: definition
                 ))
+                toolWrapper.provenance = await sessionManager.getToolSource(toolId: ref.toolId, for: sessionId)
+                availableTools.append(toolWrapper)
             }
         } catch {
             Logger.module(named: "chat").error("Failed to resolve tools for session \(sessionId): \(error)")

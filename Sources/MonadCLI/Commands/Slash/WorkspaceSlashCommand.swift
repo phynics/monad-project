@@ -213,10 +213,10 @@ struct WorkspaceSlashCommand: SlashCommand {
         if let wsId = targetWorkspaceId {
             try await context.client.attachWorkspace(wsId, to: context.session.id, isPrimary: false)
 
-            // Register File System tools to the attached local working directory workspace
-            for tool in ClientConstants.filesystemToolReferences {
-                try await context.client.addWorkspaceTool(tool, workspaceId: wsId)
-            }
+            // Push all filesystem tools in a single sync operation
+            try await context.client.syncWorkspaceTools(
+                ClientConstants.filesystemToolReferences, workspaceId: wsId
+            )
 
             // Persist the local reference
             LocalConfigManager.shared.saveClientWorkspace(uri: uriString, id: wsId.uuidString)

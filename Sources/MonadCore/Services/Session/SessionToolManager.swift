@@ -14,8 +14,11 @@ public actor SessionToolManager {
     /// Registered workspaces providing tools
     private var workspaces: [UUID: any WorkspaceProtocol] = [:]
 
-    /// Cached workspace tools
-    private var workspaceTools: [String: WorkspaceToolWrapper] = [:]
+    /// Cached workspace tools: toolId -> (wrapper, provenance string)
+    private var workspaceTools: [String: (tool: WorkspaceToolWrapper, provenance: String)] = [:]
+
+    /// Cached known-tool overrides from workspaces: toolId -> provenance string
+    private var knownToolProvenance: [String: String] = [:]
 
     public init(availableTools: [AnyTool], contextSession: ToolContextSession? = nil) {
         self.availableTools = availableTools
@@ -50,51 +53,86 @@ public actor SessionToolManager {
 
     /// Refresh tools from all registered workspaces
     private func refreshWorkspaceTools() async {
-        var newTools: [String: WorkspaceToolWrapper] = [:]
+        var newTools: [String: (tool: WorkspaceToolWrapper, provenance: String)] = [:]
+        var newKnownProvenance: [String: String] = [:]
 
         for workspace in workspaces.values {
+            let provenanceTag = "Workspace: \(workspace.reference.uri.description)"
             do {
                 let refs = try await workspace.listTools()
                 for ref in refs {
                     switch ref {
-                    case .known:
-                         // Known tools are either system tools (already in availableTools) or handled specially.
-                         // If we want to expose them as workspace-bound, we'd need to wrap them differently.
-                         // For now, ignroe known tools as they likely duplicate system tools.
-                         // Or log it.
-                         break
+                    case .known(let toolId):
+                        // Tag the system tool with this workspace's provenance
+                        if availableTools.contains(where: { $0.id == toolId }) {
+                            newKnownProvenance[toolId] = provenanceTag
+                        } else {
+                            let logger = Logger(label: "com.monad.session-tool-manager")
+                            logger.warning("Workspace declared .known tool '\(toolId)' but it is not a registered system tool")
+                        }
                     case .custom(let def):
-                         let wrapper = WorkspaceToolWrapper(workspace: workspace, definition: def)
-                         newTools[wrapper.id] = wrapper
+                        let wrapper = WorkspaceToolWrapper(workspace: workspace, definition: def)
+                        newTools[wrapper.id] = (tool: wrapper, provenance: provenanceTag)
                     }
                 }
             } catch {
-                // Log error but continue
-                print("Failed to list tools for workspace \(workspace.id): \(error)")
+                let logger = Logger(label: "com.monad.session-tool-manager")
+                logger.error("Failed to list tools for workspace \(workspace.id): \(error)")
             }
         }
 
         self.workspaceTools = newTools
+        self.knownToolProvenance = newKnownProvenance
     }
 
     /// Get tools that are currently enabled, including context tools if a context is active
     public func getEnabledTools() async -> [AnyTool] {
         var tools = availableTools.filter { enabledTools.contains($0.id) }
 
+        // Apply workspace provenance to .known system tools
+        tools = tools.map { tool in
+            if let provenance = knownToolProvenance[tool.id] {
+                var tagged = tool
+                tagged.provenance = provenance
+                return tagged
+            }
+            return tool
+        }
+
         // Include context tools if a context is active
         if let session = contextSession, await session.hasActiveContext {
             tools.append(contentsOf: await session.getContextTools())
         }
 
-        // Include workspace tools
-        tools.append(contentsOf: workspaceTools.values.map { AnyTool($0) })
+        // Include workspace custom tools with provenance
+        tools.append(contentsOf: workspaceTools.values.map { entry in
+            var tool = AnyTool(entry.tool)
+            tool.provenance = entry.provenance
+            return tool
+        })
 
         return tools
     }
 
     public func getAvailableTools() -> [AnyTool] {
         var tools = availableTools
-        tools.append(contentsOf: workspaceTools.values.map { AnyTool($0) })
+
+        // Apply provenance to .known system tools
+        tools = tools.map { tool in
+            if let provenance = knownToolProvenance[tool.id] {
+                var tagged = tool
+                tagged.provenance = provenance
+                return tagged
+            }
+            return tool
+        }
+
+        // Append workspace custom tools with provenance
+        tools.append(contentsOf: workspaceTools.values.map { entry in
+            var tool = AnyTool(entry.tool)
+            tool.provenance = entry.provenance
+            return tool
+        })
         return tools
     }
 
@@ -125,6 +163,11 @@ public actor SessionToolManager {
     public func getTool(id: String) async -> AnyTool? {
         // First check regular system tools
         if let tool = availableTools.first(where: { $0.id == id }) {
+            if let provenance = knownToolProvenance[id] {
+                var tagged = tool
+                tagged.provenance = provenance
+                return tagged
+            }
             return tool
         }
 
@@ -136,8 +179,10 @@ public actor SessionToolManager {
         }
 
         // Then check workspace tools
-        if let tool = workspaceTools[id] {
-            return AnyTool(tool)
+        if let entry = workspaceTools[id] {
+            var tool = AnyTool(entry.tool)
+            tool.provenance = entry.provenance
+            return tool
         }
 
         return nil

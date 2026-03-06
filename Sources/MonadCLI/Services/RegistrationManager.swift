@@ -62,17 +62,19 @@ struct RegistrationManager {
 
     @discardableResult
     func ensureRegistered(client: MonadClient) async throws -> StoredIdentity {
+        let tools = ClientConstants.filesystemToolReferences
+
         if let existing = getIdentity() {
-            // Verify with server? For now assume valid if we have it.
+            // Always sync tools on connect to keep the server's DB current
+            // (tool set may have changed since last registration)
+            try await client.syncWorkspaceTools(tools, workspaceId: existing.shellWorkspaceId)
             return existing
         }
 
-        // Register
+        // First-time registration
         let hostname = ProcessInfo.processInfo.hostName
         let displayName = NSUserName()
         let platform = "macos" // Detect dynamically if needed
-
-        let tools = ClientConstants.filesystemToolReferences
 
         let response = try await client.registerClient(
             hostname: hostname,

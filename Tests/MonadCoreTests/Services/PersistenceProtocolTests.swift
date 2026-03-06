@@ -81,6 +81,7 @@ final class MockPersistenceStore:
 
     // ToolPersistenceProtocol
     func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws {}
+    func syncTools(workspaceId: UUID, tools: [ToolReference]) async throws {}
     func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] { [] }
     func fetchClientTools(clientId: UUID) async throws -> [ToolReference] { [] }
     func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID? { nil }

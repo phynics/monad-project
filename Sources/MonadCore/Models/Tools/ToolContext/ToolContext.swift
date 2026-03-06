@@ -1,12 +1,7 @@
 import Foundation
-
-/// A type that can be formatted for inclusion in an LLM prompt.
-public protocol PromptFormattable: Sendable {
-    /// The formatted string representation of this object for a prompt.
-    var promptString: String { get }
-}
-
 import Logging
+import MonadShared
+@_exported import protocol MonadShared.PromptFormattable
 
 // MARK: - ToolContext Protocol
 
@@ -62,45 +57,50 @@ public protocol ToolContext: AnyObject, Sendable {
 
 // MARK: - Default Implementations
 
-extension ToolContext {
+public extension ToolContext {
     /// Default: non-persistent (auto-exits on non-context tool calls)
-    public var isPersistent: Bool { false }
+    var isPersistent: Bool {
+        false
+    }
 
     /// Default: not pinned
-    public var isPinned: Bool { false }
+    var isPinned: Bool {
+        false
+    }
 
-    public func activate() async {
+    func activate() async {
         // Default: no-op
     }
 
-    public func deactivate() async {
+    func deactivate() async {
         // Default: no-op
     }
 
     /// Default: no pinned state
-    public func formatPinnedState() async -> String? {
+    func formatPinnedState() async -> String? {
         nil
     }
 
-    public func welcomeMessage() async -> String {
+    func welcomeMessage() async -> String {
         let tools = await contextTools
         let toolList = tools.map { "- `\($0.id)`: \($0.description)" }.joined(
-            separator: "\n")
+            separator: "\n"
+        )
 
         let exitNote =
             isPersistent
-            ? "This context persists across other tool calls."
-            : "Calling any non-context tool will exit this context."
+                ? "This context persists across other tool calls."
+                : "Calling any non-context tool will exit this context."
 
         return """
-            \(Self.displayName) activated.
+        \(Self.displayName) activated.
 
-            Available commands:
-            \(toolList)
+        Available commands:
+        \(toolList)
 
-            Note: \(exitNote)
+        Note: \(exitNote)
 
-            \(await formatState())
-            """
+        \(await formatState())
+        """
     }
 }

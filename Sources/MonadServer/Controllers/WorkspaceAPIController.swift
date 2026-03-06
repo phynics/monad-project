@@ -22,6 +22,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         group.patch(":workspaceId", use: update)
         group.delete(":workspaceId", use: delete)
         group.post(":workspaceId/tools", use: addTool)
+        group.put(":workspaceId/tools", use: syncTools)
         group.get(":workspaceId/tools", use: listTools)
     }
 
@@ -48,6 +49,11 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         )
 
         try await persistenceService.saveWorkspace(workspace)
+
+        // Persist any tools declared at creation time
+        for tool in input.tools {
+            try await persistenceService.addToolToWorkspace(workspaceId: id, tool: tool)
+        }
 
         return try workspace.response(status: .created, from: request, context: context)
     }
@@ -127,6 +133,17 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         try await persistenceService.addToolToWorkspace(workspaceId: id, tool: input.tool)
 
         return .created
+    }
+
+    /// PUT /workspaces/:id/tools — atomically replaces all tools for a workspace.
+    /// Workspace providers call this on connect to push their full tool set.
+    @Sendable func syncTools(request: Request, context: Context) async throws -> HTTPResponse.Status {
+        let id = try context.parameters.require("workspaceId", as: UUID.self)
+        let input = try await request.decode(as: SyncToolsRequest.self, context: context)
+
+        try await persistenceService.syncTools(workspaceId: id, tools: input.tools)
+
+        return .ok
     }
 
     /// GET /workspaces/:id/tools

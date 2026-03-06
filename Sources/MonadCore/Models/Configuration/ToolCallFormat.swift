@@ -1,9 +1,3 @@
-import Foundation
+import MonadShared
 
-public enum ToolCallFormat: String, Codable, CaseIterable, Identifiable, Sendable {
-    case openAI = "Native (OpenAI)"
-    case json = "JSON"
-    case xml = "XML"
-
-    public var id: String { rawValue }
-}
+@_exported import enum MonadShared.ToolCallFormat

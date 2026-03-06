@@ -110,6 +110,9 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     public func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws {
         try await toolsMock.addToolToWorkspace(workspaceId: workspaceId, tool: tool)
     }
+    public func syncTools(workspaceId: UUID, tools: [ToolReference]) async throws {
+        try await toolsMock.syncTools(workspaceId: workspaceId, tools: tools)
+    }
     public func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] {
         try await toolsMock.fetchTools(forWorkspaces: workspaceIds)
     }

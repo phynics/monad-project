@@ -33,6 +33,16 @@ public struct RegisterToolRequest: Codable, Sendable {
     }
 }
 
+/// Request to atomically replace all tools for a workspace.
+/// Used by workspace providers to push their full tool set on connect.
+public struct SyncToolsRequest: Codable, Sendable {
+    public let tools: [ToolReference]
+
+    public init(tools: [ToolReference]) {
+        self.tools = tools
+    }
+}
+
 public struct AttachWorkspaceRequest: Codable, Sendable {
     public let workspaceId: UUID
     public let isPrimary: Bool

@@ -86,6 +86,7 @@ public struct UnconfiguredPersistenceService: FullPersistenceService {
     public func deleteWorkspace(id: UUID) async throws { fail() }
 
     public func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws { fail() }
+    public func syncTools(workspaceId: UUID, tools: [ToolReference]) async throws { fail() }
     public func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] { fail() }
     public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] { fail() }
     public func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID? { fail() }

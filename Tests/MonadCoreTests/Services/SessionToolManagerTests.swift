@@ -141,4 +141,48 @@ final class SessionToolManagerTests: XCTestCase {
             XCTAssertEqual(fetched?.name, "wsTool")
         }
     }
+
+    func testWorkspaceToolsHaveProvenance() async throws {
+        let manager = SessionToolManager(availableTools: [])
+        let workspaceId = UUID()
+        let uri = WorkspaceURI(parsing: "monad://test-workspace-prov")!
+        let workspaceRef = WorkspaceReference(id: workspaceId, uri: uri, hostType: .server, ownerId: nil)
+
+        let def = WorkspaceToolDefinition(id: "provTool", name: "provTool", description: "prov", parametersSchema: [:])
+        let mockWS = MockWorkspace(id: workspaceId, reference: workspaceRef, toolsToReturn: [.custom(def)])
+
+        await manager.registerWorkspace(mockWS)
+
+        // Verify the tool has the expected provenance injected
+        let available = await manager.getAvailableTools()
+        let tool = available.first(where: { $0.name == "provTool" })
+        XCTAssertNotNil(tool)
+        XCTAssertEqual(tool?.provenance, "Workspace: monad://test-workspace-prov")
+        
+        let fetched = await manager.getTool(id: tool!.id)
+        XCTAssertEqual(fetched?.provenance, "Workspace: monad://test-workspace-prov")
+    }
+
+    func testKnownToolRefsResolved() async throws {
+        let systemTool = AnyTool(MockTool(id: "cat", name: "cat"))
+        let manager = SessionToolManager(availableTools: [systemTool])
+
+        let workspaceId = UUID()
+        let uri = WorkspaceURI(parsing: "monad://test-known-tool")!
+        let workspaceRef = WorkspaceReference(id: workspaceId, uri: uri, hostType: .server, ownerId: nil)
+
+        // Workspace declares it offers the "cat" known tool
+        let mockWS = MockWorkspace(id: workspaceId, reference: workspaceRef, toolsToReturn: [.known(id: "cat")])
+
+        await manager.registerWorkspace(mockWS)
+
+        // The system tool should now have provenance indicating it is tied to the workspace
+        let available = await manager.getAvailableTools()
+        let tool = available.first(where: { $0.id == "cat" })
+        XCTAssertNotNil(tool)
+        XCTAssertEqual(tool?.provenance, "Workspace: monad://test-known-tool")
+
+        let fetched = await manager.getTool(id: "cat")
+        XCTAssertEqual(fetched?.provenance, "Workspace: monad://test-known-tool")
+    }
 }

@@ -19,6 +19,7 @@ struct ContextManagerMockingTests {
             ContextManager(workspace: nil)
         }
 
-        #expect(contextManager != nil)
+        // Just verifying initialization completes successfully
+        _ = contextManager
     }
 }
