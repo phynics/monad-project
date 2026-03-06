@@ -75,7 +75,6 @@ public final class StreamingCoordinator {
         for toolCall in toolCalls {
             // Use reflection to extract properties safely
             let mirror = Mirror(reflecting: toolCall)
-            var id: String?
             var name: String?
             var arguments: String?
             var index: Int?
@@ -84,8 +83,6 @@ public final class StreamingCoordinator {
                 switch child.label {
                 case "index":
                     index = child.value as? Int
-                case "id":
-                    id = child.value as? String
                 case "function":
                     // Function is likely another struct we need to reflect on
                     // Handle Optional unwrapping for function property

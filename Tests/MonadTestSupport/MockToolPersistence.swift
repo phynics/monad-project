@@ -1,5 +1,6 @@
 @testable import MonadCore
 import Foundation
+import MonadShared
 
 public final class MockToolPersistence: ToolPersistenceProtocol, @unchecked Sendable {
     public var workspaces: [WorkspaceReference] = []

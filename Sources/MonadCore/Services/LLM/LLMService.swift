@@ -1,4 +1,5 @@
 import Foundation
+import MonadShared
 import Logging
 import Observation
 import OpenAI

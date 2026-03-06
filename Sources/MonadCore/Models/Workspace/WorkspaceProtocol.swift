@@ -1,4 +1,5 @@
 import Foundation
+import MonadShared
 
 /// Defines the capabilities and behaviors of a workspace
 public protocol WorkspaceProtocol: Sendable {

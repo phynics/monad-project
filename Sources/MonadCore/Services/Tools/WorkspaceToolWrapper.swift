@@ -1,4 +1,5 @@
 import Foundation
+import MonadShared
 
 /// Wraps a tool from a workspace to conform to the Tool protocol
 public struct WorkspaceToolWrapper: Tool, Sendable {

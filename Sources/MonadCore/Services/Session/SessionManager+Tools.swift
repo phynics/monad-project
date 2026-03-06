@@ -1,4 +1,5 @@
 import Foundation
+import MonadShared
 
 public extension SessionManager {
     // MARK: - Tool Management

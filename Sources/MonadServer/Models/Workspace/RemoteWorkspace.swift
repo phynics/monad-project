@@ -1,5 +1,6 @@
 import MonadCore
 import Foundation
+import MonadShared
 
 /// Implementation of WorkspaceProtocol that forwards requests to a remote client via RPC/WebSocket
 public actor RemoteWorkspace: WorkspaceProtocol {

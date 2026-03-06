@@ -1,4 +1,5 @@
 import Foundation
+import MonadShared
 
 extension WorkspaceToolDefinition {
     /// Create from an existing Tool protocol instance

@@ -3,6 +3,7 @@ import Foundation
 public enum WorkspaceTrustLevel: String, Codable, Sendable {
     case full  // Unrestricted within boundary
     case restricted  // Allowlist of operations
+    case readOnly  // Read-only filesystem operations
 }
 
 /// A workspace reference defines the metadata and location of a workspace

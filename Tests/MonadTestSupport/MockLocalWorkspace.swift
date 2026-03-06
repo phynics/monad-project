@@ -1,5 +1,6 @@
 @testable import MonadCore
 import Foundation
+import MonadShared
 
 /// A minimal mock workspace for unit testing, backed by a temp directory.
 public actor MockLocalWorkspace: WorkspaceProtocol {

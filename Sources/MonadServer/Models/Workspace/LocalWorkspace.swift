@@ -1,5 +1,6 @@
 import MonadCore
 import Foundation
+import MonadShared
 
 /// Implementation of WorkspaceProtocol for workspaces hosted on the local server filesystem
 public actor LocalWorkspace: WorkspaceProtocol {

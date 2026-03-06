@@ -148,4 +148,61 @@ extension ChatREPL {
             // Ignore errors here to not block startup
         }
     }
+    func autoAttachCurrentDirectory() async {
+        do {
+            let pwd = FileManager.default.currentDirectoryPath
+            let hostname = ProcessInfo.processInfo.hostName
+            let uriString = "file://\(hostname)\(pwd)"
+
+            guard let myId = RegistrationManager.shared.getIdentity()?.clientId else { return }
+
+            let allWorkspaces = try await client.workspace.listWorkspaces()
+            var targetWorkspaceId: UUID?
+
+            if let existing = allWorkspaces.first(where: { $0.uri.description == uriString }) {
+                targetWorkspaceId = existing.id
+            } else {
+                guard let uri = WorkspaceURI(parsing: uriString) else { return }
+                let newWs = try await client.workspace.createWorkspace(
+                    uri: uri,
+                    hostType: .client,
+                    ownerId: myId,
+                    rootPath: pwd,
+                    trustLevel: .readOnly
+                )
+                targetWorkspaceId = newWs.id
+            }
+
+            if let wsId = targetWorkspaceId {
+                let sessionWS = try await client.workspace.listSessionWorkspaces(sessionId: session.id)
+                let isAttached = sessionWS.attached.contains { $0.id == wsId }
+                
+                if !isAttached {
+                    try await client.workspace.attachWorkspace(wsId, to: session.id, isPrimary: false)
+                }
+
+                try await client.workspace.syncWorkspaceTools(
+                    ClientConstants.readOnlyToolReferences, workspaceId: wsId
+                )
+
+                LocalConfigManager.shared.saveClientWorkspace(uri: uriString, id: wsId.uuidString)
+            }
+        } catch {
+            // Silently ignore auto-attach errors so we don't break startup
+        }
+    }
+
+    func promptForWriteAccess(reason: String, workspaceURI: String) -> Bool {
+        print("\n\(TerminalUI.bold("⚠️  Write Access Requested"))")
+        print("The assistant wants to modify files in this read-only workspace (\(workspaceURI)).")
+        print("Reason: \(TerminalUI.dim(reason))")
+        
+        print("Grant full write access? [y/N] ", terminator: "")
+        fflush(stdout)
+        
+        let answer = lineReader.readLine(prompt: "", completion: nil)?
+            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        return answer == "y"
+    }
 }

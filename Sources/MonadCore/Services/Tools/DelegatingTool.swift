@@ -1,7 +1,8 @@
 import Foundation
+import MonadShared
 
 /// A Tool implementation that delegates execution to a ToolRouter
-public struct DelegatingTool: Tool {
+public struct DelegatingTool: Tool, ToolReferenceProviding {
     public let ref: ToolReference
     private let router: ToolRouter
     private let sessionId: UUID
@@ -20,6 +21,10 @@ public struct DelegatingTool: Tool {
     }
 
     // MARK: - Tool Protocol
+
+    public var toolReference: ToolReference {
+        ref
+    }
 
     public var id: String {
         ref.toolId

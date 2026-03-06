@@ -1,4 +1,5 @@
 import Foundation
+import MonadShared
 import OpenAI
 
 /// Protocol for defining tools that can be called by the AI
@@ -87,7 +88,7 @@ public struct CalculatorTool: ToolDefinition {
 
         // Simple calculator using NSExpression
         let expr = NSExpression(format: expression)
-        if let result = expr.expressionValue(with: nil, context: nil) {
+        if let result = expr.expressionValue(with: nil as Any?, context: nil as NSMutableDictionary?) {
             return "\(result)"
         } else {
             throw ToolError.executionFailed("Failed to evaluate expression")

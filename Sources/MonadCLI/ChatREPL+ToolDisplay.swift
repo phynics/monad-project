@@ -3,11 +3,15 @@ import MonadClient
 import MonadShared
 
 extension ChatREPL {
-    func printToolAttempt(name: String, argsJSON: String, reference: ToolReference) {
+    func printToolAttempt(name: String, argsJSON: String, reference: ToolReference?) {
         let location: String
-        switch reference {
-        case .known: location = "server"
-        case .custom: location = "local"
+        if let reference = reference {
+            switch reference {
+            case .known: location = "server"
+            case .custom: location = "local"
+            }
+        } else {
+            location = "client"
         }
         let paramsStr = formatToolArgs(argsJSON)
         let header = TerminalUI.blue("⟩ \(name)")

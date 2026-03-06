@@ -28,7 +28,9 @@ let package = Package(
     targets: [
         .target(
             name: "MonadShared",
-            dependencies: [],
+            dependencies: [
+                .product(name: "OpenAI", package: "OpenAI")
+            ],
             path: "Sources/MonadShared"
         ),
         .target(

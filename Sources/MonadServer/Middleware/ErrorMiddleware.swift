@@ -20,7 +20,7 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
             var response = try apiError.response(from: request, context: context)
             response.status = error.status
             return response
-        } catch let error as MonadCore.ToolError {
+        } catch let error as ToolError {
             let status: HTTPResponse.Status
             let code: String
             switch error {

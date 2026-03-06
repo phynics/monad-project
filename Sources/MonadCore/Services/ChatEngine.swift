@@ -1,5 +1,6 @@
 import Dependencies
 import Foundation
+import MonadShared
 import Logging
 import MonadPrompt
 import OpenAI

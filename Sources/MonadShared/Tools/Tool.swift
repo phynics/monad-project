@@ -1,9 +1,6 @@
 import Foundation
 import Logging
-import MonadShared
 import OpenAI
-
-@_exported import struct MonadShared.ToolResult
 
 /// A tool that the LLM can call to interact with the external world or perform computations.
 ///
@@ -98,7 +95,7 @@ public extension Tool {
            let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data) {
             schema = decoded
         } else {
-            let logger = Logger.module(named: "tool-schema")
+           var logger: Logger { Logger(label: "com.monad.shared.tools") }
             logger.warning("Failed to decode parametersSchema for tool '\(id)' — using empty schema. Raw: \(parametersSchema)")
             // Fallback to empty object if conversion fails
             schema = .object([:])
@@ -181,6 +178,10 @@ public struct ToolConfiguration: Codable, Identifiable, Sendable {
 
 // MARK: - Type-Erased Tool
 
+public protocol ToolReferenceProviding {
+    var toolReference: ToolReference { get }
+}
+
 /// A type-erased wrapper around any `Tool` conformance.
 ///
 /// Use `AnyTool` when you need to store tools in a concrete type context
@@ -243,8 +244,8 @@ public struct AnyTool: Tool {
 
     /// Returns the ``ToolReference`` for this tool, used for internal routing and event emission.
     public var toolReference: ToolReference {
-        if let delegating = wrapped as? DelegatingTool {
-            return delegating.ref
+        if let provider = wrapped as? ToolReferenceProviding {
+            return provider.toolReference
         }
         return .known(id: id)
     }

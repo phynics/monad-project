@@ -4,13 +4,14 @@ import MonadShared
 
 /// Standard filesystem tool references for client registration
 public enum ClientConstants {
-    public static let filesystemToolReferences: [ToolReference] = [
+    public static let readOnlyToolReferences: [ToolReference] = [
         .known(id: "cat"),
         .known(id: "ls"),
         .known(id: "grep"),
         .known(id: "search_files"),
         .known(id: "find"),
         .known(id: "inspect_file"),
+        .known(id: "request_write_access"),
         .custom(
             WorkspaceToolDefinition(
                 id: "dummy_tool",
@@ -20,6 +21,13 @@ public enum ClientConstants {
                 contextInjection: "This tool does absolutely nothing but tests context injection."
             )
         )
+    ]
+
+    public static let readWriteToolReferences: [ToolReference] = [
+        // Placeholder for future write tools
+        .known(id: "write_file"),
+        .known(id: "edit_file"),
+        .known(id: "delete_file")
     ]
 }
 

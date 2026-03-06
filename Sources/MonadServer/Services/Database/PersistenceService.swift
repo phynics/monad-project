@@ -282,7 +282,7 @@ public actor PersistenceService:
         try await dbQueue.write { db in
             // Verify workspace exists
             guard try WorkspaceReference.exists(db, key: workspaceId) else {
-                throw MonadCore.ToolError.workspaceNotFound(workspaceId)
+                throw ToolError.workspaceNotFound(workspaceId)
             }
 
             // Create and insert tool
@@ -294,7 +294,7 @@ public actor PersistenceService:
     public func syncTools(workspaceId: UUID, tools: [ToolReference]) async throws {
         try await dbQueue.write { db in
             guard try WorkspaceReference.exists(db, key: workspaceId) else {
-                throw MonadCore.ToolError.workspaceNotFound(workspaceId)
+                throw ToolError.workspaceNotFound(workspaceId)
             }
 
             let incomingIds = Set(tools.map { $0.toolId })

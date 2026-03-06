@@ -1,9 +1,10 @@
 import Foundation
+import MonadShared
 import Logging
 import OpenAI
 
 /// Tool that allows an agent to launch a sub-task using another agent
-public struct LaunchSubagentTool: Tool, Sendable {
+public struct LaunchSubagentTool: MonadShared.Tool, Sendable {
     public let id = "launch_subagent"
     public let name = "Launch Subagent"
     public let description = "Delegate a specific task to another agent. This task will run in the background."

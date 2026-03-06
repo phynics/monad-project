@@ -7,6 +7,7 @@ extension ChatREPL {
         await registerCommands()
         await showContext()
         await checkAndRestoreWorkspaces()
+        await autoAttachCurrentDirectory()
 
         while running {
             guard let input = await readInput() else {

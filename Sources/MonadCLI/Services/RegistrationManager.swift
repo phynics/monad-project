@@ -62,7 +62,7 @@ struct RegistrationManager {
 
     @discardableResult
     func ensureRegistered(client: MonadClient) async throws -> StoredIdentity {
-        let tools = ClientConstants.filesystemToolReferences
+        let tools = ClientConstants.readOnlyToolReferences
 
         if let existing = getIdentity() {
             // Always sync tools on connect to keep the server's DB current

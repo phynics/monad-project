@@ -205,7 +205,7 @@ struct WorkspaceSlashCommand: SlashCommand {
                 hostType: .client,
                 ownerId: myId,
                 rootPath: pwd,
-                trustLevel: .full
+                trustLevel: .readOnly
             )
             targetWorkspaceId = newWs.id
         }
@@ -213,9 +213,9 @@ struct WorkspaceSlashCommand: SlashCommand {
         if let wsId = targetWorkspaceId {
             try await context.client.workspace.attachWorkspace(wsId, to: context.session.id, isPrimary: false)
 
-            // Push all filesystem tools in a single sync operation
+            // Push read only tools
             try await context.client.workspace.syncWorkspaceTools(
-                ClientConstants.filesystemToolReferences, workspaceId: wsId
+                ClientConstants.readOnlyToolReferences, workspaceId: wsId
             )
 
             // Persist the local reference
