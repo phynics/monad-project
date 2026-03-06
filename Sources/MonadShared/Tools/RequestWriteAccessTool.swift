@@ -1,5 +1,4 @@
 import Foundation
-import MonadShared
 
 /// A tool used by the LLM to request permission to modify files in the active workspace.
 /// When executed on the client-side, this triggers a user prompt to upgrade the workspace trust level.

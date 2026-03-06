@@ -10,7 +10,7 @@ public extension MonadChatClient {
             path: "/api/sessions/\(sessionId.uuidString)/chat", method: "POST"
         )
         request.httpBody = try await client.encode(
-            ChatRequest(message: message, toolOutputs: toolOutputs, clientId: await client.configuration.clientId, clientTools: clientTools)
+            ChatRequest(message: message, toolOutputs: toolOutputs, clientId: client.configuration.clientId, clientTools: clientTools)
         )
         return try await client.perform(request)
     }
@@ -27,26 +27,26 @@ public extension MonadChatClient {
     func chatStream(sessionId: UUID, message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientTools: [ToolReference]? = nil) async throws -> AsyncThrowingStream<
         ChatEvent, Error
     > {
-        await client.configuration.logger.debug("chatStream called for session \(sessionId)")
+        client.configuration.logger.debug("chatStream called for session \(sessionId)")
         var request = try await client.buildRequest(
             path: "/api/sessions/\(sessionId.uuidString)/chat/stream", method: "POST"
         )
-        let clientId = await client.configuration.clientId
+        let clientId = client.configuration.clientId
         request.httpBody = try await client.encode(
             ChatRequest(message: message, toolOutputs: toolOutputs, clientId: clientId, clientTools: clientTools)
         )
 
-        await client.configuration.logger.debug(
+        client.configuration.logger.debug(
             "Sending request to \(request.url?.absoluteString ?? "unknown")"
         )
         let (bytes, response) = try await client.fetchStreamBytes(request: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
-            await client.configuration.logger.error("Invalid response type")
+            client.configuration.logger.error("Invalid response type")
             throw MonadClientError.unknown("Invalid response")
         }
 
-        await client.configuration.logger.debug("Response status: \(httpResponse.statusCode)")
+        client.configuration.logger.debug("Response status: \(httpResponse.statusCode)")
         if httpResponse.statusCode != 200 {
             // Read error body if possible
             var message: String?
@@ -57,25 +57,25 @@ public extension MonadChatClient {
                 }
                 message = body
             } catch {
-                await client.configuration.logger.error("Failed to read error body: \(error)")
+                client.configuration.logger.error("Failed to read error body: \(error)")
             }
 
             switch httpResponse.statusCode {
             case 401:
-                await client.configuration.logger.error("HTTP 401 Unauthorized: \(message ?? "")")
+                client.configuration.logger.error("HTTP 401 Unauthorized: \(message ?? "")")
                 throw MonadClientError.unauthorized
             case 404:
-                await client.configuration.logger.error("HTTP 404 Not Found")
+                client.configuration.logger.error("HTTP 404 Not Found")
                 throw MonadClientError.notFound
             default:
-                await client.configuration.logger.error("HTTP \(httpResponse.statusCode): \(message ?? "")")
+                client.configuration.logger.error("HTTP \(httpResponse.statusCode): \(message ?? "")")
                 throw MonadClientError.httpError(
                     statusCode: httpResponse.statusCode, message: message
                 )
             }
         }
 
-        await client.configuration.logger.debug("Starting SSE reader")
-        return await client.sseReader.events(from: bytes, logger: client.configuration.logger)
+        client.configuration.logger.debug("Starting SSE reader")
+        return client.sseReader.events(from: bytes, logger: client.configuration.logger)
     }
 }

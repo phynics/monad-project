@@ -196,7 +196,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let (client, mockSession) = makeClient()
         let url = try #require(URL(string: "http://localhost"))
         let resp = try #require(HTTPURLResponse(url: url, statusCode: 401, httpVersion: nil, headerFields: nil))
-        try await mockSession.setMockResponse(resp)
+        await mockSession.setMockResponse(resp)
         do {
             _ = try await client.chat.listMemories()
             Issue.record("Expected unauthorized error")
@@ -209,7 +209,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let (client, mockSession) = makeClient()
         let url = try #require(URL(string: "http://localhost"))
         let resp = try #require(HTTPURLResponse(url: url, statusCode: 404, httpVersion: nil, headerFields: nil))
-        try await mockSession.setMockResponse(resp)
+        await mockSession.setMockResponse(resp)
         do {
             _ = try await client.chat.listMemories()
             Issue.record("Expected notFound error")
@@ -222,7 +222,7 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
         let (client, mockSession) = makeClient()
         let url = try #require(URL(string: "http://localhost"))
         let resp = try #require(HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil))
-        try await mockSession.setMockResponse(resp)
+        await mockSession.setMockResponse(resp)
         do {
             _ = try await client.chat.listMemories()
             Issue.record("Expected error to be thrown")

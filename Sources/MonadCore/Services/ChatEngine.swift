@@ -61,10 +61,9 @@ public final class ChatEngine: @unchecked Sendable {
         let session = await sessionManager.getSession(id: sessionId)
         let workspaces = await sessionManager.getWorkspaces(for: sessionId)
         let attachedWorkspaces = workspaces?.attached ?? []
-        let primaryWorkspaceId = workspaces?.primary?.id
 
         var clientName: String?
-        var connectedClients = Set<UUID>()
+        let connectedClients = Set<UUID>()
 
         // Find which workspaces are connected
         if let primaryWorkspace = workspaces?.primary {
@@ -221,7 +220,6 @@ public final class ChatEngine: @unchecked Sendable {
         var toolCallAccumulators: [Int: (id: String, name: String, args: String)] = [:]
 
         var parser = StreamingParser()
-        var hasEmittedThought = false
 
         // Bug 1: Track timing and token usage
         let turnStartTime = Date()
@@ -253,12 +251,10 @@ public final class ChatEngine: @unchecked Sendable {
 
                 if !thinkingChunk.isEmpty {
                     fullThinking += thinkingChunk
-                    hasEmittedThought = true
                     continuation.yield(.thinking(String(thinkingChunk)))
                 }
 
                 if !contentChunk.isEmpty {
-                    hasEmittedThought = false
                     fullResponse += contentChunk
                     continuation.yield(.generation(String(contentChunk)))
                 }
@@ -266,7 +262,6 @@ public final class ChatEngine: @unchecked Sendable {
 
             // Accumulate Tool Calls
             if let calls = result.choices.first?.delta.toolCalls {
-                hasEmittedThought = false
 
                 for call in calls {
                     guard let index = call.index else { continue }
@@ -290,16 +285,12 @@ public final class ChatEngine: @unchecked Sendable {
         if !parser.buffer.isEmpty {
             if parser.isThinking {
                 fullThinking += parser.buffer
-                hasEmittedThought = true
                 continuation.yield(.thinking(parser.buffer))
             } else {
-                hasEmittedThought = false
                 fullResponse += parser.buffer
                 continuation.yield(.generation(parser.buffer))
             }
         }
-
-        hasEmittedThought = false
 
         // Accumulate raw output for debug
         accumulatedRawOutput += fullThinking

@@ -17,7 +17,7 @@ final class LocalConfigManagerTests: XCTestCase {
     }
 
     func testPersistence() {
-        var config = manager.getConfig()
+        let config = manager.getConfig()
         XCTAssertNil(config.lastSessionId)
         XCTAssertNil(config.clientWorkspaces)
 

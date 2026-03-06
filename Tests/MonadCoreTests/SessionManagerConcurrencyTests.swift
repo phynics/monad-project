@@ -13,7 +13,7 @@ import Testing
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
-        return await withDependencies {
+        return withDependencies {
             $0.persistenceService = persistence
             $0.embeddingService = embedding
             $0.llmService = llm

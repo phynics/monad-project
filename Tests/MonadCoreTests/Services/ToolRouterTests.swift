@@ -27,7 +27,7 @@ final class ToolRouterTests: XCTestCase {
     
     private func setupSessionManager() async throws -> (SessionManager, MockPersistenceService) {
         let mockPersistence = MockPersistenceService()
-        let sessionManager = await withDependencies {
+        let sessionManager = withDependencies {
             $0.persistenceService = mockPersistence
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()

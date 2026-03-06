@@ -13,13 +13,13 @@ struct PersistenceProtocolTests {
         let mock = MockPersistenceStore()
 
         // Verify it conforms to all required domains
-        #expect(mock is MemoryStoreProtocol)
-        #expect(mock is MessageStoreProtocol)
-        #expect(mock is SessionPersistenceProtocol)
-        #expect(mock is JobStoreProtocol)
-        #expect(mock is MSAgentStoreProtocol)
-        #expect(mock is WorkspacePersistenceProtocol)
-        #expect(mock is ToolPersistenceProtocol)
+        let _: MemoryStoreProtocol = mock
+        let _: MessageStoreProtocol = mock
+        let _: SessionPersistenceProtocol = mock
+        let _: JobStoreProtocol = mock
+        let _: MSAgentStoreProtocol = mock
+        let _: WorkspacePersistenceProtocol = mock
+        let _: ToolPersistenceProtocol = mock
     }
 }
 
