@@ -1,11 +1,11 @@
-import MonadShared
-import MonadCore
 import Foundation
 import GRDB
+import MonadCore
+import MonadShared
 
-extension DatabaseSchema {
+public extension DatabaseSchema {
     /// Register all migrations
-    public static func registerMigrations(in migrator: inout DatabaseMigrator) {
+    static func registerMigrations(in migrator: inout DatabaseMigrator) {
         // v1: Baseline schema (consolidated v1 and v2)
         migrator.registerMigration("v1") { db in
             try createWorkspaceTables(in: db)
@@ -47,7 +47,7 @@ extension DatabaseSchema {
         migrator.registerMigration("v5") { db in
             // Skip if v29 already removed it or if it somehow doesn't exist
             if try db.columns(in: "conversationMessage").contains(where: { $0.name == "memoryId" }) {
-                // No-op, it already exists or will be added/removed later. 
+                // No-op, it already exists or will be added/removed later.
                 // Actually, if we are at v5, we want to add it.
             } else {
                 // If it's missing at this stage, it might be because baseline removed it.
@@ -68,11 +68,12 @@ extension DatabaseSchema {
         migrator.registerMigration("v7") { db in
             let timelines = try Timeline.fetchAll(db)
             for var timeline in timelines {
-                if !timeline.tags.isEmpty && !timeline.tags.hasPrefix("[") {
+                if !timeline.tags.isEmpty, !timeline.tags.hasPrefix("[") {
                     if let data = Data(base64Encoded: timeline.tags),
-                        let tagsArray = try? JSONDecoder().decode([String].self, from: data),
-                        let newData = try? JSONEncoder().encode(tagsArray),
-                        let newString = String(data: newData, encoding: .utf8) {
+                       let tagsArray = try? JSONDecoder().decode([String].self, from: data),
+                       let newData = try? JSONEncoder().encode(tagsArray),
+                       let newString = String(data: newData, encoding: .utf8)
+                    {
                         timeline.tags = newString
                         try timeline.update(db)
                     }
@@ -85,7 +86,8 @@ extension DatabaseSchema {
             if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "parentId" }) {
                 try db.alter(table: "conversationMessage") { table in
                     table.add(column: "parentId", .blob).references(
-                        "conversationMessage", onDelete: .setNull)
+                        "conversationMessage", onDelete: .setNull
+                    )
                 }
             }
         }
@@ -97,8 +99,7 @@ extension DatabaseSchema {
                     table.add(column: "think", .text)
                 }
             }
-            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "toolCalls" }
-            ) {
+            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "toolCalls" }) {
                 try db.alter(table: "conversationMessage") { table in
                     table.add(column: "toolCalls", .text).notNull().defaults(to: "[]")
                 }
@@ -122,53 +123,57 @@ extension DatabaseSchema {
             // Protect Archives (Sessions and Messages) from deletion and modification
             try db.execute(
                 sql: """
-                        CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
-                        BEFORE DELETE ON timeline
-                        FOR EACH ROW
-                        WHEN OLD.isArchived = 1
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Archived timelines cannot be deleted');
-                        END;
-                    """)
+                    CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
+                    BEFORE DELETE ON timeline
+                    FOR EACH ROW
+                    WHEN OLD.isArchived = 1
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Archived timelines cannot be deleted');
+                    END;
+                """
+            )
 
             try db.execute(
                 sql: """
-                        CREATE TRIGGER IF NOT EXISTS prevent_session_modification
-                        BEFORE UPDATE ON timeline
-                        FOR EACH ROW
-                        WHEN OLD.isArchived = 1
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Archived timelines cannot be modified');
-                        END;
-                    """)
+                    CREATE TRIGGER IF NOT EXISTS prevent_session_modification
+                    BEFORE UPDATE ON timeline
+                    FOR EACH ROW
+                    WHEN OLD.isArchived = 1
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Archived timelines cannot be modified');
+                    END;
+                """
+            )
 
             try db.execute(
                 sql: """
-                        CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
-                        BEFORE DELETE ON conversationMessage
-                        FOR EACH ROW
-                        WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Archived messages cannot be deleted');
-                        END;
-                    """)
+                    CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
+                    BEFORE DELETE ON conversationMessage
+                    FOR EACH ROW
+                    WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Archived messages cannot be deleted');
+                    END;
+                """
+            )
 
             try db.execute(
                 sql: """
-                        CREATE TRIGGER IF NOT EXISTS prevent_message_modification
-                        BEFORE UPDATE ON conversationMessage
-                        FOR EACH ROW
-                        WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Archived messages cannot be modified');
-                        END;
-                    """)
+                    CREATE TRIGGER IF NOT EXISTS prevent_message_modification
+                    BEFORE UPDATE ON conversationMessage
+                    FOR EACH ROW
+                    WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Archived messages cannot be modified');
+                    END;
+                """
+            )
         }
 
         // v12: Remove alwaysAppend, isEnabled, and priority from Note
         // v12: Remove alwaysAppend, isEnabled, and priority from Note (Removed)
         migrator.registerMigration("v12") { _ in
-           // No-op
+            // No-op
         }
 
         // v13: Add table_directory for self-documenting schema
@@ -213,7 +218,8 @@ extension DatabaseSchema {
             try db.create(
                 index: "idx_compactificationNode_session",
                 on: "compactificationNode",
-                columns: ["timelineId"])
+                columns: ["timelineId"]
+            )
         }
 
         // v16: Workspaces and Client Identity
@@ -276,47 +282,51 @@ extension DatabaseSchema {
 
             try db.execute(
                 sql: """
-                        CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
-                        BEFORE DELETE ON timeline
-                        FOR EACH ROW
-                        WHEN OLD.isArchived = 1
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Archived timelines cannot be deleted');
-                        END;
-                    """)
+                    CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
+                    BEFORE DELETE ON timeline
+                    FOR EACH ROW
+                    WHEN OLD.isArchived = 1
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Archived timelines cannot be deleted');
+                    END;
+                """
+            )
 
             try db.execute(
                 sql: """
-                        CREATE TRIGGER IF NOT EXISTS prevent_session_modification
-                        BEFORE UPDATE ON timeline
-                        FOR EACH ROW
-                        WHEN OLD.isArchived = 1
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Archived timelines cannot be modified');
-                        END;
-                    """)
+                    CREATE TRIGGER IF NOT EXISTS prevent_session_modification
+                    BEFORE UPDATE ON timeline
+                    FOR EACH ROW
+                    WHEN OLD.isArchived = 1
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Archived timelines cannot be modified');
+                    END;
+                """
+            )
 
             try db.execute(
                 sql: """
-                        CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
-                        BEFORE DELETE ON conversationMessage
-                        FOR EACH ROW
-                        WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Archived messages cannot be deleted');
-                        END;
-                    """)
+                    CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
+                    BEFORE DELETE ON conversationMessage
+                    FOR EACH ROW
+                    WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Archived messages cannot be deleted');
+                    END;
+                """
+            )
 
             try db.execute(
                 sql: """
-                        CREATE TRIGGER IF NOT EXISTS prevent_message_modification
-                        BEFORE UPDATE ON conversationMessage
-                        FOR EACH ROW
-                        WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Archived messages cannot be modified');
-                        END;
-                    """)
+                    CREATE TRIGGER IF NOT EXISTS prevent_message_modification
+                    BEFORE UPDATE ON conversationMessage
+                    FOR EACH ROW
+                    WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Archived messages cannot be modified');
+                    END;
+                """
+            )
         }
 
         // v22: Add timelineId to BackgroundJob table
@@ -463,6 +473,32 @@ extension DatabaseSchema {
                     table.add(column: "metadata", .text).notNull().defaults(to: "{}")
                 }
             }
+        }
+
+        // v31: Rename conversationSession table to timeline (for existing databases)
+        // Fresh installs (via v1 baseline) already have 'timeline'; this is a no-op for them.
+        migrator.registerMigration("v31") { db in
+            guard try db.tableExists("conversationSession") else { return }
+
+            // 1. Rename the main conversation table
+            try db.execute(sql: "ALTER TABLE conversationSession RENAME TO timeline")
+
+            // 2. Rename sessionId → timelineId in conversationMessage
+            if try db.columns(in: "conversationMessage").contains(where: { $0.name == "sessionId" }) {
+                try db.execute(sql: "ALTER TABLE conversationMessage RENAME COLUMN sessionId TO timelineId")
+            }
+
+            // 3. Rename sessionId → timelineId in job table
+            if try db.columns(in: "job").contains(where: { $0.name == "sessionId" }) {
+                try db.execute(sql: "ALTER TABLE job RENAME COLUMN sessionId TO timelineId")
+            }
+
+            // 4. Replace old index names with new ones
+            try db.execute(sql: "DROP INDEX IF EXISTS idx_message_session")
+            try db.create(index: "idx_message_timeline", on: "conversationMessage", columns: ["timelineId"])
+
+            try db.execute(sql: "DROP INDEX IF EXISTS idx_job_session")
+            try db.create(index: "idx_job_timeline", on: "job", columns: ["timelineId"])
         }
     }
 }
