@@ -10,7 +10,7 @@ struct ResolvedPath {
 }
 
 private func resolvePath(_ input: String?, context: ChatContext) async throws -> ResolvedPath {
-    let sessionWS = try await context.client.workspace.listSessionWorkspaces(sessionId: context.session.id)
+    let timelineWS = try await context.client.workspace.listTimelineWorkspaces(timelineId: context.timeline.id)
 
     let targetWorkspaceId: UUID
     let wsName: String
@@ -21,7 +21,7 @@ private func resolvePath(_ input: String?, context: ChatContext) async throws ->
     if let selected = selectedId {
         targetWorkspaceId = selected
         wsName = "Selected"
-    } else if let primary = sessionWS.primary {
+    } else if let primary = timelineWS.primary {
         targetWorkspaceId = primary.id
         wsName = "Primary"
     } else {
@@ -49,7 +49,7 @@ private func resolvePath(_ input: String?, context: ChatContext) async throws ->
     }
 
     // Default path logic
-    if targetWorkspaceId == sessionWS.primary?.id && !input.contains("/") && !input.hasPrefix("Notes/")
+    if targetWorkspaceId == timelineWS.primary?.id && !input.contains("/") && !input.hasPrefix("Notes/")
         && !input.hasPrefix("Personas/") {
         return ResolvedPath(
             workspaceId: targetWorkspaceId, path: "Notes/\(input)", workspaceName: wsName)

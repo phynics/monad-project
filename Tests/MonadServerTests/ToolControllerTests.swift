@@ -1,11 +1,11 @@
+import MonadShared
+import MonadCore
 import Testing
 import Hummingbird
 import HummingbirdTesting
 import Foundation
 import MonadTestSupport
 @testable import MonadServer
-import MonadCore
-import MonadShared
 import NIOCore
 import Dependencies
 
@@ -17,7 +17,7 @@ import Dependencies
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
-        let sessionManager = SessionManager(
+        let timelineManager = TimelineManager(
             workspaceRoot: workspaceRoot
         )
         try await withDependencies {
@@ -25,19 +25,19 @@ import Dependencies
             $0.embeddingService = embedding
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
-            $0.sessionManager = sessionManager
+            $0.timelineManager = timelineManager
         } operation: {
             let toolRouter = ToolRouter()
             let router = Router()
             router.add(middleware: ErrorMiddleware())
-            let controller = ToolAPIController<BasicRequestContext>(sessionManager: sessionManager, toolRouter: toolRouter)
+            let controller = ToolAPIController<BasicRequestContext>(timelineManager: timelineManager, toolRouter: toolRouter)
             controller.addRoutes(to: router.group("/tools"))
 
             let app = Application(router: router)
 
             try await app.test(.router) { client in
                 // Create Session
-                let session = try await sessionManager.createSession()
+                let session = try await timelineManager.createTimeline()
 
                 // 1. List
                 try await client.execute(uri: "/tools/\(session.id)", method: .get) { response in
@@ -47,7 +47,7 @@ import Dependencies
                 }
 
                 // 2. Execute (Mock execution)
-                let execReq = ExecuteToolRequest(sessionId: session.id, name: "test_tool", arguments: [:])
+                let execReq = ExecuteToolRequest(timelineId: session.id, name: "test_tool", arguments: [:])
                 let execBuffer = ByteBuffer(bytes: try JSONEncoder().encode(execReq))
 
                 try await client.execute(uri: "/tools/execute", method: .post, body: execBuffer) { response in

@@ -16,7 +16,7 @@ extension ChatREPL {
             return
         }
 
-        let sessionId = session.id
+        let timelineId = timeline.id
         currentGenerationTask = Task {
             var currentMessage = initialMessage
             var currentToolOutputs: [ToolOutputSubmission]? = nil
@@ -30,7 +30,7 @@ extension ChatREPL {
                     }
 
                     let stream = try await client.chat.chatStream(
-                        sessionId: sessionId,
+                        timelineId: timelineId,
                         message: currentMessage,
                         toolOutputs: currentToolOutputs
                     )
@@ -137,8 +137,8 @@ extension ChatREPL {
                     if !pendingToolCalls.isEmpty && !Task.isCancelled {
                         print("") // Spacing for local tools
                         
-                        let sessionWS = try? await client.workspace.listSessionWorkspaces(sessionId: sessionId)
-                        let targetWsId = selectedWorkspaceId ?? sessionWS?.primary?.id ?? sessionWS?.attached.first?.id
+                        let timelineWS = try? await client.workspace.listTimelineWorkspaces(timelineId: timelineId)
+                        let targetWsId = selectedWorkspaceId ?? timelineWS?.primary?.id ?? timelineWS?.attached.first?.id
                         
                         guard let wsId = targetWsId,
                               let workspace = try? await client.workspace.getWorkspace(wsId) else {
@@ -152,7 +152,7 @@ extension ChatREPL {
                             printToolAttempt(name: call.name, argsJSON: arguments, reference: nil)
                         }
                         
-                        let executor = ClientToolExecutor(client: client, session: session, repl: self)
+                        let executor = ClientToolExecutor(client: client, timeline: timeline, repl: self)
                         let submissions = await executor.execute(toolCalls: pendingToolCalls, in: workspace)
                         
                         for submission in submissions {

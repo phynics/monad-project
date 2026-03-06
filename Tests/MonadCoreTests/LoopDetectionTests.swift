@@ -22,7 +22,7 @@ struct LoopDetectionTests {
     @Test("Test loop detection triggers after 3 identical calls")
     func testLoopDetection() async throws {
         let tool = MockTool()
-        let toolManager = SessionToolManager(availableTools: [AnyTool(tool)])
+        let toolManager = TimelineToolManager(availableTools: [AnyTool(tool)])
         let executor = ToolExecutor(toolManager: toolManager)
 
         let toolCall = ToolCall(name: "mock_tool", arguments: ["arg": AnyCodable(1)])
@@ -44,7 +44,7 @@ struct LoopDetectionTests {
     @Test("Test loop detection reset")
     func testLoopDetectionReset() async throws {
         let tool = MockTool()
-        let toolManager = SessionToolManager(availableTools: [AnyTool(tool)])
+        let toolManager = TimelineToolManager(availableTools: [AnyTool(tool)])
         let executor = ToolExecutor(toolManager: toolManager)
 
         let toolCall = ToolCall(name: "mock_tool", arguments: ["arg": AnyCodable(1)])
@@ -62,7 +62,7 @@ struct LoopDetectionTests {
     @Test("Test different arguments do not trigger loop detection")
     func testDifferentArgs() async throws {
         let tool = MockTool()
-        let toolManager = SessionToolManager(availableTools: [AnyTool(tool)])
+        let toolManager = TimelineToolManager(availableTools: [AnyTool(tool)])
         let executor = ToolExecutor(toolManager: toolManager)
 
         for i in 1...5 {

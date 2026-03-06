@@ -11,7 +11,7 @@ public actor LocalWorkspace: WorkspaceProtocol {
     private let rootURL: URL
 
     public init(reference: WorkspaceReference) throws {
-        guard reference.hostType == .server || reference.hostType == .serverSession,
+        guard reference.hostType == .server || reference.hostType == .serverTimeline,
               let path = reference.rootPath else {
             throw WorkspaceError.invalidWorkspaceType
         }

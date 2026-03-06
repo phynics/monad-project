@@ -1,3 +1,4 @@
+import MonadShared
 import MonadCore
 import Foundation
 import GRDB
@@ -63,17 +64,17 @@ extension DatabaseSchema {
             // No-op
         }
 
-        // v7: Convert conversationSession tags from base64 to JSON
+        // v7: Convert timeline tags from base64 to JSON
         migrator.registerMigration("v7") { db in
-            let sessions = try Timeline.fetchAll(db)
-            for var session in sessions {
-                if !session.tags.isEmpty && !session.tags.hasPrefix("[") {
-                    if let data = Data(base64Encoded: session.tags),
+            let timelines = try Timeline.fetchAll(db)
+            for var timeline in timelines {
+                if !timeline.tags.isEmpty && !timeline.tags.hasPrefix("[") {
+                    if let data = Data(base64Encoded: timeline.tags),
                         let tagsArray = try? JSONDecoder().decode([String].self, from: data),
                         let newData = try? JSONEncoder().encode(tagsArray),
                         let newString = String(data: newData, encoding: .utf8) {
-                        session.tags = newString
-                        try session.update(db)
+                        timeline.tags = newString
+                        try timeline.update(db)
                     }
                 }
             }
@@ -104,12 +105,12 @@ extension DatabaseSchema {
             }
         }
 
-        // v10: Add workingDirectory to conversationSession
+        // v10: Add workingDirectory to timeline
         migrator.registerMigration("v10") { db in
-            if try !db.columns(in: "conversationSession").contains(where: {
+            if try !db.columns(in: "timeline").contains(where: {
                 $0.name == "workingDirectory"
             }) {
-                try db.alter(table: "conversationSession") { table in
+                try db.alter(table: "timeline") { table in
                     table.add(column: "workingDirectory", .text)
                 }
             }
@@ -122,22 +123,22 @@ extension DatabaseSchema {
             try db.execute(
                 sql: """
                         CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
-                        BEFORE DELETE ON conversationSession
+                        BEFORE DELETE ON timeline
                         FOR EACH ROW
                         WHEN OLD.isArchived = 1
                         BEGIN
-                            SELECT RAISE(ABORT, 'Archived sessions cannot be deleted');
+                            SELECT RAISE(ABORT, 'Archived timelines cannot be deleted');
                         END;
                     """)
 
             try db.execute(
                 sql: """
                         CREATE TRIGGER IF NOT EXISTS prevent_session_modification
-                        BEFORE UPDATE ON conversationSession
+                        BEFORE UPDATE ON timeline
                         FOR EACH ROW
                         WHEN OLD.isArchived = 1
                         BEGIN
-                            SELECT RAISE(ABORT, 'Archived sessions cannot be modified');
+                            SELECT RAISE(ABORT, 'Archived timelines cannot be modified');
                         END;
                     """)
 
@@ -146,7 +147,7 @@ extension DatabaseSchema {
                         CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
                         BEFORE DELETE ON conversationMessage
                         FOR EACH ROW
-                        WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
+                        WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
                         BEGIN
                             SELECT RAISE(ABORT, 'Archived messages cannot be deleted');
                         END;
@@ -157,7 +158,7 @@ extension DatabaseSchema {
                         CREATE TRIGGER IF NOT EXISTS prevent_message_modification
                         BEFORE UPDATE ON conversationMessage
                         FOR EACH ROW
-                        WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
+                        WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
                         BEGIN
                             SELECT RAISE(ABORT, 'Archived messages cannot be modified');
                         END;
@@ -199,8 +200,8 @@ extension DatabaseSchema {
         migrator.registerMigration("v15") { db in
             try db.create(table: "compactificationNode") { table in
                 table.column("id", .blob).primaryKey()
-                table.column("sessionId", .blob).notNull()
-                    .references("conversationSession", onDelete: .cascade)
+                table.column("timelineId", .blob).notNull()
+                    .references("timeline", onDelete: .cascade)
                 table.column("type", .text).notNull()
                 table.column("summary", .text).notNull()
                 table.column("displayHint", .text).notNull()
@@ -212,7 +213,7 @@ extension DatabaseSchema {
             try db.create(
                 index: "idx_compactificationNode_session",
                 on: "compactificationNode",
-                columns: ["sessionId"])
+                columns: ["timelineId"])
         }
 
         // v16: Workspaces and Client Identity
@@ -221,9 +222,9 @@ extension DatabaseSchema {
                 try createWorkspaceTables(in: db)
             }
 
-            if try db.tableExists("conversationSession") {
-                let columns = try db.columns(in: "conversationSession").map { $0.name }
-                try db.alter(table: "conversationSession") { table in
+            if try db.tableExists("timeline") {
+                let columns = try db.columns(in: "timeline").map { $0.name }
+                try db.alter(table: "timeline") { table in
                     if !columns.contains("primaryWorkspaceId") {
                         table.add(column: "primaryWorkspaceId", .blob)
                             .references("workspace", onDelete: .setNull)
@@ -257,10 +258,10 @@ extension DatabaseSchema {
             // No-op
         }
 
-        // v20: Add persona column to conversationSession
+        // v20: Add persona column to timeline
         migrator.registerMigration("v20") { db in
-            if try !db.columns(in: "conversationSession").contains(where: { $0.name == "persona" }) {
-                try db.alter(table: "conversationSession") { table in
+            if try !db.columns(in: "timeline").contains(where: { $0.name == "persona" }) {
+                try db.alter(table: "timeline") { table in
                     table.add(column: "persona", .text)
                 }
             }
@@ -276,22 +277,22 @@ extension DatabaseSchema {
             try db.execute(
                 sql: """
                         CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
-                        BEFORE DELETE ON conversationSession
+                        BEFORE DELETE ON timeline
                         FOR EACH ROW
                         WHEN OLD.isArchived = 1
                         BEGIN
-                            SELECT RAISE(ABORT, 'Archived sessions cannot be deleted');
+                            SELECT RAISE(ABORT, 'Archived timelines cannot be deleted');
                         END;
                     """)
 
             try db.execute(
                 sql: """
                         CREATE TRIGGER IF NOT EXISTS prevent_session_modification
-                        BEFORE UPDATE ON conversationSession
+                        BEFORE UPDATE ON timeline
                         FOR EACH ROW
                         WHEN OLD.isArchived = 1
                         BEGIN
-                            SELECT RAISE(ABORT, 'Archived sessions cannot be modified');
+                            SELECT RAISE(ABORT, 'Archived timelines cannot be modified');
                         END;
                     """)
 
@@ -300,7 +301,7 @@ extension DatabaseSchema {
                         CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
                         BEFORE DELETE ON conversationMessage
                         FOR EACH ROW
-                        WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
+                        WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
                         BEGIN
                             SELECT RAISE(ABORT, 'Archived messages cannot be deleted');
                         END;
@@ -311,21 +312,21 @@ extension DatabaseSchema {
                         CREATE TRIGGER IF NOT EXISTS prevent_message_modification
                         BEFORE UPDATE ON conversationMessage
                         FOR EACH ROW
-                        WHEN (SELECT isArchived FROM conversationSession WHERE id = OLD.sessionId) = 1
+                        WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
                         BEGIN
                             SELECT RAISE(ABORT, 'Archived messages cannot be modified');
                         END;
                     """)
         }
 
-        // v22: Add sessionId to Job table
+        // v22: Add timelineId to BackgroundJob table
         migrator.registerMigration("v22") { db in
             try db.drop(table: "job")
 
             try db.create(table: "job") { table in
                 table.column("id", .blob).primaryKey()
-                table.column("sessionId", .blob).notNull()
-                    .references("conversationSession", onDelete: .cascade)
+                table.column("timelineId", .blob).notNull()
+                    .references("timeline", onDelete: .cascade)
                 table.column("title", .text).notNull()
                 table.column("description", .text)
                 table.column("priority", .integer).notNull().defaults(to: 0)
@@ -336,7 +337,7 @@ extension DatabaseSchema {
 
             try db.create(index: "idx_job_status", on: "job", columns: ["status"])
             try db.create(index: "idx_job_priority", on: "job", columns: ["priority"])
-            try db.create(index: "idx_job_session", on: "job", columns: ["sessionId"])
+            try db.create(index: "idx_job_session", on: "job", columns: ["timelineId"])
         }
 
         // v23: Add status to workspace table
@@ -348,14 +349,14 @@ extension DatabaseSchema {
             }
         }
 
-        // v24: Add agentId to Job table
+        // v24: Add agentId to BackgroundJob table
         migrator.registerMigration("v24") { db in
             try db.drop(table: "job")
 
             try db.create(table: "job") { table in
                 table.column("id", .blob).primaryKey()
-                table.column("sessionId", .blob).notNull()
-                    .references("conversationSession", onDelete: .cascade)
+                table.column("timelineId", .blob).notNull()
+                    .references("timeline", onDelete: .cascade)
                 table.column("title", .text).notNull()
                 table.column("description", .text)
                 table.column("priority", .integer).notNull().defaults(to: 0)
@@ -367,18 +368,18 @@ extension DatabaseSchema {
 
             try db.create(index: "idx_job_status", on: "job", columns: ["status"])
             try db.create(index: "idx_job_priority", on: "job", columns: ["priority"])
-            try db.create(index: "idx_job_session", on: "job", columns: ["sessionId"])
+            try db.create(index: "idx_job_session", on: "job", columns: ["timelineId"])
             try db.create(index: "idx_job_agent", on: "job", columns: ["agentId"])
         }
 
-        // v25: Add missing columns to Job table
+        // v25: Add missing columns to BackgroundJob table
         migrator.registerMigration("v25") { db in
             try db.drop(table: "job")
 
             try db.create(table: "job") { table in
                 table.column("id", .blob).primaryKey()
-                table.column("sessionId", .blob).notNull()
-                    .references("conversationSession", onDelete: .cascade)
+                table.column("timelineId", .blob).notNull()
+                    .references("timeline", onDelete: .cascade)
                 table.column("title", .text).notNull()
                 table.column("description", .text)
                 table.column("priority", .integer).notNull().defaults(to: 0)
@@ -394,11 +395,11 @@ extension DatabaseSchema {
 
             try db.create(index: "idx_job_status", on: "job", columns: ["status"])
             try db.create(index: "idx_job_priority", on: "job", columns: ["priority"])
-            try db.create(index: "idx_job_session", on: "job", columns: ["sessionId"])
+            try db.create(index: "idx_job_session", on: "job", columns: ["timelineId"])
             try db.create(index: "idx_job_agent", on: "job", columns: ["agentId"])
         }
 
-        // v26: Add parentId to Job table for task trees
+        // v26: Add parentId to BackgroundJob table for task trees
         migrator.registerMigration("v26") { db in
             if try !db.columns(in: "job").contains(where: { $0.name == "parentId" }) {
                 try db.alter(table: "job") { table in

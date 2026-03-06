@@ -12,7 +12,7 @@ private func makePaginatedMemories(_ items: [Memory] = []) throws -> Data {
     return try encoder.encode(response)
 }
 
-private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Data {
+private func makePaginatedSessions(_ items: [TimelineResponse] = []) throws -> Data {
     let response = PaginatedResponse(items: items, metadata: PaginationMetadata(page: 1, perPage: 20, totalItems: items.count))
     let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
     return try encoder.encode(response)
@@ -60,65 +60,65 @@ private func makePaginatedSessions(_ items: [SessionResponse] = []) throws -> Da
 
     // MARK: - Sessions
 
-    @Test("createSession sends POST to /api/sessions")
-    func createSession_postToSessions() async throws {
+    @Test("createTimeline sends POST to /api/sessions")
+    func createTimeline_postToSessions() async throws {
         let (client, mockSession) = makeClient()
-        let session = SessionResponse(id: UUID(), title: "New")
+        let session = TimelineResponse(id: UUID(), title: "New")
         let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
         try await mockSession.setMockData(encoder.encode(session))
 
-        _ = try await client.chat.createSession()
+        _ = try await client.chat.createTimeline()
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/sessions")
         #expect(req?.httpMethod == "POST")
     }
 
-    @Test("listSessions sends GET to /api/sessions")
-    func listSessions_getToSessions() async throws {
+    @Test("listTimelines sends GET to /api/sessions")
+    func listTimelines_getToSessions() async throws {
         let (client, mockSession) = makeClient()
         try await mockSession.setMockData(makePaginatedSessions())
 
-        _ = try await client.chat.listSessions()
+        _ = try await client.chat.listTimelines()
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/sessions")
         #expect(req?.httpMethod == "GET")
     }
 
-    @Test("getSession sends GET to /api/sessions/{id}")
-    func getSession_getWithId() async throws {
+    @Test("getTimeline sends GET to /api/sessions/{id}")
+    func getTimeline_getWithId() async throws {
         let (client, mockSession) = makeClient()
-        let sessionId = UUID()
-        let sessionResp = SessionResponse(id: sessionId, title: "Test")
+        let timelineId = UUID()
+        let sessionResp = TimelineResponse(id: timelineId, title: "Test")
         let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
         try await mockSession.setMockData(encoder.encode(sessionResp))
 
-        _ = try await client.chat.getSession(id: sessionId)
+        _ = try await client.chat.getTimeline(id: timelineId)
         let req = await mockSession.lastRequest
-        #expect(req?.url?.path == "/api/sessions/\(sessionId.uuidString)")
+        #expect(req?.url?.path == "/api/sessions/\(timelineId.uuidString)")
         #expect(req?.httpMethod == "GET")
     }
 
-    @Test("deleteSession sends DELETE to /api/sessions/{id}")
-    func deleteSession_deleteWithId() async throws {
+    @Test("deleteTimeline sends DELETE to /api/sessions/{id}")
+    func deleteTimeline_deleteWithId() async throws {
         let (client, mockSession) = makeClient()
-        let sessionId = UUID()
+        let timelineId = UUID()
         await mockSession.setMockData(Data())
 
-        try await client.chat.deleteSession(sessionId)
+        try await client.chat.deleteTimeline(timelineId)
         let req = await mockSession.lastRequest
-        #expect(req?.url?.path == "/api/sessions/\(sessionId.uuidString)")
+        #expect(req?.url?.path == "/api/sessions/\(timelineId.uuidString)")
         #expect(req?.httpMethod == "DELETE")
     }
 
-    @Test("updateSessionTitle sends PATCH to /api/sessions/{id}")
-    func updateSessionTitle_patchWithId() async throws {
+    @Test("updateTimelineTitle sends PATCH to /api/sessions/{id}")
+    func updateTimelineTitle_patchWithId() async throws {
         let (client, mockSession) = makeClient()
-        let sessionId = UUID()
+        let timelineId = UUID()
         await mockSession.setMockData(Data())
 
-        try await client.chat.updateSessionTitle("New Title", sessionId: sessionId)
+        try await client.chat.updateTimelineTitle("New Title", timelineId: timelineId)
         let req = await mockSession.lastRequest
-        #expect(req?.url?.path == "/api/sessions/\(sessionId.uuidString)")
+        #expect(req?.url?.path == "/api/sessions/\(timelineId.uuidString)")
         #expect(req?.httpMethod == "PATCH")
     }
 

@@ -3,8 +3,8 @@ import MonadShared
 
 // MARK: - Type Aliases from MonadShared
 
-/// Session Models
-public typealias Session = MonadShared.SessionResponse
+/// Timeline Models
+public typealias Timeline = MonadShared.TimelineResponse
 
 // Chat Models
 public typealias ChatRequest = MonadShared.ChatRequest
@@ -29,9 +29,9 @@ public typealias MSAgent = MonadShared.MSAgent
 public typealias Message = MonadShared.Message
 public typealias MessageRole = MonadShared.Message.MessageRole
 
-// Job Models
-public typealias Job = MonadShared.Job
-public typealias AddJobRequest = MonadShared.AddJobRequest
+// BackgroundJob Models
+public typealias BackgroundJob = MonadShared.BackgroundJob
+public typealias AddBackgroundJobRequest = MonadShared.AddBackgroundJobRequest
 
 // MARK: - Client-Specific Models
 

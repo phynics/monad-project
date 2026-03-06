@@ -6,10 +6,10 @@ import MonadShared
 import NIOCore
 
 public struct MemoryAPIController<Context: RequestContext>: Sendable {
-    public let sessionManager: SessionManager
+    public let timelineManager: TimelineManager
 
-    public init(sessionManager: SessionManager) {
-        self.sessionManager = sessionManager
+    public init(timelineManager: TimelineManager) {
+        self.timelineManager = timelineManager
     }
 
     public func addRoutes(to group: RouterGroup<Context>) {
@@ -35,7 +35,7 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
             tags: input?.tags ?? []
         )
 
-        let persistence = await sessionManager.getPersistenceService()
+        let persistence = await timelineManager.getPersistenceService()
         let id = try await persistence.saveMemory(memory, policy: .immediate)
 
         guard let savedMemory = try await persistence.fetchMemory(id: id) else {
@@ -50,7 +50,7 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
         let page = pagination.page
         let perPage = pagination.perPage
 
-        let persistence = await sessionManager.getPersistenceService()
+        let persistence = await timelineManager.getPersistenceService()
         let memories = try await persistence.fetchAllMemories()
 
         // In-memory pagination
@@ -72,7 +72,7 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
-        let persistence = await sessionManager.getPersistenceService()
+        let persistence = await timelineManager.getPersistenceService()
         guard let memory = try await persistence.fetchMemory(id: id) else {
             throw HTTPError(.notFound)
         }
@@ -86,7 +86,7 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
 
         let input = try await request.decode(as: UpdateMemoryRequest.self, context: context)
 
-        let persistence = await sessionManager.getPersistenceService()
+        let persistence = await timelineManager.getPersistenceService()
         guard var memory = try await persistence.fetchMemory(id: id) else {
             throw HTTPError(.notFound)
         }
@@ -109,7 +109,7 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
 
     @Sendable func search(_ request: Request, context: Context) async throws -> [Memory] {
         let input = try await request.decode(as: MemorySearchRequest.self, context: context)
-        let persistence = await sessionManager.getPersistenceService()
+        let persistence = await timelineManager.getPersistenceService()
 
         let memories = try await persistence.searchMemories(query: input.query)
         return (input.limit != nil) ? Array(memories.prefix(input.limit!)) : memories
@@ -119,7 +119,7 @@ public struct MemoryAPIController<Context: RequestContext>: Sendable {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
-        let persistence = await sessionManager.getPersistenceService()
+        let persistence = await timelineManager.getPersistenceService()
         try await persistence.deleteMemory(id: id)
 
         return .noContent

@@ -1,3 +1,5 @@
+import MonadShared
+import MonadCore
 import Foundation
 import GRDB
 import Testing
@@ -24,13 +26,13 @@ struct MigrationTests {
                 t.column("metadata", .text).notNull().defaults(to: "")
             }
             // Create other tables minimal versions to satisfy potential FKs if needed
-            try db.create(table: "conversationSession") { t in
+            try db.create(table: "timeline") { t in
                 t.primaryKey("id", .blob).notNull()
                 t.column("isArchived", .boolean).notNull().defaults(to: false)
             }
             try db.create(table: "conversationMessage") { t in
                 t.primaryKey("id", .blob).notNull()
-                t.column("sessionId", .blob).notNull().references("conversationSession")
+                t.column("timelineId", .blob).notNull().references("timeline")
                 t.column("role", .text).notNull().defaults(to: "user")
                 t.column("content", .text).notNull().defaults(to: "")
                 t.column("timestamp", .datetime).notNull().defaults(to: Date())

@@ -1,3 +1,4 @@
+import MonadShared
 # Persistence Layer
 
 Modular storage architecture for MonadCore.
@@ -8,8 +9,8 @@ The persistence layer is split into 8 focused protocols to ensure high cohesion 
 
 - `MemoryStoreProtocol`: Vector and semantic memory storage.
 - `MessageStoreProtocol`: Chat history management.
-- `SessionPersistenceProtocol`: Conversation session lifecycle.
-- `JobStoreProtocol`: Background task and subagent job queue.
+- `TimelinePersistenceProtocol`: Conversation timeline lifecycle.
+- `BackgroundJobStoreProtocol`: Background task and subagent job queue.
 - `MSAgentStoreProtocol`: Static agent definitions.
 - `WorkspacePersistenceProtocol`: Virtual document workspace tracking.
 - `ClientStoreProtocol`: Remote client identity and state.

@@ -26,26 +26,26 @@ public struct ToolExecutionResult: Sendable {
 
 /// Executes tool calls and manages tool results
 public actor ToolExecutor {
-    private let toolManager: SessionToolManager
+    private let toolManager: TimelineToolManager
     private let logger = Logger.module(named: "tools")
 
     /// Active tool context session
-    public let contextSession: ToolContextSession
+    public let timelineContext: ToolTimelineContext
 
     /// Reference to job queue for auto-dequeue functionality
-    public let jobQueueContext: JobQueueContext?
+    public let jobQueueContext: BackgroundJobQueueContext?
 
     // Loop detection
     private var callCounts: [ToolCall: Int] = [:]
     private let maxRepeatedCalls = 3
 
     public init(
-        toolManager: SessionToolManager,
-        contextSession: ToolContextSession = ToolContextSession(),
-        jobQueueContext: JobQueueContext? = nil
+        toolManager: TimelineToolManager,
+        timelineContext: ToolTimelineContext = ToolTimelineContext(),
+        jobQueueContext: BackgroundJobQueueContext? = nil
     ) {
         self.toolManager = toolManager
-        self.contextSession = contextSession
+        self.timelineContext = timelineContext
         self.jobQueueContext = jobQueueContext
     }
 
@@ -82,12 +82,12 @@ public actor ToolExecutor {
 
         // Check for context auto-exit: if a context is active and this is NOT a context tool,
         // deactivate the context before proceeding
-        let isContextTool = await contextSession.isContextTool(toolCall.name)
-        let isGatewayForActiveContext = await contextSession.isActiveContextGateway(toolCall.name)
+        let isContextTool = await timelineContext.isContextTool(toolCall.name)
+        let isGatewayForActiveContext = await timelineContext.isActiveContextGateway(toolCall.name)
 
-        if await contextSession.hasActiveContext && !isContextTool && !isGatewayForActiveContext {
+        if await timelineContext.hasActiveContext && !isContextTool && !isGatewayForActiveContext {
             logger.info("Non-context tool called, deactivating active context")
-            await contextSession.deactivate()
+            await timelineContext.deactivate()
         }
 
         guard let tool = await toolManager.getTool(id: toolCall.name) else {
@@ -115,8 +115,8 @@ public actor ToolExecutor {
             }
 
             // Append context state if a context is active and this is a context tool
-            if await contextSession.hasActiveContext && isContextTool,
-               let context = await contextSession.activeContext {
+            if await timelineContext.hasActiveContext && isContextTool,
+               let context = await timelineContext.activeContext {
                 let contextState = await context.formatState()
                 if !contextState.isEmpty {
                     responseContent += "\n\n---\n\(contextState)"

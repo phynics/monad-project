@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 #if canImport(NaturalLanguage)
 import NaturalLanguage

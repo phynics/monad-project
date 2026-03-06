@@ -1,4 +1,5 @@
-@testable import MonadCore
+import MonadShared
+import MonadCore
 import Foundation
 
 public final class MockMessageStore: MessageStoreProtocol, @unchecked Sendable {
@@ -10,11 +11,11 @@ public final class MockMessageStore: MessageStoreProtocol, @unchecked Sendable {
         messages.append(message)
     }
 
-    public func fetchMessages(for sessionId: UUID) async throws -> [ConversationMessage] {
-        return messages.filter { $0.sessionId == sessionId }
+    public func fetchMessages(for timelineId: UUID) async throws -> [ConversationMessage] {
+        return messages.filter { $0.timelineId == timelineId }
     }
 
-    public func deleteMessages(for sessionId: UUID) async throws {
-        messages.removeAll(where: { $0.sessionId == sessionId })
+    public func deleteMessages(for timelineId: UUID) async throws {
+        messages.removeAll(where: { $0.timelineId == timelineId })
     }
 }

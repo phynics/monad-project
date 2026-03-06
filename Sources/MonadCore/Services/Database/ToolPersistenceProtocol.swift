@@ -1,3 +1,4 @@
+import MonadShared
 /// Protocol for managing tool registrations and routing metadata.
 
 import Foundation

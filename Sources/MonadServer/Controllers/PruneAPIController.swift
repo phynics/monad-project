@@ -13,7 +13,7 @@ public struct PruneAPIController<Context: RequestContext>: Sendable {
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("/memories", use: pruneMemories)
-        group.post("/sessions", use: pruneSessions)
+        group.post("/sessions", use: pruneTimelines)
         group.post("/messages", use: pruneMessages)
     }
 
@@ -38,18 +38,18 @@ public struct PruneAPIController<Context: RequestContext>: Sendable {
         return PruneResponse(count: count, dryRun: dryRun)
     }
 
-    @Sendable func pruneSessions(_ request: Request, context: Context) async throws -> PruneResponse {
-        let input = try await request.decode(as: PruneSessionRequest.self, context: context)
+    @Sendable func pruneTimelines(_ request: Request, context: Context) async throws -> PruneResponse {
+        let input = try await request.decode(as: PruneTimelineRequest.self, context: context)
         // Convert days to seconds
         let timeInterval = Double(input.days) * 24 * 60 * 60
         let dryRun = input.dryRun
         let count: Int
         do {
-            count = try await persistenceService.pruneSessions(
-                olderThan: timeInterval, excluding: input.excludedSessionIds, dryRun: dryRun
+            count = try await persistenceService.pruneTimelines(
+                olderThan: timeInterval, excluding: input.excludedTimelineIds, dryRun: dryRun
             )
         } catch {
-            print("[PruneController] pruneSessions error: \(error)")
+            print("[PruneController] pruneTimelines error: \(error)")
             throw error
         }
 

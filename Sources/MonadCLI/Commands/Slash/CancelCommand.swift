@@ -8,7 +8,7 @@ struct CancelCommand: SlashCommand {
     let aliases: [String] = []
 
     func run(args: [String], context: ChatContext) async throws {
-        try await context.client.chat.cancelChat(sessionId: context.session.id)
+        try await context.client.chat.cancelChat(timelineId: context.timeline.id)
         await context.repl.cancelCurrentGeneration()
         context.output.printWarning("Cancellation signal sent.")
     }

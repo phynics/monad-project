@@ -12,9 +12,9 @@ import OpenAI
 /// - Autonomous msAgents (MSAgentExecutor): consumes the stream internally for state tracking.
 ///
 /// Tool resolution is the caller's responsibility. The engine accepts pre-resolved tools.
-/// Session hydration is also the caller's responsibility for autonomous use cases.
+/// Timeline hydration is also the caller's responsibility for autonomous use cases.
 public final class ChatEngine: @unchecked Sendable {
-    @Dependency(\.sessionManager) private var sessionManager
+    @Dependency(\.timelineManager) private var timelineManager
     @Dependency(\.persistenceService) private var persistenceService
     @Dependency(\.llmService) private var llmService
 
@@ -24,7 +24,7 @@ public final class ChatEngine: @unchecked Sendable {
 
     /// Execute a chat turn and return a stream of deltas.
     /// - Parameters:
-    ///   - sessionId: The unique identifier for the chat session.
+    ///   - timelineId: The unique identifier for the chat session.
     ///   - message: The user's input message.
     ///   - tools: Pre-resolved tools available for this turn.
     ///   - toolOutputs: Optional list of tool outputs to be processed from a previous turn.
@@ -33,7 +33,7 @@ public final class ChatEngine: @unchecked Sendable {
     ///   - maxTurns: Maximum number of LLM turns before stopping. Defaults to 5.
     /// - Returns: An asynchronous stream of chat events.
     public func chatStream(
-        sessionId: UUID,
+        timelineId: UUID,
         message: String,
         tools: [AnyTool],
         toolOutputs: [ToolOutputSubmission]? = nil,
@@ -41,14 +41,14 @@ public final class ChatEngine: @unchecked Sendable {
         systemInstructions: String? = nil,
         maxTurns: Int = 5
     ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
-        let sid = ANSIColors.colorize(sessionId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
-        logger.info("Starting chat stream for session \(sid)")
+        let sid = ANSIColors.colorize(timelineId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
+        logger.info("Starting chat stream for timeline \(sid)")
 
         // Save conversation steps (user message + any tool outputs from previous turn)
-        try await saveConversationSteps(sessionId: sessionId, message: message, toolOutputs: toolOutputs)
+        try await saveConversationSteps(timelineId: timelineId, message: message, toolOutputs: toolOutputs)
 
         // Fetch history
-        let history = try await sessionManager.getHistory(for: sessionId)
+        let history = try await timelineManager.getHistory(for: timelineId)
 
         // Gather context (RAG)
         let contextData = await fetchContext(contextManager: contextManager, message: message, history: history)
@@ -58,8 +58,8 @@ public final class ChatEngine: @unchecked Sendable {
         let toolParams = tools.map { $0.toToolParam() }
 
         // Build prompt
-        let session = await sessionManager.getSession(id: sessionId)
-        let workspaces = await sessionManager.getWorkspaces(for: sessionId)
+        let timeline = await timelineManager.getTimeline(id: timelineId)
+        let workspaces = await timelineManager.getWorkspaces(for: timelineId)
         let attachedWorkspaces = workspaces?.attached ?? []
 
         var clientName: String?
@@ -76,7 +76,7 @@ public final class ChatEngine: @unchecked Sendable {
         }
 
         let (initialMessages, structuredContext) = await buildPrompt(
-            session: session,
+            timeline: timeline,
             message: message,
             contextData: contextData,
             history: history,
@@ -94,7 +94,7 @@ public final class ChatEngine: @unchecked Sendable {
             let task = Task {
                 await self.runChatLoop(
                     continuation: continuation,
-                    sessionId: sessionId,
+                    timelineId: timelineId,
                     initialMessages: initialMessages,
                     toolParams: toolParams,
                     availableTools: tools,
@@ -120,7 +120,7 @@ public final class ChatEngine: @unchecked Sendable {
 
     private func runChatLoop(
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation,
-        sessionId: UUID,
+        timelineId: UUID,
         initialMessages: [ChatQuery.ChatCompletionMessageParam],
         toolParams: [ChatQuery.ChatCompletionToolParam],
         availableTools: [AnyTool],
@@ -142,9 +142,9 @@ public final class ChatEngine: @unchecked Sendable {
 
         while turnCount < maxTurns {
             turnCount += 1
-            let sid = ANSIColors.colorize(sessionId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
+            let sid = ANSIColors.colorize(timelineId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
             let turnStr = ANSIColors.colorize("\(turnCount)", color: ANSIColors.brightYellow)
-            logger.info("Starting turn \(turnStr) for session \(sid)")
+            logger.info("Starting turn \(turnStr) for timeline \(sid)")
 
             if Task.isCancelled {
                 continuation.yield(.error(CancellationError()))
@@ -161,7 +161,7 @@ public final class ChatEngine: @unchecked Sendable {
                     structuredContext: structuredContext,
                     modelName: modelName,
                     turnCount: turnCount,
-                    sessionId: sessionId,
+                    timelineId: timelineId,
                     continuation: continuation,
                     accumulatedRawOutput: &accumulatedRawOutput
                 )
@@ -202,7 +202,7 @@ public final class ChatEngine: @unchecked Sendable {
         structuredContext: [String: String],
         modelName: String,
         turnCount: Int,
-        sessionId: UUID,
+        timelineId: UUID,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation,
         accumulatedRawOutput: inout String
     ) async throws -> TurnResult {
@@ -363,7 +363,7 @@ public final class ChatEngine: @unchecked Sendable {
                 }
                 let callsJSON = (try? SerializationUtils.jsonEncoder.encode(callsForDB)).flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
 
-                let assistantMsg = ConversationMessage(sessionId: sessionId, role: .assistant, content: fullResponse, think: fullThinking.isEmpty ? nil : fullThinking, toolCalls: callsJSON)
+                let assistantMsg = ConversationMessage(timelineId: timelineId, role: .assistant, content: fullResponse, think: fullThinking.isEmpty ? nil : fullThinking, toolCalls: callsJSON)
                 do {
                     try await persistenceService.saveMessage(assistantMsg)
                 } catch {
@@ -371,7 +371,7 @@ public final class ChatEngine: @unchecked Sendable {
                 }
 
                 let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
-                await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
+                await timelineManager.setDebugSnapshot(snapshot, for: timelineId)
 
                 let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
                 continuation.yield(.generationCompleted(
@@ -395,7 +395,7 @@ public final class ChatEngine: @unchecked Sendable {
 
         } else {
             let assistantMsg = ConversationMessage(
-                sessionId: sessionId,
+                timelineId: timelineId,
                 role: .assistant,
                 content: fullResponse,
                 recalledMemories: String(decoding: (try? SerializationUtils.jsonEncoder.encode(contextData.memories.map { $0.memory })) ?? Data(), as: UTF8.self),
@@ -416,7 +416,7 @@ public final class ChatEngine: @unchecked Sendable {
                 model: modelName,
                 turnCount: turnCount
             )
-            await sessionManager.setDebugSnapshot(snapshot, for: sessionId)
+            await timelineManager.setDebugSnapshot(snapshot, for: timelineId)
 
             let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
             continuation.yield(.generationCompleted(
@@ -438,14 +438,14 @@ public final class ChatEngine: @unchecked Sendable {
     // MARK: - Helper Methods
 
     private func saveConversationSteps(
-        sessionId: UUID,
+        timelineId: UUID,
         message: String,
         toolOutputs: [ToolOutputSubmission]?
     ) async throws {
         if let toolOutputs = toolOutputs {
             for output in toolOutputs {
                 let msg = ConversationMessage(
-                    sessionId: sessionId,
+                    timelineId: timelineId,
                     role: .tool,
                     content: output.output,
                     toolCallId: output.toolCallId
@@ -455,7 +455,7 @@ public final class ChatEngine: @unchecked Sendable {
         }
 
         if !message.isEmpty {
-            let userMsg = ConversationMessage(sessionId: sessionId, role: .user, content: message)
+            let userMsg = ConversationMessage(timelineId: timelineId, role: .user, content: message)
             try await persistenceService.saveMessage(userMsg)
         } else if toolOutputs?.isEmpty ?? true {
             throw ToolError.invalidArgument("input", expected: "message or toolOutputs", got: "empty")
@@ -488,7 +488,7 @@ public final class ChatEngine: @unchecked Sendable {
     }
 
     private func buildPrompt(
-        session _: Timeline?,
+        timeline _: Timeline?,
         message: String,
         contextData: ContextData,
         history: [Message],

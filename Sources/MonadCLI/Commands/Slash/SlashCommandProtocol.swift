@@ -30,7 +30,7 @@ extension SlashCommand {
 /// Context passed to slash commands
 struct ChatContext {
     let client: MonadClient
-    let session: Session
+    let timeline: Timeline
     let output: TerminalOutput
     let repl: ChatREPLController
 }
@@ -38,7 +38,7 @@ struct ChatContext {
 /// Protocol to interact with the REPL state
 protocol ChatREPLController: Sendable {
     func stop() async
-    func switchSession(_ session: Session) async
+    func switchTimeline(_ timeline: Timeline) async
     func setSelectedWorkspace(_ id: UUID?) async
     func getSelectedWorkspace() async -> UUID?
     func refreshContext() async

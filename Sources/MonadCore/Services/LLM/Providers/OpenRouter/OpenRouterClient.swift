@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import Logging
 import OpenAI
@@ -47,7 +48,7 @@ public actor OpenRouterClient {
 
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = timeoutInterval
-        session = URLSession(configuration: config)
+        self.session = URLSession(configuration: config)
         logger.debug("Initialized OpenRouterClient with model: \(modelName), endpoint: \(urlString), timeout: \(timeoutInterval)s")
     }
 
@@ -58,7 +59,6 @@ public actor OpenRouterClient {
         responseFormat: ChatQuery.ResponseFormat? = nil
     ) -> AsyncThrowingStream<ChatStreamResult, Error> {
         // Capture dependencies
-        let session = self.session
         let endpoint = self.endpoint
         let apiKey = self.apiKey
         let modelName = self.modelName
@@ -99,7 +99,7 @@ public actor OpenRouterClient {
 
                         request.httpBody = try JSONEncoder().encode(query)
 
-                        let (stream, response) = try await session.bytes(for: request)
+                        let (stream, response) = try await self.session.bytes(for: request)
 
                         guard let httpResponse = response as? HTTPURLResponse else {
                             throw LLMServiceError.networkError("Invalid response type from OpenRouter")
@@ -180,7 +180,6 @@ public actor OpenRouterClient {
     public func fetchAvailableModels() async throws -> [String]? {
         let maxRetries = self.maxRetries
         let endpoint = self.endpoint
-        let session = self.session
         let logger = self.logger
 
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
@@ -188,7 +187,7 @@ public actor OpenRouterClient {
             let request = URLRequest(url: url)
             logger.debug("Fetching OpenRouter models from: \(url.absoluteString)")
 
-            let (data, response) = try await session.data(for: request)
+            let (data, response) = try await self.session.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw LLMServiceError.networkError("Invalid response type from OpenRouter models API")

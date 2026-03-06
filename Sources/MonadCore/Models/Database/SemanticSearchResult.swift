@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Result of a semantic search including the memory and its similarity score

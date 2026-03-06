@@ -40,7 +40,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
 
     // MARK: - HealthCheckable
 
-    public func getHealthStatus() async -> MonadCore.HealthStatus {
+    public func getHealthStatus() async -> HealthStatus {
         return isConfigured ? .ok : .degraded
     }
 
@@ -51,7 +51,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         ]
     }
 
-    public func checkHealth() async -> MonadCore.HealthStatus {
+    public func checkHealth() async -> HealthStatus {
         // Basic check: is configured
         guard isConfigured else { return .degraded }
 
@@ -95,7 +95,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         return fastClient
     }
 
-    internal func setClients(
+    public func setClients(
         main: (any LLMClientProtocol)?, utility: (any LLMClientProtocol)?,
         fast: (any LLMClientProtocol)?
     ) {

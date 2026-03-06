@@ -1,22 +1,23 @@
+import MonadShared
 import MonadCore
 import Foundation
 import GRDB
 
 extension PersistenceService {
-    public func saveSession(_ session: Timeline) throws {
+    public func saveTimeline(_ session: Timeline) throws {
         logger.debug("Saving session: \(session.id)")
         try dbQueue.write { db in
             try session.save(db)
         }
     }
 
-    public func fetchSession(id: UUID) throws -> Timeline? {
+    public func fetchTimeline(id: UUID) throws -> Timeline? {
         try dbQueue.read { db in
             try Timeline.fetchOne(db, key: ["id": id])
         }
     }
 
-    public func fetchAllSessions(includeArchived: Bool = false) throws -> [Timeline] {
+    public func fetchAllTimelines(includeArchived: Bool = false) throws -> [Timeline] {
         try dbQueue.read { db in
             if includeArchived {
                 return
@@ -33,7 +34,7 @@ extension PersistenceService {
         }
     }
 
-    public func deleteSession(id: UUID) throws {
+    public func deleteTimeline(id: UUID) throws {
         _ = try dbQueue.write { db in
             try Timeline.deleteOne(db, key: ["id": id])
         }

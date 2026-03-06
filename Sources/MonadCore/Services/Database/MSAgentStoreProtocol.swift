@@ -1,3 +1,4 @@
+import MonadShared
 /// Protocol for managing MSAgent definitions in persistent storage.
 
 import Foundation

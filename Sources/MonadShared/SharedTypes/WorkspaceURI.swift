@@ -26,9 +26,9 @@ public struct WorkspaceURI: Codable, Sendable, Hashable, CustomStringConvertible
         self.path = String(uri[uri.index(after: colonIndex)...])
     }
 
-    /// Create a server session workspace URI
-    public static func serverSession(_ sessionId: UUID) -> WorkspaceURI {
-        WorkspaceURI(host: "monad-server", path: "/sessions/\(sessionId.uuidString)")
+    /// Create a server timeline workspace URI
+    public static func serverTimeline(_ timelineId: UUID) -> WorkspaceURI {
+        WorkspaceURI(host: "monad-server", path: "/sessions/\(timelineId.uuidString)")
     }
 
     /// Create a client shell workspace URI

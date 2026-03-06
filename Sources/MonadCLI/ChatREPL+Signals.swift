@@ -46,7 +46,7 @@ extension ChatREPL {
             task.cancel()
             currentGenerationTask = nil
             TerminalUI.printWarning("\n[Cancelling generation...]")
-            try? await client.chat.cancelChat(sessionId: session.id)
+            try? await client.chat.cancelChat(timelineId: timeline.id)
         }
     }
 }

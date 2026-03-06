@@ -1,6 +1,7 @@
+import MonadShared
+import MonadCore
 import Foundation
 import GRDB
-import MonadCore
 import Testing
 import MonadServer
 
@@ -26,17 +27,17 @@ struct PersistenceImmutabilityTests {
     func archiveImmutability() async throws {
         var session = Timeline(title: "Archived Session")
         session.isArchived = true
-        try await persistence.saveSession(session)
+        try await persistence.saveTimeline(session)
 
         let message = ConversationMessage(
-            sessionId: session.id,
+            timelineId: session.id,
             role: .user,
             content: "Permanent Message"
         )
         try await persistence.saveMessage(message)
 
         let messageId = message.id
-        let sessionId = session.id
+        let timelineId = session.id
 
         // Attempt to delete message
         await #expect(throws: Error.self) {
@@ -53,7 +54,7 @@ struct PersistenceImmutabilityTests {
         }
 
         // Verify message is unchanged
-        let fetchedMessages = try await persistence.fetchMessages(for: sessionId)
+        let fetchedMessages = try await persistence.fetchMessages(for: timelineId)
         #expect(fetchedMessages.count == 1)
         #expect(fetchedMessages.first?.content == "Permanent Message")
     }
@@ -62,17 +63,17 @@ struct PersistenceImmutabilityTests {
     func nonArchivedImmutability() async throws {
         var session = Timeline(title: "Live Session")
         session.isArchived = false
-        try await persistence.saveSession(session)
+        try await persistence.saveTimeline(session)
 
         let message = ConversationMessage(
-            sessionId: session.id,
+            timelineId: session.id,
             role: .user,
             content: "Temporary Message"
         )
         try await persistence.saveMessage(message)
 
         let messageId = message.id
-        let sessionId = session.id
+        let timelineId = session.id
 
         // Attempt to update message content - SHOULD SUCCESS
         try await dbQueue.write { db in
@@ -85,7 +86,7 @@ struct PersistenceImmutabilityTests {
         }
 
         // Verify message is gone
-        let fetchedMessages = try await persistence.fetchMessages(for: sessionId)
+        let fetchedMessages = try await persistence.fetchMessages(for: timelineId)
         #expect(fetchedMessages.isEmpty)
     }
 
@@ -93,21 +94,21 @@ struct PersistenceImmutabilityTests {
     func sessionImmutability() async throws {
         var session = Timeline(title: "Permanent Session")
         session.isArchived = true
-        try await persistence.saveSession(session)
+        try await persistence.saveTimeline(session)
 
-        let sessionId = session.id
+        let timelineId = session.id
 
         // Attempt to delete session
         await #expect(throws: Error.self) {
             try await dbQueue.write { db in
-                try db.execute(sql: "DELETE FROM conversationSession WHERE id = ?", arguments: [sessionId])
+                try db.execute(sql: "DELETE FROM timeline WHERE id = ?", arguments: [timelineId])
             }
         }
 
         // Attempt to update session title
         await #expect(throws: Error.self) {
             try await dbQueue.write { db in
-                try db.execute(sql: "UPDATE conversationSession SET title = 'Changed' WHERE id = ?", arguments: [sessionId])
+                try db.execute(sql: "UPDATE timeline SET title = 'Changed' WHERE id = ?", arguments: [timelineId])
             }
         }
     }
@@ -116,21 +117,21 @@ struct PersistenceImmutabilityTests {
     func nonArchivedSessionImmutability() async throws {
         var session = Timeline(title: "Temporary Session")
         session.isArchived = false
-        try await persistence.saveSession(session)
+        try await persistence.saveTimeline(session)
 
-        let sessionId = session.id
+        let timelineId = session.id
 
         // Attempt to update session title - SHOULD SUCCESS
         try await dbQueue.write { db in
-            try db.execute(sql: "UPDATE conversationSession SET title = 'Changed' WHERE id = ?", arguments: [sessionId])
+            try db.execute(sql: "UPDATE timeline SET title = 'Changed' WHERE id = ?", arguments: [timelineId])
         }
 
         // Attempt to delete session - SHOULD SUCCESS
         try await dbQueue.write { db in
-            try db.execute(sql: "DELETE FROM conversationSession WHERE id = ?", arguments: [sessionId])
+            try db.execute(sql: "DELETE FROM timeline WHERE id = ?", arguments: [timelineId])
         }
 
-        let fetched = try await persistence.fetchSession(id: sessionId)
+        let fetched = try await persistence.fetchTimeline(id: timelineId)
         #expect(fetched == nil)
     }
 }

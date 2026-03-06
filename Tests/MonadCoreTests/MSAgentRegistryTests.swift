@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import MonadTestSupport
 import MonadCore
@@ -31,7 +32,7 @@ struct MSAgentRegistryTests {
 
         self.persistence = mock
 
-        self.registry = withDependencies {
+        self.registry = try await withDependencies {
             $0.persistenceService = mock
         } operation: {
             MSAgentRegistry()

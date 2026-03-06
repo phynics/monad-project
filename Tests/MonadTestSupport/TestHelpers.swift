@@ -1,4 +1,5 @@
-@testable import MonadCore
+import MonadShared
+import MonadCore
 import Foundation
 
 #if DEBUG

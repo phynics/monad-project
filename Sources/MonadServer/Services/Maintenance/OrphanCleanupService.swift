@@ -1,3 +1,4 @@
+import MonadShared
 import MonadCore
 import Foundation
 import Logging
@@ -6,11 +7,11 @@ import Dependencies
 
 /// Service that cleans up orphaned workspaces
 public final class OrphanCleanupService: Service, @unchecked Sendable {
-    private let persistenceService: any WorkspacePersistenceProtocol & SessionPersistenceProtocol
+    private let persistenceService: any WorkspacePersistenceProtocol & TimelinePersistenceProtocol
     private let workspaceRoot: URL
     private let logger = Logger(label: "com.monad.orphan-cleanup")
 
-    public init(workspaceRoot: URL, persistenceService: any WorkspacePersistenceProtocol & SessionPersistenceProtocol) {
+    public init(workspaceRoot: URL, persistenceService: any WorkspacePersistenceProtocol & TimelinePersistenceProtocol) {
         self.workspaceRoot = workspaceRoot
         self.persistenceService = persistenceService
     }
@@ -43,16 +44,16 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
         logger.info("Starting orphaned workspace cleanup...")
         do {
             let workspaces = try await persistenceService.fetchAllWorkspaces()
-            let sessions = try await persistenceService.fetchAllSessions(includeArchived: true)
+            let timelines = try await persistenceService.fetchAllTimelines(includeArchived: true)
 
             var referencedIds: Set<UUID> = []
 
             // Collect all referenced IDs
-            for session in sessions {
-                if let pid = session.primaryWorkspaceId {
+            for timeline in timelines {
+                if let pid = timeline.primaryWorkspaceId {
                     referencedIds.insert(pid)
                 }
-                for aid in session.attachedWorkspaces {
+                for aid in timeline.attachedWorkspaces {
                     referencedIds.insert(aid)
                 }
             }

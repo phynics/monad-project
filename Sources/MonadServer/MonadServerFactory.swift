@@ -1,3 +1,4 @@
+import MonadShared
 import Dependencies
 import Foundation
 import Hummingbird
@@ -74,7 +75,7 @@ public struct MonadServerFactory {
 
         // Initialize Core Services
         let msAgentRegistry = MSAgentRegistry()
-        let sessionManager = SessionManager(
+        let timelineManager = TimelineManager(
             workspaceRoot: workspaceRoot,
             connectionManager: connectionManager,
             workspaceCreator: WorkspaceFactory()
@@ -86,8 +87,8 @@ public struct MonadServerFactory {
             persistenceService: persistenceService,
             chatEngine: chatEngine
         )
-        let jobRunner = JobRunnerService(
-            sessionManager: sessionManager,
+        let jobRunner = BackgroundJobRunnerService(
+            timelineManager: timelineManager,
             msAgentRegistry: msAgentRegistry,
             msAgentExecutor: msAgentExecutor
         )
@@ -102,7 +103,7 @@ public struct MonadServerFactory {
             $0.embeddingService = embeddingService
             $0.vectorStore = vectorStore
             $0.msAgentRegistry = msAgentRegistry
-            $0.sessionManager = sessionManager
+            $0.timelineManager = timelineManager
             $0.toolRouter = toolRouter
             $0.chatEngine = chatEngine
             $0.msAgentExecutor = msAgentExecutor
@@ -139,23 +140,23 @@ public struct MonadServerFactory {
                 return "Authenticated!"
             }
 
-            let sessionController = SessionAPIController<AppRequestContext>(
-                sessionManager: sessionManager
+            let timelineController = TimelineAPIController<AppRequestContext>(
+                timelineManager: timelineManager
             )
-            sessionController.addRoutes(to: protected.group("/sessions"))
+            timelineController.addRoutes(to: protected.group("/sessions"))
 
             let chatController = ChatAPIController<AppRequestContext>(
-                sessionManager: sessionManager,
+                timelineManager: timelineManager,
                 chatEngine: chatEngine,
                 toolRouter: toolRouter,
                 verbose: verbose
             )
             chatController.addRoutes(to: protected.group("/sessions"))
 
-            let jobController = JobAPIController<AppRequestContext>(sessionManager: sessionManager)
+            let jobController = BackgroundJobAPIController<AppRequestContext>(timelineManager: timelineManager)
             jobController.addRoutes(to: protected.group("/sessions"))
 
-            let memoryController = MemoryAPIController<AppRequestContext>(sessionManager: sessionManager)
+            let memoryController = MemoryAPIController<AppRequestContext>(timelineManager: timelineManager)
             memoryController.addRoutes(to: protected.group("/memories"))
 
             let pruneController = PruneAPIController<AppRequestContext>(
@@ -164,7 +165,7 @@ public struct MonadServerFactory {
             pruneController.addRoutes(to: protected.group("/prune"))
 
             let toolController = ToolAPIController<AppRequestContext>(
-                sessionManager: sessionManager,
+                timelineManager: timelineManager,
                 toolRouter: toolRouter
             )
             toolController.addRoutes(to: protected.group("/tools"))

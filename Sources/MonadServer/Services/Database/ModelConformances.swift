@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import GRDB
 import MonadCore
@@ -24,12 +25,12 @@ extension ConversationMessage: FetchableRecord, PersistableRecord {
 // MARK: - Timeline
 
 extension Timeline: FetchableRecord, PersistableRecord {
-    public static var databaseTableName: String { "conversationSession" }
+    public static var databaseTableName: String { "timeline" }
 }
 
-// MARK: - Job
+// MARK: - BackgroundJob
 
-extension Job: FetchableRecord, PersistableRecord {
+extension BackgroundJob: FetchableRecord, PersistableRecord {
     public static var databaseTableName: String { "job" }
 }
 

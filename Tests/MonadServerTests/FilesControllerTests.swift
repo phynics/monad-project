@@ -1,10 +1,11 @@
+import MonadShared
+import MonadCore
 import Testing
 import Hummingbird
 import HummingbirdTesting
 import Foundation
 import MonadTestSupport
 @testable import MonadServer
-import MonadCore
 import NIOCore
 import Logging
 import Dependencies
@@ -27,25 +28,25 @@ import Dependencies
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
-            // Create Session (which creates the workspace)
-            let session = try await sessionManager.createSession(title: "Files Test Session")
-            guard let workspaceId = session.primaryWorkspaceId else {
-                Issue.record("Session should have a primary workspace")
+            // Create Timeline (which creates the workspace)
+            let timeline = try await timelineManager.createTimeline(title: "Files Test Session")
+            guard let workspaceId = timeline.primaryWorkspaceId,
+                  let workingDirectory = timeline.workingDirectory else {
+                Issue.record("Timeline should have a primary workspace and working directory")
                 return
             }
 
             // Manually create a nested file directly in the workspace to test retrieval
-            // The workspace path is .../sessions/<sessionId>
-            let sessionWorkspacePath = workspaceRoot.appendingPathComponent("sessions").appendingPathComponent(session.id.uuidString)
-            let noteDir = sessionWorkspacePath.appendingPathComponent("Notes")
+            let timelineWorkspacePath = URL(fileURLWithPath: workingDirectory)
+            let noteDir = timelineWorkspacePath.appendingPathComponent("Notes")
             try FileManager.default.createDirectory(at: noteDir, withIntermediateDirectories: true)
 
             let content = "# Nested Content"
-            let filePath = noteDir.appendingPathComponent("Project.md")
+            let filePath = noteDir.appendingPathComponent("TestFile.md")
             try content.write(to: filePath, atomically: true, encoding: .utf8)
 
             // Setup App & Controller
@@ -58,10 +59,10 @@ import Dependencies
 
             let app = Application(router: router)
 
-            // Test Request: GET /workspaces/:id/files/Notes/Project.md
+            // Test Request: GET /workspaces/:id/files/Notes/TestFile.md
             // This validates that the ** wildcard and manual extraction logic works
             try await app.test(.router) { client in
-                 try await client.execute(uri: "/workspaces/\(workspaceId)/files/Notes/Project.md", method: .get) { response in
+                 try await client.execute(uri: "/workspaces/\(workspaceId)/files/Notes/TestFile.md", method: .get) { response in
                     #expect(response.status == .ok)
                     let bodyString = String(buffer: response.body)
                     #expect(bodyString == content)
@@ -89,16 +90,17 @@ import Dependencies
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
-            let session = try await sessionManager.createSession(title: "List Files Session")
-            guard let workspaceId = session.primaryWorkspaceId else { return }
+            let timeline = try await timelineManager.createTimeline(title: "List Files Session")
+            guard let workspaceId = timeline.primaryWorkspaceId,
+                  let workingDirectory = timeline.workingDirectory else { return }
 
             // Inject fake files
-            let sessionWorkspacePath = workspaceRoot.appendingPathComponent("sessions").appendingPathComponent(session.id.uuidString)
-            let noteDir = sessionWorkspacePath.appendingPathComponent("Notes")
+            let timelineWorkspacePath = URL(fileURLWithPath: workingDirectory)
+            let noteDir = timelineWorkspacePath.appendingPathComponent("Notes")
             try FileManager.default.createDirectory(at: noteDir, withIntermediateDirectories: true)
             try "Content".write(to: noteDir.appendingPathComponent("TestNote.md"), atomically: true, encoding: .utf8)
 
@@ -112,7 +114,7 @@ import Dependencies
                  try await client.execute(uri: "/workspaces/\(workspaceId)/files", method: .get) { response in
                     #expect(response.status == .ok)
                     // Should return JSON array
-                    let files = try JSONDecoder().decode([String].self, from: response.body)
+                    _ = try JSONDecoder().decode([String].self, from: response.body)
                     // Session creation makes Notes/Welcome.md, Notes/Project.md
                 }
             }

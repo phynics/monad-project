@@ -1,10 +1,10 @@
+import MonadShared
+import MonadCore
 import Foundation
 import GRDB
 import Hummingbird
 import HummingbirdTesting
-import MonadCore
 @testable import MonadServer
-import MonadShared
 import Testing
 
 @Suite(.serialized)
@@ -87,12 +87,12 @@ struct PruneControllerTests {
         }
     }
 
-    // MARK: - pruneSessions
+    // MARK: - pruneTimelines
 
     @Test("POST /prune/sessions returns 0 count on empty database")
-    func pruneSessions_emptyDatabase_returnsZero() async throws {
+    func pruneTimelines_emptyDatabase_returnsZero() async throws {
         let app = makeApp()
-        let body = try JSONEncoder().encode(PruneSessionRequest(days: 30, excludedSessionIds: [], dryRun: true))
+        let body = try JSONEncoder().encode(PruneTimelineRequest(days: 30, excludedTimelineIds: [], dryRun: true))
 
         try await app.test(.router) { client in
             try await client.execute(
@@ -110,14 +110,14 @@ struct PruneControllerTests {
     }
 
     @Test("POST /prune/sessions prunes old sessions")
-    func pruneSessions_prunesOldSessions() async throws {
+    func pruneTimelines_prunesOldSessions() async throws {
         // Insert an old non-archived session
         var oldSession = Timeline(title: "Old Session")
         oldSession.updatedAt = Date().addingTimeInterval(-60 * 24 * 60 * 60) // 60 days ago
-        try await persistence.saveSession(oldSession)
+        try await persistence.saveTimeline(oldSession)
 
         let app = makeApp()
-        let body = try JSONEncoder().encode(PruneSessionRequest(days: 30, excludedSessionIds: [], dryRun: false))
+        let body = try JSONEncoder().encode(PruneTimelineRequest(days: 30, excludedTimelineIds: [], dryRun: false))
 
         try await app.test(.router) { client in
             try await client.execute(
@@ -134,13 +134,13 @@ struct PruneControllerTests {
     }
 
     @Test("POST /prune/sessions excludes specified session IDs")
-    func pruneSessions_excludesSpecifiedIds() async throws {
+    func pruneTimelines_excludesSpecifiedIds() async throws {
         var oldSession = Timeline(title: "Excluded Session")
         oldSession.updatedAt = Date().addingTimeInterval(-60 * 24 * 60 * 60)
-        try await persistence.saveSession(oldSession)
+        try await persistence.saveTimeline(oldSession)
 
         let app = makeApp()
-        let body = try JSONEncoder().encode(PruneSessionRequest(days: 30, excludedSessionIds: [oldSession.id], dryRun: false))
+        let body = try JSONEncoder().encode(PruneTimelineRequest(days: 30, excludedTimelineIds: [oldSession.id], dryRun: false))
 
         try await app.test(.router) { client in
             try await client.execute(

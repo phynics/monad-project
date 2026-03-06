@@ -7,7 +7,7 @@ import Logging
 public actor ToolRouter {
     private let logger = Logger.module(named: "com.monad.core.tools")
 
-    @Dependency(\.sessionManager) private var sessionManager
+    @Dependency(\.timelineManager) private var timelineManager
 
     public init() {}
 
@@ -15,27 +15,27 @@ public actor ToolRouter {
     public func execute(
         tool: ToolReference,
         arguments: [String: AnyCodable],
-        sessionId: UUID
+        timelineId: UUID
     ) async throws -> String {
         let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
-        let sid = ANSIColors.colorize(sessionId.uuidString.prefix(8).lowercased(), color: ANSIColors.dim)
+        let sid = ANSIColors.colorize(timelineId.uuidString.prefix(8).lowercased(), color: ANSIColors.dim)
 
-        logger.info("Routing 🛠️ \(toolName) in session \(sid)")
+        logger.info("Routing 🛠️ \(toolName) in timeline \(sid)")
 
         // 1. Resolve Tool Location
-        guard let workspaceId = try await resolveWorkspace(for: tool, in: sessionId) else {
+        guard let workspaceId = try await resolveWorkspace(for: tool, in: timelineId) else {
             throw ToolError.toolNotFound(tool.displayName)
         }
 
         // 2. Get Workspace Details
-        guard let workspace = try await sessionManager.getWorkspace(workspaceId) else {
+        guard let workspace = try await timelineManager.getWorkspace(workspaceId) else {
             throw ToolError.workspaceNotFound(workspaceId)
         }
 
         switch workspace.hostType {
-        case .server, .serverSession:
+        case .server, .serverTimeline:
             // 3a. Execute Locally
-            return try await executeLocally(tool: tool, arguments: arguments, workspace: workspace, sessionId: sessionId)
+            return try await executeLocally(tool: tool, arguments: arguments, workspace: workspace, timelineId: timelineId)
 
         case .client:
             // 3b. Execute Remotely
@@ -43,27 +43,27 @@ public actor ToolRouter {
         }
     }
 
-    private func resolveWorkspace(for tool: ToolReference, in sessionId: UUID) async throws -> UUID? {
-        let workspaces = await sessionManager.getWorkspaces(for: sessionId)
+    private func resolveWorkspace(for tool: ToolReference, in timelineId: UUID) async throws -> UUID? {
+        let workspaces = await timelineManager.getWorkspaces(for: timelineId)
         guard let wsList = workspaces else { return nil }
 
         var candidates: [UUID] = []
         if let primary = wsList.primary { candidates.append(primary.id) }
         candidates.append(contentsOf: wsList.attached.map { $0.id })
 
-        return try await sessionManager.findWorkspaceForTool(tool, in: candidates)
+        return try await timelineManager.findWorkspaceForTool(tool, in: candidates)
     }
 
     private func executeLocally(
         tool: ToolReference,
         arguments: [String: AnyCodable],
         workspace _: WorkspaceReference,
-        sessionId: UUID
+        timelineId: UUID
     ) async throws -> String {
         let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
         logger.info("Executing locally: \(toolName)")
 
-        guard let toolManager = await sessionManager.getToolManager(for: sessionId) else {
+        guard let toolManager = await timelineManager.getToolManager(for: timelineId) else {
             throw ToolError.toolNotFound(tool.displayName)
         }
 

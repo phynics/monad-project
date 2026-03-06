@@ -21,14 +21,14 @@ final class LocalConfigManagerTests: XCTestCase {
         XCTAssertNil(config.lastSessionId)
         XCTAssertNil(config.clientWorkspaces)
 
-        let sessionId = UUID().uuidString
+        let timelineId = UUID().uuidString
         let workspaces = ["file:///tmp/test": UUID().uuidString]
 
-        manager.updateLastSessionId(sessionId)
+        manager.updateLastSessionId(timelineId)
         manager.updateClientWorkspaces(workspaces)
 
         let savedConfig = manager.getConfig()
-        XCTAssertEqual(savedConfig.lastSessionId, sessionId)
+        XCTAssertEqual(savedConfig.lastSessionId, timelineId)
         XCTAssertEqual(savedConfig.clientWorkspaces, workspaces)
     }
 }

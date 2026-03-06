@@ -1,3 +1,5 @@
+import MonadShared
+import MonadCore
 import Testing
 import Hummingbird
 import HummingbirdTesting
@@ -5,8 +7,6 @@ import Foundation
 import Dependencies
 import MonadTestSupport
 @testable import MonadServer
-import MonadCore
-import MonadShared
 import NIOCore
 
 @Suite struct ChatControllerTests {
@@ -27,15 +27,15 @@ import NIOCore
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
             // Create Session
-            let session = try await sessionManager.createSession()
+            let session = try await timelineManager.createTimeline()
 
             try await withDependencies {
-                $0.sessionManager = sessionManager
+                $0.timelineManager = timelineManager
             } operation: {
                 let toolRouter = ToolRouter()
                 try await withDependencies {
@@ -45,7 +45,7 @@ import NIOCore
 
                     // Setup App
                     let router = Router()
-                    let controller = ChatAPIController<BasicRequestContext>(sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter)
+                    let controller = ChatAPIController<BasicRequestContext>(timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter)
                     controller.addRoutes(to: router.group("/sessions"))
 
                     let app = Application(router: router)
@@ -83,15 +83,15 @@ import NIOCore
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
             // Create Session
-            let session = try await sessionManager.createSession()
+            let session = try await timelineManager.createTimeline()
 
             try await withDependencies {
-                $0.sessionManager = sessionManager
+                $0.timelineManager = timelineManager
             } operation: {
                 let toolRouter = ToolRouter()
                 try await withDependencies {
@@ -101,7 +101,7 @@ import NIOCore
 
                     // Setup App
                     let router = Router()
-                    let controller = ChatAPIController<BasicRequestContext>(sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter)
+                    let controller = ChatAPIController<BasicRequestContext>(timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter)
                     controller.addRoutes(to: router.group("/sessions"))
 
                     let app = Application(router: router)

@@ -17,7 +17,7 @@ A **Workspace** is a defined environment with a specific root path, trust level,
 | **Status** | `active` (available) or `missing` (client disconnected or path moved). |
 
 ### 2. The Session
-A **Session** (`Timeline`) represents a continuous thread of interaction between the User and the AI. It orchestrates context, memory, and tool execution. (Previously called `ConversationSession`.)
+A **Session** (`Timeline`) represents a continuous thread of interaction between the User and the AI. It orchestrates context, memory, and tool execution. (Previously called `Timeline`.)
 
 ### Sessions
 A session can have one **Primary Workspace** (usually a `ServerSession` type providing a private sandbox) and multiple **Attached Workspaces**. 
@@ -46,10 +46,10 @@ graph TD
 
 ## Tool Execution Flow
 
-Tools are the hands of the AI. The `SessionToolManager` and `ToolExecutor` work together to route tool calls to the correct workspace.
+Tools are the hands of the AI. The `TimelineToolManager` and `ToolExecutor` work together to route tool calls to the correct workspace.
 
 ### 1. Discovery
-When a session starts, `SessionToolManager` aggregates all available tools from:
+When a session starts, `TimelineToolManager` aggregates all available tools from:
 1.  **System Tools**: Built-in capabilities (e.g., `search_web`, `memory_recall`).
 2.  **Primary Workspace**: File operations within the server session.
 3.  **Attached Workspaces**: File operations and commands on the user's machine.

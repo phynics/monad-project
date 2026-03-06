@@ -3,7 +3,7 @@ import Foundation
 @testable import MonadCore
 @testable import MonadShared
 
-final class SessionToolManagerTests: XCTestCase {
+final class TimelineToolManagerTests: XCTestCase {
     
     struct MockTool: MonadShared.Tool, @unchecked Sendable {
         let id: String
@@ -36,7 +36,7 @@ final class SessionToolManagerTests: XCTestCase {
         let systemTool1 = AnyTool(MockTool(id: "sys1", name: "System 1"))
         let systemTool2 = AnyTool(MockTool(id: "sys2", name: "System 2"))
         
-        let manager = SessionToolManager(availableTools: [systemTool1, systemTool2])
+        let manager = TimelineToolManager(availableTools: [systemTool1, systemTool2])
         
         let enabled = await manager.enabledTools
         XCTAssertEqual(enabled.count, 2)
@@ -49,7 +49,7 @@ final class SessionToolManagerTests: XCTestCase {
     
     func testUpdateAvailableToolsAutoEnablesNewTools() async throws {
         let systemTool1 = AnyTool(MockTool(id: "sys1", name: "System 1"))
-        let manager = SessionToolManager(availableTools: [systemTool1])
+        let manager = TimelineToolManager(availableTools: [systemTool1])
         
         // Add a new tool, and simulate one being removed
         let systemTool2 = AnyTool(MockTool(id: "sys2", name: "System 2"))
@@ -63,7 +63,7 @@ final class SessionToolManagerTests: XCTestCase {
     
     func testToggleEnableDisableTools() async throws {
         let systemTool1 = AnyTool(MockTool(id: "sys1", name: "System 1"))
-        let manager = SessionToolManager(availableTools: [systemTool1])
+        let manager = TimelineToolManager(availableTools: [systemTool1])
         
         var enabled = await manager.enabledTools
         XCTAssertTrue(enabled.contains("sys1"))
@@ -82,7 +82,7 @@ final class SessionToolManagerTests: XCTestCase {
     }
     
     func testWorkspaceToolRegistration() async throws {
-        let manager = SessionToolManager(availableTools: [])
+        let manager = TimelineToolManager(availableTools: [])
         
         let workspaceId = UUID()
         let workspaceRef = WorkspaceReference(id: workspaceId, uri: WorkspaceURI(parsing: "monad://test")!, hostType: .server, ownerId: nil)
@@ -114,7 +114,7 @@ final class SessionToolManagerTests: XCTestCase {
     
     func testGetToolResolvesCorrectly() async throws {
         let systemTool = AnyTool(MockTool(id: "sys1", name: "System 1"))
-        let manager = SessionToolManager(availableTools: [systemTool])
+        let manager = TimelineToolManager(availableTools: [systemTool])
         
         let sysResult = await manager.getTool(id: "sys1")
         XCTAssertNotNil(sysResult)
@@ -144,7 +144,7 @@ final class SessionToolManagerTests: XCTestCase {
     }
 
     func testWorkspaceToolsHaveProvenance() async throws {
-        let manager = SessionToolManager(availableTools: [])
+        let manager = TimelineToolManager(availableTools: [])
         let workspaceId = UUID()
         let uri = WorkspaceURI(parsing: "monad://test-workspace-prov")!
         let workspaceRef = WorkspaceReference(id: workspaceId, uri: uri, hostType: .server, ownerId: nil)
@@ -166,7 +166,7 @@ final class SessionToolManagerTests: XCTestCase {
 
     func testKnownToolRefsResolved() async throws {
         let systemTool = AnyTool(MockTool(id: "cat", name: "cat"))
-        let manager = SessionToolManager(availableTools: [systemTool])
+        let manager = TimelineToolManager(availableTools: [systemTool])
 
         let workspaceId = UUID()
         let uri = WorkspaceURI(parsing: "monad://test-known-tool")!

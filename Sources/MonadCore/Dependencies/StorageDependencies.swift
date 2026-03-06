@@ -1,3 +1,4 @@
+import MonadShared
 import Dependencies
 import Foundation
 
@@ -6,8 +7,8 @@ import Foundation
 public typealias FullPersistenceService =
     MemoryStoreProtocol &
     MessageStoreProtocol &
-    SessionPersistenceProtocol &
-    JobStoreProtocol &
+    TimelinePersistenceProtocol &
+    BackgroundJobStoreProtocol &
     MSAgentStoreProtocol &
     WorkspacePersistenceProtocol &
     ToolPersistenceProtocol &
@@ -61,19 +62,19 @@ public struct UnconfiguredPersistenceService: FullPersistenceService {
     public func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws { fail() }
     public func vacuumMemories(threshold: Double) async throws -> Int { fail() }
     public func saveMessage(_ message: ConversationMessage) async throws { fail() }
-    public func fetchMessages(for sessionId: UUID) async throws -> [ConversationMessage] { fail() }
-    public func deleteMessages(for sessionId: UUID) async throws { fail() }
-    public func saveSession(_ session: Timeline) async throws { fail() }
-    public func fetchSession(id: UUID) async throws -> Timeline? { fail() }
-    public func fetchAllSessions(includeArchived: Bool) async throws -> [Timeline] { fail() }
-    public func deleteSession(id: UUID) async throws { fail() }
-    public func saveJob(_ job: Job) async throws { fail() }
-    public func fetchJob(id: UUID) async throws -> Job? { fail() }
-    public func fetchAllJobs() async throws -> [Job] { fail() }
-    public func fetchJobs(for sessionId: UUID) async throws -> [Job] { fail() }
-    public func fetchPendingJobs(limit: Int) async throws -> [Job] { fail() }
+    public func fetchMessages(for timelineId: UUID) async throws -> [ConversationMessage] { fail() }
+    public func deleteMessages(for timelineId: UUID) async throws { fail() }
+    public func saveTimeline(_ session: Timeline) async throws { fail() }
+    public func fetchTimeline(id: UUID) async throws -> Timeline? { fail() }
+    public func fetchAllTimelines(includeArchived: Bool) async throws -> [Timeline] { fail() }
+    public func deleteTimeline(id: UUID) async throws { fail() }
+    public func saveJob(_ job: BackgroundJob) async throws { fail() }
+    public func fetchJob(id: UUID) async throws -> BackgroundJob? { fail() }
+    public func fetchAllJobs() async throws -> [BackgroundJob] { fail() }
+    public func fetchJobs(for timelineId: UUID) async throws -> [BackgroundJob] { fail() }
+    public func fetchPendingJobs(limit: Int) async throws -> [BackgroundJob] { fail() }
     public func deleteJob(id: UUID) async throws { fail() }
-    public func monitorJobs() async -> AsyncStream<JobEvent> { fail() }
+    public func monitorJobs() async -> AsyncStream<BackgroundJobEvent> { fail() }
     public func saveMSAgent(_ agent: MSAgent) async throws { fail() }
     public func fetchMSAgent(id: UUID) async throws -> MSAgent? { fail() }
     public func fetchMSAgent(key: String) async throws -> MSAgent? { fail() }

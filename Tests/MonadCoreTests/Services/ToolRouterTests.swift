@@ -25,38 +25,38 @@ final class ToolRouterTests: XCTestCase {
         }
     }
     
-    private func setupSessionManager() async throws -> (SessionManager, MockPersistenceService) {
+    private func setupTimelineManager() async throws -> (TimelineManager, MockPersistenceService) {
         let mockPersistence = MockPersistenceService()
-        let sessionManager = withDependencies {
+        let timelineManager = try await withDependencies {
             $0.persistenceService = mockPersistence
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            SessionManager(workspaceRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+            TimelineManager(workspaceRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         }
-        return (sessionManager, mockPersistence)
+        return (timelineManager, mockPersistence)
     }
     
     func testExecuteLocally() async throws {
-        let (sessionManager, mockPersistence) = try await setupSessionManager()
-        let toolRouter = withDependencies {
-            $0.sessionManager = sessionManager
+        let (timelineManager, mockPersistence) = try await setupTimelineManager()
+        let toolRouter = try await withDependencies {
+            $0.timelineManager = timelineManager
         } operation: {
             ToolRouter()
         }
         
         // Setup session and local workspace
-        let session = try await sessionManager.createSession()
+        let session = try await timelineManager.createTimeline()
         let workspaceId = UUID()
         let workspaceRef = WorkspaceReference(id: workspaceId, uri: WorkspaceURI(parsing: "monad://local")!, hostType: .server, ownerId: nil)
         
         // Mock persistence expects WorkspaceReference
         try await mockPersistence.saveWorkspace(workspaceRef)
-        try await sessionManager.attachWorkspace(workspaceId, to: session.id)
+        try await timelineManager.attachWorkspace(workspaceId, to: session.id)
         
         // Setup internal tools by extracting the ToolManager
-        let toolManager = await sessionManager.getToolManager(for: session.id)
+        let toolManager = await timelineManager.getToolManager(for: session.id)
         XCTAssertNotNil(toolManager)
         
         let toolId = "local_tool"
@@ -70,25 +70,25 @@ final class ToolRouterTests: XCTestCase {
         let toolRef = ToolReference.known(toolId)
         let arguments: [String: AnyCodable] = ["param": AnyCodable("value")]
         
-        let result = try await toolRouter.execute(tool: toolRef, arguments: arguments, sessionId: session.id)
+        let result = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
         XCTAssertEqual(result, "Local success")
     }
     
     func testExecuteRemotelyThrowsClientExecutionRequired() async throws {
-        let (sessionManager, mockPersistence) = try await setupSessionManager()
-        let toolRouter = withDependencies {
-            $0.sessionManager = sessionManager
+        let (timelineManager, mockPersistence) = try await setupTimelineManager()
+        let toolRouter = try await withDependencies {
+            $0.timelineManager = timelineManager
         } operation: {
             ToolRouter()
         }
         
-        let session = try await sessionManager.createSession()
+        let session = try await timelineManager.createTimeline()
         let workspaceId = UUID()
         
         // Setup remote workspace
         let workspaceRef = WorkspaceReference(id: workspaceId, uri: WorkspaceURI(parsing: "monad://remote")!, hostType: .client, ownerId: UUID())
         try await mockPersistence.saveWorkspace(workspaceRef)
-        try await sessionManager.attachWorkspace(workspaceId, to: session.id)
+        try await timelineManager.attachWorkspace(workspaceId, to: session.id)
         
         let toolId = "remote_tool"
         try await mockPersistence.addToolToWorkspace(workspaceId: workspaceId, tool: .known(toolId))
@@ -97,7 +97,7 @@ final class ToolRouterTests: XCTestCase {
         let arguments: [String: AnyCodable] = [:]
         
         do {
-            _ = try await toolRouter.execute(tool: toolRef, arguments: arguments, sessionId: session.id)
+            _ = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
             XCTFail("Should have thrown clientExecutionRequired")
         } catch ToolError.clientExecutionRequired {
             // Expected
@@ -107,20 +107,20 @@ final class ToolRouterTests: XCTestCase {
     }
     
     func testExecuteRemotelyWithoutClientThrowsClientNotConnected() async throws {
-        let (sessionManager, mockPersistence) = try await setupSessionManager()
-        let toolRouter = withDependencies {
-            $0.sessionManager = sessionManager
+        let (timelineManager, mockPersistence) = try await setupTimelineManager()
+        let toolRouter = try await withDependencies {
+            $0.timelineManager = timelineManager
         } operation: {
             ToolRouter()
         }
         
-        let session = try await sessionManager.createSession()
+        let session = try await timelineManager.createTimeline()
         let workspaceId = UUID()
         
         // Setup remote workspace missing an ownerId
         let workspaceRef = WorkspaceReference(id: workspaceId, uri: WorkspaceURI(parsing: "monad://remote")!, hostType: .client, ownerId: nil)
         try await mockPersistence.saveWorkspace(workspaceRef)
-        try await sessionManager.attachWorkspace(workspaceId, to: session.id)
+        try await timelineManager.attachWorkspace(workspaceId, to: session.id)
         
         let toolId = "remote_tool"
         try await mockPersistence.addToolToWorkspace(workspaceId: workspaceId, tool: .known(toolId))
@@ -129,7 +129,7 @@ final class ToolRouterTests: XCTestCase {
         let arguments: [String: AnyCodable] = [:]
         
         do {
-            _ = try await toolRouter.execute(tool: toolRef, arguments: arguments, sessionId: session.id)
+            _ = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
             XCTFail("Should have thrown clientNotConnected")
         } catch ToolError.clientNotConnected {
             // Expected
@@ -139,19 +139,19 @@ final class ToolRouterTests: XCTestCase {
     }
     
     func testExecuteToolNotFound() async throws {
-        let (sessionManager, _) = try await setupSessionManager()
-        let toolRouter = withDependencies {
-            $0.sessionManager = sessionManager
+        let (timelineManager, _) = try await setupTimelineManager()
+        let toolRouter = try await withDependencies {
+            $0.timelineManager = timelineManager
         } operation: {
             ToolRouter()
         }
         
-        let session = try await sessionManager.createSession()
+        let session = try await timelineManager.createTimeline()
         let toolRef = ToolReference.known("unknown")
         let arguments: [String: AnyCodable] = [:]
         
         do {
-            _ = try await toolRouter.execute(tool: toolRef, arguments: arguments, sessionId: session.id)
+            _ = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
             XCTFail("Should have thrown toolNotFound")
         } catch ToolError.toolNotFound {
             // Expected

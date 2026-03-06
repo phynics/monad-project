@@ -1,3 +1,5 @@
+import MonadShared
+import MonadCore
 import Testing
 import Hummingbird
 import HummingbirdTesting
@@ -5,8 +7,6 @@ import Foundation
 import Dependencies
 import MonadTestSupport
 @testable import MonadServer
-import MonadCore
-import MonadShared
 import NIOCore
 
 @Suite struct MemoryControllerTests {
@@ -24,12 +24,12 @@ import NIOCore
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
             let router = Router()
-            let controller = MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager)
+            let controller = MemoryAPIController<BasicRequestContext>(timelineManager: timelineManager)
             controller.addRoutes(to: router.group("/memories"))
 
             let app = Application(router: router)

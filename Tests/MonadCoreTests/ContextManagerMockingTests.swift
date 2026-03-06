@@ -14,7 +14,7 @@ struct ContextManagerMockingTests {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
 
-        let contextManager = withDependencies {
+        let contextManager = try await withDependencies {
             $0.persistenceService = mockPersistence
             $0.embeddingService = mockEmbedding
         } operation: {

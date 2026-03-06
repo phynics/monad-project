@@ -3,7 +3,7 @@ import MonadShared
 import Logging
 
 /// A tool wrapper that allows an MSAgent definition to be called as a tool by another agent or chat session.
-/// Executing this tool results in a background Job being queued for the target agent.
+/// Executing this tool results in a background BackgroundJob being queued for the target agent.
 public struct MSAgentAsTool: MonadShared.Tool, Sendable {
     public let id: String
     public let name: String
@@ -12,9 +12,9 @@ public struct MSAgentAsTool: MonadShared.Tool, Sendable {
 
     private let agentId: String
     private let agentName: String
-    private let jobQueueContext: JobQueueContext
+    private let jobQueueContext: BackgroundJobQueueContext
 
-    public init(agent: MSAgent, jobQueueContext: JobQueueContext) {
+    public init(agent: MSAgent, jobQueueContext: BackgroundJobQueueContext) {
         self.agentId = agent.id.uuidString
         self.agentName = agent.name
         self.jobQueueContext = jobQueueContext
@@ -56,7 +56,7 @@ public struct MSAgentAsTool: MonadShared.Tool, Sendable {
 
         let priority = params.optional("priority", as: Int.self) ?? 0
 
-        let request = AddJobRequest(
+        let request = AddBackgroundJobRequest(
             title: title,
             description: taskDescription,
             priority: priority,
@@ -65,7 +65,7 @@ public struct MSAgentAsTool: MonadShared.Tool, Sendable {
 
         do {
             let job = try await jobQueueContext.launchSubagent(request: request)
-            return .success("Task delegated to '\(agentName)'. Background Job ID: \(job.id.uuidString.prefix(8))")
+            return .success("Task delegated to '\(agentName)'. Background BackgroundJob ID: \(job.id.uuidString.prefix(8))")
         } catch {
             return .failure("Failed to delegate task: \(error.localizedDescription)")
         }

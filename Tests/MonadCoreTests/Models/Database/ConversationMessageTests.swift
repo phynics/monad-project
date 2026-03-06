@@ -17,10 +17,10 @@ final class ConversationMessageTests: XCTestCase {
     
     func testConversationMessageCodable() throws {
         // Need to provide a realistic `Session` ID for foreign key in DB context
-        let sessionId = UUID()
+        let timelineId = UUID()
         let msg = ConversationMessage(
             id: UUID(),
-            sessionId: sessionId,
+            timelineId: timelineId,
             role: .user,
             content: "Ping",
             timestamp: Date()
@@ -33,7 +33,7 @@ final class ConversationMessageTests: XCTestCase {
         let date = Date()
         let dbMsg = ConversationMessage(
             id: uuid,
-            sessionId: UUID(),
+            timelineId: UUID(),
             role: .assistant,
             content: "Pong",
             timestamp: date

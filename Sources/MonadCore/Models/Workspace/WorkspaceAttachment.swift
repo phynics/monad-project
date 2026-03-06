@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 // MARK: - Workspace Attachment

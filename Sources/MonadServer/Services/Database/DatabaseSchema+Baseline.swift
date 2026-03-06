@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import GRDB
 
@@ -57,7 +58,7 @@ extension DatabaseSchema {
 
     internal static func createConversationTables(in db: Database) throws {
         // Conversation sessions
-        try db.create(table: "conversationSession") { t in
+        try db.create(table: "timeline") { t in
             t.primaryKey("id", .blob).notNull()
             t.column("title", .text).notNull()
             t.column("createdAt", .datetime).notNull()
@@ -74,8 +75,8 @@ extension DatabaseSchema {
         // Conversation messages
         try db.create(table: "conversationMessage") { t in
             t.primaryKey("id", .blob).notNull()
-            t.column("sessionId", .blob).notNull()
-                .references("conversationSession", onDelete: .cascade)
+            t.column("timelineId", .blob).notNull()
+                .references("timeline", onDelete: .cascade)
             t.column("role", .text).notNull()
             t.column("content", .text).notNull()
             t.column("timestamp", .datetime).notNull()
@@ -90,7 +91,7 @@ extension DatabaseSchema {
         try db.create(
             index: "idx_message_session",
             on: "conversationMessage",
-            columns: ["sessionId"])
+            columns: ["timelineId"])
         try db.create(
             index: "idx_message_timestamp",
             on: "conversationMessage",

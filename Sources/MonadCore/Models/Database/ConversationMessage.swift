@@ -1,8 +1,9 @@
+import MonadShared
 import Foundation
 /// Individual message within a conversation
 public struct ConversationMessage: Codable, Identifiable, Sendable {
     public var id: UUID
-    public var sessionId: UUID
+    public var timelineId: UUID
     public var role: String
     public var content: String
     public var timestamp: Date
@@ -14,7 +15,7 @@ public struct ConversationMessage: Codable, Identifiable, Sendable {
 
     public init(
         id: UUID = UUID(),
-        sessionId: UUID,
+        timelineId: UUID,
         role: MessageRole,
         content: String,
         timestamp: Date = Date(),
@@ -25,7 +26,7 @@ public struct ConversationMessage: Codable, Identifiable, Sendable {
         toolCallId: String? = nil
     ) {
         self.id = id
-        self.sessionId = sessionId
+        self.timelineId = timelineId
         self.role = role.rawValue
         self.content = content
         self.timestamp = timestamp

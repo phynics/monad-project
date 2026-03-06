@@ -32,7 +32,7 @@ public struct StatusAPIController<Context: RequestContext>: Sendable {
         let aiHealth = await llmService.checkHealth()
         let aiDetails = await llmService.getHealthDetails()
 
-        // Map MonadCore.HealthStatus to HealthStatus
+        // Map HealthStatus to HealthStatus
         let mappedDbHealth = HealthStatus(fromCore: dbHealth)
         let mappedAiHealth = HealthStatus(fromCore: aiHealth)
 
@@ -53,7 +53,7 @@ public struct StatusAPIController<Context: RequestContext>: Sendable {
 }
 
 extension HealthStatus {
-    init(fromCore status: MonadCore.HealthStatus) {
+    init(fromCore status: HealthStatus) {
         switch status {
         case .ok: self = .ok
         case .degraded: self = .degraded

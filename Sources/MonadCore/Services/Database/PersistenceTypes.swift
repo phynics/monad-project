@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 public enum MemorySavePolicy: Sendable {
@@ -6,8 +7,8 @@ public enum MemorySavePolicy: Sendable {
     case preventSimilar(threshold: Double)
 }
 
-public enum JobEvent: Sendable {
-    case jobAdded(Job)
-    case jobUpdated(Job)
+public enum BackgroundJobEvent: Sendable {
+    case jobAdded(BackgroundJob)
+    case jobUpdated(BackgroundJob)
     case jobDeleted(UUID)
 }

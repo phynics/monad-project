@@ -1,5 +1,6 @@
-import XCTest
+import MonadShared
 import MonadCore
+import XCTest
 import MonadTestSupport
 @testable import MonadServer
 import Dependencies
@@ -34,7 +35,7 @@ final class OrphanCleanupServiceTests: XCTestCase {
         mockPersistence.workspaces = [wsOrphan, wsActive]
 
         let session = Timeline(id: UUID(), title: "Test", primaryWorkspaceId: activeId)
-        mockPersistence.sessions = [session]
+        mockPersistence.timelines = [session]
 
         let service = OrphanCleanupService(workspaceRoot: workspaceRoot, persistenceService: mockPersistence)
 
@@ -68,7 +69,7 @@ final class OrphanCleanupServiceTests: XCTestCase {
 
         let wsUser = WorkspaceReference(id: userWsId, uri: .init(host: "server", path: "/user"), hostType: .server, rootPath: userWsPath)
         mockPersistence.workspaces = [wsUser]
-        mockPersistence.sessions = [] // No sessions, so it is technically "orphaned"
+        mockPersistence.timelines = [] // No sessions, so it is technically "orphaned"
 
         let service = OrphanCleanupService(workspaceRoot: workspaceRoot, persistenceService: mockPersistence)
 

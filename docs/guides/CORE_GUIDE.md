@@ -21,7 +21,7 @@ Execution is managed via **Jobs**.
 - **`ChatEngine`**: The unified engine for both interactive chat and autonomous agent loops.
 - **`ContextBuilder`**: A declarative DSL for constructing prompts from history, memories, and tools.
 - **`JobRunnerService`**: A background service that monitors the database and executes pending jobs.
-- **`SessionManager`**: Manages the lifecycle of conversation sessions and their components.
+- **`TimelineManager`**: Manages the lifecycle of conversation sessions and their components.
 
 ---
 
@@ -56,7 +56,7 @@ The `ChatEngine` drives the interaction. It uses `ContextBuilder` internally to 
 
 ```swift
 let stream = try await chatEngine.chatStream(
-    sessionId: session.id,
+    timelineId: session.id,
     message: "Research this topic",
     tools: availableTools,
     systemInstructions: agent.composedInstructions
@@ -101,15 +101,15 @@ let tool = AgentAsTool(agent: researcher, jobQueueContext: jobQueue)
 
 ## 5. Running the Framework
 
-### Initializing the SessionManager
-The `SessionManager` is the primary entry point for managing sessions and their tools.
+### Initializing the TimelineManager
+The `TimelineManager` is the primary entry point for managing sessions and their tools.
 
 ```swift
 import MonadCore
 import Dependencies
 
-// SessionManager uses @Dependency for shared services
-let manager = SessionManager(
+// TimelineManager uses @Dependency for shared services
+let manager = TimelineManager(
     workspaceRoot: URL(fileURLWithPath: "/path/to/workspaces")
 )
 
@@ -130,7 +130,7 @@ Task {
 ### Queuing a Task
 ```swift
 let job = Job(
-    sessionId: session.id,
+    timelineId: session.id,
     title: "Write a weather report",
     agentId: "default"
 )

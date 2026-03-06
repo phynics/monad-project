@@ -3,14 +3,13 @@ import Foundation
 import Dependencies
 @testable import MonadCore
 @testable import MonadShared
-@testable import MonadShared
 
 @Suite("Dependency Safety Tests")
 struct DependencySafetyTests {
     
     @Test("Unconfigured PersistenceService throws descriptive error")
-    func testUnconfiguredPersistence() {
-        withDependencies {
+    func testUnconfiguredPersistence() async throws {
+        try await withDependencies {
             $0.persistenceService = PersistenceServiceKey.liveValue // Should trigger fatalError/error
         } operation: {
             // We can't easily catch fatalError in Swift Testing without XCTest expectation or subprocess.

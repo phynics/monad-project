@@ -79,7 +79,7 @@ extension ChatREPL {
 
         if let command = await registry.getCommand(cmdName) {
             let context = ChatContext(
-                client: client, session: session, output: StandardOutput(), repl: self
+                client: client, timeline: timeline, output: StandardOutput(), repl: self
             )
 
             do {
@@ -100,8 +100,8 @@ extension ChatREPL {
         await registry.register(HelpCommand(registry: registry))
         await registry.register(QuitCommand())
         await registry.register(StatusCommand())
-        await registry.register(NewSessionCommand())
-        await registry.register(SessionCommand())
+        await registry.register(NewTimelineCommand())
+        await registry.register(TimelineCommand())
         await registry.register(ConfigCommand())
         await registry.register(CancelCommand())
 

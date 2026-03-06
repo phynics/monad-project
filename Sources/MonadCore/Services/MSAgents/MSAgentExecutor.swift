@@ -1,24 +1,25 @@
+import MonadShared
 import Foundation
 import Logging
 import Dependencies
 
 /// Service responsible for executing autonomous msAgents and managing their reasoning loops.
 public struct MSAgentExecutor: Sendable {
-    private let persistenceService: any JobStoreProtocol & MessageStoreProtocol
+    private let persistenceService: any BackgroundJobStoreProtocol & MessageStoreProtocol
     private let chatEngine: ChatEngine
 
     private let logger = Logger.module(named: "agent-executor")
 
-    public init(persistenceService: any JobStoreProtocol & MessageStoreProtocol, chatEngine: ChatEngine) {
+    public init(persistenceService: any BackgroundJobStoreProtocol & MessageStoreProtocol, chatEngine: ChatEngine) {
         self.persistenceService = persistenceService
         self.chatEngine = chatEngine
     }
 
     /// Execute an agent for a specific job
     public func execute(
-        job: Job,
+        job: BackgroundJob,
         agent: MSAgent,
-        session: Timeline,
+        timeline: Timeline,
         toolExecutor: ToolExecutor,
         contextManager: ContextManager?
     ) async {
@@ -41,11 +42,11 @@ public struct MSAgentExecutor: Sendable {
                 Description: \(job.description ?? "N/A")
 
                 Please execute this task.
-                When finished, state 'Job Complete'.
+                When finished, state 'BackgroundJob Complete'.
                 """
 
             let triggerMessage = ConversationMessage(
-                sessionId: session.id,
+                timelineId: timeline.id,
                 role: .user,
                 content: jobPrompt,
                 timestamp: Date()
@@ -57,7 +58,7 @@ public struct MSAgentExecutor: Sendable {
         do {
             let availableTools = await toolExecutor.getAvailableTools()
             let stream = try await chatEngine.chatStream(
-                sessionId: session.id,
+                timelineId: timeline.id,
                 message: "Continue execution",
                 tools: availableTools,
                 contextManager: contextManager,
@@ -85,8 +86,8 @@ public struct MSAgentExecutor: Sendable {
     }
 
     /// Shared failure logic with retry mechanism
-    public func failJob(_ job: Job, reason: String) async {
-        logger.error("Job \(job.id) failed: \(reason)")
+    public func failJob(_ job: BackgroundJob, reason: String) async {
+        logger.error("BackgroundJob \(job.id) failed: \(reason)")
 
         var currentJob = job
         currentJob.updatedAt = Date()
@@ -102,12 +103,12 @@ public struct MSAgentExecutor: Sendable {
             currentJob.logs.append("Retrying in \(Int(backoff))s (Attempt \(currentJob.retryCount)/\(maxRetries))")
         } else {
             currentJob.status = .failed
-            currentJob.logs.append("Max retries reached. Job failed permanently.")
+            currentJob.logs.append("Max retries reached. BackgroundJob failed permanently.")
 
             let msg = ConversationMessage(
-                sessionId: job.sessionId,
+                timelineId: job.timelineId,
                 role: .system,
-                content: "Job [\(job.id.uuidString.prefix(8))] Failed: \(reason)",
+                content: "BackgroundJob [\(job.id.uuidString.prefix(8))] Failed: \(reason)",
                 timestamp: Date()
             )
             try? await persistenceService.saveMessage(msg)

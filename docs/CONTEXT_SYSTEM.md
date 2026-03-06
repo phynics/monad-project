@@ -206,7 +206,7 @@ public struct Agent: Codable, Identifiable, Sendable {
 
 ### Conversation Records (Timeline)
 
-Conversation records are stored in `Timeline` (formerly `ConversationSession`).
+Conversation records are stored in `Timeline` (formerly `Timeline`).
 
 **Model:** `Sources/MonadCore/Models/Database/Timeline.swift`
 
@@ -217,7 +217,7 @@ Conversation records are stored in `Timeline` (formerly `ConversationSession`).
 - `primaryWorkspaceId` — Reference to primary workspace
 - `attachedWorkspaceIds` — JSON array of attached workspace IDs
 
-**Persistence:** Managed via `SessionPersistenceProtocol`
+**Persistence:** Managed via `TimelinePersistenceProtocol`
 
 ### Default Prompts
 
@@ -335,7 +335,7 @@ Tools are surfaced to the LLM with **provenance information** to help it reason 
 
 **Implementation:**
 - `AnyTool` wrapper includes optional `provenance` string
-- `SessionToolManager` formats tool definitions with labels
+- `TimelineToolManager` formats tool definitions with labels
 - LLM sees: `read_file [Workspace: MyProject] — Read a file from the workspace`
 
 ### Path Resolution
@@ -380,7 +380,7 @@ Tools hosted by remote clients (e.g., IDE integrations):
 
 ### ContextManager Initialization
 
-`ContextManager` is created per-session by `SessionManager`:
+`ContextManager` is created per-session by `TimelineManager`:
 
 ```swift
 let contextManager = ContextManager(
@@ -391,7 +391,7 @@ let contextManager = ContextManager(
 
 **Actor Isolation:** All state protected by actor isolation
 
-**Caching:** SessionManager maintains cache of ContextManagers (one per session)
+**Caching:** TimelineManager maintains cache of ContextManagers (one per session)
 
 ### Gathering Context
 

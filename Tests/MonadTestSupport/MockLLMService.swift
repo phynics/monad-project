@@ -1,6 +1,6 @@
-@testable import MonadCore
-import Foundation
 import MonadShared
+import MonadCore
+import Foundation
 import OpenAI
 @testable import MonadPrompt
 
@@ -126,13 +126,13 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
 }
 
 public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, HealthCheckable {
-    public var mockHealthStatus: MonadCore.HealthStatus = .ok
+    public var mockHealthStatus: HealthStatus = .ok
     public var mockHealthDetails: [String: String]? = ["mock": "true"]
 
-    public func getHealthStatus() async -> MonadCore.HealthStatus { mockHealthStatus }
+    public func getHealthStatus() async -> HealthStatus { mockHealthStatus }
     public func getHealthDetails() async -> [String: String]? { mockHealthDetails }
 
-    public func checkHealth() async -> MonadCore.HealthStatus {
+    public func checkHealth() async -> HealthStatus {
         return mockHealthStatus
     }
 

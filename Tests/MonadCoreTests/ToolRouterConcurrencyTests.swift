@@ -7,21 +7,21 @@ import MonadTestSupport
 import Testing
 
 @Suite(.serialized) struct ToolRouterConcurrencyTests {
-    private func makeSetup() async -> (ToolRouter, SessionManager, MockPersistenceService) {
+    private func makeSetup() async -> (ToolRouter, TimelineManager, MockPersistenceService) {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         let router = ToolRouter()
-        let manager = await withDependencies {
+        let manager = try await withDependencies {
             $0.persistenceService = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
-            $0.sessionManager = SessionManager(workspaceRoot: workspaceRoot)
+            $0.timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
         } operation: {
-            SessionManager(workspaceRoot: workspaceRoot)
+            TimelineManager(workspaceRoot: workspaceRoot)
         }
         return (router, manager, persistence)
     }
@@ -30,14 +30,14 @@ import Testing
     func concurrentExecute_unknownTool_allThrow() async throws {
         let (router, manager, _) = await makeSetup()
 
-        let sessionId = try await withDependencies {
+        let timelineId = try await withDependencies {
             $0.persistenceService = MockPersistenceService()
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()
             $0.msAgentRegistry = MSAgentRegistry()
-            $0.sessionManager = manager
+            $0.timelineManager = manager
         } operation: {
-            try await manager.createSession().id
+            try await manager.createTimeline().id
         }
 
         let tool = ToolReference.known(id: "nonexistent")
@@ -48,9 +48,9 @@ import Testing
                 group.addTask {
                     do {
                         _ = try await withDependencies {
-                            $0.sessionManager = manager
+                            $0.timelineManager = manager
                         } operation: {
-                            try await router.execute(tool: tool, arguments: [:], sessionId: sessionId)
+                            try await router.execute(tool: tool, arguments: [:], timelineId: timelineId)
                         }
                         return nil
                     } catch {
@@ -80,14 +80,14 @@ import Testing
 
         do {
             _ = try await withDependencies {
-                $0.sessionManager = manager
+                $0.timelineManager = manager
             } operation: {
-                try await router.execute(tool: tool, arguments: [:], sessionId: unknownSessionId)
+                try await router.execute(tool: tool, arguments: [:], timelineId: unknownSessionId)
             }
             Issue.record("Expected error to be thrown")
         } catch {
             // Any ToolError is acceptable (toolNotFound, workspaceNotFound)
-            #expect(error is ToolError || error is SessionError)
+            #expect(error is ToolError || error is TimelineError)
         }
     }
 }

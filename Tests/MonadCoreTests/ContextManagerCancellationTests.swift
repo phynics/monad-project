@@ -3,12 +3,11 @@ import Foundation
 import MonadTestSupport
 @testable import MonadCore
 @testable import MonadShared
-@testable import MonadShared
 import Testing
 
 @Suite(.serialized) struct ContextManagerCancellationTests {
-    private func makeContextManager() -> ContextManager {
-        return withDependencies {
+    private func makeContextManager() async throws -> ContextManager {
+        return try await withDependencies {
             $0.persistenceService = MockPersistenceService()
             $0.embeddingService = MockEmbeddingService()
         } operation: {
@@ -18,7 +17,7 @@ import Testing
 
     @Test("gatherContext emits at least one progress event before completing")
     func gatherContext_emitsEvents() async throws {
-        let manager = makeContextManager()
+        let manager = try await makeContextManager()
         let stream = await manager.gatherContext(for: "test query")
 
         var events: [ContextManager.ContextGatheringEvent] = []
@@ -36,7 +35,7 @@ import Testing
 
     @Test("gatherContext can be cancelled without hanging")
     func gatherContext_cancellation_doesNotHang() async throws {
-        let manager = makeContextManager()
+        let manager = try await makeContextManager()
 
         let timeoutTask = Task {
             // Cancel after a short delay to simulate mid-stream cancellation
@@ -64,7 +63,7 @@ import Testing
 
     @Test("gatherContext with empty query produces complete event")
     func gatherContext_emptyQuery_completesSuccessfully() async throws {
-        let manager = makeContextManager()
+        let manager = try await makeContextManager()
         let stream = await manager.gatherContext(for: "")
 
         var sawComplete = false
@@ -78,7 +77,7 @@ import Testing
 
     @Test("Multiple sequential gatherContext calls complete successfully")
     func gatherContext_sequentialCalls_allComplete() async throws {
-        let manager = makeContextManager()
+        let manager = try await makeContextManager()
 
         for index in 1 ... 3 {
             let stream = await manager.gatherContext(for: "query number \(index)")

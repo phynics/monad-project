@@ -39,7 +39,7 @@ public enum ToolError: Error, LocalizedError, Sendable {
         case .executionFailed(let message):
             return "Review the tool logs or debug the tool implementation. Error: \(message)"
         case .toolNotFound(let name):
-            return "Ensure the tool '\(name)' is registered in the SessionToolManager."
+            return "Ensure the tool '\(name)' is registered in the TimelineToolManager."
         case .workspaceNotFound(let id):
             return "Verify that workspace \(id) exists and is currently attached."
         case .clientNotConnected:

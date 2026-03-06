@@ -5,18 +5,18 @@ import MonadShared
 public struct DelegatingTool: Tool, ToolReferenceProviding {
     public let ref: ToolReference
     private let router: ToolRouter
-    private let sessionId: UUID
+    private let timelineId: UUID
     private let resolvedDefinition: WorkspaceToolDefinition
 
     public init(
         ref: ToolReference,
         router: ToolRouter,
-        sessionId: UUID,
+        timelineId: UUID,
         resolvedDefinition: WorkspaceToolDefinition
     ) {
         self.ref = ref
         self.router = router
-        self.sessionId = sessionId
+        self.timelineId = timelineId
         self.resolvedDefinition = resolvedDefinition
     }
 
@@ -58,7 +58,7 @@ public struct DelegatingTool: Tool, ToolReferenceProviding {
         let args = parameters.mapValues { AnyCodable($0) }
 
         do {
-            let output = try await router.execute(tool: ref, arguments: args, sessionId: sessionId)
+            let output = try await router.execute(tool: ref, arguments: args, timelineId: timelineId)
             return .success(output)
         } catch let error as ToolError {
             if case .clientExecutionRequired = error {

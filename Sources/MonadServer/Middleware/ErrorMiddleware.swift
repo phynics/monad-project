@@ -54,11 +54,11 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
             var response = try apiError.response(from: request, context: context)
             response.status = status
             return response
-        } catch let error as MonadCore.SessionError {
+        } catch let error as MonadCore.TimelineError {
             let status: HTTPResponse.Status
             let code: String
             switch error {
-            case .sessionNotFound:
+            case .timelineNotFound:
                 status = .notFound
                 code = "session_not_found"
             }

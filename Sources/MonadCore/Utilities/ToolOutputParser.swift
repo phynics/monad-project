@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Utility for parsing tool calls from raw text content when structured tool calls fail.

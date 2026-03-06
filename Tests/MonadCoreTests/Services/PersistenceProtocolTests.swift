@@ -15,8 +15,8 @@ struct PersistenceProtocolTests {
         // Verify it conforms to all required domains
         let _: MemoryStoreProtocol = mock
         let _: MessageStoreProtocol = mock
-        let _: SessionPersistenceProtocol = mock
-        let _: JobStoreProtocol = mock
+        let _: TimelinePersistenceProtocol = mock
+        let _: BackgroundJobStoreProtocol = mock
         let _: MSAgentStoreProtocol = mock
         let _: WorkspacePersistenceProtocol = mock
         let _: ToolPersistenceProtocol = mock
@@ -27,8 +27,8 @@ struct PersistenceProtocolTests {
 final class MockPersistenceStore:
     MemoryStoreProtocol,
     MessageStoreProtocol,
-    SessionPersistenceProtocol,
-    JobStoreProtocol,
+    TimelinePersistenceProtocol,
+    BackgroundJobStoreProtocol,
     MSAgentStoreProtocol,
     WorkspacePersistenceProtocol,
     ToolPersistenceProtocol,
@@ -47,23 +47,23 @@ final class MockPersistenceStore:
 
     // MessageStoreProtocol
     func saveMessage(_ message: ConversationMessage) async throws {}
-    func fetchMessages(for sessionId: UUID) async throws -> [ConversationMessage] { [] }
-    func deleteMessages(for sessionId: UUID) async throws {}
+    func fetchMessages(for timelineId: UUID) async throws -> [ConversationMessage] { [] }
+    func deleteMessages(for timelineId: UUID) async throws {}
 
-    // SessionPersistenceProtocol
-    func saveSession(_ session: Timeline) async throws {}
-    func fetchSession(id: UUID) async throws -> Timeline? { nil }
-    func fetchAllSessions(includeArchived: Bool) async throws -> [Timeline] { [] }
-    func deleteSession(id: UUID) async throws {}
+    // TimelinePersistenceProtocol
+    func saveTimeline(_ session: Timeline) async throws {}
+    func fetchTimeline(id: UUID) async throws -> Timeline? { nil }
+    func fetchAllTimelines(includeArchived: Bool) async throws -> [Timeline] { [] }
+    func deleteTimeline(id: UUID) async throws {}
 
-    // JobStoreProtocol
-    func saveJob(_ job: Job) async throws {}
-    func fetchJob(id: UUID) async throws -> Job? { nil }
-    func fetchAllJobs() async throws -> [Job] { [] }
-    func fetchJobs(for sessionId: UUID) async throws -> [Job] { [] }
-    func fetchPendingJobs(limit: Int) async throws -> [Job] { [] }
+    // BackgroundJobStoreProtocol
+    func saveJob(_ job: BackgroundJob) async throws {}
+    func fetchJob(id: UUID) async throws -> BackgroundJob? { nil }
+    func fetchAllJobs() async throws -> [BackgroundJob] { [] }
+    func fetchJobs(for timelineId: UUID) async throws -> [BackgroundJob] { [] }
+    func fetchPendingJobs(limit: Int) async throws -> [BackgroundJob] { [] }
     func deleteJob(id: UUID) async throws {}
-    func monitorJobs() async -> AsyncStream<JobEvent> { .init { _ in } }
+    func monitorJobs() async -> AsyncStream<BackgroundJobEvent> { .init { _ in } }
 
     // MSAgentStoreProtocol
     func saveMSAgent(_ agent: MSAgent) async throws {}

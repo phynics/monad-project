@@ -22,7 +22,7 @@ extension ResponseGenerator where Self: Codable & Sendable {
 
 // Concrete conformances for shared models
 
-extension SessionResponse: ResponseGenerator {}
+extension TimelineResponse: ResponseGenerator {}
 
 extension WorkspaceReference: ResponseGenerator {}
 
@@ -38,7 +38,7 @@ extension ClientIdentity: ResponseGenerator {}
 
 extension ClientRegistrationResponse: ResponseGenerator {}
 
-extension Job: ResponseGenerator {}
+extension BackgroundJob: ResponseGenerator {}
 
 extension LLMConfiguration: ResponseGenerator {}
 
@@ -48,7 +48,7 @@ extension StatusResponse: ResponseGenerator {}
 
 extension ChatResponse: ResponseGenerator {}
 
-extension SessionWorkspacesResponse: ResponseGenerator {}
+extension TimelineWorkspacesResponse: ResponseGenerator {}
 
 extension APIErrorResponse: ResponseGenerator {}
 

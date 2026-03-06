@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 public protocol EmbeddingServiceProtocol: Sendable {

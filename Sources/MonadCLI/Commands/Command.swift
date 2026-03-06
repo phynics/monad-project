@@ -24,8 +24,8 @@ struct Command: AsyncParsableCommand {
     @Flag(name: .long, help: "Enable verbose debug logging")
     var verbose: Bool = false
 
-    @Option(name: .shortAndLong, help: "Session ID to use")
-    var session: String?
+    @Option(name: .shortAndLong, help: "Timeline ID to use")
+    var timeline: String?
 
     @Argument(parsing: .remaining, help: "Description of the task")
     var task: [String]
@@ -69,24 +69,24 @@ struct Command: AsyncParsableCommand {
             throw ExitCode.failure
         }
 
-        // Resolve session
-        let targetSession: Session
-        if let sessionId = session, let uuid = UUID(uuidString: sessionId) {
-            let sessions = try await client.chat.listSessions()
-            guard let found = sessions.first(where: { $0.id == uuid }) else {
-                TerminalUI.printError("Session not found: \(sessionId)")
+        // Resolve timeline
+        let targetTimeline: Timeline
+        if let timelineId = timeline, let uuid = UUID(uuidString: timelineId) {
+            let timelines = try await client.chat.listTimelines()
+            guard let found = timelines.first(where: { $0.id == uuid }) else {
+                TerminalUI.printError("Timeline not found: \(timelineId)")
                 throw ExitCode.failure
             }
-            targetSession = found
+            targetTimeline = found
         } else if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
-            let sessions = try await client.chat.listSessions()
-            if let found = sessions.first(where: { $0.id == uuid }) {
-                targetSession = found
+            let timelines = try await client.chat.listTimelines()
+            if let found = timelines.first(where: { $0.id == uuid }) {
+                targetTimeline = found
             } else {
-                targetSession = try await client.chat.createSession()
+                targetTimeline = try await client.chat.createTimeline()
             }
         } else {
-            targetSession = try await client.chat.createSession()
+            targetTimeline = try await client.chat.createTimeline()
         }
 
         // Build command generation prompt
@@ -97,7 +97,7 @@ struct Command: AsyncParsableCommand {
         print("")
 
         var fullResponse = ""
-        let stream = try await client.chat.chatStream(sessionId: targetSession.id, message: prompt)
+        let stream = try await client.chat.chatStream(timelineId: targetTimeline.id, message: prompt)
 
         for try await delta in stream {
             if let content = delta.textContent {
@@ -114,12 +114,12 @@ struct Command: AsyncParsableCommand {
             return
         }
 
-        try await commandLoop(command: command, client: client, session: targetSession)
+        try await commandLoop(command: command, client: client, timeline: targetTimeline)
     }
 
     // MARK: - Command Loop
 
-    private func commandLoop(command: String, client: MonadClient, session: Session) async throws {
+    private func commandLoop(command: String, client: MonadClient, timeline: Timeline) async throws {
         var currentCommand = command
 
         while true {
@@ -165,7 +165,7 @@ struct Command: AsyncParsableCommand {
                 print("")
 
                 var editResponse = ""
-                let stream = try await client.chat.chatStream(sessionId: session.id, message: editPrompt)
+                let stream = try await client.chat.chatStream(timelineId: timeline.id, message: editPrompt)
                 for try await delta in stream {
                     if let content = delta.textContent {
                         editResponse += content

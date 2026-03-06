@@ -1,8 +1,9 @@
+import MonadShared
+import MonadCore
 import Testing
 import Foundation
 import GRDB
 import MonadServer
-@testable import MonadCore
 
 @Suite struct ModelSerializationTests {
 

@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 import Logging
 import OpenAI
@@ -38,7 +39,7 @@ public actor OllamaClient {
         config.timeoutIntervalForRequest = timeoutInterval
         config.timeoutIntervalForResource = timeoutInterval * 5
         config.waitsForConnectivity = true
-        session = URLSession(configuration: config)
+        self.session = URLSession(configuration: config)
         logger.debug("Initialized OllamaClient with model: \(modelName), endpoint: \(self.endpoint.absoluteString), timeout: \(timeoutInterval)s")
     }
 
@@ -50,7 +51,6 @@ public actor OllamaClient {
         logger.debug("Ollama chat stream started for model: \(modelName)")
 
         // Capture dependencies
-        let session = self.session
         let maxRetries = self.maxRetries
         let logger = self.logger
 
@@ -74,7 +74,7 @@ public actor OllamaClient {
                             logger.debug("Ollama request body: \(bodyString)")
                         }
 
-                        let (stream, response) = try await session.bytes(for: request)
+                        let (stream, response) = try await self.session.bytes(for: request)
 
                         guard let httpResponse = response as? HTTPURLResponse else {
                             throw LLMServiceError.networkError("Invalid response type from Ollama")
@@ -335,7 +335,6 @@ public actor OllamaClient {
     public func fetchAvailableModels() async throws -> [String]? {
         let maxRetries = self.maxRetries
         let endpoint = self.endpoint
-        let session = self.session
         let logger = self.logger
 
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
@@ -343,7 +342,7 @@ public actor OllamaClient {
             let request = URLRequest(url: tagsURL)
             logger.debug("Fetching Ollama models from: \(tagsURL.absoluteString)")
 
-            let (data, response) = try await session.data(for: request)
+            let (data, response) = try await self.session.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw LLMServiceError.networkError("Invalid response type from Ollama models API")

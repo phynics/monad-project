@@ -21,15 +21,15 @@ struct MonadCLI: AsyncParsableCommand {
           /debug                        Show rendered prompt & raw output
           /quit                         Exit (or :q)
 
-          SESSION & WORKSPACE:
-          /new                          Start a new session
-          /session info/list/switch     Manage chat sessions
+          TIMELINE & WORKSPACE:
+          /new                          Start a new timeline
+          /timeline info/list/switch    Manage chat timelines
           /workspace all/list/attach    Manage workspaces
           /workspace attach-pwd         Attach current local directory
 
           FILES & CONTEXT:
           /ls, /cat, /write, /edit      Explore & modify workspace files
-          /memory list/add/search       Manage session memories
+          /memory list/add/search       Manage timeline memories
           /job list/add                 Track tasks for the assistant
         """,
         version: "1.0.0",
@@ -41,7 +41,7 @@ struct MonadCLI: AsyncParsableCommand {
 struct Chat: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "chat",
-        abstract: "Start an interactive chat session (Default)"
+        abstract: "Start an interactive chat timeline (Default)"
     )
 
     @Option(name: .long, help: "Server URL (defaults to auto-discovery or localhost)")
@@ -53,8 +53,8 @@ struct Chat: AsyncParsableCommand {
     @Flag(name: .long, help: "Enable verbose debug logging")
     var verbose: Bool = false
 
-    @Option(name: .shortAndLong, help: "Session ID to resume")
-    var session: String?
+    @Option(name: .shortAndLong, help: "Timeline ID to resume")
+    var timeline: String?
 
     func run() async throws {
         // Load local config
@@ -131,23 +131,23 @@ struct Chat: AsyncParsableCommand {
             TerminalUI.printInfo("You can configure the CLI using the '/config' command in chat.")
         }
 
-        // Resulting session to use
-        let cliSessionManager = CLISessionManager(client: client)
-        let finalSession = try await cliSessionManager.resolveSession(
-            explicitId: session,
+        // Resulting timeline to use
+        let cliTimelineManager = CLITimelineManager(client: client)
+        let finalTimeline = try await cliTimelineManager.resolveTimeline(
+            explicitId: timeline,
             localConfig: localConfig
         )
 
-        // Persist successful session ID and handle re-attachment
-        LocalConfigManager.shared.updateLastSessionId(finalSession.id.uuidString)
-        await cliSessionManager.handleWorkspaceReattachment(
-            session: finalSession, localConfig: localConfig
+        // Persist successful timeline ID and handle re-attachment
+        LocalConfigManager.shared.updateLastSessionId(finalTimeline.id.uuidString)
+        await cliTimelineManager.handleWorkspaceReattachment(
+            timeline: finalTimeline, localConfig: localConfig
         )
 
         TerminalUI.printWelcome()
 
         // Start REPL
-        let repl = ChatREPL(client: client, session: finalSession)
+        let repl = ChatREPL(client: client, timeline: finalTimeline)
         try await repl.run()
     }
 }

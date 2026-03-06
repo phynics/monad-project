@@ -15,7 +15,7 @@ public struct WorkspaceReference: Codable, Sendable, Identifiable {
     public var tools: [ToolReference]  // Tools available in this workspace
     public var rootPath: String?  // Filesystem root for the workspace
     public var trustLevel: WorkspaceTrustLevel
-    public var lastModifiedBy: UUID?  // Session ID that last modified
+    public var lastModifiedBy: UUID?  // Timeline ID that last modified
     public var status: WorkspaceStatus
     public var metadata: [String: AnyCodable]
     public var contextInjection: String?
@@ -23,7 +23,7 @@ public struct WorkspaceReference: Codable, Sendable, Identifiable {
 
     public enum WorkspaceHostType: String, Codable, Sendable {
         case server
-        case serverSession  // A workspace specific to a session on the server
+        case serverTimeline  // A workspace specific to a timeline on the server
         case client
     }
 
@@ -61,14 +61,14 @@ public struct WorkspaceReference: Codable, Sendable, Identifiable {
         self.createdAt = createdAt
     }
 
-    /// Create a primary workspace for a session
-    public static func primaryForSession(
-        _ sessionId: UUID,
+    /// Create a primary workspace for a timeline
+    public static func primaryForTimeline(
+        _ timelineId: UUID,
         rootPath: String,
         metadata: [String: AnyCodable] = [:]
     ) -> WorkspaceReference {
         WorkspaceReference(
-            uri: .serverSession(sessionId),
+            uri: .serverTimeline(timelineId),
             hostType: .server,
             rootPath: rootPath,
             trustLevel: .full,

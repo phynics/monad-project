@@ -30,7 +30,7 @@ Contains the foundational library for all domain logic, data models, and busines
 - **Configuration**: `LLMConfiguration` supporting OpenAI, OpenRouter, Ollama, OpenAI-compatible providers
 - **Persistence**: GRDB-based storage via `PersistenceService`
 - **Context Engine**: RAG logic via `ContextManager` (semantic search + tag boosting + re-ranking)
-- **Session Management**: Lifecycle of `Timeline` sessions via `SessionManager`
+- **Session Management**: Lifecycle of `Timeline` sessions via `TimelineManager`
 - **Tool Logic**: Workspace-aware tool resolution via `ToolRouter` and `ToolExecutor`
 - **LLM Integration**: Multi-provider LLM client via `LLMService`
 - **Agent Execution**: `AgentExecutor` for autonomous agent loops
@@ -45,7 +45,7 @@ Contains the foundational library for all domain logic, data models, and busines
 
 **Key Services:**
 - `ChatEngine` — Unified engine for chat and autonomous agents
-- `SessionManager` — Actor managing session lifecycle and components
+- `TimelineManager` — Actor managing session lifecycle and components
 - `ContextManager` — Actor for RAG and context gathering
 - `ToolRouter` — Actor routing tool execution to appropriate handler
 - `LLMService` — Multi-provider LLM client with streaming
@@ -64,7 +64,7 @@ Sources/MonadCore/Models/
 ├── Tools/         Tool, ToolReference, ToolError, ToolParameters, …
 │   ├── Filesystem/  7 filesystem tools (cd, find, inspect, ls, cat, grep, search)
 │   ├── JobQueue/    JobQueueGatewayTool, Job, JobQueueContext
-│   └── ToolContext/ ContextTool, ToolContext, ToolContextSession
+│   └── ToolContext/ ContextTool, ToolContext, ToolTimelineContext
 └── Workspace/     WorkspaceAttachment, WorkspaceLock, WorkspaceProtocol,
                    WorkspaceReference, WorkspaceTool, WorkspaceToolDefinition
 
@@ -73,7 +73,7 @@ Sources/MonadCore/Stores/
 ```
 
 **Key Model Notes:**
-- **`Timeline`** (formerly `ConversationSession`) — Persistent conversation record with workspace attachments
+- **`Timeline`** (formerly `Timeline`) — Persistent conversation record with workspace attachments
 - **`LLMConfiguration`** — Multi-provider config (replaces old monolithic `Configuration`)
 - **`Message`** — Includes optional `think` field for Chain of Thought reasoning
 - **`ToolReference`** — Enum: `.known(id)` or `.custom(definition)`
@@ -85,7 +85,7 @@ Sources/MonadCore/Stores/
 - `SubagentContext` — Removed
 - `CompactificationNode` — Removed
 - `Configuration` wrapper struct — Replaced by `LLMConfiguration`
-- `SessionStore` — Removed (responsibilities fully covered by `SessionManager`)
+- `SessionStore` — Removed (responsibilities fully covered by `TimelineManager`)
 
 ---
 
@@ -137,7 +137,7 @@ The backend server hosting the agent and exposing the brain to clients.
 
 **Controllers** (in `Sources/MonadServer/Controllers/`):
 - `ChatAPIController` — Chat streaming endpoints
-- `SessionAPIController` — Session CRUD
+- `TimelineAPIController` — Session CRUD
 - `MemoryAPIController` — Memory operations
 - `WorkspaceAPIController` — Workspace management
 - `JobAPIController` — Background job management
@@ -373,7 +373,7 @@ The `/sessions/{id}/chat` endpoint emits Server-Sent Events with the following t
 
 | Event Type | Description | Payload Fields |
 |:-----------|:------------|:---------------|
-| `generationContext` | Initial context information | `sessionId`, `agentId`, `primaryWorkspace`, `attachedWorkspaces` |
+| `generationContext` | Initial context information | `timelineId`, `agentId`, `primaryWorkspace`, `attachedWorkspaces` |
 | `thought` | Chain of Thought reasoning (from `<think>` tags) | `thought` (string) |
 | `delta` | User-facing text fragments | `content` (string) |
 | `toolCall` | LLM requesting a tool | `toolCallId`, `name`, `arguments` (streaming) |
@@ -396,7 +396,7 @@ The `/sessions/{id}/chat` endpoint emits Server-Sent Events with the following t
 
 | Host Type | Description | Location | Tools |
 |:----------|:------------|:---------|:------|
-| `serverSession` | Private session sandbox | Server disk | Filesystem, session tools |
+| `serverTimeline` | Private session sandbox | Server disk | Filesystem, session tools |
 | `server` | Shared project directory | Server disk | Filesystem, workspace tools |
 | `client` | Remote client environment | Client machine | Client-provided tools (RPC) |
 
@@ -412,7 +412,7 @@ The `/sessions/{id}/chat` endpoint emits Server-Sent Events with the following t
 1. **Creation**: Primary workspace created automatically with session
 2. **Attachment**: Shared workspaces attached via `/workspace attach` or `attach-pwd`
 3. **Discovery**: `WorkspaceFactory` creates appropriate `WorkspaceProtocol` implementation
-4. **Tool Registration**: `SessionToolManager` aggregates tools from all workspaces
+4. **Tool Registration**: `TimelineToolManager` aggregates tools from all workspaces
 5. **Execution**: `ToolRouter` routes tool calls to correct workspace
 6. **Health Checking**: `WorkspaceManager` monitors workspace availability
 7. **Detachment**: Workspaces can be detached, removing their tools from session
@@ -423,14 +423,14 @@ The `/sessions/{id}/chat` endpoint emits Server-Sent Events with the following t
 
 ### Actors
 Heavy use of actors for thread-safe state management:
-- `SessionManager` — Session lifecycle and component caching
+- `TimelineManager` — Session lifecycle and component caching
 - `ContextManager` — RAG and context gathering
 - `ToolRouter` — Tool routing and execution
 - `WorkspaceManager` — Workspace lifecycle
 
 **Pattern:**
 ```swift
-public actor SessionManager {
+public actor TimelineManager {
     internal var sessions: [UUID: Timeline] = [:]
 
     public func createSession(title: String) async throws -> Timeline {
@@ -474,7 +474,7 @@ Uses Point-Free's `swift-dependencies` for DI:
 
 **Dependency Keys** (in `Sources/MonadCore/Dependencies/`):
 - `LLMDependencies.swift` — LLMService, EmbeddingService
-- `OrchestrationDependencies.swift` — SessionManager, ChatEngine, AgentExecutor, etc.
+- `OrchestrationDependencies.swift` — TimelineManager, ChatEngine, AgentExecutor, etc.
 - `StorageDependencies.swift` — PersistenceService, VectorStore
 
 **Usage:**
@@ -485,7 +485,7 @@ Uses Point-Free's `swift-dependencies` for DI:
 **Configuration:**
 ```swift
 withDependencies {
-    $0.sessionManager = mySessionManager
+    $0.sessionManager = myTimelineManager
 } operation: {
     // Use dependencies
 }

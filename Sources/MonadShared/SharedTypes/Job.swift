@@ -1,11 +1,11 @@
 import Foundation
 
-// MARK: - Job Model
+// MARK: - BackgroundJob Model
 
 /// Represents a single job in the queue
-public struct Job: Identifiable, Codable, Sendable, Equatable {
+public struct BackgroundJob: Identifiable, Codable, Sendable, Equatable {
     public let id: UUID
-    public let sessionId: UUID
+    public let timelineId: UUID
     public var parentId: UUID?
     public var title: String
     public var description: String?
@@ -29,7 +29,7 @@ public struct Job: Identifiable, Codable, Sendable, Equatable {
 
     public init(
         id: UUID = UUID(),
-        sessionId: UUID,
+        timelineId: UUID,
         parentId: UUID? = nil,
         title: String,
         description: String? = nil,
@@ -44,7 +44,7 @@ public struct Job: Identifiable, Codable, Sendable, Equatable {
         nextRunAt: Date? = nil
     ) {
         self.id = id
-        self.sessionId = sessionId
+        self.timelineId = timelineId
         self.parentId = parentId
         self.title = title
         self.description = description
@@ -62,7 +62,7 @@ public struct Job: Identifiable, Codable, Sendable, Equatable {
 
 // MARK: - Formatting
 
-public extension Job {
+public extension BackgroundJob {
     /// Format job for display
     var formatted: String {
         let statusIcon: String

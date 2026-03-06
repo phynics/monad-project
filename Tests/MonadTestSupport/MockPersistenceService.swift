@@ -1,11 +1,12 @@
-@testable import MonadCore
+import MonadShared
+import MonadCore
 import Foundation
 
 public final class MockPersistenceService: FullPersistenceService, @unchecked Sendable {
     private let memoriesMock = MockMemoryStore()
     private let messagesMock = MockMessageStore()
-    private let sessionsMock = MockSessionPersistence()
-    private let jobsMock = MockJobStore()
+    private let timelinesMock = MockTimelinePersistence()
+    private let jobsMock = MockBackgroundJobStore()
     private let msAgentsMock = MockMSAgentStore()
     private let workspacesMock = MockWorkspacePersistence()
     private let toolsMock = MockToolPersistence()
@@ -51,31 +52,31 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
         set { messagesMock.messages = newValue }
     }
     public func saveMessage(_ message: ConversationMessage) async throws { try await messagesMock.saveMessage(message) }
-    public func fetchMessages(for sessionId: UUID) async throws -> [ConversationMessage] { try await messagesMock.fetchMessages(for: sessionId) }
-    public func deleteMessages(for sessionId: UUID) async throws { try await messagesMock.deleteMessages(for: sessionId) }
+    public func fetchMessages(for timelineId: UUID) async throws -> [ConversationMessage] { try await messagesMock.fetchMessages(for: timelineId) }
+    public func deleteMessages(for timelineId: UUID) async throws { try await messagesMock.deleteMessages(for: timelineId) }
 
-    // MARK: - SessionPersistenceProtocol
-    public var sessions: [Timeline] {
-        get { sessionsMock.sessions }
-        set { sessionsMock.sessions = newValue }
+    // MARK: - TimelinePersistenceProtocol
+    public var timelines: [Timeline] {
+        get { timelinesMock.timelines }
+        set { timelinesMock.timelines = newValue }
     }
-    public func saveSession(_ session: Timeline) async throws { try await sessionsMock.saveSession(session) }
-    public func fetchSession(id: UUID) async throws -> Timeline? { try await sessionsMock.fetchSession(id: id) }
-    public func fetchAllSessions(includeArchived: Bool) async throws -> [Timeline] { try await sessionsMock.fetchAllSessions(includeArchived: includeArchived) }
-    public func deleteSession(id: UUID) async throws { try await sessionsMock.deleteSession(id: id) }
+    public func saveTimeline(_ timeline: Timeline) async throws { try await timelinesMock.saveTimeline(timeline) }
+    public func fetchTimeline(id: UUID) async throws -> Timeline? { try await timelinesMock.fetchTimeline(id: id) }
+    public func fetchAllTimelines(includeArchived: Bool) async throws -> [Timeline] { try await timelinesMock.fetchAllTimelines(includeArchived: includeArchived) }
+    public func deleteTimeline(id: UUID) async throws { try await timelinesMock.deleteTimeline(id: id) }
 
-    // MARK: - JobStoreProtocol
-    public var jobs: [Job] {
+    // MARK: - BackgroundJobStoreProtocol
+    public var jobs: [BackgroundJob] {
         get { jobsMock.jobs }
         set { jobsMock.jobs = newValue }
     }
-    public func saveJob(_ job: Job) async throws { try await jobsMock.saveJob(job) }
-    public func fetchJob(id: UUID) async throws -> Job? { try await jobsMock.fetchJob(id: id) }
-    public func fetchAllJobs() async throws -> [Job] { try await jobsMock.fetchAllJobs() }
-    public func fetchJobs(for sessionId: UUID) async throws -> [Job] { try await jobsMock.fetchJobs(for: sessionId) }
-    public func fetchPendingJobs(limit: Int) async throws -> [Job] { try await jobsMock.fetchPendingJobs(limit: limit) }
+    public func saveJob(_ job: BackgroundJob) async throws { try await jobsMock.saveJob(job) }
+    public func fetchJob(id: UUID) async throws -> BackgroundJob? { try await jobsMock.fetchJob(id: id) }
+    public func fetchAllJobs() async throws -> [BackgroundJob] { try await jobsMock.fetchAllJobs() }
+    public func fetchJobs(for timelineId: UUID) async throws -> [BackgroundJob] { try await jobsMock.fetchJobs(for: timelineId) }
+    public func fetchPendingJobs(limit: Int) async throws -> [BackgroundJob] { try await jobsMock.fetchPendingJobs(limit: limit) }
     public func deleteJob(id: UUID) async throws { try await jobsMock.deleteJob(id: id) }
-    public func monitorJobs() async -> AsyncStream<JobEvent> { await jobsMock.monitorJobs() }
+    public func monitorJobs() async -> AsyncStream<BackgroundJobEvent> { await jobsMock.monitorJobs() }
 
     // MARK: - MSAgentStoreProtocol
     public var msAgents: [MSAgent] {
@@ -151,7 +152,7 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
         memories = []
         searchResults = []
         messages = []
-        sessions = []
+        timelines = []
         jobs = []
         msAgents = []
         workspaces = []

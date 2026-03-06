@@ -5,9 +5,9 @@ public extension MonadChatClient {
     // MARK: - Chat API
 
     /// Send a chat message (non-streaming)
-    func chat(sessionId: UUID, message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientTools: [ToolReference]? = nil) async throws -> ChatResponse {
+    func chat(timelineId: UUID, message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientTools: [ToolReference]? = nil) async throws -> ChatResponse {
         var request = try await client.buildRequest(
-            path: "/api/sessions/\(sessionId.uuidString)/chat", method: "POST"
+            path: "/api/sessions/\(timelineId.uuidString)/chat", method: "POST"
         )
         request.httpBody = try await client.encode(
             ChatRequest(message: message, toolOutputs: toolOutputs, clientId: client.configuration.clientId, clientTools: clientTools)
@@ -16,20 +16,20 @@ public extension MonadChatClient {
     }
 
     /// Cancel an ongoing chat generation
-    func cancelChat(sessionId: UUID) async throws {
+    func cancelChat(timelineId: UUID) async throws {
         let request = try await client.buildRequest(
-            path: "/api/sessions/\(sessionId.uuidString)/chat/cancel", method: "POST"
+            path: "/api/sessions/\(timelineId.uuidString)/chat/cancel", method: "POST"
         )
         _ = try await client.performRaw(request)
     }
 
     /// Send a chat message with streaming response
-    func chatStream(sessionId: UUID, message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientTools: [ToolReference]? = nil) async throws -> AsyncThrowingStream<
+    func chatStream(timelineId: UUID, message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientTools: [ToolReference]? = nil) async throws -> AsyncThrowingStream<
         ChatEvent, Error
     > {
-        client.configuration.logger.debug("chatStream called for session \(sessionId)")
+        client.configuration.logger.debug("chatStream called for timeline \(timelineId)")
         var request = try await client.buildRequest(
-            path: "/api/sessions/\(sessionId.uuidString)/chat/stream", method: "POST"
+            path: "/api/sessions/\(timelineId.uuidString)/chat/stream", method: "POST"
         )
         let clientId = client.configuration.clientId
         request.httpBody = try await client.encode(

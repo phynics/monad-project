@@ -8,18 +8,18 @@ import NIOCore
 import OpenAI
 
 public struct ChatAPIController<Context: RequestContext>: Sendable {
-    public let sessionManager: SessionManager
+    public let timelineManager: TimelineManager
     public let chatEngine: ChatEngine
     public let toolRouter: ToolRouter
     public let verbose: Bool
 
     public init(
-        sessionManager: SessionManager,
+        timelineManager: TimelineManager,
         chatEngine: ChatEngine,
         toolRouter: ToolRouter,
         verbose: Bool = false
     ) {
-        self.sessionManager = sessionManager
+        self.timelineManager = timelineManager
         self.chatEngine = chatEngine
         self.toolRouter = toolRouter
         self.verbose = verbose
@@ -40,12 +40,12 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
 
-        // Hydrate session and resolve tools at the server layer
-        try await sessionManager.hydrateSession(id: id)
-        let availableTools = await resolveTools(sessionId: id, clientTools: chatRequest.clientTools)
+        // Hydrate timeline and resolve tools at the server layer
+        try await timelineManager.hydrateTimeline(id: id)
+        let availableTools = await resolveTools(timelineId: id, clientTools: chatRequest.clientTools)
 
         let stream = try await chatEngine.chatStream(
-            sessionId: id,
+            timelineId: id,
             message: chatRequest.message,
             tools: availableTools,
             toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) }
@@ -72,16 +72,16 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
 
         let sid = ANSIColors.colorize(id.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
-        Logger.module(named: "chat").info("Streaming chat in session \(sid)")
+        Logger.module(named: "chat").info("Streaming chat in timeline \(sid)")
 
-        // Hydrate session and resolve tools at the server layer
-        try await sessionManager.hydrateSession(id: id)
-        let availableTools = await resolveTools(sessionId: id, clientTools: chatRequest.clientTools)
+        // Hydrate timeline and resolve tools at the server layer
+        try await timelineManager.hydrateTimeline(id: id)
+        let availableTools = await resolveTools(timelineId: id, clientTools: chatRequest.clientTools)
 
-        Logger.module(named: "chat").info("Resolved \(ANSIColors.colorize("\(availableTools.count)", color: ANSIColors.green)) tools for session \(sid)")
+        Logger.module(named: "chat").info("Resolved \(ANSIColors.colorize("\(availableTools.count)", color: ANSIColors.green)) tools for timeline \(sid)")
 
         let chatEngineStream = try await chatEngine.chatStream(
-            sessionId: id,
+            timelineId: id,
             message: chatRequest.message,
             tools: availableTools,
             toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) }
@@ -134,7 +134,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
             let registrationTask = task
             Task {
-                await sessionManager.registerTask(registrationTask, for: id)
+                await timelineManager.registerTask(registrationTask, for: id)
             }
 
             continuation.onTermination = { @Sendable _ in
@@ -154,7 +154,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         guard let id = UUID(uuidString: idString) else {
             throw HTTPError(.badRequest)
         }
-        await sessionManager.cancelGeneration(for: id)
+        await timelineManager.cancelGeneration(for: id)
         return Response(status: .ok)
     }
 
@@ -162,7 +162,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
-        guard let snapshot = await sessionManager.getDebugSnapshot(for: id) else {
+        guard let snapshot = await timelineManager.getDebugSnapshot(for: id) else {
             throw HTTPError(.notFound)
         }
 
@@ -175,10 +175,10 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
     // MARK: - Tool Resolution (Server-Layer Concern)
 
-    private func resolveTools(sessionId: UUID, clientTools: [ToolReference]?) async -> [AnyTool] {
+    private func resolveTools(timelineId: UUID, clientTools: [ToolReference]?) async -> [AnyTool] {
         var availableTools: [AnyTool] = []
         do {
-            let references = try await sessionManager.getAllToolReferences(sessionId: sessionId, clientTools: clientTools)
+            let references = try await timelineManager.getAllToolReferences(timelineId: timelineId, clientTools: clientTools)
 
             for ref in references {
                 var def: WorkspaceToolDefinition?
@@ -190,14 +190,14 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                 var toolWrapper = AnyTool(DelegatingTool(
                     ref: ref,
                     router: toolRouter,
-                    sessionId: sessionId,
+                    timelineId: timelineId,
                     resolvedDefinition: definition
                 ))
-                toolWrapper.provenance = await sessionManager.getToolSource(toolId: ref.toolId, for: sessionId)
+                toolWrapper.provenance = await timelineManager.getToolSource(toolId: ref.toolId, for: timelineId)
                 availableTools.append(toolWrapper)
             }
         } catch {
-            Logger.module(named: "chat").error("Failed to resolve tools for session \(sessionId): \(error)")
+            Logger.module(named: "chat").error("Failed to resolve tools for timeline \(timelineId): \(error)")
         }
         return availableTools
     }

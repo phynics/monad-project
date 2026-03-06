@@ -1,6 +1,7 @@
+import MonadShared
+import MonadCore
 import Foundation
 import GRDB
-import MonadCore
 import Testing
 import MonadServer
 
@@ -23,9 +24,9 @@ struct PersistenceTests {
     @Test("Test creating a conversation session")
     func sessionCreation() async throws {
         let session = Timeline(title: "Test Session")
-        try await persistence.saveSession(session)
+        try await persistence.saveTimeline(session)
 
-        let fetched = try await persistence.fetchSession(id: session.id)
+        let fetched = try await persistence.fetchTimeline(id: session.id)
         #expect(fetched != nil)
         #expect(fetched?.title == "Test Session")
     }
@@ -33,10 +34,10 @@ struct PersistenceTests {
     @Test("Test message persistence within a session")
     func messagePersistence() async throws {
         let session = Timeline(title: "Test Session")
-        try await persistence.saveSession(session)
+        try await persistence.saveTimeline(session)
 
         let message = ConversationMessage(
-            sessionId: session.id,
+            timelineId: session.id,
             role: .user,
             content: "Hello World"
         )
@@ -50,7 +51,7 @@ struct PersistenceTests {
     @Test("Test message persistence with recalled memories")
     func messagePersistenceWithMemories() async throws {
         let session = Timeline(title: "Test Session")
-        try await persistence.saveSession(session)
+        try await persistence.saveTimeline(session)
 
         let memories = [
             Memory(title: "Memory 1", content: "Content 1"),
@@ -59,7 +60,7 @@ struct PersistenceTests {
         let memoriesJson = String(data: try JSONEncoder().encode(memories), encoding: .utf8)!
 
         let message = ConversationMessage(
-            sessionId: session.id,
+            timelineId: session.id,
             role: .user,
             content: "Message with memories",
             recalledMemories: memoriesJson
@@ -78,27 +79,27 @@ struct PersistenceTests {
     func cascadingDeletes() async throws {
         var session = Timeline(title: "Test Session")
         session.isArchived = true
-        try await persistence.saveSession(session)
+        try await persistence.saveTimeline(session)
 
-        let message = ConversationMessage(sessionId: session.id, role: .user, content: "Delete me")
+        let message = ConversationMessage(timelineId: session.id, role: .user, content: "Delete me")
         try await persistence.saveMessage(message)
 
         // Attempting to delete an archived session should now throw due to the SQLite trigger
         await #expect(throws: Error.self) {
-            try await persistence.deleteSession(id: session.id)
+            try await persistence.deleteTimeline(id: session.id)
         }
     }
 
     @Test("Test message ordering: Messages are chronological")
     func messageOrdering() async throws {
         let session = Timeline(title: "Test Session")
-        try await persistence.saveSession(session)
+        try await persistence.saveTimeline(session)
 
         let m1 = ConversationMessage(
-            sessionId: session.id, role: .user, content: "First",
+            timelineId: session.id, role: .user, content: "First",
             timestamp: Date().addingTimeInterval(-10))
         let m2 = ConversationMessage(
-            sessionId: session.id, role: .assistant, content: "Second", timestamp: Date())
+            timelineId: session.id, role: .assistant, content: "Second", timestamp: Date())
 
         try await persistence.saveMessage(m2)
         try await persistence.saveMessage(m1)
@@ -113,32 +114,32 @@ struct PersistenceTests {
     func archiveSession() async throws {
         var session = Timeline(title: "Test Session")
         session.isArchived = false
-        try await persistence.saveSession(session)
+        try await persistence.saveTimeline(session)
 
         // Marking as archived should work (0 -> 1)
         session.isArchived = true
-        try await persistence.saveSession(session)
+        try await persistence.saveTimeline(session)
 
-        let archived = try await persistence.fetchAllSessions(includeArchived: true)
+        let archived = try await persistence.fetchAllTimelines(includeArchived: true)
         #expect(archived.contains { $0.id == session.id && $0.isArchived })
 
         // Further modifications should fail
         session.title = "Changed Title"
         await #expect(throws: Error.self) {
-            try await persistence.saveSession(session)
+            try await persistence.saveTimeline(session)
         }
     }
 
     @Test("Test database reset: Wipes only non-immutable data")
     func databaseReset() async throws {
         // Add some custom data
-        try await persistence.saveSession(Timeline(title: "Archive to keep"))
+        try await persistence.saveTimeline(Timeline(title: "Archive to keep"))
         let memory = Memory(title: "Memory to wipe", content: "Should be gone")
         _ = try await persistence.saveMemory(memory, policy: .immediate)
 
         try await persistence.resetDatabase()
 
-        let sessions = try await persistence.fetchAllSessions(includeArchived: true)
+        let sessions = try await persistence.fetchAllTimelines(includeArchived: true)
         #expect(!sessions.isEmpty, "Archives should be preserved")
 
         let allMemories = try await persistence.fetchAllMemories()

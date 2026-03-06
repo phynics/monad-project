@@ -1,4 +1,5 @@
-@testable import MonadCore
+import MonadShared
+import MonadCore
 import Foundation
 
 #if DEBUG
@@ -25,20 +26,20 @@ extension Memory {
     }
 }
 
-extension Job {
+extension BackgroundJob {
     public static func fixture(
         id: UUID = UUID(),
-        sessionId: UUID = UUID(),
+        timelineId: UUID = UUID(),
         parentId: UUID? = nil,
-        title: String = "Test Job",
+        title: String = "Test BackgroundJob",
         description: String? = nil,
         priority: Int = 0,
-        status: Job.Status = .pending,
+        status: BackgroundJob.Status = .pending,
         agentId: String = "default"
-    ) -> Job {
-        Job(
+    ) -> BackgroundJob {
+        BackgroundJob(
             id: id,
-            sessionId: sessionId,
+            timelineId: timelineId,
             parentId: parentId,
             title: title,
             description: description,
@@ -55,7 +56,7 @@ extension Job {
 extension WorkspaceReference {
     public static func fixture(
         id: UUID = UUID(),
-        uri: WorkspaceURI = .serverSession(UUID()),
+        uri: WorkspaceURI = .serverTimeline(UUID()),
         hostType: WorkspaceHostType = .server,
         ownerId: UUID? = nil,
         rootPath: String? = nil,

@@ -37,7 +37,7 @@ struct JobSlashCommand: SlashCommand {
         print(TerminalUI.bold("Usage: /job <action> [arguments]"))
         print("Actions:")
         print("  add <title> [description]  Add a new background job")
-        print("  list                       List all jobs in the current session")
+        print("  list                       List all jobs in the current timeline")
         print("  show <jobId>               Show details of a specific job")
         print("  delete <jobId>             Delete a job")
     }
@@ -50,18 +50,18 @@ struct JobSlashCommand: SlashCommand {
 
         let jobTitle = args.joined(separator: " ")
 
-        let job = try await context.client.chat.addJob(sessionId: context.session.id, title: jobTitle, priority: 0)
-        TerminalUI.printSuccess("Job added: \(job.title) (ID: \(job.id))")
+        let job = try await context.client.chat.addJob(timelineId: context.timeline.id, title: jobTitle, priority: 0)
+        TerminalUI.printSuccess("BackgroundJob added: \(job.title) (ID: \(job.id))")
     }
 
     private func listJobs(context: ChatContext) async throws {
-        let jobs = try await context.client.chat.listJobs(sessionId: context.session.id)
+        let jobs = try await context.client.chat.listJobs(timelineId: context.timeline.id)
         if jobs.isEmpty {
-            print("No jobs found for this session.")
+            print("No jobs found for this timeline.")
             return
         }
 
-        print(TerminalUI.bold("Jobs for Session \(context.session.title ?? "Untitled"):"))
+        print(TerminalUI.bold("Jobs for Timeline \(context.timeline.title ?? "Untitled"):"))
         for job in jobs {
             let statusColor: (String) -> String
             switch job.status {
@@ -77,15 +77,15 @@ struct JobSlashCommand: SlashCommand {
 
     private func showJob(args: [String], context: ChatContext) async throws {
         guard let idString = args.first, let id = UUID(uuidString: idString) else {
-            TerminalUI.printError("Invalid Job ID")
+            TerminalUI.printError("Invalid BackgroundJob ID")
             return
         }
 
         // Fetch specific or search in list?
         // Client has `getJob`.
         do {
-            let job = try await context.client.chat.getJob(sessionId: context.session.id, jobId: id)
-            print(TerminalUI.bold("Job Details:"))
+            let job = try await context.client.chat.getJob(timelineId: context.timeline.id, jobId: id)
+            print(TerminalUI.bold("BackgroundJob Details:"))
             print("ID: \(job.id)")
             print("Title: \(job.title)")
             print("Status: \(job.status.rawValue)")
@@ -96,17 +96,17 @@ struct JobSlashCommand: SlashCommand {
             print("Created: \(job.createdAt)")
             print("Updated: \(job.updatedAt)")
         } catch {
-            TerminalUI.printError("Job not found or error: \(error)")
+            TerminalUI.printError("BackgroundJob not found or error: \(error)")
         }
     }
 
     private func deleteJob(args: [String], context: ChatContext) async throws {
         guard let idString = args.first, let id = UUID(uuidString: idString) else {
-            TerminalUI.printError("Invalid Job ID")
+            TerminalUI.printError("Invalid BackgroundJob ID")
             return
         }
 
-        try await context.client.chat.deleteJob(sessionId: context.session.id, jobId: id)
-        TerminalUI.printSuccess("Job deleted.")
+        try await context.client.chat.deleteJob(timelineId: context.timeline.id, jobId: id)
+        TerminalUI.printSuccess("BackgroundJob deleted.")
     }
 }

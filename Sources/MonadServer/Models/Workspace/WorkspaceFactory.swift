@@ -1,3 +1,4 @@
+import MonadShared
 import MonadCore
 import Foundation
 
@@ -12,7 +13,7 @@ public struct WorkspaceFactory: WorkspaceCreating {
         connectionManager: (any ClientConnectionManagerProtocol)?
     ) throws -> any WorkspaceProtocol {
         switch reference.hostType {
-        case .server, .serverSession:
+        case .server, .serverTimeline:
             return try LocalWorkspace(reference: reference)
         case .client:
             guard let cm = connectionManager else {

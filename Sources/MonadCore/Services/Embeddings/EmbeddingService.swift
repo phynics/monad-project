@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 
 /// Protocol for a service that can generate vector embeddings for text

@@ -1,9 +1,9 @@
+import MonadShared
+import MonadCore
 import Foundation
 import HTTPTypes
 import Hummingbird
 import HummingbirdTesting
-import MonadCore
-import MonadShared
 import NIOCore
 import Testing
 import Dependencies
@@ -26,13 +26,13 @@ import MonadTestSupport
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
-            // We need to inject sessionManager into the context for ToolRouter and ChatEngine
+            // We need to inject timelineManager into the context for ToolRouter and ChatEngine
             try await withDependencies {
-                $0.sessionManager = sessionManager
+                $0.timelineManager = timelineManager
             } operation: {
                 let toolRouter = ToolRouter()
                 try await withDependencies {
@@ -44,7 +44,7 @@ import MonadTestSupport
                     router.add(middleware: ErrorMiddleware())
                     let protected = router.group("/api").add(middleware: AuthMiddleware())
                     ChatAPIController<BasicRequestContext>(
-                        sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter
+                        timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter
                     ).addRoutes(to: protected.group("/sessions"))
 
                     let app = Application(router: router)
@@ -80,12 +80,12 @@ import MonadTestSupport
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
             try await withDependencies {
-                $0.sessionManager = sessionManager
+                $0.timelineManager = timelineManager
             } operation: {
                 let toolRouter = ToolRouter()
                 try await withDependencies {
@@ -97,7 +97,7 @@ import MonadTestSupport
                     router.add(middleware: ErrorMiddleware())
                     let protected = router.group("/api").add(middleware: AuthMiddleware())
                     ChatAPIController<BasicRequestContext>(
-                        sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter
+                        timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter
                     ).addRoutes(to: protected.group("/sessions"))
 
                     let app = Application(router: router)
@@ -133,14 +133,14 @@ import MonadTestSupport
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
             let router = Router()
             router.add(middleware: ErrorMiddleware())
             let protected = router.group("/api").add(middleware: AuthMiddleware())
-            MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
+            MemoryAPIController<BasicRequestContext>(timelineManager: timelineManager).addRoutes(
                 to: protected.group("/memories"))
 
             let app = Application(router: router)
@@ -167,14 +167,14 @@ import MonadTestSupport
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
             let router = Router()
             router.add(middleware: ErrorMiddleware())
             let protected = router.group("/api").add(middleware: AuthMiddleware())
-            MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
+            MemoryAPIController<BasicRequestContext>(timelineManager: timelineManager).addRoutes(
                 to: protected.group("/memories"))
 
             let app = Application(router: router)
@@ -204,14 +204,14 @@ import MonadTestSupport
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
             let router = Router()
             router.add(middleware: ErrorMiddleware())
             let protected = router.group("/api").add(middleware: AuthMiddleware())
-            MemoryAPIController<BasicRequestContext>(sessionManager: sessionManager).addRoutes(
+            MemoryAPIController<BasicRequestContext>(timelineManager: timelineManager).addRoutes(
                 to: protected.group("/memories"))
 
             let app = Application(router: router)

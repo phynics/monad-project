@@ -13,7 +13,7 @@ struct ContextManagerTests {
     func testGatherContextSemanticRetrieval() async throws {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
-        let contextManager = withDependencies {
+        let contextManager = try await withDependencies {
             $0.persistenceService = mockPersistence
             $0.embeddingService = mockEmbedding
         } operation: {
@@ -49,7 +49,7 @@ struct ContextManagerTests {
     func testGatherContextUsesHistoryForTagsButQueryForEmbedding() async throws {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
-        let contextManager = withDependencies {
+        let contextManager = try await withDependencies {
             $0.persistenceService = mockPersistence
             $0.embeddingService = mockEmbedding
         } operation: {
@@ -88,7 +88,7 @@ struct ContextManagerTests {
     func testRankingLogicWithTagBoost() async throws {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
-        let contextManager = withDependencies {
+        let contextManager = try await withDependencies {
             $0.persistenceService = mockPersistence
             $0.embeddingService = mockEmbedding
         } operation: {
@@ -147,7 +147,7 @@ struct ContextManagerTests {
         )
         let workspace = try MockLocalWorkspace(reference: ref)
 
-        let manager = withDependencies {
+        let manager = try await withDependencies {
             $0.persistenceService = mockPersistence
             $0.embeddingService = mockEmbedding
         } operation: {

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct CreateSessionRequest: Codable, Sendable {
+public struct CreateTimelineRequest: Codable, Sendable {
     public let title: String?
     public let primaryWorkspaceId: UUID?
 
@@ -18,7 +18,7 @@ public struct UpdateSessionTitleRequest: Codable, Sendable {
     }
 }
 
-public struct SessionWorkspacesResponse: Codable, Sendable {
+public struct TimelineWorkspacesResponse: Codable, Sendable {
     public let primaryWorkspace: WorkspaceReference?
     public let attachedWorkspaces: [WorkspaceReference]
 
@@ -28,7 +28,7 @@ public struct SessionWorkspacesResponse: Codable, Sendable {
     }
 }
 
-public struct SessionResponse: Codable, Sendable, Identifiable {
+public struct TimelineResponse: Codable, Sendable, Identifiable {
     public let id: UUID
     public let title: String?
     public let createdAt: Date
@@ -74,7 +74,7 @@ public struct SessionResponse: Codable, Sendable, Identifiable {
     }
 }
 
-public struct UpdateSessionRequest: Codable, Sendable {
+public struct UpdateTimelineRequest: Codable, Sendable {
     public let title: String?
 
     public init(title: String? = nil) {

@@ -22,8 +22,8 @@ struct Query: AsyncParsableCommand {
     @Flag(name: .long, help: "Enable verbose debug logging")
     var verbose: Bool = false
 
-    @Option(name: .shortAndLong, help: "Session ID to use")
-    var session: String?
+    @Option(name: .shortAndLong, help: "Timeline ID to use")
+    var timeline: String?
 
     @Argument(parsing: .remaining, help: "The question to ask")
     var question: [String]
@@ -67,28 +67,28 @@ struct Query: AsyncParsableCommand {
             throw ExitCode.failure
         }
 
-        // Resolve session
-        let targetSession: Session
-        if let sessionId = session, let uuid = UUID(uuidString: sessionId) {
-            let sessions = try await client.chat.listSessions()
-            guard let found = sessions.first(where: { $0.id == uuid }) else {
-                TerminalUI.printError("Session not found: \(sessionId)")
+        // Resolve timeline
+        let targetTimeline: Timeline
+        if let timelineId = timeline, let uuid = UUID(uuidString: timelineId) {
+            let timelines = try await client.chat.listTimelines()
+            guard let found = timelines.first(where: { $0.id == uuid }) else {
+                TerminalUI.printError("Timeline not found: \(timelineId)")
                 throw ExitCode.failure
             }
-            targetSession = found
+            targetTimeline = found
         } else if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
-            let sessions = try await client.chat.listSessions()
-            if let found = sessions.first(where: { $0.id == uuid }) {
-                targetSession = found
+            let timelines = try await client.chat.listTimelines()
+            if let found = timelines.first(where: { $0.id == uuid }) {
+                targetTimeline = found
             } else {
-                targetSession = try await client.chat.createSession()
+                targetTimeline = try await client.chat.createTimeline()
             }
         } else {
-            targetSession = try await client.chat.createSession()
+            targetTimeline = try await client.chat.createTimeline()
         }
 
         // Stream the response
-        let stream = try await client.chat.chatStream(sessionId: targetSession.id, message: questionText)
+        let stream = try await client.chat.chatStream(timelineId: targetTimeline.id, message: questionText)
 
         for try await delta in stream {
             if let content = delta.textContent {

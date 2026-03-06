@@ -12,14 +12,14 @@ public struct PruneMemoriesRequest: Codable, Sendable {
     }
 }
 
-public struct PruneSessionRequest: Codable, Sendable {
+public struct PruneTimelineRequest: Codable, Sendable {
     public let days: Int
-    public let excludedSessionIds: [UUID]
+    public let excludedTimelineIds: [UUID]
     public let dryRun: Bool
 
-    public init(days: Int, excludedSessionIds: [UUID] = [], dryRun: Bool = false) {
+    public init(days: Int, excludedTimelineIds: [UUID] = [], dryRun: Bool = false) {
         self.days = days
-        self.excludedSessionIds = excludedSessionIds
+        self.excludedTimelineIds = excludedTimelineIds
         self.dryRun = dryRun
     }
 }

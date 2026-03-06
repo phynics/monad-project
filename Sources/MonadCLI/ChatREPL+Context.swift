@@ -27,18 +27,18 @@ extension ChatREPL {
         }
 
         do {
-            let sessionWS = try await client.workspace.listSessionWorkspaces(sessionId: session.id)
+            let timelineWS = try await client.workspace.listTimelineWorkspaces(timelineId: timeline.id)
             var wsSummary = "No Workspace"
 
-            let displayId = selectedWorkspaceId ?? sessionWS.primary?.id
+            let displayId = selectedWorkspaceId ?? timelineWS.primary?.id
 
             if let targetId = displayId {
                 let ws = try await client.workspace.getWorkspace(targetId)
                 let icon = selectedWorkspaceId == nil ? "📂" : "🎯"
                 wsSummary = "\(icon) \(ws.uri.description)"
 
-                if selectedWorkspaceId == nil && !sessionWS.attached.isEmpty {
-                    wsSummary += " (+\(sessionWS.attached.count) attached)"
+                if selectedWorkspaceId == nil && !timelineWS.attached.isEmpty {
+                    wsSummary += " (+\(timelineWS.attached.count) attached)"
                 }
             }
 
@@ -88,15 +88,15 @@ extension ChatREPL {
 
     func checkAndRestoreWorkspaces() async {
         do {
-            let sessionWS = try await client.workspace.listSessionWorkspaces(sessionId: session.id)
+            let timelineWS = try await client.workspace.listTimelineWorkspaces(timelineId: timeline.id)
             var workspacesToRestore: [WorkspaceReference] = []
 
-            if let primary = sessionWS.primary, primary.status == .missing, primary.hostType == .server {
+            if let primary = timelineWS.primary, primary.status == .missing, primary.hostType == .server {
                 workspacesToRestore.append(primary)
             }
 
             if let identity = RegistrationManager.shared.getIdentity() {
-                for ws in sessionWS.attached {
+                for ws in timelineWS.attached {
                     if ws.hostType == .client, ws.ownerId == identity.clientId {
                         if let url = URL(string: ws.uri.description), url.host == identity.hostname {
                             let path = url.path
@@ -127,7 +127,7 @@ extension ChatREPL {
                 .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y" {
                 for ws in workspacesToRestore {
                     if ws.hostType == .server {
-                        try await client.workspace.restoreWorkspace(sessionId: session.id, workspaceId: ws.id)
+                        try await client.workspace.restoreWorkspace(timelineId: timeline.id, workspaceId: ws.id)
                         TerminalUI.printSuccess("Restored server workspace: \(ws.uri.description)")
                     } else {
                         if let url = URL(string: ws.uri.description) {
@@ -174,11 +174,11 @@ extension ChatREPL {
             }
 
             if let wsId = targetWorkspaceId {
-                let sessionWS = try await client.workspace.listSessionWorkspaces(sessionId: session.id)
-                let isAttached = sessionWS.attached.contains { $0.id == wsId }
+                let timelineWS = try await client.workspace.listTimelineWorkspaces(timelineId: timeline.id)
+                let isAttached = timelineWS.attached.contains { $0.id == wsId }
                 
                 if !isAttached {
-                    try await client.workspace.attachWorkspace(wsId, to: session.id, isPrimary: false)
+                    try await client.workspace.attachWorkspace(wsId, to: timeline.id, isPrimary: false)
                 }
 
                 try await client.workspace.syncWorkspaceTools(

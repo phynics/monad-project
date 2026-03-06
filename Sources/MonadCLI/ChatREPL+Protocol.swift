@@ -8,11 +8,11 @@ extension ChatREPL {
         running = false
     }
 
-    func switchSession(_ newSession: Session) async {
-        session = newSession
+    func switchTimeline(_ newTimeline: Timeline) async {
+        timeline = newTimeline
         selectedWorkspaceId = nil
-        LocalConfigManager.shared.updateLastSessionId(newSession.id.uuidString)
-        TerminalUI.printInfo("Switched to session \(newSession.id.uuidString.prefix(8))")
+        LocalConfigManager.shared.updateLastSessionId(newTimeline.id.uuidString)
+        TerminalUI.printInfo("Switched to timeline \(newTimeline.id.uuidString.prefix(8))")
         await showContext()
         await checkAndRestoreWorkspaces()
     }

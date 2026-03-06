@@ -7,16 +7,16 @@ import Testing
 @MainActor
 struct JobQueueTests {
     private let persistence: MockPersistenceService
-    private let context: JobQueueContext
+    private let context: BackgroundJobQueueContext
 
     init() async throws {
         let mock = MockPersistenceService()
         let sid = UUID()
         persistence = mock
-        context = JobQueueContext(persistenceService: mock, sessionId: sid)
+        context = BackgroundJobQueueContext(persistenceService: mock, timelineId: sid)
 
         let session = Timeline(id: sid, title: "Test Session")
-        try await mock.saveSession(session)
+        try await mock.saveTimeline(session)
     }
 
     @Test("Add job via tool")

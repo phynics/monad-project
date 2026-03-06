@@ -1,3 +1,4 @@
+import MonadShared
 # Architecture Overview
 
 Deep dive into the MonadCore system design.

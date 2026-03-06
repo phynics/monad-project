@@ -4,7 +4,7 @@ State stores in MonadCore (`Sources/MonadCore/Stores/`) provide thread-safe, act
 
 ## Overview
 
-Stores differ from "Managers" (`SessionManager`, `WorkspaceManager`) in that they are mostly simple caching layers for the API, whereas Managers orchestrate deep domain logic, component initialization, and cross-cutting concerns.
+Stores differ from "Managers" (`TimelineManager`, `WorkspaceManager`) in that they are mostly simple caching layers for the API, whereas Managers orchestrate deep domain logic, component initialization, and cross-cutting concerns.
 
 ### `WorkspaceStore`
 
@@ -27,6 +27,6 @@ It bridges the gap between the lightweight data-only `WorkspaceReference` stored
 
 ### `SessionStore`
 
-The `SessionStore` was removed. Its responsibilities were fully subsumed by `SessionManager`, which already maintains an active dictionary of `sessions: [UUID: Timeline]` and handles all session database reads and writes.
+The `SessionStore` was removed. Its responsibilities were fully subsumed by `TimelineManager`, which already maintains an active dictionary of `sessions: [UUID: Timeline]` and handles all session database reads and writes.
 
-Using `SessionManager` is preferred for all session operations because session orchestration involves much more than just database synchronization (e.g. setting up `ContextManager`, `ToolExecutor`, and tracking tool sessions).
+Using `TimelineManager` is preferred for all session operations because session orchestration involves much more than just database synchronization (e.g. setting up `ContextManager`, `ToolExecutor`, and tracking tool sessions).

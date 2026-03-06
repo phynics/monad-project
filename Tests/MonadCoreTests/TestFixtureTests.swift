@@ -21,9 +21,9 @@ struct TestFixtureTests {
         #expect(!memory.content.isEmpty)
     }
     
-    @Test("Job Builder creates valid job")
+    @Test("BackgroundJob Builder creates valid job")
     func testJobBuilder() {
-        let job = Job.fixture(priority: 10)
+        let job = BackgroundJob.fixture(priority: 10)
         #expect(job.priority == 10)
         #expect(job.status == .pending)
     }

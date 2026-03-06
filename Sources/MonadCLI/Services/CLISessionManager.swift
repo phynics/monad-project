@@ -3,23 +3,23 @@ import ArgumentParser
 import MonadClient
 import MonadShared
 
-struct CLISessionManager {
+struct CLITimelineManager {
     let client: MonadClient
 
-    /// Resolves which session to use (Resume or New)
-    func resolveSession(
+    /// Resolves which timeline to use (Resume or New)
+    func resolveTimeline(
         explicitId: String?,
         localConfig: LocalConfig
-    ) async throws -> Session {
+    ) async throws -> Timeline {
 
         // 1. Try to resume from flag
-        if let sessionId = explicitId, let uuid = UUID(uuidString: sessionId) {
+        if let timelineId = explicitId, let uuid = UUID(uuidString: timelineId) {
             do {
-                _ = try await client.chat.getHistory(sessionId: uuid)
-                TerminalUI.printInfo("Resuming session \(uuid.uuidString.prefix(8))...")
-                return Session(id: uuid, title: nil)
+                _ = try await client.chat.getHistory(timelineId: uuid)
+                TerminalUI.printInfo("Resuming timeline \(uuid.uuidString.prefix(8))...")
+                return Timeline(id: uuid, title: nil)
             } catch {
-                TerminalUI.printError("Session not found: \(sessionId)")
+                TerminalUI.printError("Timeline not found: \(timelineId)")
                 throw ExitCode.failure
             }
         }
@@ -27,66 +27,66 @@ struct CLISessionManager {
         // 2. Try to resume from config (automatic)
         if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
             do {
-                _ = try await client.chat.getHistory(sessionId: uuid)
-                TerminalUI.printInfo("Resumed session \(uuid.uuidString.prefix(8))")
-                return Session(id: uuid, title: nil)
+                _ = try await client.chat.getHistory(timelineId: uuid)
+                TerminalUI.printInfo("Resumed timeline \(uuid.uuidString.prefix(8))")
+                return Timeline(id: uuid, title: nil)
             } catch {
                 // Stale config, ignore and proceed to menu
             }
         }
 
         // 3. Interactive Menu
-        return try await showSessionMenu()
+        return try await showTimelineMenu()
     }
 
-    private func showSessionMenu() async throws -> Session {
+    private func showTimelineMenu() async throws -> Timeline {
         print("")
-        print(TerminalUI.bold("No active session found."))
-        print("  [1] Create New Session")
-        print("  [2] List Existing Sessions")
+        print(TerminalUI.bold("No active timeline found."))
+        print("  [1] Create New Timeline")
+        print("  [2] List Existing Timelines")
         print("")
         print("Select an option [1]: ", terminator: "")
 
         let choice = readLine()?.trimmingCharacters(in: .whitespaces) ?? "1"
 
         if choice == "2" {
-            let sessions = try await client.chat.listSessions()
-            if sessions.isEmpty {
-                print("No sessions found. Creating new one.")
-                return try await createNewSessionFlow()
+            let timelines = try await client.chat.listTimelines()
+            if timelines.isEmpty {
+                print("No timelines found. Creating new one.")
+                return try await createNewTimelineFlow()
             }
 
             print("")
-            for (idx, session) in sessions.enumerated() {
-                let title = session.title ?? "Untitled"
-                let date = TerminalUI.formatDate(session.updatedAt)
-                print("  [\(idx+1)] \(title) (\(session.id.uuidString.prefix(8))) - \(date)")
+            for (idx, timeline) in timelines.enumerated() {
+                let title = timeline.title ?? "Untitled"
+                let date = TerminalUI.formatDate(timeline.updatedAt)
+                print("  [\(idx+1)] \(title) (\(timeline.id.uuidString.prefix(8))) - \(date)")
             }
             print("")
-            print("Select a session [1]: ", terminator: "")
+            print("Select a timeline [1]: ", terminator: "")
             let indexStr = readLine()?.trimmingCharacters(in: .whitespaces) ?? "1"
             let index = (Int(indexStr) ?? 1) - 1
 
-            if index >= 0 && index < sessions.count {
-                let session = sessions[index]
-                return Session(id: session.id, title: session.title)
+            if index >= 0 && index < timelines.count {
+                let timeline = timelines[index]
+                return Timeline(id: timeline.id, title: timeline.title)
             } else {
                 TerminalUI.printError("Invalid selection.")
                 throw ExitCode.failure
             }
         } else {
-            return try await createNewSessionFlow()
+            return try await createNewTimelineFlow()
         }
     }
 
-    private func createNewSessionFlow() async throws -> Session {
-        let session = try await client.chat.createSession()
-        TerminalUI.printSuccess("Created new session \(session.id.uuidString.prefix(8))")
-        return session
+    private func createNewTimelineFlow() async throws -> Timeline {
+        let timeline = try await client.chat.createTimeline()
+        TerminalUI.printSuccess("Created new timeline \(timeline.id.uuidString.prefix(8))")
+        return timeline
     }
 
     /// Handles re-attachment of client-side workspaces
-    func handleWorkspaceReattachment(session: Session, localConfig: LocalConfig) async {
+    func handleWorkspaceReattachment(timeline: Timeline, localConfig: LocalConfig) async {
         guard let workspaces = localConfig.clientWorkspaces, !workspaces.isEmpty else { return }
 
         print("")
@@ -107,7 +107,7 @@ struct CLISessionManager {
                 do {
                     // Verify workspace exists on server and is linked to this client
                     // Actually, we can just attempt to attach. If it fails, it might be gone.
-                    try await client.workspace.attachWorkspace(wsId, to: session.id, isPrimary: false)
+                    try await client.workspace.attachWorkspace(wsId, to: timeline.id, isPrimary: false)
                     TerminalUI.printSuccess("Attached \(uri)")
                 } catch {
                     TerminalUI.printError("Failed to re-attach \(uri): \(error.localizedDescription)")

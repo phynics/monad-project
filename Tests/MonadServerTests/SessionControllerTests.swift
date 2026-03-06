@@ -1,11 +1,11 @@
+import MonadShared
+import MonadCore
 import Testing
 import Hummingbird
 import HummingbirdTesting
 import Foundation
 import MonadTestSupport
 @testable import MonadServer
-import MonadCore
-import MonadShared
 import Dependencies
 
 @Suite struct SessionControllerTests {
@@ -24,13 +24,13 @@ import Dependencies
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
             // Setup App
             let router = Router()
-            let controller = SessionAPIController<BasicRequestContext>(sessionManager: sessionManager)
+            let controller = TimelineAPIController<BasicRequestContext>(timelineManager: timelineManager)
             controller.addRoutes(to: router.group("/sessions"))
 
             let app = Application(router: router)
@@ -42,7 +42,7 @@ import Dependencies
 
                     let decoder = JSONDecoder()
                     decoder.dateDecodingStrategy = .iso8601
-                    let session = try decoder.decode(SessionResponse.self, from: response.body)
+                    let session = try decoder.decode(TimelineResponse.self, from: response.body)
                     #expect(session.id.uuidString.isEmpty == false)
                 }
             }

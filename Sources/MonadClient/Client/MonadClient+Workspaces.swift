@@ -77,10 +77,10 @@ public extension MonadWorkspaceClient {
         return try await client.perform(request)
     }
 
-    func attachWorkspace(_ workspaceId: UUID, to sessionId: UUID, isPrimary: Bool)
+    func attachWorkspace(_ workspaceId: UUID, to timelineId: UUID, isPrimary: Bool)
         async throws {
         var request = try await client.buildRequest(
-            path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "POST"
+            path: "/api/sessions/\(timelineId.uuidString)/workspaces", method: "POST"
         )
         request.httpBody = try await client.encode(
             AttachWorkspaceRequest(workspaceId: workspaceId, isPrimary: isPrimary)
@@ -88,27 +88,27 @@ public extension MonadWorkspaceClient {
         _ = try await client.performRaw(request)
     }
 
-    func detachWorkspace(_ workspaceId: UUID, from sessionId: UUID) async throws {
+    func detachWorkspace(_ workspaceId: UUID, from timelineId: UUID) async throws {
         let request = try await client.buildRequest(
-            path: "/api/sessions/\(sessionId.uuidString)/workspaces/\(workspaceId.uuidString)",
+            path: "/api/sessions/\(timelineId.uuidString)/workspaces/\(workspaceId.uuidString)",
             method: "DELETE"
         )
         _ = try await client.performRaw(request)
     }
 
-    func listSessionWorkspaces(sessionId: UUID) async throws -> (
+    func listTimelineWorkspaces(timelineId: UUID) async throws -> (
         primary: WorkspaceReference?, attached: [WorkspaceReference]
     ) {
         let request = try await client.buildRequest(
-            path: "/api/sessions/\(sessionId.uuidString)/workspaces", method: "GET"
+            path: "/api/sessions/\(timelineId.uuidString)/workspaces", method: "GET"
         )
-        let response: SessionWorkspacesResponse = try await client.perform(request)
+        let response: TimelineWorkspacesResponse = try await client.perform(request)
         return (response.primaryWorkspace, response.attachedWorkspaces)
     }
 
-    func restoreWorkspace(sessionId: UUID, workspaceId: UUID) async throws {
+    func restoreWorkspace(timelineId: UUID, workspaceId: UUID) async throws {
         let request = try await client.buildRequest(
-            path: "/api/sessions/\(sessionId.uuidString)/workspaces/\(workspaceId.uuidString)/restore",
+            path: "/api/sessions/\(timelineId.uuidString)/workspaces/\(workspaceId.uuidString)/restore",
             method: "POST"
         )
         _ = try await client.performRaw(request)

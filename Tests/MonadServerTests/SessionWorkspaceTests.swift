@@ -1,6 +1,7 @@
+import MonadShared
+import MonadCore
 import XCTest
 import GRDB
-@testable import MonadCore
 import MonadTestSupport
 @testable import MonadServer
 import Dependencies
@@ -33,12 +34,12 @@ final class SessionWorkspaceTests: XCTestCase {
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
             // Act
-            let session = try await sessionManager.createSession(title: "Workspace Test Session")
+            let session = try await timelineManager.createTimeline(title: "Workspace Test Session")
 
             // Assert
             XCTAssertNotNil(session.primaryWorkspaceId, "Session should have a primary workspace ID")

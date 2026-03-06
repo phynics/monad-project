@@ -12,7 +12,7 @@ import MonadShared
 /// The main Request-Eval-Print Loop for the Chat Interface
 actor ChatREPL: ChatREPLController {
     let client: MonadClient
-    var session: Session
+    var timeline: Timeline
     var running = true
     var selectedWorkspaceId: UUID?
     var lastDebugSnapshot: DebugSnapshot?
@@ -29,8 +29,8 @@ actor ChatREPL: ChatREPLController {
     /// Track consecutive Ctrl-C presses for force-exit
     var lastSigintTime: Date?
 
-    init(client: MonadClient, session: Session) {
+    init(client: MonadClient, timeline: Timeline) {
         self.client = client
-        self.session = session
+        self.timeline = timeline
     }
 }

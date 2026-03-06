@@ -59,30 +59,30 @@ struct QuitCommand: SlashCommand {
     }
 }
 
-struct NewSessionCommand: SlashCommand {
+struct NewTimelineCommand: SlashCommand {
     let name = "new"
-    let description = "Start a new chat session"
-    let category: String? = "Session Management"
+    let description = "Start a new chat timeline"
+    let category: String? = "Timeline Management"
 
     func run(args: [String], context: ChatContext) async throws {
         do {
-            let session = try await context.client.chat.createSession()
-            await context.repl.switchSession(session)
-            TerminalUI.printSuccess("Started new session \(session.id.uuidString.prefix(8))")
+            let timeline = try await context.client.chat.createTimeline()
+            await context.repl.switchTimeline(timeline)
+            TerminalUI.printSuccess("Started new timeline \(timeline.id.uuidString.prefix(8))")
         } catch {
-            TerminalUI.printError("Failed to create session: \(error.localizedDescription)")
+            TerminalUI.printError("Failed to create timeline: \(error.localizedDescription)")
         }
     }
 }
 
 // MARK: - Specialized Commands
 
-struct SessionCommand: SlashCommand {
-    let name = "session"
-    let aliases = ["sessions"]
-    let description = "Manage sessions"
-    let category: String? = "Session Management"
-    let usage = "/session [info|list|delete|rename|switch|log] [args]"
+struct TimelineCommand: SlashCommand {
+    let name = "timeline"
+    let aliases = ["timelines"]
+    let description = "Manage timelines"
+    let category: String? = "Timeline Management"
+    let usage = "/timeline [info|list|delete|rename|switch|log] [args]"
 
     func run(args: [String], context: ChatContext) async throws {
         let subcommand = args.first ?? "info"
@@ -91,23 +91,23 @@ struct SessionCommand: SlashCommand {
         case "info":
             try await showInfo(context: context)
         case "list", "ls":
-            try await listSessions(context: context)
+            try await listTimelines(context: context)
         case "delete", "rm":
             if args.count > 1 {
-                try await deleteSession(args[1], context: context)
+                try await deleteTimeline(args[1], context: context)
             } else {
-                TerminalUI.printError("Usage: /session delete <session-id>")
+                TerminalUI.printError("Usage: /timeline delete <timeline-id>")
             }
         case "rename", "name":
             if args.count > 1 {
                 let newTitle = args.dropFirst().joined(separator: " ")
-                try await renameSession(newTitle, context: context)
+                try await renameTimeline(newTitle, context: context)
             } else {
-                TerminalUI.printError("Usage: /session rename <new-name>")
+                TerminalUI.printError("Usage: /timeline rename <new-name>")
             }
         case "switch", "use":
             if args.count > 1 {
-                try await switchSession(args[1], context: context)
+                try await switchTimeline(args[1], context: context)
             } else {
                 // Interactive TUI switch
                 try await interactiveSwitch(context: context)
@@ -120,28 +120,28 @@ struct SessionCommand: SlashCommand {
     }
 
     private func showInfo(context: ChatContext) async throws {
-        let session = context.session
-        let messages = try await context.client.chat.getHistory(sessionId: session.id)
-        let sessionWS = try await context.client.workspace.listSessionWorkspaces(sessionId: session.id)
+        let timeline = context.timeline
+        let messages = try await context.client.chat.getHistory(timelineId: timeline.id)
+        let timelineWS = try await context.client.workspace.listTimelineWorkspaces(timelineId: timeline.id)
 
         print("")
-        print(TerminalUI.bold("Current Session"))
+        print(TerminalUI.bold("Current Timeline"))
         print("")
-        print("  Title:    \(session.title ?? "Untitled")")
-        print("  ID:       \(session.id.uuidString)")
-        print("  Created:  \(TerminalUI.formatDate(session.createdAt))")
+        print("  Title:    \(timeline.title ?? "Untitled")")
+        print("  ID:       \(timeline.id.uuidString)")
+        print("  Created:  \(TerminalUI.formatDate(timeline.createdAt))")
         print("  Messages: \(messages.count)")
 
         // Workspaces
         var wsDesc: [String] = []
-        if let primary = sessionWS.primary {
+        if let primary = timelineWS.primary {
             wsDesc.append("\(primary.uri.description) (★)")
         }
-        for ws in sessionWS.attached.prefix(2) {
+        for ws in timelineWS.attached.prefix(2) {
             wsDesc.append("\(ws.uri.description) (●)")
         }
-        if sessionWS.attached.count > 2 {
-            wsDesc.append("+\(sessionWS.attached.count - 2) more")
+        if timelineWS.attached.count > 2 {
+            wsDesc.append("+\(timelineWS.attached.count - 2) more")
         }
 
         if !wsDesc.isEmpty {
@@ -150,35 +150,35 @@ struct SessionCommand: SlashCommand {
         }
 
         print("")
-        print(TerminalUI.dim("Use '/session list' for all sessions, '/session switch' to change."))
+        print(TerminalUI.dim("Use '/timeline list' for all timelines, '/timeline switch' to change."))
         print("")
     }
 
     private func interactiveSwitch(context: ChatContext) async throws {
-        let sessions = try await context.client.chat.listSessions()
-        guard !sessions.isEmpty else {
-            TerminalUI.printInfo("No other sessions found.")
+        let timelines = try await context.client.chat.listTimelines()
+        guard !timelines.isEmpty else {
+            TerminalUI.printInfo("No other timelines found.")
             return
         }
 
-        let currentId = context.session.id
-        let sortedSessions = sessions.sorted { $0.createdAt > $1.createdAt }
+        let currentId = context.timeline.id
+        let sortedTimelines = timelines.sorted { $0.createdAt > $1.createdAt }
 
         print("")
-        print(TerminalUI.bold("Switch Session:"))
+        print(TerminalUI.bold("Switch Timeline:"))
         print("")
 
-        for (idx, session) in sortedSessions.enumerated() {
-            let title = session.title ?? "Untitled"
-            let isCurrent = session.id == currentId
+        for (idx, timeline) in sortedTimelines.enumerated() {
+            let title = timeline.title ?? "Untitled"
+            let isCurrent = timeline.id == currentId
             let marker = isCurrent ? TerminalUI.green("[●]") : "[ ]"
-            let dateStr = TerminalUI.formatDate(session.createdAt)
+            let dateStr = TerminalUI.formatDate(timeline.createdAt)
 
             print("  \(idx + 1). \(marker) \(title)  \(TerminalUI.dim(dateStr))")
         }
 
         print("")
-        print("Enter number (1-\(sortedSessions.count)) or q to cancel: ", terminator: "")
+        print("Enter number (1-\(sortedTimelines.count)) or q to cancel: ", terminator: "")
         fflush(stdout)
 
         guard let input = readLine()?.trimmingCharacters(in: .whitespaces) else {
@@ -190,25 +190,25 @@ struct SessionCommand: SlashCommand {
             return
         }
 
-        guard let index = Int(input), index > 0, index <= sortedSessions.count else {
+        guard let index = Int(input), index > 0, index <= sortedTimelines.count else {
             TerminalUI.printError("Invalid selection.")
             return
         }
 
-        let selected = sortedSessions[index - 1]
+        let selected = sortedTimelines[index - 1]
         if selected.id == currentId {
-            TerminalUI.printInfo("Already in this session.")
+            TerminalUI.printInfo("Already in this timeline.")
             return
         }
 
-        await context.repl.switchSession(selected)
-        TerminalUI.printSuccess("Switched to session: \(selected.title ?? selected.id.uuidString)")
+        await context.repl.switchTimeline(selected)
+        TerminalUI.printSuccess("Switched to timeline: \(selected.title ?? selected.id.uuidString)")
     }
 
     private func showHistory(context: ChatContext) async throws {
-        let messages = try await context.client.chat.getHistory(sessionId: context.session.id)
+        let messages = try await context.client.chat.getHistory(timelineId: context.timeline.id)
         if messages.isEmpty {
-            TerminalUI.printInfo("No messages in this session yet.")
+            TerminalUI.printInfo("No messages in this timeline yet.")
             return
         }
 
@@ -235,22 +235,22 @@ struct SessionCommand: SlashCommand {
         }
     }
 
-    private func listSessions(context: ChatContext) async throws {
-        let sessions = try await context.client.chat.listSessions()
-        if sessions.isEmpty {
-            TerminalUI.printInfo("No sessions found.")
+    private func listTimelines(context: ChatContext) async throws {
+        let timelines = try await context.client.chat.listTimelines()
+        if timelines.isEmpty {
+            TerminalUI.printInfo("No timelines found.")
             return
         }
 
-        print("\n" + TerminalUI.bold("Sessions:") + "\n")
-        let currentId = context.session.id
+        print("\n" + TerminalUI.bold("Timelines:") + "\n")
+        let currentId = context.timeline.id
 
-        for session in sessions {
-            let title = session.title ?? "Untitled"
-            let dateStr = TerminalUI.formatDate(session.createdAt)
-            let isCurrent = session.id == currentId
+        for timeline in timelines {
+            let title = timeline.title ?? "Untitled"
+            let dateStr = TerminalUI.formatDate(timeline.createdAt)
+            let isCurrent = timeline.id == currentId
             let marker = isCurrent ? TerminalUI.green(" ●") : ""
-            let idStr = session.id.uuidString.prefix(8)
+            let idStr = timeline.id.uuidString.prefix(8)
 
             print(
                 "  \(TerminalUI.dim(String(idStr)))  \(title)  \(TerminalUI.dim(dateStr))\(marker)")
@@ -258,37 +258,37 @@ struct SessionCommand: SlashCommand {
         print("")
     }
 
-    private func deleteSession(_ idStr: String, context: ChatContext) async throws {
+    private func deleteTimeline(_ idStr: String, context: ChatContext) async throws {
         if let uuid = UUID(uuidString: idStr) {
-            try await context.client.chat.deleteSession(uuid)
-            TerminalUI.printSuccess("Deleted session \(uuid.uuidString.prefix(8))")
+            try await context.client.chat.deleteTimeline(uuid)
+            TerminalUI.printSuccess("Deleted timeline \(uuid.uuidString.prefix(8))")
             return
         }
 
         // Partial match
-        let sessions = try await context.client.chat.listSessions()
-        if let match = sessions.first(where: {
+        let timelines = try await context.client.chat.listTimelines()
+        if let match = timelines.first(where: {
             $0.id.uuidString.hasPrefix(idStr) || $0.id.uuidString.hasPrefix(idStr.uppercased())
         }) {
-            try await context.client.chat.deleteSession(match.id)
-            TerminalUI.printSuccess("Deleted session \(match.id.uuidString.prefix(8))")
+            try await context.client.chat.deleteTimeline(match.id)
+            TerminalUI.printSuccess("Deleted timeline \(match.id.uuidString.prefix(8))")
         } else {
-            TerminalUI.printError("Invalid session ID or no match: \(idStr)")
+            TerminalUI.printError("Invalid timeline ID or no match: \(idStr)")
         }
     }
 
-    private func renameSession(_ title: String, context: ChatContext) async throws {
-        try await context.client.chat.updateSessionTitle(title, sessionId: context.session.id)
-        TerminalUI.printSuccess("Renamed session to: \(title)")
+    private func renameTimeline(_ title: String, context: ChatContext) async throws {
+        try await context.client.chat.updateTimelineTitle(title, timelineId: context.timeline.id)
+        TerminalUI.printSuccess("Renamed timeline to: \(title)")
     }
 
-    private func switchSession(_ idStr: String, context: ChatContext) async throws {
-        let sessions = try await context.client.chat.listSessions()
-        if let match = sessions.first(where: { $0.id.uuidString.hasPrefix(idStr) }) {
-            await context.repl.switchSession(match)
-            TerminalUI.printSuccess("Switched to session: \(match.title ?? match.id.uuidString)")
+    private func switchTimeline(_ idStr: String, context: ChatContext) async throws {
+        let timelines = try await context.client.chat.listTimelines()
+        if let match = timelines.first(where: { $0.id.uuidString.hasPrefix(idStr) }) {
+            await context.repl.switchTimeline(match)
+            TerminalUI.printSuccess("Switched to timeline: \(match.title ?? match.id.uuidString)")
         } else {
-            TerminalUI.printError("No session found matching: \(idStr)")
+            TerminalUI.printError("No timeline found matching: \(idStr)")
         }
     }
 }

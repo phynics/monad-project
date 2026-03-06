@@ -1,3 +1,4 @@
+import MonadShared
 import Foundation
 /// Database model for a tool available in a workspace
 public struct WorkspaceTool: Codable, Sendable, Identifiable {

@@ -1,4 +1,4 @@
-@_exported import enum MonadShared.HealthStatus
+import MonadShared
 
 /// Protocol for services that can report their health status.
 public protocol HealthCheckable: Sendable {

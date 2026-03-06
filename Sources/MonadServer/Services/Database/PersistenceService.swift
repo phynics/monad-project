@@ -8,8 +8,8 @@ import Logging
 public actor PersistenceService:
     MemoryStoreProtocol,
     MessageStoreProtocol,
-    SessionPersistenceProtocol,
-    JobStoreProtocol,
+    TimelinePersistenceProtocol,
+    BackgroundJobStoreProtocol,
     MSAgentStoreProtocol,
     WorkspacePersistenceProtocol,
     ClientStoreProtocol,
@@ -18,13 +18,13 @@ public actor PersistenceService:
     internal let dbQueue: DatabaseQueue
     internal let logger = Logger.module(named: "database")
 
-    // Job Event Stream
-    private let jobStream: AsyncStream<JobEvent>
-    private let jobContinuation: AsyncStream<JobEvent>.Continuation
+    // BackgroundJob Event Stream
+    private let jobStream: AsyncStream<BackgroundJobEvent>
+    private let jobContinuation: AsyncStream<BackgroundJobEvent>.Continuation
 
     // MARK: - HealthCheckable
 
-    public func getHealthStatus() async -> MonadCore.HealthStatus {
+    public func getHealthStatus() async -> HealthStatus {
         // Actor-isolated, but we can assume ok if initialized. 
         // We'll return ok and let checkHealth do the real work if needed.
         return .ok
@@ -34,7 +34,7 @@ public actor PersistenceService:
         return ["path": dbQueue.path]
     }
 
-    public func checkHealth() async -> MonadCore.HealthStatus {
+    public func checkHealth() async -> HealthStatus {
         do {
             try await dbQueue.read { db in
                 _ = try Int.fetchOne(db, sql: "SELECT 1")
@@ -50,16 +50,16 @@ public actor PersistenceService:
 
     public init(dbQueue: DatabaseQueue) {
         self.dbQueue = dbQueue
-        let (stream, continuation) = AsyncStream.makeStream(of: JobEvent.self)
+        let (stream, continuation) = AsyncStream.makeStream(of: BackgroundJobEvent.self)
         self.jobStream = stream
         self.jobContinuation = continuation
     }
 
-    public func monitorJobs() -> AsyncStream<JobEvent> {
+    public func monitorJobs() -> AsyncStream<BackgroundJobEvent> {
         return jobStream
     }
 
-    internal func emit(_ event: JobEvent) {
+    internal func emit(_ event: BackgroundJobEvent) {
         jobContinuation.yield(event)
     }
 
@@ -136,7 +136,7 @@ public actor PersistenceService:
             // Memory is used for recall and injected opportunistically,
             // it can be reset as it's not part of the protected 'Archive'.
             try Memory.deleteAll(db)
-            try Job.deleteAll(db)
+            try BackgroundJob.deleteAll(db)
 
             // Note: Archives and conversationMessage/Session are now protected by triggers
             // and cannot be deleted or modified (for archived sessions).

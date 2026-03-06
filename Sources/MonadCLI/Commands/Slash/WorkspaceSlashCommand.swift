@@ -15,7 +15,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         case "all", "list", "ls":
             try await listAllWorkspaces(context: context)
         case nil:
-            try await showSessionWorkspaces(context: context)
+            try await showTimelineWorkspaces(context: context)
         case "select", "use":
             if args.count > 1 {
                 try await selectWorkspace(args[1], context: context)
@@ -26,7 +26,7 @@ struct WorkspaceSlashCommand: SlashCommand {
             if args.count > 1 {
                 if let uuid = UUID(uuidString: args[1]) {
                     try await context.client.workspace.attachWorkspace(
-                        uuid, to: context.session.id, isPrimary: false
+                        uuid, to: context.timeline.id, isPrimary: false
                     )
                     TerminalUI.printSuccess("Attached workspace \(uuid.uuidString).")
                 } else {
@@ -40,7 +40,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         case "detach":
             if args.count > 1 {
                 if let uuid = UUID(uuidString: args[1]) {
-                    try await context.client.workspace.detachWorkspace(uuid, from: context.session.id)
+                    try await context.client.workspace.detachWorkspace(uuid, from: context.timeline.id)
                     TerminalUI.printSuccess("Detached workspace \(uuid.uuidString).")
                 } else {
                     TerminalUI.printError("Invalid UUID")
@@ -51,17 +51,17 @@ struct WorkspaceSlashCommand: SlashCommand {
         case "attach-pwd", "pwd":
             try await attachCurrentDirectory(context: context)
         default:
-            try await showSessionWorkspaces(context: context)
+            try await showTimelineWorkspaces(context: context)
         }
     }
 
-    private func showSessionWorkspaces(context: ChatContext) async throws {
-        let sessionWS = try await context.client.workspace.listSessionWorkspaces(
-            sessionId: context.session.id
+    private func showTimelineWorkspaces(context: ChatContext) async throws {
+        let timelineWS = try await context.client.workspace.listTimelineWorkspaces(
+            timelineId: context.timeline.id
         )
 
-        let primaryWorkspace = sessionWS.primary
-        let attachedWorkspaces = sessionWS.attached
+        let primaryWorkspace = timelineWS.primary
+        let attachedWorkspaces = timelineWS.attached
 
         print("\n\(TerminalUI.bold("Session Workspaces:"))")
 
@@ -83,18 +83,18 @@ struct WorkspaceSlashCommand: SlashCommand {
 
     private func listAllWorkspaces(context: ChatContext) async throws {
         let allWorkspaces = try await context.client.workspace.listWorkspaces()
-        let sessionWS = try await context.client.workspace.listSessionWorkspaces(
-            sessionId: context.session.id
+        let timelineWS = try await context.client.workspace.listTimelineWorkspaces(
+            timelineId: context.timeline.id
         )
 
-        let primaryId = sessionWS.primary?.id
-        let attachedIds = Set(sessionWS.attached.map { $0.id })
+        let primaryId = timelineWS.primary?.id
+        let attachedIds = Set(timelineWS.attached.map { $0.id })
 
         let primaryWorkspace = allWorkspaces.first(where: { $0.id == primaryId })
         let attachedWorkspaces = allWorkspaces.filter { attachedIds.contains($0.id) && $0.id != primaryId }
         let availableWorkspaces = allWorkspaces.filter { $0.id != primaryId && !attachedIds.contains($0.id) }
 
-        print("\n\(TerminalUI.bold("Current Session Workspaces:"))")
+        print("\n\(TerminalUI.bold("Current Timeline Workspaces:"))")
 
         if let primary = primaryWorkspace {
             printWorkspace(primary, marker: "★", color: "green")
@@ -169,7 +169,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         if let input = readLine(), let index = Int(input), index > 0, index <= workspaces.count {
             let selected = workspaces[index - 1]
             try await context.client.workspace.attachWorkspace(
-                selected.id, to: context.session.id, isPrimary: false
+                selected.id, to: context.timeline.id, isPrimary: false
             )
             TerminalUI.printSuccess("Attached \(selected.uri.description)")
         } else {
@@ -211,7 +211,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         }
 
         if let wsId = targetWorkspaceId {
-            try await context.client.workspace.attachWorkspace(wsId, to: context.session.id, isPrimary: false)
+            try await context.client.workspace.attachWorkspace(wsId, to: context.timeline.id, isPrimary: false)
 
             // Push read only tools
             try await context.client.workspace.syncWorkspaceTools(

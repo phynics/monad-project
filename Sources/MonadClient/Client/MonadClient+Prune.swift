@@ -18,11 +18,11 @@ public extension MonadChatClient {
         return response.count
     }
 
-    func pruneSessions(olderThanDays days: Int, excluding: [UUID] = [], dryRun: Bool = false)
+    func pruneTimelines(olderThanDays days: Int, excluding: [UUID] = [], dryRun: Bool = false)
         async throws -> Int {
         var request = try await client.buildRequest(path: "/api/prune/sessions", method: "POST")
         request.httpBody = try await client.encode(
-            PruneSessionRequest(days: days, excludedSessionIds: excluding, dryRun: dryRun)
+            PruneTimelineRequest(days: days, excludedTimelineIds: excluding, dryRun: dryRun)
         )
         let response: PruneResponse = try await client.perform(request)
         return response.count

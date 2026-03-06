@@ -1,8 +1,8 @@
+import MonadShared
+import MonadCore
 import Foundation
 import Hummingbird
 import HummingbirdTesting
-import MonadCore
-import MonadShared
 import NIOCore
 import OpenAI
 import Testing
@@ -29,17 +29,17 @@ import MonadTestSupport
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
             // Create Session
-            let session = try await sessionManager.createSession()
+            let session = try await timelineManager.createTimeline()
 
-            // We need to inject sessionManager into the context for ToolRouter and ChatEngine
-            // Since we created sessionManager explicitly, we should override it in dependencies for subsequent calls
+            // We need to inject timelineManager into the context for ToolRouter and ChatEngine
+            // Since we created timelineManager explicitly, we should override it in dependencies for subsequent calls
             try await withDependencies {
-                $0.sessionManager = sessionManager
+                $0.timelineManager = timelineManager
             } operation: {
                 let toolRouter = ToolRouter()
                 // Also override toolRouter for ChatEngine
@@ -51,7 +51,7 @@ import MonadTestSupport
                     // Setup App
                     let router = Router()
                     let controller = ChatAPIController<BasicRequestContext>(
-                        sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter)
+                        timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter)
                     controller.addRoutes(to: router.group("/sessions"))
 
                     let app = Application(router: router)
@@ -69,7 +69,7 @@ import MonadTestSupport
                             #expect(response.headers[.contentType] == "text/event-stream")
 
                             // Collect body
-                            let body = try await String(buffer: await response.body)
+                            let body = String(buffer: response.body)
                             // SSE format check
                             #expect(body.contains("data:"))
                             #expect(body.contains("\"streamCompleted\""))
@@ -96,11 +96,11 @@ import MonadTestSupport
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(workspaceRoot: workspaceRoot)
-            let session = try await sessionManager.createSession()
+            let timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
+            let session = try await timelineManager.createTimeline()
 
             try await withDependencies {
-                $0.sessionManager = sessionManager
+                $0.timelineManager = timelineManager
             } operation: {
                 let toolRouter = ToolRouter()
                 try await withDependencies {
@@ -109,7 +109,7 @@ import MonadTestSupport
                     let engine = ChatEngine()
                     let router = Router()
                     let controller = ChatAPIController<BasicRequestContext>(
-                        sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter)
+                        timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter)
                     controller.addRoutes(to: router.group("/sessions"))
                     let app = Application(router: router)
                     let chatRequest = ChatRequest(message: "Wait for it")
@@ -123,12 +123,12 @@ import MonadTestSupport
                                 uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer
                             ) { response in
                                 #expect(response.status == .ok)
-                                let body = try await String(buffer: await response.body)
+                                let body = String(buffer: response.body)
                                 #expect(body.contains("\"cancelled\""))
                             }
                         }
 
-                        // Wait for stream to start (enough time for sessionManager to register task)
+                        // Wait for stream to start (enough time for timelineManager to register task)
                         try await Task.sleep(nanoseconds: 500_000_000) // 0.5s
 
                         // Cancel
@@ -159,15 +159,15 @@ import MonadTestSupport
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let sessionManager = SessionManager(
+            let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot
             )
 
             // Create Session
-            let session = try await sessionManager.createSession()
+            let session = try await timelineManager.createTimeline()
 
             try await withDependencies {
-                $0.sessionManager = sessionManager
+                $0.timelineManager = timelineManager
             } operation: {
                 let toolRouter = ToolRouter()
                  try await withDependencies {
@@ -178,7 +178,7 @@ import MonadTestSupport
                     // Setup App
                     let router = Router()
                     let controller = ChatAPIController<BasicRequestContext>(
-                        sessionManager: sessionManager, chatEngine: engine, toolRouter: toolRouter)
+                        timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter)
                     controller.addRoutes(to: router.group("/sessions"))
 
                     let app = Application(router: router)

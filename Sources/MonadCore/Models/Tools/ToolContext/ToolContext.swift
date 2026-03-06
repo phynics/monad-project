@@ -2,7 +2,6 @@ import Foundation
 import MonadShared
 import Logging
 import MonadShared
-@_exported import protocol MonadShared.PromptFormattable
 
 // MARK: - ToolContext Protocol
 

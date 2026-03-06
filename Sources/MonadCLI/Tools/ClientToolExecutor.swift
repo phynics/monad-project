@@ -5,12 +5,12 @@ import MonadShared
 /// Executes tools locally on the client machine for attached workspaces.
 struct ClientToolExecutor {
     let client: MonadClient
-    let session: Session
+    let timeline: Timeline
     let repl: ChatREPL
     
-    init(client: MonadClient, session: Session, repl: ChatREPL) {
+    init(client: MonadClient, timeline: Timeline, repl: ChatREPL) {
         self.client = client
-        self.session = session
+        self.timeline = timeline
         self.repl = repl
     }
     

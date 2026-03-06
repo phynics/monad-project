@@ -1,3 +1,4 @@
+import MonadShared
 /// Protocol for managing virtual document workspaces.
 
 import Foundation

@@ -6,23 +6,23 @@ import MonadShared
 import NIOCore
 
 public struct ExecuteToolRequest: Codable, Sendable {
-    public let sessionId: UUID
+    public let timelineId: UUID
     public let name: String
     public let arguments: [String: AnyCodable]
 
-    public init(sessionId: UUID, name: String, arguments: [String: AnyCodable]) {
-        self.sessionId = sessionId
+    public init(timelineId: UUID, name: String, arguments: [String: AnyCodable]) {
+        self.timelineId = timelineId
         self.name = name
         self.arguments = arguments
     }
 }
 
 public struct ToolAPIController<Context: RequestContext>: Sendable {
-    public let sessionManager: SessionManager
+    public let timelineManager: TimelineManager
     public let toolRouter: ToolRouter
 
-    public init(sessionManager: SessionManager, toolRouter: ToolRouter) {
-        self.sessionManager = sessionManager
+    public init(timelineManager: TimelineManager, toolRouter: ToolRouter) {
+        self.timelineManager = timelineManager
         self.toolRouter = toolRouter
     }
 
@@ -35,7 +35,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func listSystemTools(_: Request, context _: Context) async throws -> [ToolInfo] {
-        let tools = await sessionManager.systemTools()
+        let tools = await timelineManager.systemTools()
         return tools.map { ToolInfo(id: $0.id, name: $0.name, description: $0.description) }
     }
 
@@ -44,7 +44,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         let name = try context.parameters.require("name")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
-        guard let toolManager = await sessionManager.getToolManager(for: id) else {
+        guard let toolManager = await timelineManager.getToolManager(for: id) else {
             throw HTTPError(.notFound)
         }
 
@@ -57,7 +57,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         let name = try context.parameters.require("name")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
-        guard let toolManager = await sessionManager.getToolManager(for: id) else {
+        guard let toolManager = await timelineManager.getToolManager(for: id) else {
             throw HTTPError(.notFound)
         }
 
@@ -71,7 +71,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.badRequest)
         }
 
-        guard let toolManager = await sessionManager.getToolManager(for: id) else {
+        guard let toolManager = await timelineManager.getToolManager(for: id) else {
             throw HTTPError(.notFound)
         }
 
@@ -80,7 +80,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         // 1. System Tools
         let systemTools = await toolManager.getEnabledTools()
         for tool in systemTools {
-            let source = await sessionManager.getToolSource(toolId: tool.id, for: id)
+            let source = await timelineManager.getToolSource(toolId: tool.id, for: id)
             toolInfos.append(
                 ToolInfo(
                     id: tool.id, name: tool.name, description: tool.description, isEnabled: true,
@@ -90,11 +90,11 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         }
 
         // 2. Workspace Tools
-        let workspaceTools = try await sessionManager.getAggregatedTools(for: id)
+        let workspaceTools = try await timelineManager.getAggregatedTools(for: id)
         for toolRef in workspaceTools {
             if toolInfos.contains(where: { $0.id == toolRef.toolId }) { continue }
 
-            let source = await sessionManager.getToolSource(toolId: toolRef.toolId, for: id)
+            let source = await timelineManager.getToolSource(toolId: toolRef.toolId, for: id)
             let name = toolRef.displayName
             var description = "Workspace tool"
 
@@ -127,7 +127,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
             return try await toolRouter.execute(
                 tool: .known(execReq.name),
                 arguments: execReq.arguments,
-                sessionId: execReq.sessionId
+                timelineId: execReq.timelineId
             )
         } catch let error as ToolError {
             if case .toolNotFound = error {

@@ -1,0 +1,39 @@
+import Foundation
+import MonadShared
+
+/// Gateway tool that activates the BackgroundJobQueueContext
+///
+/// When executed, this tool activates the job queue context and makes
+/// job management tools available. Calling any non-context tool will
+/// automatically exit the job queue context.
+public final class BackgroundJobQueueGatewayTool: ContextGatewayTool, Sendable {
+    public typealias Context = BackgroundJobQueueContext
+
+    public let id = "manage_jobs"
+    public let name = "Manage Jobs"
+    public let description = "Enter job queue management mode to add, remove, and prioritize jobs"
+    public let requiresPermission = false
+
+    public let context: BackgroundJobQueueContext
+    public let timelineContext: ToolTimelineContext
+
+    public init(context: BackgroundJobQueueContext, timelineContext: ToolTimelineContext) {
+        self.context = context
+        self.timelineContext = timelineContext
+    }
+
+    public func canExecute() async -> Bool { true }
+
+    public var parametersSchema: [String: AnyCodable] {
+        ToolParameterSchema.object { _ in }.schema
+    }
+
+    public func execute(parameters: [String: Any]) async throws -> ToolResult {
+        // Activate the context
+        await timelineContext.activate(context)
+
+        // Return welcome message
+        let message = await context.welcomeMessage()
+        return .success(message)
+    }
+}

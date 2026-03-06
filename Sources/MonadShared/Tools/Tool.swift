@@ -160,8 +160,6 @@ public func formatToolsForPrompt(_ tools: [AnyTool]) async -> String {
     """
 }
 
-// ToolResult is now defined in MonadShared and re-exported via @_exported import above.
-
 /// Persistent configuration for a specific tool within a chat session.
 public struct ToolConfiguration: Codable, Identifiable, Sendable {
     /// The unique identifier of the tool.

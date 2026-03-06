@@ -12,7 +12,7 @@ struct WorkspaceRepositoryTests {
     @Test("Create Workspace")
     func testCreateWorkspace() async throws {
         let persistence = MockPersistenceService()
-        let repository = await withDependencies {
+        let repository = try await withDependencies {
             $0.persistenceService = persistence
         } operation: {
             WorkspaceRepository()
@@ -41,14 +41,14 @@ struct WorkspaceRepositoryTests {
     @Test("Get Workspace")
     func testGetWorkspace() async throws {
         let persistence = MockPersistenceService()
-        let repository = await withDependencies {
+        let repository = try await withDependencies {
             $0.persistenceService = persistence
         } operation: {
             WorkspaceRepository()
         }
 
         let ws = WorkspaceReference(
-            uri: .serverSession(UUID()),
+            uri: .serverTimeline(UUID()),
             hostType: .server,
             rootPath: "/path",
             metadata: ["test": .boolean(true)]
@@ -64,14 +64,14 @@ struct WorkspaceRepositoryTests {
     @Test("List Workspaces")
     func testListWorkspaces() async throws {
         let persistence = MockPersistenceService()
-        let repository = await withDependencies {
+        let repository = try await withDependencies {
             $0.persistenceService = persistence
         } operation: {
             WorkspaceRepository()
         }
 
-        let ws1 = WorkspaceReference(uri: .serverSession(UUID()), hostType: .server)
-        let ws2 = WorkspaceReference(uri: .serverSession(UUID()), hostType: .server)
+        let ws1 = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
+        let ws2 = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
         try await persistence.saveWorkspace(ws1)
         try await persistence.saveWorkspace(ws2)
 
@@ -84,13 +84,13 @@ struct WorkspaceRepositoryTests {
     @Test("Delete Workspace")
     func testDeleteWorkspace() async throws {
         let persistence = MockPersistenceService()
-        let repository = await withDependencies {
+        let repository = try await withDependencies {
             $0.persistenceService = persistence
         } operation: {
             WorkspaceRepository()
         }
 
-        let ws = WorkspaceReference(uri: .serverSession(UUID()), hostType: .server)
+        let ws = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
         try await persistence.saveWorkspace(ws)
 
         try await repository.deleteWorkspace(id: ws.id)
@@ -101,13 +101,13 @@ struct WorkspaceRepositoryTests {
     @Test("Update Workspace")
     func testUpdateWorkspace() async throws {
         let persistence = MockPersistenceService()
-        let repository = await withDependencies {
+        let repository = try await withDependencies {
             $0.persistenceService = persistence
         } operation: {
             WorkspaceRepository()
         }
 
-        var ws = WorkspaceReference(uri: .serverSession(UUID()), hostType: .server)
+        var ws = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
         try await persistence.saveWorkspace(ws)
 
         ws.status = .missing

@@ -5,12 +5,12 @@ actor PruneSlashCommand: SlashCommand {
     nonisolated let name = "prune"
     nonisolated let description = "Bulk delete data"
     nonisolated let category: String? = "Data Management"
-    nonisolated let usage = "/prune [memories|sessions|confirm] <args>"
+    nonisolated let usage = "/prune [memories|timelines|confirm] <args>"
 
     private enum PendingOperation {
         case memoriesQuery(String)
         case memoriesDays(Int)
-        case sessions(days: Int)
+        case timelines(days: Int)
         case memory(Memory)
     }
 
@@ -53,7 +53,7 @@ actor PruneSlashCommand: SlashCommand {
             } else {
                 TerminalUI.printError("Usage: /prune memory <id|olderThan>")
             }
-        case "sessions", "session":
+        case "timelines", "session":
             if args.count > 1 {
                 let arg = args[1].lowercased()
                 let days: Int
@@ -62,12 +62,12 @@ actor PruneSlashCommand: SlashCommand {
                 } else if let parsed = Int(arg) {
                     days = parsed
                 } else {
-                    TerminalUI.printError("Usage: /prune sessions <older-than-days|all>")
+                    TerminalUI.printError("Usage: /prune timelines <older-than-days|all>")
                     return
                 }
-                try await planPruneSessions(days: days, context: context)
+                try await planPruneTimelines(days: days, context: context)
             } else {
-                TerminalUI.printError("Usage: /prune sessions <older-than-days|all>")
+                TerminalUI.printError("Usage: /prune timelines <older-than-days|all>")
             }
         case "confirm":
             try await executePendingOperation(context: context)
@@ -81,7 +81,7 @@ actor PruneSlashCommand: SlashCommand {
         print("  /prune memories <query|days>   Plan deletion of memories (by query or age)")
         print("  /prune memory <id>             Plan deletion of a specific memory")
         print("  /prune memory olderThan <days> Plan deletion of memories older than N days")
-        print("  /prune sessions <days|all>     Plan deletion of sessions older than N days")
+        print("  /prune timelines <days|all>     Plan deletion of timelines older than N days")
         print("  /prune confirm                 Execute the planned deletion")
     }
 
@@ -125,26 +125,26 @@ actor PruneSlashCommand: SlashCommand {
         print("")
     }
 
-    private func planPruneSessions(days: Int, context: ChatContext) async throws {
-        TerminalUI.printLoading("Checking sessions...")
-        // Exclude current session for count accuracy check
-        let currentSessionId = context.session.id
-        let count = try await context.client.chat.pruneSessions(
-            olderThanDays: days, excluding: [currentSessionId], dryRun: true)
+    private func planPruneTimelines(days: Int, context: ChatContext) async throws {
+        TerminalUI.printLoading("Checking timelines...")
+        // Exclude current timeline for count accuracy check
+        let currentTimelineId = context.timeline.id
+        let count = try await context.client.chat.pruneTimelines(
+            olderThanDays: days, excluding: [currentTimelineId], dryRun: true)
 
         if count == 0 {
-            TerminalUI.printInfo("No sessions found to prune.")
+            TerminalUI.printInfo("No timelines found to prune.")
             pendingOperation = nil
             return
         }
 
-        pendingOperation = .sessions(days: days)
-        let criteria = days == 0 ? "all sessions" : "sessions older than \(days) days"
+        pendingOperation = .timelines(days: days)
+        let criteria = days == 0 ? "all timelines" : "timelines older than \(days) days"
 
         print("")
         print(TerminalUI.bold("⚠️  Dry Run Results:"))
-        print("   Would delete \(TerminalUI.cyan("\(count)")) sessions matching \(criteria).")
-        print("   (Current session will be preserved)")
+        print("   Would delete \(TerminalUI.cyan("\(count)")) timelines matching \(criteria).")
+        print("   (Current timeline will be preserved)")
         print("")
         print(TerminalUI.bold("To execute this deletion, run:"))
         print("   /prune confirm")
@@ -211,12 +211,12 @@ actor PruneSlashCommand: SlashCommand {
             let count = try await context.client.chat.pruneMemories(olderThanDays: days, dryRun: false)
             TerminalUI.printSuccess("Deleted \(count) memories.")
 
-        case .sessions(let days):
-            TerminalUI.printLoading("Deleting sessions...")
-            let currentSessionId = context.session.id
-            let count = try await context.client.chat.pruneSessions(
-                olderThanDays: days, excluding: [currentSessionId], dryRun: false)
-            TerminalUI.printSuccess("Deleted \(count) sessions.")
+        case .timelines(let days):
+            TerminalUI.printLoading("Deleting timelines...")
+            let currentTimelineId = context.timeline.id
+            let count = try await context.client.chat.pruneTimelines(
+                olderThanDays: days, excluding: [currentTimelineId], dryRun: false)
+            TerminalUI.printSuccess("Deleted \(count) timelines.")
 
         case .memory(let memory):
             TerminalUI.printLoading("Deleting memory...")

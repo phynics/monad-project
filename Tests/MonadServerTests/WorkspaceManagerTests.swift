@@ -1,6 +1,7 @@
+import MonadShared
+import MonadCore
 import XCTest
 import Dependencies
-@testable import MonadCore
 import MonadTestSupport
 @testable import MonadServer
 
@@ -12,7 +13,7 @@ final class WorkspaceManagerTests: XCTestCase {
 
     override func setUp() async throws {
         persistence = MockPersistenceService()
-        repository = await withDependencies {
+        repository = try await withDependencies {
             $0.persistenceService = persistence
         } operation: {
             WorkspaceRepository()
@@ -36,7 +37,7 @@ final class WorkspaceManagerTests: XCTestCase {
 
         let ref = WorkspaceReference(
             id: wsId,
-            uri: .serverSession(wsId),
+            uri: .serverTimeline(wsId),
             hostType: .server,
             rootPath: wsDir.path
         )
@@ -64,7 +65,7 @@ final class WorkspaceManagerTests: XCTestCase {
 
         let ref = WorkspaceReference(
             id: wsId,
-            uri: .serverSession(wsId),
+            uri: .serverTimeline(wsId),
             hostType: .server,
             rootPath: wsDir.path
         )
@@ -84,7 +85,7 @@ final class WorkspaceManagerTests: XCTestCase {
         let wsDir = testDir.appendingPathComponent("ws3")
         try FileManager.default.createDirectory(at: wsDir, withIntermediateDirectories: true)
 
-        let ref1 = WorkspaceReference(id: wsId1, uri: .serverSession(wsId1), hostType: .server, rootPath: wsDir.path)
+        let ref1 = WorkspaceReference(id: wsId1, uri: .serverTimeline(wsId1), hostType: .server, rootPath: wsDir.path)
         try await persistence.saveWorkspace(ref1)
 
         _ = try await manager.getWorkspace(id: wsId1)

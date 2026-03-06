@@ -1,6 +1,7 @@
+import MonadShared
+import MonadCore
 import Foundation
 import GRDB
-import MonadCore
 import Testing
 @testable import MonadServer
 
@@ -24,7 +25,7 @@ struct JobPersistenceTests {
             let columnNames = Set(columns.map { $0.name })
 
             #expect(columnNames.contains("id"))
-            #expect(columnNames.contains("sessionId"))
+            #expect(columnNames.contains("timelineId"))
             #expect(columnNames.contains("title"))
             #expect(columnNames.contains("description"))
             #expect(columnNames.contains("priority"))
@@ -36,13 +37,13 @@ struct JobPersistenceTests {
 
     @Test("Test basic job persistence")
     func jobPersistence() throws {
-        let sessionId = UUID()
+        let timelineId = UUID()
         try dbQueue.write { db in
-            try db.execute(sql: "INSERT INTO conversationSession (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)", arguments: [sessionId, "Test Session", Date(), Date()])
+            try db.execute(sql: "INSERT INTO timeline (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)", arguments: [timelineId, "Test Session", Date(), Date()])
         }
 
-        let job = Job(
-            sessionId: sessionId,
+        let job = BackgroundJob(
+            timelineId: timelineId,
             title: "Test Task",
             description: "Some description",
             priority: 10
@@ -53,9 +54,9 @@ struct JobPersistenceTests {
         }
 
         try dbQueue.read { db in
-            let fetched = try Job.fetchOne(db, key: job.id)
+            let fetched = try BackgroundJob.fetchOne(db, key: job.id)
             #expect(fetched != nil)
-            #expect(fetched?.sessionId == sessionId)
+            #expect(fetched?.timelineId == timelineId)
             #expect(fetched?.title == "Test Task")
             #expect(fetched?.priority == 10)
             #expect(fetched?.status == .pending)
@@ -64,12 +65,12 @@ struct JobPersistenceTests {
 
     @Test("Test job update")
     func jobUpdate() throws {
-        let sessionId = UUID()
+        let timelineId = UUID()
         try dbQueue.write { db in
-            try db.execute(sql: "INSERT INTO conversationSession (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)", arguments: [sessionId, "Test Session", Date(), Date()])
+            try db.execute(sql: "INSERT INTO timeline (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)", arguments: [timelineId, "Test Session", Date(), Date()])
         }
 
-        var job = Job(sessionId: sessionId, title: "Initial")
+        var job = BackgroundJob(timelineId: timelineId, title: "Initial")
         try dbQueue.write { db in
             try job.insert(db)
         }
@@ -82,7 +83,7 @@ struct JobPersistenceTests {
         }
 
         try dbQueue.read { db in
-            let fetched = try Job.fetchOne(db, key: job.id)
+            let fetched = try BackgroundJob.fetchOne(db, key: job.id)
             #expect(fetched?.title == "Updated")
             #expect(fetched?.status == .inProgress)
         }
@@ -92,7 +93,7 @@ struct JobPersistenceTests {
 @Suite(.serialized)
 struct PersistenceServiceJobTests {
     private let persistence: PersistenceService
-    private let sessionId = UUID()
+    private let timelineId = UUID()
 
     init() throws {
         let queue = try DatabaseQueue()
@@ -102,13 +103,13 @@ struct PersistenceServiceJobTests {
         persistence = PersistenceService(dbQueue: queue)
 
         try queue.write { db in
-            try db.execute(sql: "INSERT INTO conversationSession (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)", arguments: [sessionId, "Test Session", Date(), Date()])
+            try db.execute(sql: "INSERT INTO timeline (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)", arguments: [timelineId, "Test Session", Date(), Date()])
         }
     }
 
     @Test("Test saving and fetching job via PersistenceService")
     func saveAndFetchJob() async throws {
-        let job = Job(sessionId: sessionId, title: "Service Task")
+        let job = BackgroundJob(timelineId: timelineId, title: "Service Task")
         try await persistence.saveJob(job)
 
         let fetched = try await persistence.fetchJob(id: job.id)
@@ -118,8 +119,8 @@ struct PersistenceServiceJobTests {
 
     @Test("Test listing all jobs via PersistenceService")
     func listAllJobs() async throws {
-        try await persistence.saveJob(Job(sessionId: sessionId, title: "Task 1", priority: 1))
-        try await persistence.saveJob(Job(sessionId: sessionId, title: "Task 2", priority: 2))
+        try await persistence.saveJob(BackgroundJob(timelineId: timelineId, title: "Task 1", priority: 1))
+        try await persistence.saveJob(BackgroundJob(timelineId: timelineId, title: "Task 2", priority: 2))
 
         let all = try await persistence.fetchAllJobs()
         #expect(all.count == 2)
@@ -131,20 +132,20 @@ struct PersistenceServiceJobTests {
     func listJobsForSession() async throws {
         let otherSessionId = UUID()
         try await persistence.dbQueue.write { db in
-             try db.execute(sql: "INSERT INTO conversationSession (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)", arguments: [otherSessionId, "Other Session", Date(), Date()])
+             try db.execute(sql: "INSERT INTO timeline (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)", arguments: [otherSessionId, "Other Session", Date(), Date()])
         }
 
-        try await persistence.saveJob(Job(sessionId: sessionId, title: "Task 1"))
-        try await persistence.saveJob(Job(sessionId: otherSessionId, title: "Other Task"))
+        try await persistence.saveJob(BackgroundJob(timelineId: timelineId, title: "Task 1"))
+        try await persistence.saveJob(BackgroundJob(timelineId: otherSessionId, title: "Other Task"))
 
-        let sessionJobs = try await persistence.fetchJobs(for: sessionId)
+        let sessionJobs = try await persistence.fetchJobs(for: timelineId)
         #expect(sessionJobs.count == 1)
         #expect(sessionJobs[0].title == "Task 1")
     }
 
     @Test("Test deleting job via PersistenceService")
     func deleteJob() async throws {
-        let job = Job(sessionId: sessionId, title: "To Delete")
+        let job = BackgroundJob(timelineId: timelineId, title: "To Delete")
         try await persistence.saveJob(job)
 
         try await persistence.deleteJob(id: job.id)

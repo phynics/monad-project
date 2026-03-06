@@ -1,3 +1,4 @@
+import MonadShared
 import Dependencies
 import Foundation
 
@@ -7,8 +8,8 @@ public enum MSAgentRegistryKey: DependencyKey {
     public static let liveValue = MSAgentRegistry()
 }
 
-public enum SessionManagerKey: DependencyKey {
-    public static let liveValue = SessionManager(
+public enum TimelineManagerKey: DependencyKey {
+    public static let liveValue = TimelineManager(
         workspaceRoot: FileManager.default.temporaryDirectory // Default for unconfigured
     )
 }
@@ -36,9 +37,9 @@ extension DependencyValues {
         set { self[MSAgentRegistryKey.self] = newValue }
     }
 
-    public var sessionManager: SessionManager {
-        get { self[SessionManagerKey.self] }
-        set { self[SessionManagerKey.self] = newValue }
+    public var timelineManager: TimelineManager {
+        get { self[TimelineManagerKey.self] }
+        set { self[TimelineManagerKey.self] = newValue }
     }
 
     public var toolRouter: ToolRouter {

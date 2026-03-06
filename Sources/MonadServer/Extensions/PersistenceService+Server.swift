@@ -1,19 +1,20 @@
+import MonadShared
 import Foundation
 import GRDB
 import Logging
 import MonadCore
 
 extension PersistenceService {
-    /// Search archived sessions by title, tags, or message content
-    public func searchArchivedSessions(query: String) throws -> [Timeline] {
+    /// Search archived timelines by title, tags, or message content
+    public func searchArchivedTimelines(query: String) throws -> [Timeline] {
         try dbQueue.read { database in
             let pattern = "%\(query)%"
 
-            // Subquery to find session IDs that have matching messages
+            // Subquery to find timeline IDs that have matching messages
             let matchingMessageSessionIds =
                 try ConversationMessage
                 .filter(Column("content").like(pattern))
-                .select(Column("sessionId"))
+                .select(Column("timelineId"))
                 .fetchAll(database)
                 .map { $0 as UUID }
 
@@ -29,8 +30,8 @@ extension PersistenceService {
         }
     }
 
-    /// Search for archived sessions that contain any of the provided tags
-    public func searchArchivedSessions(matchingAnyTag tags: [String]) throws
+    /// Search for archived timelines that contain any of the provided tags
+    public func searchArchivedTimelines(matchingAnyTag tags: [String]) throws
         -> [Timeline] {
         guard !tags.isEmpty else { return [] }
 
@@ -55,7 +56,7 @@ extension PersistenceService {
         }
     }
 
-    public func pruneSessions(
+    public func pruneTimelines(
         olderThan timeInterval: TimeInterval, excluding: [UUID] = [], dryRun: Bool
     )
         async throws -> Int {
@@ -74,16 +75,16 @@ extension PersistenceService {
             } else {
                 let candidates = try query.fetchAll(database)
                 var deletedCount = 0
-                for session in candidates {
+                for timeline in candidates {
                     // Double check before deleting
-                    if session.isArchived {
+                    if timeline.isArchived {
                         // Logger not available here, silently skip or use print if critical debug needed
                         continue
                     }
 
                     do {
                         let didDelete = try Timeline.deleteOne(
-                            database, key: ["id": session.id])
+                            database, key: ["id": timeline.id])
                         deletedCount += (didDelete ? 1 : 0)
                     } catch {
                         // Ignore individual failures to continue pruning
@@ -102,7 +103,7 @@ extension PersistenceService {
                 ConversationMessage
                 .filter(Column("timestamp") < cutoffDate)
                 .filter(
-                    sql: "sessionId IN (SELECT id FROM conversationSession WHERE isArchived = 0)")
+                    sql: "timelineId IN (SELECT id FROM timeline WHERE isArchived = 0)")
 
             if dryRun {
                 return try query.fetchCount(database)

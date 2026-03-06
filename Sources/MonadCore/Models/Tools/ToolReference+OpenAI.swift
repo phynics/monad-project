@@ -1,5 +1,6 @@
 import Foundation
 import OpenAI
+import MonadShared
 
 extension ToolReference {
     public func toToolParam() -> ChatQuery.ChatCompletionToolParam? {

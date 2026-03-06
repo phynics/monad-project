@@ -111,7 +111,7 @@ Start with **[API_REFERENCE.md](API_REFERENCE.md)** for:
 ## Key Concepts
 
 ### Timeline
-The persistent conversation record. Represents a continuous thread of interaction between user and AI. Formerly called `ConversationSession`.
+The persistent conversation record. Represents a continuous thread of interaction between user and AI. Formerly called `Timeline`.
 
 **Fields:** `id`, `title`, `createdAt`, `updatedAt`, `isArchived`, `tags`, `workingDirectory`, `primaryWorkspaceId`, `attachedWorkspaceIds`
 
@@ -166,7 +166,7 @@ Files in the `Notes/` directory of the Primary Workspace. Read by `ContextManage
 - `Project.md` — Project-specific context
 
 ### Workspace Model
-**Primary Workspace:** Private session sandbox with `Notes/` directory. Created automatically with session. Host type: `.serverSession`.
+**Primary Workspace:** Private session sandbox with `Notes/` directory. Created automatically with session. Host type: `.serverTimeline`.
 
 **Attached Workspaces:** Shared project directories. Attached via `/workspace attach` or `attach-pwd`. Host types: `.server` (local disk) or `.client` (remote RPC).
 
@@ -186,7 +186,7 @@ Sources/MonadCore/Models/
 ├── Tools/         Tool, ToolReference, ToolError, ToolParameters, …
 │   ├── Filesystem/  (7 tools: cd, find, inspect, ls, cat, grep, search)
 │   ├── JobQueue/    JobQueueGatewayTool, Job, JobQueueContext
-│   └── ToolContext/ ContextTool, ToolContext, ToolContextSession
+│   └── ToolContext/ ContextTool, ToolContext, ToolTimelineContext
 └── Workspace/     WorkspaceAttachment, WorkspaceLock, WorkspaceProtocol,
                    WorkspaceReference, WorkspaceTool, WorkspaceToolDefinition,
                    WorkspaceToolError, WorkspaceURI
@@ -206,7 +206,7 @@ Core services in `Sources/MonadCore/Services/`:
 ├── LLM/                          — LLMService, StreamingParser, StreamingCoordinator
 │   └── Providers/                — OpenAI, Ollama, OpenRouter clients
 ├── Prompting/                    — DefaultInstructions, PromptSections
-├── Session/                      — SessionManager, SessionToolManager
+├── Session/                      — TimelineManager, TimelineToolManager
 ├── Tools/                        — SystemToolRegistry, ToolExecutor, ToolRouter
 │   └── Agent/                    — LaunchSubagentTool, AgentAsTool
 ├── Vector/                       — VectorStore, MockVectorStore
@@ -305,7 +305,7 @@ These types/concepts have been removed from the codebase:
 - `Configuration` wrapper struct — Replaced by `LLMConfiguration`
 - MCP configuration — Removed from config system
 - Custom `Locked` wrapper — Now uses Swift 6 `OSAllocatedUnfairLock`
-- `ConversationSession` — Renamed to `Timeline`
+- `Timeline` — Renamed to `Timeline`
 
 ## Assets
 

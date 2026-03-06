@@ -1,9 +1,9 @@
+import MonadShared
+import MonadCore
 import Foundation
 import Hummingbird
 import HummingbirdTesting
-import MonadCore
 @testable import MonadServer
-import MonadShared
 import Testing
 
 @Suite struct ErrorHandlingTests {
@@ -159,13 +159,13 @@ import Testing
         }
     }
 
-    // MARK: - SessionError
+    // MARK: - TimelineError
 
-    @Test("SessionError.sessionNotFound maps to 404 session_not_found")
-    func sessionError_sessionNotFound_maps404() async throws {
+    @Test("TimelineError.timelineNotFound maps to 404 session_not_found")
+    func sessionError_timelineNotFound_maps404() async throws {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
-        router.get("/err") { _, _ -> String in throw SessionError.sessionNotFound }
+        router.get("/err") { _, _ -> String in throw TimelineError.timelineNotFound }
         let app = Application(router: router)
 
         try await app.test(.router) { client in

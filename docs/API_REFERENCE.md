@@ -189,7 +189,7 @@ Each event in the SSE stream parses into a `ChatEvent` object with a specific ne
 
 - `GET /jobs`: List all background jobs.
 - `POST /jobs`: Create a new job.
-  - Body: `{ "sessionId": "UUID", "title": "string", "agentId": "string" }`
+  - Body: `{ "timelineId": "UUID", "title": "string", "agentId": "string" }`
 - `GET /jobs/{id}`: Get job status and logs.
 - `DELETE /jobs/{id}`: Delete a job.
 
