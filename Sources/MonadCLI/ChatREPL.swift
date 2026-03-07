@@ -27,6 +27,7 @@ actor ChatREPL: ChatREPLController {
 
     /// The currently active generation task
     var currentGenerationTask: Task<Void, Never>?
+    var escapeMonitorTask: Task<Void, Never>?
     var signalSource: DispatchSourceSignal?
 
     /// Track consecutive Ctrl-C presses for force-exit

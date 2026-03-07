@@ -17,6 +17,7 @@ extension ChatREPL {
         }
 
         let timelineId = timeline.id
+        startEscapeMonitor()
         currentGenerationTask = Task {
             var currentMessage = initialMessage
             var currentToolOutputs: [ToolOutputSubmission]? = nil
@@ -178,5 +179,6 @@ extension ChatREPL {
         }
         await currentGenerationTask?.value
         currentGenerationTask = nil
+        stopEscapeMonitor()
     }
 }

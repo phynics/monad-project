@@ -1,4 +1,4 @@
-import MonadShared
+import Foundation
 import os
 
 /// A thread-safe wrapper around a value.

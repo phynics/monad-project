@@ -48,5 +48,54 @@ extension ChatREPL {
             TerminalUI.printWarning("\n[Cancelling generation...]")
             try? await client.chat.cancelChat(timelineId: timeline.id)
         }
+        stopEscapeMonitor()
+    }
+
+    func startEscapeMonitor() {
+        stopEscapeMonitor()
+        
+        escapeMonitorTask = Task.detached { [weak self] in
+            let rawMode = TerminalRawMode()
+            rawMode.enable()
+            defer { rawMode.disable() }
+            
+            var lastEscapeTime: Date?
+            
+            while !Task.isCancelled {
+                var byte: UInt8 = 0
+                let bytesRead = read(STDIN_FILENO, &byte, 1)
+                
+                if bytesRead <= 0 {
+                    try? await Task.sleep(for: .milliseconds(50))
+                    continue
+                }
+                
+                let char = Character(UnicodeScalar(byte))
+                if char == "\u{1B}" {
+                    let now = Date()
+                    if let last = lastEscapeTime, now.timeIntervalSince(last) < 0.5 {
+                        // Double escape detected!
+                        if let self = self {
+                            await self.cancelCurrentGeneration()
+                        }
+                        lastEscapeTime = nil
+                    } else {
+                        lastEscapeTime = now
+                    }
+                } else if byte == 3 { // Ctrl-C
+                    // The signal handler should handle this, but in raw mode we might catch it here
+                    if let self = self {
+                        await self.handleSigint()
+                    }
+                } else {
+                    lastEscapeTime = nil
+                }
+            }
+        }
+    }
+
+    func stopEscapeMonitor() {
+        escapeMonitorTask?.cancel()
+        escapeMonitorTask = nil
     }
 }
