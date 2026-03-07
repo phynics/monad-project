@@ -35,6 +35,17 @@ import MonadTestSupport
 
             // Create Session
             let session = try await timelineManager.createTimeline()
+            
+            // Attach an agent
+            let agentId = UUID()
+            let agent = AgentInstance(id: agentId, name: "Test Agent", description: "Test", primaryWorkspaceId: UUID(), privateTimelineId: UUID())
+            try await persistence.saveAgentInstance(agent)
+            var updatedSession = session
+            updatedSession.attachedAgentInstanceId = agentId
+            try await persistence.saveTimeline(updatedSession)
+            
+            // Clear cache to force re-hydration with agent
+            await timelineManager.deleteTimeline(id: session.id)
 
             // We need to inject timelineManager into the context for ToolRouter and ChatEngine
             // Since we created timelineManager explicitly, we should override it in dependencies for subsequent calls
@@ -98,6 +109,17 @@ import MonadTestSupport
         } operation: {
             let timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
             let session = try await timelineManager.createTimeline()
+            
+            // Attach an agent
+            let agentId = UUID()
+            let agent = AgentInstance(id: agentId, name: "Test Agent", description: "Test", primaryWorkspaceId: UUID(), privateTimelineId: UUID())
+            try await persistence.saveAgentInstance(agent)
+            var updatedSession = session
+            updatedSession.attachedAgentInstanceId = agentId
+            try await persistence.saveTimeline(updatedSession)
+            
+            // Clear cache to force re-hydration with agent
+            await timelineManager.deleteTimeline(id: session.id)
 
             try await withDependencies {
                 $0.timelineManager = timelineManager
@@ -124,7 +146,7 @@ import MonadTestSupport
                             ) { response in
                                 #expect(response.status == .ok)
                                 let body = String(buffer: response.body)
-                                #expect(body.contains("\"cancelled\""))
+                                #expect(body.contains("\"generationCancelled\""))
                             }
                         }
 

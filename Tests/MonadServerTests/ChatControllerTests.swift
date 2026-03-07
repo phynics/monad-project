@@ -33,6 +33,17 @@ import NIOCore
 
             // Create Session
             let session = try await timelineManager.createTimeline()
+            
+            // Attach an agent
+            let agentId = UUID()
+            let agent = AgentInstance(id: agentId, name: "Test Agent", description: "Test", primaryWorkspaceId: UUID(), privateTimelineId: UUID())
+            try await persistence.saveAgentInstance(agent)
+            var updatedSession = session
+            updatedSession.attachedAgentInstanceId = agentId
+            try await persistence.saveTimeline(updatedSession)
+            
+            // Clear cache
+            await timelineManager.deleteTimeline(id: session.id)
 
             try await withDependencies {
                 $0.timelineManager = timelineManager
@@ -89,6 +100,17 @@ import NIOCore
 
             // Create Session
             let session = try await timelineManager.createTimeline()
+            
+            // Attach an agent
+            let agentId = UUID()
+            let agent = AgentInstance(id: agentId, name: "Test Agent", description: "Test", primaryWorkspaceId: UUID(), privateTimelineId: UUID())
+            try await persistence.saveAgentInstance(agent)
+            var updatedSession = session
+            updatedSession.attachedAgentInstanceId = agentId
+            try await persistence.saveTimeline(updatedSession)
+            
+            // Clear cache
+            await timelineManager.deleteTimeline(id: session.id)
 
             try await withDependencies {
                 $0.timelineManager = timelineManager
