@@ -2,9 +2,9 @@
 
 ## Phase 1: Core Logic & Shared Models
 - [x] Task: Add `generationCancelled` event type to `StreamEventType` in `MonadShared` (6d83916)
-- [ ] Task: Implement Task Registry in `SessionManager`
-    - [ ] Add `activeTasks: [UUID: Task<Void, Never>]` to `SessionManager` actor
-    - [ ] Implement `registerTask(_:for:)` and `cancelGeneration(for:)` methods
+- [x] Task: Implement Task Registry in `SessionManager` (b887131)
+    - [x] Add `activeTasks: [UUID: Task<Void, Never>]` to `SessionManager` actor
+    - [x] Implement `registerTask(_:for:)` and `cancelGeneration(for:)` methods
 - [ ] Task: Update `ChatEngine` to handle cancellation
     - [ ] Check `Task.isCancelled` in `runChatLoop` and `processTurn`
     - [ ] Yield `.error(CancellationError())` to the stream when cancelled
