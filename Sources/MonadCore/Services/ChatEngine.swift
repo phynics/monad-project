@@ -1,8 +1,8 @@
 import Dependencies
 import Foundation
-import MonadShared
 import Logging
 import MonadPrompt
+import MonadShared
 import OpenAI
 
 /// Unified chat engine that handles both interactive chat and autonomous agent execution.
@@ -39,8 +39,10 @@ public final class ChatEngine: @unchecked Sendable {
         toolOutputs: [ToolOutputSubmission]? = nil,
         contextManager: ContextManager? = nil,
         systemInstructions: String? = nil,
+        agentInstanceId: UUID? = nil,
         maxTurns: Int = 5
     ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
+        let resolvedAgentId = agentInstanceId // capture for closure
         let sid = ANSIColors.colorize(timelineId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
         logger.info("Starting chat stream for timeline \(sid)")
 
@@ -67,12 +69,12 @@ public final class ChatEngine: @unchecked Sendable {
 
         // Find which workspaces are connected
         if let primaryWorkspace = workspaces?.primary {
-             if let ownerId = primaryWorkspace.ownerId {
-                 // Try to get client
-                 if let client = try? await persistenceService.fetchClient(id: ownerId) {
-                     clientName = client.displayName
-                 }
-             }
+            if let ownerId = primaryWorkspace.ownerId {
+                // Try to get client
+                if let client = try? await persistenceService.fetchClient(id: ownerId) {
+                    clientName = client.displayName
+                }
+            }
         }
 
         let (initialMessages, structuredContext) = await buildPrompt(
@@ -101,6 +103,7 @@ public final class ChatEngine: @unchecked Sendable {
                     contextData: contextData,
                     structuredContext: structuredContext,
                     modelName: modelName,
+                    agentInstanceId: resolvedAgentId,
                     maxTurns: maxTurns
                 )
             }
@@ -127,6 +130,7 @@ public final class ChatEngine: @unchecked Sendable {
         contextData: ContextData,
         structuredContext: [String: String],
         modelName: String,
+        agentInstanceId: UUID?,
         maxTurns: Int
     ) async {
         var currentMessages = initialMessages
@@ -162,6 +166,7 @@ public final class ChatEngine: @unchecked Sendable {
                     modelName: modelName,
                     turnCount: turnCount,
                     timelineId: timelineId,
+                    agentInstanceId: agentInstanceId,
                     continuation: continuation,
                     accumulatedRawOutput: &accumulatedRawOutput
                 )
@@ -203,9 +208,11 @@ public final class ChatEngine: @unchecked Sendable {
         modelName: String,
         turnCount: Int,
         timelineId: UUID,
+        agentInstanceId: UUID?,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation,
         accumulatedRawOutput: inout String
     ) async throws -> TurnResult {
+        let authorId = agentInstanceId // stamp on assistant messages
         var debugToolCalls: [ToolCallRecord] = []
         var debugToolResults: [ToolResultRecord] = []
 
@@ -262,7 +269,6 @@ public final class ChatEngine: @unchecked Sendable {
 
             // Accumulate Tool Calls
             if let calls = result.choices.first?.delta.toolCalls {
-
                 for call in calls {
                     guard let index = call.index else { continue }
                     var acc = toolCallAccumulators[index] ?? ("", "", "")
@@ -363,7 +369,7 @@ public final class ChatEngine: @unchecked Sendable {
                 }
                 let callsJSON = (try? SerializationUtils.jsonEncoder.encode(callsForDB)).flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
 
-                let assistantMsg = ConversationMessage(timelineId: timelineId, role: .assistant, content: fullResponse, think: fullThinking.isEmpty ? nil : fullThinking, toolCalls: callsJSON)
+                let assistantMsg = ConversationMessage(timelineId: timelineId, role: .assistant, content: fullResponse, think: fullThinking.isEmpty ? nil : fullThinking, toolCalls: callsJSON, agentInstanceId: authorId)
                 do {
                     try await persistenceService.saveMessage(assistantMsg)
                 } catch {
@@ -399,7 +405,8 @@ public final class ChatEngine: @unchecked Sendable {
                 role: .assistant,
                 content: fullResponse,
                 recalledMemories: String(decoding: (try? SerializationUtils.jsonEncoder.encode(contextData.memories.map { $0.memory })) ?? Data(), as: UTF8.self),
-                think: fullThinking.isEmpty ? nil : fullThinking
+                think: fullThinking.isEmpty ? nil : fullThinking,
+                agentInstanceId: authorId
             )
             do {
                 try await persistenceService.saveMessage(assistantMsg)

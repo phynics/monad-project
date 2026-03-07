@@ -42,13 +42,21 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         // Hydrate timeline and resolve tools at the server layer
         try await timelineManager.hydrateTimeline(id: id)
+
+        // Strict mode: require an agent to be attached
+        guard let agent = await timelineManager.getAttachedAgentInstance(for: id) else {
+            throw HTTPError(.unprocessableContent, message: "No agent attached to timeline. Attach an agent before sending messages.")
+        }
+        let systemInstructions = await timelineManager.getAgentSystemInstructions(for: id)
         let availableTools = await resolveTools(timelineId: id, clientTools: chatRequest.clientTools)
 
         let stream = try await chatEngine.chatStream(
             timelineId: id,
             message: chatRequest.message,
             tools: availableTools,
-            toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) }
+            toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) },
+            systemInstructions: systemInstructions,
+            agentInstanceId: agent.id
         )
 
         var fullResponse = ""
@@ -76,6 +84,12 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         // Hydrate timeline and resolve tools at the server layer
         try await timelineManager.hydrateTimeline(id: id)
+
+        // Strict mode: require an agent to be attached
+        guard let agent = await timelineManager.getAttachedAgentInstance(for: id) else {
+            throw HTTPError(.unprocessableContent, message: "No agent attached to timeline. Attach an agent before sending messages.")
+        }
+        let systemInstructions = await timelineManager.getAgentSystemInstructions(for: id)
         let availableTools = await resolveTools(timelineId: id, clientTools: chatRequest.clientTools)
 
         Logger.module(named: "chat").info("Resolved \(ANSIColors.colorize("\(availableTools.count)", color: ANSIColors.green)) tools for timeline \(sid)")
@@ -84,7 +98,9 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             timelineId: id,
             message: chatRequest.message,
             tools: availableTools,
-            toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) }
+            toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) },
+            systemInstructions: systemInstructions,
+            agentInstanceId: agent.id
         )
 
         let sseStream = AsyncStream<ByteBuffer> { continuation in
@@ -149,7 +165,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         return Response(status: .ok, headers: headers, body: .init(asyncSequence: sseStream))
     }
 
-    @Sendable func cancel(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func cancel(_: Request, context: Context) async throws -> Response {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else {
             throw HTTPError(.badRequest)
@@ -158,7 +174,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         return Response(status: .ok)
     }
 
-    @Sendable func getDebug(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func getDebug(_: Request, context: Context) async throws -> Response {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
@@ -170,7 +186,8 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
         return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data))
+        )
     }
 
     // MARK: - Tool Resolution (Server-Layer Concern)
@@ -183,8 +200,8 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             for ref in references {
                 var def: WorkspaceToolDefinition?
                 switch ref {
-                case .known(let id): def = SystemToolRegistry.shared.getDefinition(for: id)
-                case .custom(let definition): def = definition
+                case let .known(id): def = SystemToolRegistry.shared.getDefinition(for: id)
+                case let .custom(definition): def = definition
                 }
                 guard let definition = def else { continue }
                 var toolWrapper = AnyTool(DelegatingTool(

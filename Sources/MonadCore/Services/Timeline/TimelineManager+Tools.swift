@@ -13,7 +13,7 @@ public extension TimelineManager {
     ) async -> TimelineToolManager {
         let currentWD = session.workingDirectory ?? jailRoot
 
-        let availableTools: [AnyTool] = [
+        var availableTools: [AnyTool] = [
             // Filesystem Tools
             AnyTool(ChangeDirectoryTool(
                 currentPath: currentWD,
@@ -37,8 +37,20 @@ public extension TimelineManager {
             )),
 
             // BackgroundJob Queue Gateway
-            AnyTool(BackgroundJobQueueGatewayTool(context: jobQueueContext, timelineContext: toolContextTimeline))
+            AnyTool(BackgroundJobQueueGatewayTool(context: jobQueueContext, timelineContext: toolContextTimeline)),
+
+            // Timeline Observation Tools (always available)
+            AnyTool(TimelineListTool(persistenceService: persistenceService)),
+            AnyTool(TimelinePeekTool(persistenceService: persistenceService)),
         ]
+
+        // Timeline Send: only available when an agent is attached (needs sender identity)
+        if let agentId = session.attachedAgentInstanceId {
+            availableTools.append(AnyTool(TimelineSendTool(
+                persistenceService: persistenceService,
+                agentInstanceId: agentId
+            )))
+        }
 
         return TimelineToolManager(
             availableTools: availableTools, timelineContext: toolContextTimeline
@@ -63,7 +75,8 @@ public extension TimelineManager {
     }
 
     func findWorkspaceForTool(_ tool: ToolReference, in workspaceIds: [UUID]) async throws
-        -> UUID? {
+        -> UUID?
+    {
         return try await persistenceService.findWorkspaceId(forToolId: tool.toolId, in: workspaceIds)
     }
 

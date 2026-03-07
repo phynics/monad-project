@@ -18,9 +18,6 @@ swift test                           # All tests
 swift test --filter MonadCoreTests   # Specific module
 swift run MonadServer                # Start server
 swift run MonadCLI chat              # Interactive CLI
-make lint                            # SwiftLint check (full project)
-swiftlint lint Sources/              # Lint only Sources directory
-swiftlint --fix Sources/             # Auto-fix violations in Sources
 ```
 
 ## Code Quality & Linting
@@ -37,7 +34,6 @@ SwiftLint enforces code style and quality. Common violations and fixes:
 - **Identifier names** — Variables must be 3+ characters. Use descriptive names:
   - ❌ `let c = ...` → ✅ `let contentValue = ...`
   - ❌ `let i = 0` → ✅ `let index = 0`
-  - Exception: Builder closures can use `builder` instead of `b`
 - **Line length** — 120 chars (warning), 200 chars (error). Break long lines:
   ```swift
   // ❌ Too long
@@ -77,15 +73,6 @@ SwiftLint enforces code style and quality. Common violations and fixes:
   }
   func process(config: ProcessConfig)
   ```
-- **Snake_case in JSON models** — Use `// swiftlint:disable:next identifier_name` for API-matching names:
-  ```swift
-  struct APIResponse: Codable {
-      // swiftlint:disable:next identifier_name
-      let created_at: String  // Matches API field name
-  }
-  ```
-- **Set operations** — Prefer `isDisjoint(with:)` over `intersection(_:).isEmpty`
-
 **Workflow:**
 1. `swift build` — ensure code compiles
 2. `swiftlint --fix Sources/` — auto-fix simple issues
@@ -125,8 +112,6 @@ Sources/MonadCore/Stores/
 └── WorkspaceStore.swift   — Actor cache for hydrated WorkspaceProtocol instances (used by FilesAPIController)
 ```
 
-> **Note:** `SessionStore` was removed — its responsibilities are fully covered by `SessionManager`.
-
 **Key Model Notes:**
 - **`Timeline`** — persistent conversation record (formerly `ConversationSession`)
 - **`LLMConfiguration`** — multi-provider config supporting OpenAI, OpenRouter, Ollama, OpenAI-compatible. Split into `LLMProvider`, `ProviderConfiguration`, `ToolCallFormat`.
@@ -162,7 +147,7 @@ Sources/MonadCore/Stores/
 ### Concurrency
 - Use `AsyncThrowingStream` for streaming/progress (not callbacks)
 - Use **actors** for thread-safe state management (`SessionManager`, `ContextManager`, `ToolRouter`, `WorkspaceManager`)
-- Use `Locked<T>` (wraps `OSAllocatedUnfairLock`) for fine-grained locking
+- Use `Mutex<T>` for fine-grained locking
 - All code uses Swift structured concurrency (async/await)
 
 ### Graceful Shutdown
@@ -175,14 +160,6 @@ Sources/MonadCore/Stores/
 - Keys in `Sources/MonadCore/Dependencies/`: `LLMDependencies.swift`, `OrchestrationDependencies.swift`, `StorageDependencies.swift`
 - Usage: `@Dependency(\.sessionManager) private var sessionManager`
 - Configure with `withDependencies { ... }`
-
-### Tool Protocol
-- All tools conform to `Tool` (see `Sources/MonadCore/Models/Tools/Tool.swift`)
-- Required: `id`, `name`, `description`, `requiresPermission`, `parametersSchema`, `canExecute()`, `execute(parameters:)` → `ToolResult`
-- Optional: `summarize(parameters:result:)`, `toToolParam()`
-- Use `ToolParameterSchema.object { ... }` builder for schemas
-- Use `PathSanitizer.safelyResolve()` for secure path handling
-- Return `ToolResult.success(_)` or `ToolResult.failure(_)`
 
 ### Context System
 - **ContextManager** assembles prompts from:
@@ -237,13 +214,16 @@ Sources/MonadCore/Stores/
 - Each provider has: `endpoint`, `apiKey`, `modelName`, `utilityModel`, `fastModel`, `toolFormat`, `timeoutInterval`, `maxRetries`
 - Validation on load: ensures active provider configured, API key present (except Ollama)
 
-## System Tools (15 implemented)
+## System Tools (18 implemented)
 
 **Filesystem (7):**
 - `cd`, `find`, `inspect_file`, `ls`, `cat`, `grep`, `search_files`
 
 **Agent (2):**
 - `LaunchSubagentTool`, `AgentAsTool`
+
+**Timeline (3):**
+- `timeline_list`, `timeline_peek`, `timeline_send`
 
 **System (2):**
 - `system_memory_search`, `system_web_search`

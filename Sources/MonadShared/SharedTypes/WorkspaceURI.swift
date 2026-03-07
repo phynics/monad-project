@@ -6,13 +6,19 @@ public struct WorkspaceURI: Codable, Sendable, Hashable, CustomStringConvertible
     public let host: String
     public let path: String
 
-    public var description: String { "\(host):\(path)" }
+    public var description: String {
+        "\(host):\(path)"
+    }
 
     /// Whether this workspace is hosted on the server
-    public var isServer: Bool { host.hasPrefix("monad-") }
+    public var isServer: Bool {
+        host.hasPrefix("monad-")
+    }
 
     /// Whether this workspace is hosted on a client
-    public var isClient: Bool { !isServer }
+    public var isClient: Bool {
+        !isServer
+    }
 
     public init(host: String, path: String) {
         self.host = host
@@ -22,8 +28,13 @@ public struct WorkspaceURI: Codable, Sendable, Hashable, CustomStringConvertible
     /// Parse a URI string like "hostname:/path/to/workspace"
     public init?(parsing uri: String) {
         guard let colonIndex = uri.firstIndex(of: ":") else { return nil }
-        self.host = String(uri[..<colonIndex])
-        self.path = String(uri[uri.index(after: colonIndex)...])
+        host = String(uri[..<colonIndex])
+        path = String(uri[uri.index(after: colonIndex)...])
+    }
+
+    /// Create an agent workspace URI
+    public static func agentWorkspace(_ agentId: UUID) -> WorkspaceURI {
+        WorkspaceURI(host: "monad-server", path: "/agents/\(agentId.uuidString)")
     }
 
     /// Create a server timeline workspace URI

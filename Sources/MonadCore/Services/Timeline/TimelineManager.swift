@@ -1,7 +1,7 @@
-import MonadShared
 import Dependencies
 import Foundation
 import Logging
+import MonadShared
 
 /// Manages conversation timelines, their associated context, and tool execution environments.
 ///
@@ -40,7 +40,9 @@ public actor TimelineManager {
         & ToolPersistenceProtocol
         & BackgroundJobStoreProtocol
         & MSAgentStoreProtocol
-        & ClientStoreProtocol {
+        & ClientStoreProtocol
+        & AgentInstanceStoreProtocol
+    {
         _persistenceService
     }
 
@@ -147,7 +149,8 @@ public actor TimelineManager {
     /// - Returns: The newly created `Timeline`.
     public func createTimeline(title: String = "New Conversation")
         async throws
-        -> Timeline {
+        -> Timeline
+    {
         let timelineId = UUID()
 
         let timelineWorkspaceURL = workspaceRoot.appendingPathComponent(
@@ -307,8 +310,49 @@ public actor TimelineManager {
     }
 
     /// Returns the underlying persistence service.
-    public func getPersistenceService() -> any TimelinePersistenceProtocol & MessageStoreProtocol & WorkspacePersistenceProtocol & MemoryStoreProtocol & ToolPersistenceProtocol & BackgroundJobStoreProtocol & MSAgentStoreProtocol & ClientStoreProtocol {
+    public func getPersistenceService() -> any TimelinePersistenceProtocol & MessageStoreProtocol & WorkspacePersistenceProtocol & MemoryStoreProtocol & ToolPersistenceProtocol & BackgroundJobStoreProtocol & MSAgentStoreProtocol & ClientStoreProtocol & AgentInstanceStoreProtocol {
         return persistenceService
+    }
+
+    // MARK: - Agent Support
+
+    /// Returns the agent instance attached to a timeline, cleaning up dangling references.
+    public func getAttachedAgentInstance(for timelineId: UUID) async -> AgentInstance? {
+        let agentId: UUID?
+        if let cached = timelines[timelineId] {
+            agentId = cached.attachedAgentInstanceId
+        } else if let fetched = try? await persistenceService.fetchTimeline(id: timelineId) {
+            agentId = fetched.attachedAgentInstanceId
+        } else {
+            return nil
+        }
+
+        guard let agentId else { return nil }
+
+        if let agent = try? await persistenceService.fetchAgentInstance(id: agentId) {
+            return agent
+        }
+
+        // Dangling reference cleanup
+        if var stale = try? await persistenceService.fetchTimeline(id: timelineId) {
+            stale.attachedAgentInstanceId = nil
+            try? await persistenceService.saveTimeline(stale)
+            timelines[timelineId] = stale
+            Logger.module(named: "timeline-manager").warning("Cleared dangling agent \(agentId) reference on timeline \(timelineId)")
+        }
+        return nil
+    }
+
+    /// Reads Notes/system.md from the attached agent's workspace, if any.
+    public func getAgentSystemInstructions(for timelineId: UUID) async -> String? {
+        guard let agent = await getAttachedAgentInstance(for: timelineId),
+              let workspaceId = agent.primaryWorkspaceId,
+              let workspace = try? await persistenceService.fetchWorkspace(id: workspaceId),
+              let rootPath = workspace.rootPath
+        else { return nil }
+
+        let systemMdPath = rootPath + "/Notes/system.md"
+        return try? String(contentsOfFile: systemMdPath, encoding: .utf8)
     }
 
     // MARK: - Task Management

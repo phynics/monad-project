@@ -102,12 +102,12 @@ public enum TerminalUI {
 
     public static func printLogo() {
         let logo = """
-            \(magenta("  __  __                       _ "))
-            \(magenta(" |  \\/  | ___  _ __   __ _  __| |"))
-            \(magenta(" | |\\/| |/ _ \\| '_ \\ / _` |/ _` |"))
-            \(magenta(" | |  | | (_) | | | | (_| | (_| |"))
-            \(magenta(" |_|  |_|\\___/|_| |_|\\__,_|\\__,_|"))
-            """
+        \(magenta("  __  __                       _ "))
+        \(magenta(" |  \\/  | ___  _ __   __ _  __| |"))
+        \(magenta(" | |\\/| |/ _ \\| '_ \\ / _` |/ _` |"))
+        \(magenta(" | |  | | (_) | | | | (_| | (_| |"))
+        \(magenta(" |_|  |_|\\___/|_| |_|\\__,_|\\__,_|"))
+        """
         print("\n" + logo + "\n")
         print(dim("  AI Assistant v1.0.0"))
         print("")
@@ -125,14 +125,16 @@ public enum TerminalUI {
         if let regex = try? NSRegularExpression(pattern: "\\*\\*(.*?)\\*\\*", options: []) {
             let range = NSRange(output.startIndex..., in: output)
             output = regex.stringByReplacingMatches(
-                in: output, options: [], range: range, withTemplate: "\(boldCode)$1\(reset)")
+                in: output, options: [], range: range, withTemplate: "\(boldCode)$1\(reset)"
+            )
         }
 
         // Code (`text`)
         if let regex = try? NSRegularExpression(pattern: "`([^`]+)`", options: []) {
             let range = NSRange(output.startIndex..., in: output)
             output = regex.stringByReplacingMatches(
-                in: output, options: [], range: range, withTemplate: "\(cyanCode)$1\(reset)")
+                in: output, options: [], range: range, withTemplate: "\(cyanCode)$1\(reset)"
+            )
         }
 
         return output
@@ -146,9 +148,10 @@ public enum TerminalUI {
         print("")
     }
 
-    public static func getPromptString(workspace: String? = nil) -> String {
+    public static func getPromptString(workspace: String? = nil, agentName: String? = nil) -> String {
         let wsPart = workspace != nil ? "[\(workspace!)] " : ""
-        return "\(green(wsPart))\(cyan("monad")) \(bold(">")) "
+        let agentPart = agentName != nil ? "\(magenta("[\(agentName!)]")) " : ""
+        return "\(green(wsPart))\(agentPart)\(cyan("monad")) \(bold(">")) "
     }
 
     public static func printPrompt(workspace: String? = nil) {

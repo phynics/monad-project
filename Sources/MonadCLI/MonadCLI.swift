@@ -1,6 +1,7 @@
 import ArgumentParser
 import Foundation
 import MonadClient
+import MonadShared
 
 @main
 struct MonadCLI: AsyncParsableCommand {
@@ -146,8 +147,15 @@ struct Chat: AsyncParsableCommand {
 
         TerminalUI.printWelcome()
 
+        // Restore last agent instance if available
+        var restoredAgent: AgentInstance?
+        if let agentIdStr = localConfig.lastAgentInstanceId,
+           let agentId = UUID(uuidString: agentIdStr) {
+            restoredAgent = try? await client.chat.getAgentInstance(id: agentId)
+        }
+
         // Start REPL
-        let repl = ChatREPL(client: client, timeline: finalTimeline)
+        let repl = ChatREPL(client: client, timeline: finalTimeline, agent: restoredAgent)
         try await repl.run()
     }
 }

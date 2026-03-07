@@ -1,5 +1,6 @@
-import MonadShared
 import Foundation
+import MonadShared
+
 /// Individual message within a conversation
 public struct ConversationMessage: Codable, Identifiable, Sendable {
     public var id: UUID
@@ -13,6 +14,13 @@ public struct ConversationMessage: Codable, Identifiable, Sendable {
     public var toolCalls: String
     public var toolCallId: String?
 
+    /// The agent instance that authored this message (nil for human/CLI messages).
+    /// Only set on `.assistant` role messages.
+    public var agentInstanceId: UUID?
+
+    /// Depth counter for cross-agent `timeline_send` recursion guard. Default 0.
+    public var remoteDepth: Int
+
     public init(
         id: UUID = UUID(),
         timelineId: UUID,
@@ -23,7 +31,9 @@ public struct ConversationMessage: Codable, Identifiable, Sendable {
         parentId: UUID? = nil,
         think: String? = nil,
         toolCalls: String = "[]",
-        toolCallId: String? = nil
+        toolCallId: String? = nil,
+        agentInstanceId: UUID? = nil,
+        remoteDepth: Int = 0
     ) {
         self.id = id
         self.timelineId = timelineId
@@ -35,6 +45,8 @@ public struct ConversationMessage: Codable, Identifiable, Sendable {
         self.think = think
         self.toolCalls = toolCalls
         self.toolCallId = toolCallId
+        self.agentInstanceId = agentInstanceId
+        self.remoteDepth = remoteDepth
     }
 
     public enum MessageRole: String, Codable, Sendable {

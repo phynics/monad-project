@@ -18,6 +18,9 @@ actor ChatREPL: ChatREPLController {
     var lastDebugSnapshot: DebugSnapshot?
     var lastServerStatus: Bool = true
 
+    /// The currently attached agent instance (nil = no agent attached).
+    var currentAgent: AgentInstance?
+
     // Slash Command Registry
     let registry = SlashCommandRegistry()
     let lineReader = LineReader()
@@ -29,8 +32,9 @@ actor ChatREPL: ChatREPLController {
     /// Track consecutive Ctrl-C presses for force-exit
     var lastSigintTime: Date?
 
-    init(client: MonadClient, timeline: Timeline) {
+    init(client: MonadClient, timeline: Timeline, agent: AgentInstance? = nil) {
         self.client = client
         self.timeline = timeline
+        currentAgent = agent
     }
 }

@@ -26,6 +26,11 @@ public struct MSAgent: Codable, Sendable, Identifiable, Equatable {
     /// Timestamp when the agent was last updated
     public var updatedAt: Date
 
+    /// Optional seed files to write into a new AgentInstance's workspace Notes/ directory.
+    /// Keys are filenames (e.g. "system.md"), values are file contents.
+    /// Used only at instance creation time.
+    public var workspaceFilesSeed: [String: String]?
+
     public init(
         id: UUID,
         name: String,
@@ -34,7 +39,8 @@ public struct MSAgent: Codable, Sendable, Identifiable, Equatable {
         personaPrompt: String? = nil,
         guardrailsPrompt: String? = nil,
         createdAt: Date = Date(),
-        updatedAt: Date = Date()
+        updatedAt: Date = Date(),
+        workspaceFilesSeed: [String: String]? = nil
     ) {
         self.id = id
         self.name = name
@@ -44,6 +50,7 @@ public struct MSAgent: Codable, Sendable, Identifiable, Equatable {
         self.guardrailsPrompt = guardrailsPrompt
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.workspaceFilesSeed = workspaceFilesSeed
     }
 }
 

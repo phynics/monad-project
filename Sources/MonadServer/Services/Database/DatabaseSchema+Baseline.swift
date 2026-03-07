@@ -1,11 +1,11 @@
-import MonadShared
 import Foundation
 import GRDB
+import MonadShared
 
 extension DatabaseSchema {
     // MARK: - Workspace Tables
 
-    internal static func createWorkspaceTables(in db: Database) throws {
+    static func createWorkspaceTables(in db: Database) throws {
         // Client entity table
         try db.create(table: "clientIdentity") { t in
             t.column("id", .blob).primaryKey()
@@ -43,7 +43,8 @@ extension DatabaseSchema {
         try db.create(
             index: "idx_workspaceTool_workspace",
             on: "workspaceTool",
-            columns: ["workspaceId"])
+            columns: ["workspaceId"]
+        )
 
         // Workspace locks
         try db.create(table: "workspaceLock") { t in
@@ -56,7 +57,7 @@ extension DatabaseSchema {
 
     // MARK: - Conversation Tables
 
-    internal static func createConversationTables(in db: Database) throws {
+    static func createConversationTables(in db: Database) throws {
         // Conversation sessions
         try db.create(table: "timeline") { t in
             t.primaryKey("id", .blob).notNull()
@@ -70,6 +71,9 @@ extension DatabaseSchema {
                 .references("workspace", onDelete: .setNull)
             t.column("attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
             t.column("persona", .text)
+            t.column("attachedAgentInstanceId", .blob)
+            t.column("isPrivate", .boolean).notNull().defaults(to: false)
+            t.column("ownerAgentInstanceId", .blob)
         }
 
         // Conversation messages
@@ -85,22 +89,26 @@ extension DatabaseSchema {
             t.column("think", .text)
             t.column("toolCalls", .text).notNull().defaults(to: "[]")
             t.column("toolCallId", .text)
+            t.column("agentInstanceId", .blob)
+            t.column("remoteDepth", .integer).notNull().defaults(to: 0)
         }
 
         // Indexes for conversations
         try db.create(
             index: "idx_message_session",
             on: "conversationMessage",
-            columns: ["timelineId"])
+            columns: ["timelineId"]
+        )
         try db.create(
             index: "idx_message_timestamp",
             on: "conversationMessage",
-            columns: ["timestamp"])
+            columns: ["timestamp"]
+        )
     }
 
     // MARK: - Memory Table
 
-    internal static func createMemoryTable(in db: Database) throws {
+    static func createMemoryTable(in db: Database) throws {
         try db.create(table: "memory") { t in
             t.primaryKey("id", .blob).notNull()
             t.column("title", .text).notNull()
@@ -113,9 +121,32 @@ extension DatabaseSchema {
         }
     }
 
+    // MARK: - AgentInstance Table
+
+    static func createAgentInstanceTable(in db: Database) throws {
+        try db.create(table: "agentInstance") { t in
+            t.column("id", .blob).primaryKey()
+            t.column("name", .text).notNull()
+            t.column("description", .text).notNull().defaults(to: "")
+            t.column("primaryWorkspaceId", .blob)
+                .references("workspace", onDelete: .setNull)
+            t.column("privateTimelineId", .blob).notNull()
+            t.column("lastActiveAt", .datetime).notNull()
+            t.column("createdAt", .datetime).notNull()
+            t.column("updatedAt", .datetime).notNull()
+            t.column("metadata", .text).notNull().defaults(to: "{}")
+        }
+        try db.create(
+            index: "idx_agentInstance_privateTimeline",
+            on: "agentInstance",
+            columns: ["privateTimelineId"],
+            ifNotExists: true
+        )
+    }
+
     // MARK: - MSAgent Table
 
-    internal static func createMSAgentTable(in db: Database) throws {
+    static func createMSAgentTable(in db: Database) throws {
         try db.create(table: "agent") { t in
             t.column("id", .text).primaryKey()
             t.column("name", .text).notNull()

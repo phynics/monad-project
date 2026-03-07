@@ -41,6 +41,8 @@ protocol ChatREPLController: Sendable {
     func switchTimeline(_ timeline: Timeline) async
     func setSelectedWorkspace(_ id: UUID?) async
     func getSelectedWorkspace() async -> UUID?
+    func setAgent(_ agent: AgentInstance?) async
+    func getCurrentAgent() async -> AgentInstance?
     func refreshContext() async
     func getLastDebugSnapshot() async -> DebugSnapshot?
     func cancelCurrentGeneration() async

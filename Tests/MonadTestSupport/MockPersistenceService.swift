@@ -1,6 +1,6 @@
-import MonadShared
-import MonadCore
 import Foundation
+import MonadCore
+import MonadShared
 
 public final class MockPersistenceService: FullPersistenceService, @unchecked Sendable {
     private let memoriesMock = MockMemoryStore()
@@ -19,81 +19,184 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     public var fetchClientMock: ((UUID) async throws -> ClientIdentity?)?
     public var fetchAllClientsMock: (() async throws -> [ClientIdentity])?
     public var deleteClientMock: ((UUID) async throws -> Bool)?
-    
+
     public init() {}
 
-    public func getHealthStatus() async -> HealthStatus { mockHealthStatus }
-    public func getHealthDetails() async -> [String: String]? { mockHealthDetails }
-    public func checkHealth() async -> HealthStatus { mockHealthStatus }
+    public func getHealthStatus() async -> HealthStatus {
+        mockHealthStatus
+    }
+
+    public func getHealthDetails() async -> [String: String]? {
+        mockHealthDetails
+    }
+
+    public func checkHealth() async -> HealthStatus {
+        mockHealthStatus
+    }
 
     // MARK: - MemoryStoreProtocol
+
     public var memories: [Memory] {
         get { memoriesMock.memories }
         set { memoriesMock.memories = newValue }
     }
+
     public var searchResults: [(memory: Memory, similarity: Double)] {
         get { memoriesMock.searchResults }
         set { memoriesMock.searchResults = newValue }
     }
-    public func saveMemory(_ memory: Memory, policy: MemorySavePolicy) async throws -> UUID { try await memoriesMock.saveMemory(memory, policy: policy) }
-    public func fetchMemory(id: UUID) async throws -> Memory? { try await memoriesMock.fetchMemory(id: id) }
-    public func fetchAllMemories() async throws -> [Memory] { try await memoriesMock.fetchAllMemories() }
-    public func searchMemories(query: String) async throws -> [Memory] { try await memoriesMock.searchMemories(query: query) }
-    public func searchMemories(embedding: [Double], limit: Int, minSimilarity: Double) async throws -> [(memory: Memory, similarity: Double)] { try await memoriesMock.searchMemories(embedding: embedding, limit: limit, minSimilarity: minSimilarity) }
-    public func searchMemories(matchingAnyTag tags: [String]) async throws -> [Memory] { try await memoriesMock.searchMemories(matchingAnyTag: tags) }
-    public func deleteMemory(id: UUID) async throws { try await memoriesMock.deleteMemory(id: id) }
-    public func updateMemory(_ memory: Memory) async throws { try await memoriesMock.updateMemory(memory) }
-    public func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws { try await memoriesMock.updateMemoryEmbedding(id: id, newEmbedding: newEmbedding) }
-    public func vacuumMemories(threshold: Double) async throws -> Int { try await memoriesMock.vacuumMemories(threshold: threshold) }
+
+    public func saveMemory(_ memory: Memory, policy: MemorySavePolicy) async throws -> UUID {
+        try await memoriesMock.saveMemory(memory, policy: policy)
+    }
+
+    public func fetchMemory(id: UUID) async throws -> Memory? {
+        try await memoriesMock.fetchMemory(id: id)
+    }
+
+    public func fetchAllMemories() async throws -> [Memory] {
+        try await memoriesMock.fetchAllMemories()
+    }
+
+    public func searchMemories(query: String) async throws -> [Memory] {
+        try await memoriesMock.searchMemories(query: query)
+    }
+
+    public func searchMemories(embedding: [Double], limit: Int, minSimilarity: Double) async throws -> [(memory: Memory, similarity: Double)] {
+        try await memoriesMock.searchMemories(embedding: embedding, limit: limit, minSimilarity: minSimilarity)
+    }
+
+    public func searchMemories(matchingAnyTag tags: [String]) async throws -> [Memory] {
+        try await memoriesMock.searchMemories(matchingAnyTag: tags)
+    }
+
+    public func deleteMemory(id: UUID) async throws {
+        try await memoriesMock.deleteMemory(id: id)
+    }
+
+    public func updateMemory(_ memory: Memory) async throws {
+        try await memoriesMock.updateMemory(memory)
+    }
+
+    public func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws {
+        try await memoriesMock.updateMemoryEmbedding(id: id, newEmbedding: newEmbedding)
+    }
+
+    public func vacuumMemories(threshold: Double) async throws -> Int {
+        try await memoriesMock.vacuumMemories(threshold: threshold)
+    }
 
     // MARK: - MessageStoreProtocol
+
     public var messages: [ConversationMessage] {
         get { messagesMock.messages }
         set { messagesMock.messages = newValue }
     }
-    public func saveMessage(_ message: ConversationMessage) async throws { try await messagesMock.saveMessage(message) }
-    public func fetchMessages(for timelineId: UUID) async throws -> [ConversationMessage] { try await messagesMock.fetchMessages(for: timelineId) }
-    public func deleteMessages(for timelineId: UUID) async throws { try await messagesMock.deleteMessages(for: timelineId) }
+
+    public func saveMessage(_ message: ConversationMessage) async throws {
+        try await messagesMock.saveMessage(message)
+    }
+
+    public func fetchMessages(for timelineId: UUID) async throws -> [ConversationMessage] {
+        try await messagesMock.fetchMessages(for: timelineId)
+    }
+
+    public func deleteMessages(for timelineId: UUID) async throws {
+        try await messagesMock.deleteMessages(for: timelineId)
+    }
 
     // MARK: - TimelinePersistenceProtocol
+
     public var timelines: [Timeline] {
         get { timelinesMock.timelines }
         set { timelinesMock.timelines = newValue }
     }
-    public func saveTimeline(_ timeline: Timeline) async throws { try await timelinesMock.saveTimeline(timeline) }
-    public func fetchTimeline(id: UUID) async throws -> Timeline? { try await timelinesMock.fetchTimeline(id: id) }
-    public func fetchAllTimelines(includeArchived: Bool) async throws -> [Timeline] { try await timelinesMock.fetchAllTimelines(includeArchived: includeArchived) }
-    public func deleteTimeline(id: UUID) async throws { try await timelinesMock.deleteTimeline(id: id) }
+
+    public func saveTimeline(_ timeline: Timeline) async throws {
+        try await timelinesMock.saveTimeline(timeline)
+    }
+
+    public func fetchTimeline(id: UUID) async throws -> Timeline? {
+        try await timelinesMock.fetchTimeline(id: id)
+    }
+
+    public func fetchAllTimelines(includeArchived: Bool) async throws -> [Timeline] {
+        try await timelinesMock.fetchAllTimelines(includeArchived: includeArchived)
+    }
+
+    public func deleteTimeline(id: UUID) async throws {
+        try await timelinesMock.deleteTimeline(id: id)
+    }
 
     // MARK: - BackgroundJobStoreProtocol
+
     public var jobs: [BackgroundJob] {
         get { jobsMock.jobs }
         set { jobsMock.jobs = newValue }
     }
-    public func saveJob(_ job: BackgroundJob) async throws { try await jobsMock.saveJob(job) }
-    public func fetchJob(id: UUID) async throws -> BackgroundJob? { try await jobsMock.fetchJob(id: id) }
-    public func fetchAllJobs() async throws -> [BackgroundJob] { try await jobsMock.fetchAllJobs() }
-    public func fetchJobs(for timelineId: UUID) async throws -> [BackgroundJob] { try await jobsMock.fetchJobs(for: timelineId) }
-    public func fetchPendingJobs(limit: Int) async throws -> [BackgroundJob] { try await jobsMock.fetchPendingJobs(limit: limit) }
-    public func deleteJob(id: UUID) async throws { try await jobsMock.deleteJob(id: id) }
-    public func monitorJobs() async -> AsyncStream<BackgroundJobEvent> { await jobsMock.monitorJobs() }
+
+    public func saveJob(_ job: BackgroundJob) async throws {
+        try await jobsMock.saveJob(job)
+    }
+
+    public func fetchJob(id: UUID) async throws -> BackgroundJob? {
+        try await jobsMock.fetchJob(id: id)
+    }
+
+    public func fetchAllJobs() async throws -> [BackgroundJob] {
+        try await jobsMock.fetchAllJobs()
+    }
+
+    public func fetchJobs(for timelineId: UUID) async throws -> [BackgroundJob] {
+        try await jobsMock.fetchJobs(for: timelineId)
+    }
+
+    public func fetchPendingJobs(limit: Int) async throws -> [BackgroundJob] {
+        try await jobsMock.fetchPendingJobs(limit: limit)
+    }
+
+    public func deleteJob(id: UUID) async throws {
+        try await jobsMock.deleteJob(id: id)
+    }
+
+    public func monitorJobs() async -> AsyncStream<BackgroundJobEvent> {
+        await jobsMock.monitorJobs()
+    }
 
     // MARK: - MSAgentStoreProtocol
+
     public var msAgents: [MSAgent] {
         get { msAgentsMock.msAgents }
         set { msAgentsMock.msAgents = newValue }
     }
-    public func saveMSAgent(_ agent: MSAgent) async throws { try await msAgentsMock.saveMSAgent(agent) }
-    public func fetchMSAgent(id: UUID) async throws -> MSAgent? { try await msAgentsMock.fetchMSAgent(id: id) }
-    public func fetchMSAgent(key: String) async throws -> MSAgent? { try await msAgentsMock.fetchMSAgent(key: key) }
-    public func fetchAllMSAgents() async throws -> [MSAgent] { try await msAgentsMock.fetchAllMSAgents() }
-    public func hasMSAgent(id: String) async -> Bool { await msAgentsMock.hasMSAgent(id: id) }
+
+    public func saveMSAgent(_ agent: MSAgent) async throws {
+        try await msAgentsMock.saveMSAgent(agent)
+    }
+
+    public func fetchMSAgent(id: UUID) async throws -> MSAgent? {
+        try await msAgentsMock.fetchMSAgent(id: id)
+    }
+
+    public func fetchMSAgent(key: String) async throws -> MSAgent? {
+        try await msAgentsMock.fetchMSAgent(key: key)
+    }
+
+    public func fetchAllMSAgents() async throws -> [MSAgent] {
+        try await msAgentsMock.fetchAllMSAgents()
+    }
+
+    public func hasMSAgent(id: String) async -> Bool {
+        await msAgentsMock.hasMSAgent(id: id)
+    }
 
     // MARK: - WorkspacePersistenceProtocol
+
     public var workspaces: [WorkspaceReference] {
         get { workspacesMock.workspaces }
         set { workspacesMock.workspaces = newValue }
     }
+
     public func saveWorkspace(_ workspace: WorkspaceReference) async throws {
         try await workspacesMock.saveWorkspace(workspace)
         if let idx = toolsMock.workspaces.firstIndex(where: { $0.id == workspace.id }) {
@@ -102,27 +205,45 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
             toolsMock.workspaces.append(workspace)
         }
     }
-    public func fetchWorkspace(id: UUID) async throws -> WorkspaceReference? { try await workspacesMock.fetchWorkspace(id: id) }
-    public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? { try await workspacesMock.fetchWorkspace(id: id, includeTools: includeTools) }
-    public func fetchAllWorkspaces() async throws -> [WorkspaceReference] { try await workspacesMock.fetchAllWorkspaces() }
-    public func deleteWorkspace(id: UUID) async throws { try await workspacesMock.deleteWorkspace(id: id) }
+
+    public func fetchWorkspace(id: UUID) async throws -> WorkspaceReference? {
+        try await workspacesMock.fetchWorkspace(id: id)
+    }
+
+    public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? {
+        try await workspacesMock.fetchWorkspace(id: id, includeTools: includeTools)
+    }
+
+    public func fetchAllWorkspaces() async throws -> [WorkspaceReference] {
+        try await workspacesMock.fetchAllWorkspaces()
+    }
+
+    public func deleteWorkspace(id: UUID) async throws {
+        try await workspacesMock.deleteWorkspace(id: id)
+    }
 
     // MARK: - ToolPersistenceProtocol
+
     public func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws {
         try await toolsMock.addToolToWorkspace(workspaceId: workspaceId, tool: tool)
     }
+
     public func syncTools(workspaceId: UUID, tools: [ToolReference]) async throws {
         try await toolsMock.syncTools(workspaceId: workspaceId, tools: tools)
     }
+
     public func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] {
         try await toolsMock.fetchTools(forWorkspaces: workspaceIds)
     }
+
     public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] {
         try await toolsMock.fetchClientTools(clientId: clientId)
     }
+
     public func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID? {
         try await toolsMock.findWorkspaceId(forToolId: toolId, in: workspaceIds)
     }
+
     public func fetchToolSource(toolId: String, workspaceIds: [UUID], primaryWorkspaceId: UUID?) async throws -> String? {
         try await toolsMock.fetchToolSource(toolId: toolId, workspaceIds: workspaceIds, primaryWorkspaceId: primaryWorkspaceId)
     }
@@ -146,6 +267,34 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     public func deleteClient(id: UUID) async throws -> Bool {
         if let mock = deleteClientMock { return try await mock(id) }
         return false
+    }
+
+    // MARK: - AgentInstanceStoreProtocol
+
+    public var agentInstances: [AgentInstance] = []
+
+    public func saveAgentInstance(_ instance: AgentInstance) async throws {
+        if let idx = agentInstances.firstIndex(where: { $0.id == instance.id }) {
+            agentInstances[idx] = instance
+        } else {
+            agentInstances.append(instance)
+        }
+    }
+
+    public func fetchAgentInstance(id: UUID) async throws -> AgentInstance? {
+        agentInstances.first { $0.id == id }
+    }
+
+    public func fetchAllAgentInstances() async throws -> [AgentInstance] {
+        agentInstances
+    }
+
+    public func deleteAgentInstance(id: UUID) async throws {
+        agentInstances.removeAll { $0.id == id }
+    }
+
+    public func fetchTimelines(attachedToAgent agentInstanceId: UUID) async throws -> [Timeline] {
+        timelines.filter { $0.attachedAgentInstanceId == agentInstanceId }
     }
 
     public func resetDatabase() async throws {

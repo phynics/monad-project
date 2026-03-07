@@ -1,6 +1,6 @@
-import MonadShared
 import Dependencies
 import Foundation
+import MonadShared
 
 // MARK: - Dependency Keys
 
@@ -29,31 +29,42 @@ public enum MSAgentExecutorKey: DependencyKey {
     )
 }
 
+public enum AgentInstanceManagerKey: DependencyKey {
+    public static let liveValue = AgentInstanceManager(
+        workspaceRoot: FileManager.default.temporaryDirectory // Default for unconfigured
+    )
+}
+
 // MARK: - Dependency Values
 
-extension DependencyValues {
-    public var msAgentRegistry: MSAgentRegistry {
+public extension DependencyValues {
+    var msAgentRegistry: MSAgentRegistry {
         get { self[MSAgentRegistryKey.self] }
         set { self[MSAgentRegistryKey.self] = newValue }
     }
 
-    public var timelineManager: TimelineManager {
+    var timelineManager: TimelineManager {
         get { self[TimelineManagerKey.self] }
         set { self[TimelineManagerKey.self] = newValue }
     }
 
-    public var toolRouter: ToolRouter {
+    var toolRouter: ToolRouter {
         get { self[ToolRouterKey.self] }
         set { self[ToolRouterKey.self] = newValue }
     }
 
-    public var chatEngine: ChatEngine {
+    var chatEngine: ChatEngine {
         get { self[ChatEngineKey.self] }
         set { self[ChatEngineKey.self] = newValue }
     }
 
-    public var msAgentExecutor: MSAgentExecutor {
+    var msAgentExecutor: MSAgentExecutor {
         get { self[MSAgentExecutorKey.self] }
         set { self[MSAgentExecutorKey.self] = newValue }
+    }
+
+    var agentInstanceManager: AgentInstanceManager {
+        get { self[AgentInstanceManagerKey.self] }
+        set { self[AgentInstanceManagerKey.self] = newValue }
     }
 }

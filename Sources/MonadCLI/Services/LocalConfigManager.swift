@@ -4,6 +4,7 @@ struct LocalConfig: Codable {
     var serverURL: String?
     var apiKey: String?
     var lastSessionId: String?
+    var lastAgentInstanceId: String?
     var clientWorkspaces: [String: String]? // URI -> WorkspaceID
 }
 
@@ -13,7 +14,7 @@ struct LocalConfigManager {
     private let customStorageURL: URL?
 
     init(storageURL: URL? = nil) {
-        self.customStorageURL = storageURL
+        customStorageURL = storageURL
     }
 
     private var storageURL: URL {
@@ -40,7 +41,8 @@ struct LocalConfigManager {
                 configHome = URL(fileURLWithPath: xdgConfig)
             } else {
                 configHome = fileManager.homeDirectoryForCurrentUser.appendingPathComponent(
-                    ".config")
+                    ".config"
+                )
             }
 
             let dir = configHome.appendingPathComponent(appName.lowercased())
@@ -56,7 +58,7 @@ struct LocalConfigManager {
 
     func getConfig() -> LocalConfig {
         guard let data = try? Data(contentsOf: storageURL),
-            let config = try? JSONDecoder().decode(LocalConfig.self, from: data)
+              let config = try? JSONDecoder().decode(LocalConfig.self, from: data)
         else {
             return LocalConfig()
         }
@@ -82,6 +84,12 @@ struct LocalConfigManager {
     func updateLastSessionId(_ id: String) {
         var config = getConfig()
         config.lastSessionId = id
+        saveConfig(config)
+    }
+
+    func updateLastAgentInstanceId(_ id: String?) {
+        var config = getConfig()
+        config.lastAgentInstanceId = id
         saveConfig(config)
     }
 

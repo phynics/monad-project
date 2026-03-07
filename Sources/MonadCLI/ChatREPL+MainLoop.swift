@@ -49,7 +49,8 @@ extension ChatREPL {
             wsName = (try? await client.workspace.getWorkspace(selectedId))?.uri.description
         }
 
-        let prompt = TerminalUI.getPromptString(workspace: wsName)
+        let agentName = currentAgent?.name
+        let prompt = TerminalUI.getPromptString(workspace: wsName, agentName: agentName)
 
         let commandNames = await registry.allCommands.map { "/" + $0.name }
         let aliases = await registry.allCommands.flatMap { cmd in cmd.aliases.map { "/" + $0 } }
@@ -119,6 +120,7 @@ extension ChatREPL {
         await registry.register(PruneSlashCommand())
         await registry.register(ClientCommand())
         await registry.register(JobSlashCommand())
+        await registry.register(AgentSlashCommand())
 
         // Utilities
         await registry.register(ClearCommand())

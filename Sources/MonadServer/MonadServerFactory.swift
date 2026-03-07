@@ -1,10 +1,10 @@
-import MonadShared
 import Dependencies
 import Foundation
 import Hummingbird
 import HummingbirdWebSocket
 import Logging
 import MonadCore
+import MonadShared
 import ServiceLifecycle
 import UnixSignals
 
@@ -81,6 +81,7 @@ public struct MonadServerFactory {
             workspaceCreator: WorkspaceFactory()
         )
 
+        let agentInstanceManager = AgentInstanceManager(workspaceRoot: workspaceRoot)
         let toolRouter = ToolRouter()
         let chatEngine = ChatEngine()
         let msAgentExecutor = MSAgentExecutor(
@@ -107,6 +108,7 @@ public struct MonadServerFactory {
             $0.toolRouter = toolRouter
             $0.chatEngine = chatEngine
             $0.msAgentExecutor = msAgentExecutor
+            $0.agentInstanceManager = agentInstanceManager
         } operation: {
             // Public routes
             router.get("/health") { _, _ -> String in
@@ -175,6 +177,11 @@ public struct MonadServerFactory {
             )
             msAgentController.addRoutes(to: protected.group("/msAgents"))
 
+            let agentInstanceController = AgentInstanceAPIController<AppRequestContext>(
+                agentInstanceManager: agentInstanceManager
+            )
+            agentInstanceController.addRoutes(to: protected.group("/agents"))
+
             let workspacesGroup = protected.group("/workspaces")
 
             let workspaceAPIController = WorkspaceAPIController<AppRequestContext>(
@@ -215,7 +222,7 @@ public struct MonadServerFactory {
                         .init(service: app),
                         .init(service: jobRunner),
                         .init(service: orphanCleanup),
-                        .init(service: bonjourAdvertiser)
+                        .init(service: bonjourAdvertiser),
                     ],
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                     logger: logger

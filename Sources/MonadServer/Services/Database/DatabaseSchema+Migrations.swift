@@ -500,5 +500,52 @@ public extension DatabaseSchema {
             try db.execute(sql: "DROP INDEX IF EXISTS idx_job_session")
             try db.create(index: "idx_job_timeline", on: "job", columns: ["timelineId"])
         }
+
+        // v32: Add agentInstance table; extend timeline and conversationMessage
+        migrator.registerMigration("v32") { db in
+            // 1. Create agentInstance table
+            if try !db.tableExists("agentInstance") {
+                try createAgentInstanceTable(in: db)
+            }
+
+            // 2. Extend timeline table
+            let timelineCols = try db.columns(in: "timeline").map { $0.name }
+            try db.alter(table: "timeline") { table in
+                if !timelineCols.contains("attachedAgentInstanceId") {
+                    table.add(column: "attachedAgentInstanceId", .blob)
+                }
+                if !timelineCols.contains("isPrivate") {
+                    table.add(column: "isPrivate", .boolean).notNull().defaults(to: false)
+                }
+                if !timelineCols.contains("ownerAgentInstanceId") {
+                    table.add(column: "ownerAgentInstanceId", .blob)
+                }
+            }
+
+            // 3. Extend conversationMessage table
+            let msgCols = try db.columns(in: "conversationMessage").map { $0.name }
+            try db.alter(table: "conversationMessage") { table in
+                if !msgCols.contains("agentInstanceId") {
+                    table.add(column: "agentInstanceId", .blob)
+                }
+                if !msgCols.contains("remoteDepth") {
+                    table.add(column: "remoteDepth", .integer).notNull().defaults(to: 0)
+                }
+            }
+
+            // 4. Indexes
+            try db.create(
+                index: "idx_timeline_agentInstance",
+                on: "timeline",
+                columns: ["attachedAgentInstanceId"],
+                ifNotExists: true
+            )
+            try db.create(
+                index: "idx_msg_agentInstance",
+                on: "conversationMessage",
+                columns: ["agentInstanceId"],
+                ifNotExists: true
+            )
+        }
     }
 }
