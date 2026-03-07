@@ -64,6 +64,11 @@ public final class ChatEngine: @unchecked Sendable {
         let workspaces = await timelineManager.getWorkspaces(for: timelineId)
         let attachedWorkspaces = workspaces?.attached ?? []
 
+        // Fetch attached agent instance for identity context
+        let agentInstance: AgentInstance? = resolvedAgentId != nil
+            ? try? await persistenceService.fetchAgentInstance(id: resolvedAgentId!)
+            : nil
+
         var clientName: String?
         let connectedClients = Set<UUID>()
 
@@ -79,6 +84,7 @@ public final class ChatEngine: @unchecked Sendable {
 
         let (initialMessages, structuredContext) = await buildPrompt(
             timeline: timeline,
+            agentInstance: agentInstance,
             message: message,
             contextData: contextData,
             history: history,
@@ -495,7 +501,8 @@ public final class ChatEngine: @unchecked Sendable {
     }
 
     private func buildPrompt(
-        timeline _: Timeline?,
+        timeline: Timeline?,
+        agentInstance: AgentInstance?,
         message: String,
         contextData: ContextData,
         history: [Message],
@@ -516,7 +523,9 @@ public final class ChatEngine: @unchecked Sendable {
             primaryWorkspace: primaryWorkspace,
             clientName: clientName,
             connectedClients: connectedClients,
-            systemInstructions: systemInstructions
+            systemInstructions: systemInstructions,
+            agentInstance: agentInstance,
+            timeline: timeline
         )
 
         // Convert to OpenAI format

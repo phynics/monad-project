@@ -1,7 +1,7 @@
 import Foundation
+import MonadPrompt
 import MonadShared
 import OpenAI
-import MonadPrompt
 
 /// Protocol for LLM Service to enable mocking and isolation
 public protocol LLMServiceProtocol: HealthCheckable {
@@ -76,7 +76,9 @@ public protocol LLMServiceProtocol: HealthCheckable {
         primaryWorkspace: WorkspaceReference?,
         clientName: String?,
         connectedClients: Set<UUID>,
-        systemInstructions: String?
+        systemInstructions: String?,
+        agentInstance: AgentInstance?,
+        timeline: Timeline?
     ) async -> Prompt
 
     // Utilities

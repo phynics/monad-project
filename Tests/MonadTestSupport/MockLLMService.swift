@@ -1,8 +1,8 @@
-import MonadShared
-import MonadCore
 import Foundation
-import OpenAI
+import MonadCore
 @testable import MonadPrompt
+import MonadShared
+import OpenAI
 
 public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     public var nextResponse: String = ""
@@ -10,7 +10,7 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     public var lastMessages: [ChatQuery.ChatCompletionMessageParam] = []
     public var shouldThrowError: Bool = false
 
-    // Support for tool calls in stream - use dictionaries to avoid type issues
+    /// Support for tool calls in stream - use dictionaries to avoid type issues
     public var nextToolCalls: [[[String: Any]]] = []
 
     /// Support for multi-chunk streaming. If not empty, this takes precedence over nextResponse.
@@ -23,8 +23,8 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
 
     public func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
-        tools: [ChatQuery.ChatCompletionToolParam]?,
-        responseFormat: ChatQuery.ResponseFormat?
+        tools _: [ChatQuery.ChatCompletionToolParam]?,
+        responseFormat _: ChatQuery.ResponseFormat?
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
         lastMessages = messages
 
@@ -69,11 +69,11 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
 
                     var delta: [String: Any] = [
                         "role": "assistant",
-                        "content": chunk
+                        "content": chunk,
                     ]
 
                     if let tc = ctx.toolCalls, index == ctx.responses.count - 1 {
-                        let indexedTC = tc.enumerated().map { (idx, dict) in
+                        let indexedTC = tc.enumerated().map { idx, dict in
                             var newDict = dict
                             newDict["index"] = idx
                             return newDict
@@ -90,9 +90,9 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
                             [
                                 "index": 0,
                                 "delta": delta,
-                                "finish_reason": (index == ctx.responses.count - 1 && ctx.toolCalls != nil) ? "tool_calls" : (index == ctx.responses.count - 1 ? "stop" : nil)
-                            ]
-                        ]
+                                "finish_reason": (index == ctx.responses.count - 1 && ctx.toolCalls != nil) ? "tool_calls" : (index == ctx.responses.count - 1 ? "stop" : nil),
+                            ],
+                        ],
                     ]
 
                     do {
@@ -113,12 +113,14 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
         }
     }
 
-    public func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?) async throws
-        -> String {
+    public func sendMessage(_ content: String, responseFormat _: ChatQuery.ResponseFormat?) async throws
+        -> String
+    {
         if shouldThrowError {
             throw NSError(
                 domain: "MockError", code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Simulated failure"])
+                userInfo: [NSLocalizedDescriptionKey: "Simulated failure"]
+            )
         }
         lastMessages = [.user(.init(content: .string(content)))]
         return nextResponse
@@ -129,8 +131,13 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
     public var mockHealthStatus: HealthStatus = .ok
     public var mockHealthDetails: [String: String]? = ["mock": "true"]
 
-    public func getHealthStatus() async -> HealthStatus { mockHealthStatus }
-    public func getHealthDetails() async -> [String: String]? { mockHealthDetails }
+    public func getHealthStatus() async -> HealthStatus {
+        mockHealthStatus
+    }
+
+    public func getHealthDetails() async -> [String: String]? {
+        mockHealthDetails
+    }
 
     public func checkHealth() async -> HealthStatus {
         return mockHealthStatus
@@ -157,38 +164,43 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
 
     public func loadConfiguration() async {}
     public func updateConfiguration(_ config: LLMConfiguration) async throws {
-        self.mockConfig = config
+        mockConfig = config
     }
+
     public func clearConfiguration() async {
         // can't easily change isConfigured if it's computed, but we can change mock state
     }
-    public func restoreFromBackup() async throws {}
-    public func exportConfiguration() async throws -> Data { return Data() }
-    public func importConfiguration(from data: Data) async throws {}
 
-    public func sendMessage(_ content: String) async throws -> String {
+    public func restoreFromBackup() async throws {}
+    public func exportConfiguration() async throws -> Data {
+        return Data()
+    }
+
+    public func importConfiguration(from _: Data) async throws {}
+
+    public func sendMessage(_: String) async throws -> String {
         return nextResponse
     }
 
     public func sendMessage(
-        _ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool
+        _: String, responseFormat _: ChatQuery.ResponseFormat?, useUtilityModel _: Bool
     ) async throws -> String {
         return nextResponse
     }
 
     public func chatStreamWithContext(
-        userQuery: String,
-        contextNotes: [ContextFile],
-        memories: [Memory],
-        chatHistory: [Message],
-        tools: [AnyTool],
-        workspaces: [WorkspaceReference],
-        primaryWorkspace: WorkspaceReference?,
-        clientName: String?,
-        connectedClients: Set<UUID>,
-        systemInstructions: String?,
+        userQuery _: String,
+        contextNotes _: [ContextFile],
+        memories _: [Memory],
+        chatHistory _: [Message],
+        tools _: [AnyTool],
+        workspaces _: [WorkspaceReference],
+        primaryWorkspace _: WorkspaceReference?,
+        clientName _: String?,
+        connectedClients _: Set<UUID>,
+        systemInstructions _: String?,
         responseFormat: ChatQuery.ResponseFormat?,
-        useFastModel: Bool
+        useFastModel _: Bool
     ) async -> (
         stream: AsyncThrowingStream<ChatStreamResult, Error>,
         rawPrompt: String,
@@ -206,22 +218,22 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         if let stubbed = stubbedStream {
             return stubbed
         }
-        let stream = await mockClient.chatStream(
-            messages: messages, tools: tools, responseFormat: responseFormat)
-        return stream
+        return await mockClient.chatStream(
+            messages: messages, tools: tools, responseFormat: responseFormat
+        )
     }
 
     public func buildPrompt(
-        userQuery: String,
-        contextNotes: [ContextFile],
-        memories: [Memory],
-        chatHistory: [Message],
-        tools: [AnyTool],
-        workspaces: [WorkspaceReference],
-        primaryWorkspace: WorkspaceReference?,
-        clientName: String?,
-        connectedClients: Set<UUID>,
-        systemInstructions: String?
+        userQuery _: String,
+        contextNotes _: [ContextFile],
+        memories _: [Memory],
+        chatHistory _: [Message],
+        tools _: [AnyTool],
+        workspaces _: [WorkspaceReference],
+        primaryWorkspace _: WorkspaceReference?,
+        clientName _: String?,
+        connectedClients _: Set<UUID>,
+        systemInstructions _: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
         rawPrompt: String,
@@ -231,30 +243,33 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
     }
 
     public func buildContext(
-        userQuery: String,
-        contextNotes: [ContextFile],
-        memories: [Memory],
-        chatHistory: [Message],
-        tools: [AnyTool],
-        workspaces: [WorkspaceReference],
-        primaryWorkspace: WorkspaceReference?,
-        clientName: String?,
-        connectedClients: Set<UUID>,
-        systemInstructions: String?
+        userQuery _: String,
+        contextNotes _: [ContextFile],
+        memories _: [Memory],
+        chatHistory _: [Message],
+        tools _: [AnyTool],
+        workspaces _: [WorkspaceReference],
+        primaryWorkspace _: WorkspaceReference?,
+        clientName _: String?,
+        connectedClients _: Set<UUID>,
+        systemInstructions _: String?,
+        agentInstance _: AgentInstance?,
+        timeline _: Timeline?
     ) async -> Prompt {
         return Prompt(sections: [])
     }
 
-    public func generateTags(for text: String) async throws -> [String] {
+    public func generateTags(for _: String) async throws -> [String] {
         return nextTags
     }
 
-    public func generateTitle(for messages: [Message]) async throws -> String {
+    public func generateTitle(for _: [Message]) async throws -> String {
         return "Mock Title"
     }
 
-    public func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws
-        -> [String: Double] {
+    public func evaluateRecallPerformance(transcript _: String, recalledMemories _: [Memory]) async throws
+        -> [String: Double]
+    {
         return [:]
     }
 

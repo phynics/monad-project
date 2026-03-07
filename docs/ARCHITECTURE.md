@@ -45,47 +45,46 @@ Contains the foundational library for all domain logic, data models, and busines
 
 **Key Services:**
 - `ChatEngine` — Unified engine for chat and autonomous agents
-- `TimelineManager` — Actor managing session lifecycle and components
+- `TimelineManager` — Actor managing timeline lifecycle and components
+- `AgentInstanceManager` — Actor managing agent instance creation, attachment, and deletion
 - `ContextManager` — Actor for RAG and context gathering
 - `ToolRouter` — Actor routing tool execution to appropriate handler
 - `LLMService` — Multi-provider LLM client with streaming
 - `WorkspaceManager` — Actor managing workspace lifecycle
-- `AgentExecutor` — Service executing agent tasks
+- `MSAgentExecutor` — Service executing autonomous MSAgent tasks
 - `VectorStore` — Vector search for semantic memory retrieval
 
 **Models Organized Into:**
 ```
 Sources/MonadCore/Models/
-├── Agents/        Agent
 ├── Chat/          APIRequests, APIResponseMetadata, ChatEvent, Message, ToolCall
 ├── Configuration/ LLMConfiguration, LLMProvider, ProviderConfiguration, ToolCallFormat
 ├── Context/       ActiveMemory, ContextFile, DebugSnapshot
 ├── Database/      ConversationMessage, DatabaseBackup, Memory, SemanticSearchResult, Timeline
 ├── Tools/         Tool, ToolReference, ToolError, ToolParameters, …
-│   ├── Filesystem/  7 filesystem tools (cd, find, inspect, ls, cat, grep, search)
-│   ├── JobQueue/    JobQueueGatewayTool, Job, JobQueueContext
-│   └── ToolContext/ ContextTool, ToolContext, ToolTimelineContext
+│   ├── Filesystem/    7 filesystem tools (cd, find, inspect, ls, cat, grep, search)
+│   ├── BackgroundJobQueue/  BackgroundJobQueueGatewayTool, Job, BackgroundJobQueueContext
+│   └── ToolContext/  ContextTool, ToolContext, ToolTimelineContext
 └── Workspace/     WorkspaceAttachment, WorkspaceLock, WorkspaceProtocol,
                    WorkspaceReference, WorkspaceTool, WorkspaceToolDefinition
+
+Sources/MonadShared/SharedTypes/
+├── AgentInstance.swift  — Live agent entity (runtime, created from MSAgent template)
+└── MSAgent.swift        — Agent template (static definition with systemPrompt, persona, seed files)
 
 Sources/MonadCore/Stores/
 └── WorkspaceStore — Actor cache for hydrated WorkspaceProtocol instances
 ```
 
 **Key Model Notes:**
-- **`Timeline`** (formerly `Timeline`) — Persistent conversation record with workspace attachments
+- **`Timeline`** (formerly `ConversationSession`) — Persistent conversation record. Now includes `attachedAgentInstanceId`, `isPrivate`, and `ownerAgentInstanceId` for the agent system.
+- **`AgentInstance`** — Runtime agent entity in `MonadShared`. Has its own private workspace and private timeline. Created from an `MSAgent` template.
+- **`MSAgent`** — Static agent template in `MonadShared`. Defines `systemPrompt`, `personaPrompt`, `guardrails`, and `workspaceFilesSeed`.
 - **`LLMConfiguration`** — Multi-provider config (replaces old monolithic `Configuration`)
 - **`Message`** — Includes optional `think` field for Chain of Thought reasoning
 - **`ToolReference`** — Enum: `.known(id)` or `.custom(definition)`
 - **`WorkspaceReference`** — Metadata about a workspace (ID, URI, host type, tools, trust level)
 - **`WorkspaceStore`** — Actor that eagerly loads all workspaces from persistence into memory; used by `FilesAPIController`
-
-**Removed Types:**
-- `MessageDebugInfo` — Removed
-- `SubagentContext` — Removed
-- `CompactificationNode` — Removed
-- `Configuration` wrapper struct — Replaced by `LLMConfiguration`
-- `SessionStore` — Removed (responsibilities fully covered by `TimelineManager`)
 
 ---
 
@@ -96,18 +95,25 @@ Lightweight, dependency-free models used by all modules to prevent circular depe
 - Shared types between client and server
 - API contract types split into category-specific files
 
-**Dependencies:** MonadCore (for core types)
+**Dependencies:** None (standalone — no MonadCore dependency)
 
 **Key Types:**
 API contract types in `Sources/MonadShared/Models/`:
 - `ChatAPI.swift` — ChatRequest, ChatResponse
 - `ClientAPI.swift` — Client connection types
 - `MemoryAPI.swift` — Memory CRUD types
-- `SessionAPI.swift` — Session management types
+- `SessionAPI.swift` — Timeline management types (responses, requests)
 - `WorkspaceAPI.swift` — Workspace types
 - `ToolAPI.swift` — Tool-related types
 - `CommonAPI.swift` — Shared/common types
 - `SystemStatus.swift` — Health/status types
+
+Shared runtime types in `Sources/MonadShared/SharedTypes/`:
+- `AgentInstance.swift` — Live agent entity
+- `MSAgent.swift` — Agent template
+- `LLMConfiguration.swift`, `ProviderConfiguration.swift` — LLM config
+- `WorkspaceReference.swift`, `WorkspaceURI.swift` — Workspace metadata
+- `ChatEvent.swift`, `Message.swift`, `ToolCall.swift` — Streaming types
 
 ---
 
@@ -136,18 +142,19 @@ The backend server hosting the agent and exposing the brain to clients.
 - Logging (for structured logging)
 
 **Controllers** (in `Sources/MonadServer/Controllers/`):
-- `ChatAPIController` — Chat streaming endpoints
-- `TimelineAPIController` — Session CRUD
-- `MemoryAPIController` — Memory operations
-- `WorkspaceAPIController` — Workspace management
-- `JobAPIController` — Background job management
-- `ClientAPIController` — Client registration
-- `ConfigurationAPIController` — Configuration management
-- `ToolAPIController` — Tool listing
-- `AgentAPIController` — Agent management
+- `ChatAPIController` — Chat streaming endpoints (`POST /sessions/:id/chat/stream`)
+- `TimelineAPIController` — Timeline CRUD (`/sessions`)
+- `MemoryAPIController` — Memory operations (`/memories`)
+- `WorkspaceAPIController` — Workspace management (`/workspaces`)
+- `JobAPIController` — Background job management (`/sessions/:id/...`)
+- `ClientAPIController` — Client registration (`/clients`)
+- `ConfigurationAPIController` — Configuration management (`/config`)
+- `ToolAPIController` — Tool listing (`/tools`)
+- `AgentInstanceAPIController` — Agent instance CRUD and attachment (`/agents`)
+- `MSAgentAPIController` — MSAgent template management (`/msAgents`)
 - `StatusAPIController` — Health/status endpoints
-- `FilesAPIController` — File operations
-- `PruneAPIController` — Data cleanup
+- `FilesAPIController` — File operations (`/workspaces/:id/files`)
+- `PruneAPIController` — Data cleanup (`/prune`)
 - `WebSocketAPIController` — WebSocket connections
 
 **Services** (in `Sources/MonadServer/Services/`):
@@ -162,7 +169,7 @@ The backend server hosting the agent and exposing the brain to clients.
 
 **Database Schema:**
 - Migrations managed via GRDB
-- Tables: `timelines`, `messages`, `memories`, `jobs`, `agents`, `workspaces`, `clients`, etc.
+- Tables: `timelines`, `messages`, `memories`, `jobs`, `agentInstances`, `msAgents`, `workspaces`, `clients`, etc.
 - Schema versioning for backward compatibility
 
 ---
@@ -351,11 +358,14 @@ flowchart LR
 
 **Sections (by priority):**
 1. **System Instructions** (priority: 100, strategy: keep)
-2. **Context Notes** (priority: 90, strategy: summarize)
-3. **Memories** (priority: 80, strategy: truncate)
-4. **Tools** (priority: 70, strategy: keep)
-5. **Chat History** (priority: 60, strategy: truncate from start)
-6. **User Query** (priority: 10, strategy: keep)
+2. **Agent Context** (priority: 95, strategy: keep) — agent name, description, current timeline
+3. **Context Notes** (priority: 90, strategy: truncate)
+4. **Memories** (priority: 85, strategy: summarize)
+5. **Tools** (priority: 80, strategy: keep)
+6. **Workspaces** (priority: 75, strategy: keep)
+7. **Timeline Context** (priority: 72, strategy: keep) — current timeline ID and title
+8. **Chat History** (priority: 70, strategy: truncate from start)
+9. **User Query** (priority: 10, strategy: keep)
 
 **Token Budgeting:**
 - Higher priority sections allocated tokens first
@@ -423,7 +433,8 @@ The `/sessions/{id}/chat` endpoint emits Server-Sent Events with the following t
 
 ### Actors
 Heavy use of actors for thread-safe state management:
-- `TimelineManager` — Session lifecycle and component caching
+- `TimelineManager` — Timeline lifecycle and component caching
+- `AgentInstanceManager` — Agent instance creation, attachment, and deletion
 - `ContextManager` — RAG and context gathering
 - `ToolRouter` — Tool routing and execution
 - `WorkspaceManager` — Workspace lifecycle
@@ -431,9 +442,9 @@ Heavy use of actors for thread-safe state management:
 **Pattern:**
 ```swift
 public actor TimelineManager {
-    internal var sessions: [UUID: Timeline] = [:]
+    internal var timelines: [UUID: Timeline] = [:]
 
-    public func createSession(title: String) async throws -> Timeline {
+    public func createTimeline(title: String) async throws -> Timeline {
         // All mutations serialized by actor
     }
 }
@@ -474,12 +485,12 @@ Uses Point-Free's `swift-dependencies` for DI:
 
 **Dependency Keys** (in `Sources/MonadCore/Dependencies/`):
 - `LLMDependencies.swift` — LLMService, EmbeddingService
-- `OrchestrationDependencies.swift` — TimelineManager, ChatEngine, AgentExecutor, etc.
+- `OrchestrationDependencies.swift` — TimelineManager, ChatEngine, MSAgentExecutor, etc.
 - `StorageDependencies.swift` — PersistenceService, VectorStore
 
 **Usage:**
 ```swift
-@Dependency(\.sessionManager) private var sessionManager
+@Dependency(\.timelineManager) private var timelineManager
 ```
 
 **Configuration:**

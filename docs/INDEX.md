@@ -2,16 +2,20 @@
 
 Comprehensive guide to Monad documentation.
 
+> **Before exploring the codebase**, read this file first — it maps all key types, services, tools, and where they live.
+
 ## Quick Start
 
 ### For Getting Started
 - **[../README.md](../README.md)** — Project overview, quick start, and basic usage
 
 ### For AI Assistants
-- **[../AGENTS.md](../AGENTS.md)** — Quick reference: build commands, architecture, conventions, model layout, critical patterns
+- **[../CLAUDE.md](../CLAUDE.md)** — Quick reference: build commands, architecture, conventions, critical patterns
 
 ### For Developers
 - **[../DEVELOPMENT.md](../DEVELOPMENT.md)** — Developer guide: setup, creating tools/endpoints/agents, testing, troubleshooting
+
+---
 
 ## Core Documentation
 
@@ -21,74 +25,76 @@ Comprehensive guide to Monad documentation.
 - Module responsibilities (MonadCore, MonadServer, MonadClient, etc.)
 - Dependency hierarchy
 - Data flow: user input → context assembly → LLM → tool execution → response
-- SSE streaming protocol
-
-**[guides/CORE_GUIDE.md](guides/CORE_GUIDE.md)** — Agent framework guide
-- Core concepts (Agents, Jobs, Orchestration)
-- Defining and customizing agents
-- Inter-agent communication patterns
-- Best practices and troubleshooting
-
-### Features & Systems
+- SSE streaming protocol, concurrency model
 
 **[CONTEXT_SYSTEM.md](CONTEXT_SYSTEM.md)** — Context assembly pipeline
-- Context gathering process
+- Context gathering process (RAG)
 - Context Notes and the `Notes/` directory
-- Agent model and persona system
 - `@ContextBuilder` DSL and token budgeting
-- Semantic search with tag boosting
-- Workspace-tool relationship
+- Semantic search with tag boosting and re-ranking
 
-**[workspaces_feature_overview.md](workspaces_feature_overview.md)** — Workspace & tool execution
-- Workspace concepts (URI, host types, trust levels)
-- Session and workspace relationship
-- Tool execution flow (discovery, routing, execution)
-- Security & isolation (jails, trust levels)
-- Workflows (attaching projects, client-managed workspaces)
+### Feature Docs
 
-**[STORES.md](STORES.md)** — State Stores
-- In-memory actor caches for the persistence layer
-- `WorkspaceStore` caching for continuous file access
-- `SessionStore` (removed)
+**[AGENT.md](AGENT.md)** — Agent system
+- `MSAgent` templates vs `AgentInstance` runtime entities
+- Creating, attaching, and deleting agents
+- Agent identity in prompts (`AgentContext`, `TimelineContext` sections)
+- Inter-agent communication (timeline tools)
+- CLI commands and API reference
+
+**[TIMELINE.md](TIMELINE.md)** — Timeline (conversation) model
+- `Timeline` model fields and types
+- Chat stream API and SSE event reference
+- Chat flow: message → context → LLM → tools → response
+- Timeline tools for cross-agent communication
+- `TimelineManager` actor
+
+**[WORKSPACE.md](WORKSPACE.md)** — Workspace & tool execution
+- Workspace model (host types, trust levels, URI types)
+- Agent workspaces vs. attached workspaces
+- Tool execution flow (discovery, routing, server vs. client)
+- Security: path jailing, state isolation
+- `WorkspaceStore` actor cache
+- CLI commands and API reference
+
+**[CLIENT.md](CLIENT.md)** — MonadClient library & MonadCLI
+- `MonadClient` configuration and facades (`chat`, `workspace`)
+- Client registration and `AskAttachPWDTool`
+- CLI startup sequence
+- Full slash command reference
+- `LocalConfigManager` (persists timeline/agent across sessions)
 
 ### API Reference
 
-**[API_REFERENCE.md](API_REFERENCE.md)** — MonadServer HTTP API
-- System status endpoints
-- Session management (CRUD, messages)
-- Chat streaming (SSE protocol, event types)
-- Memory operations (search, CRUD)
-- Workspace management
-- Jobs and background tasks
-- Client registration
-- Configuration endpoints
+**[API_REFERENCE.md](API_REFERENCE.md)** — MonadServer HTTP API (complete endpoint listing)
+- System status, timelines, chat streaming
+- Memories, workspaces, agent instances, MSAgents
+- Jobs, clients, configuration
+
+### State Stores
+
+**[STORES.md](STORES.md)** — In-memory actor caches
+- `WorkspaceStore` for workspace hydration
+
+---
 
 ## Documentation by Role
 
 ### For AI Assistants
 
-Start with **[../AGENTS.md](../AGENTS.md)** for:
+Start with **[../CLAUDE.md](../CLAUDE.md)** for:
 - Build commands and testing (`swift build`, `swift test`, `make lint`)
 - Module architecture and model layout
-- Critical conventions:
-  - Concurrency (actors, `AsyncThrowingStream`, `Locked`)
-  - Graceful shutdown (`cancelWhenGracefulShutdown`)
-  - Dependency injection (`@Dependency`)
-  - Logging (`Logger.module(named:)`)
-  - Tool protocol
-- System tools (15 implementations)
-- References to detailed docs
+- Critical conventions: concurrency, graceful shutdown, DI, logging
+- System tools (18 implementations)
+
+Then check this INDEX for the specific area you're working on.
 
 ### For Developers
 
 Start with **[../DEVELOPMENT.md](../DEVELOPMENT.md)** for:
 - Development setup and workflows
-- Creating new features:
-  - Tools (implementing `Tool` protocol)
-  - API endpoints (Hummingbird controllers)
-  - Custom prompts (`@ContextBuilder` DSL)
-  - Agents (database records + execution)
-- CLI usage and slash commands
+- Creating new tools, API endpoints, agent templates
 - Testing strategies (mocks, HummingbirdTesting)
 - Troubleshooting common issues
 
@@ -97,8 +103,9 @@ Start with **[../DEVELOPMENT.md](../DEVELOPMENT.md)** for:
 Read in this order:
 1. **[ARCHITECTURE.md](ARCHITECTURE.md)** — Overall system design, module responsibilities, data flow
 2. **[CONTEXT_SYSTEM.md](CONTEXT_SYSTEM.md)** — How context is assembled, RAG pipeline
-3. **[workspaces_feature_overview.md](workspaces_feature_overview.md)** — Tool execution model, security
-4. **[guides/CORE_GUIDE.md](guides/CORE_GUIDE.md)** — Agent orchestration, job system
+3. **[WORKSPACE.md](WORKSPACE.md)** — Tool execution model, security
+4. **[AGENT.md](AGENT.md)** — Agent orchestration, job system
+5. **[TIMELINE.md](TIMELINE.md)** — Conversation model, streaming
 
 ### For API Integration
 
@@ -106,207 +113,111 @@ Start with **[API_REFERENCE.md](API_REFERENCE.md)** for:
 - Endpoint specifications (paths, methods, parameters)
 - Request/response formats (JSON schemas)
 - SSE streaming protocol (event types, phases)
-- Authentication and configuration
 
-## Key Concepts
+---
+
+## Key Types
 
 ### Timeline
-The persistent conversation record. Represents a continuous thread of interaction between user and AI. Formerly called `Timeline`.
+Persistent conversation record. Formerly `ConversationSession`.
 
-**Fields:** `id`, `title`, `createdAt`, `updatedAt`, `isArchived`, `tags`, `workingDirectory`, `primaryWorkspaceId`, `attachedWorkspaceIds`
+**Fields:** `id`, `title`, `createdAt`, `updatedAt`, `isArchived`, `tags`, `workingDirectory`, `primaryWorkspaceId`, `attachedWorkspaceIds`, `attachedAgentInstanceId`, `isPrivate`, `ownerAgentInstanceId`
+
+→ See **[TIMELINE.md](TIMELINE.md)** for full details.
+
+### AgentInstance
+Live runtime agent entity with its own workspace and private timeline.
+
+**Fields:** `id`, `name`, `description`, `primaryWorkspaceId`, `privateTimelineId`, `lastActiveAt`
+
+→ See **[AGENT.md](AGENT.md)** for full details.
+
+### MSAgent
+Static agent template used to seed `AgentInstance` workspaces.
+
+**Fields:** `id`, `name`, `description`, `systemPrompt`, `personaPrompt`, `guardrails`, `workspaceFilesSeed`
 
 ### LLMConfiguration
-Canonical configuration type supporting multiple LLM providers.
-
-**Providers:** OpenAI, OpenRouter, Ollama, OpenAI-compatible
-
-**Structure:**
-- `activeProvider: LLMProvider` — Currently active provider
-- `providers: [LLMProvider: ProviderConfiguration]` — Per-provider configs
-- `memoryContextLimit: Int` — Max tokens for memory context
-- `documentContextLimit: Int` — Max tokens for document context
-- `version: Int` — Config schema version
-
-**Per-Provider Config:**
-- `endpoint` — API endpoint URL
-- `apiKey` — API key (optional for Ollama)
-- `modelName` — Primary model
-- `utilityModel` — For utility tasks (tagging, summarization)
-- `fastModel` — For fast, simple tasks
-- `toolFormat` — OpenAI / JSON / XML
-- `timeoutInterval` — Request timeout
-- `maxRetries` — Retry count
+Multi-provider LLM config. `activeProvider` → `ProviderConfiguration` → `endpoint`, `apiKey`, `modelName`, `utilityModel`, `fastModel`, `toolFormat`.
 
 ### Message
-UI message model with Chain of Thought support.
-
-**Fields:** `id`, `content`, `role`, `timestamp`, `think` (optional reasoning), `toolCalls`, `toolCallId`, `parentId`, `recalledMemories`, `isSummary`, `summaryType`
-
 **Roles:** `.user`, `.assistant`, `.system`, `.tool`, `.summary`
+**Fields:** `id`, `content`, `role`, `timestamp`, `think` (CoT), `toolCalls`, `agentInstanceId`
 
-### ToolReference & WorkspaceReference
-Dedicated types for referencing tools and workspaces.
-
-**ToolReference:**
-```swift
-enum ToolReference {
-    case known(id: String)
-    case custom(definition: WorkspaceToolDefinition)
-}
-```
-
-**WorkspaceReference:**
-Metadata about a workspace (ID, URI, host type, owner, tools, root path, trust level, status).
-
-### Context Notes
-Files in the `Notes/` directory of the Primary Workspace. Read by `ContextManager` and included in prompts with high priority. The LLM can update these files to persist state and instructions across sessions.
-
-**Default Files:**
-- `Welcome.md` — Introduction and usage guide
-- `Project.md` — Project-specific context
-
-### Workspace Model
-**Primary Workspace:** Private session sandbox with `Notes/` directory. Created automatically with session. Host type: `.serverTimeline`.
-
-**Attached Workspaces:** Shared project directories. Attached via `/workspace attach` or `attach-pwd`. Host types: `.server` (local disk) or `.client` (remote RPC).
-
-**Tool Provenance:** Tools labeled as `[System]`, `[Workspace: Name]`, or `[Session]` to help LLM reason about context.
+---
 
 ## Model Organization
 
-MonadCore models are organized into focused subdirectories:
-
 ```
 Sources/MonadCore/Models/
-├── Agents/        Agent
 ├── Chat/          APIRequests, APIResponseMetadata, ChatEvent, Message, ToolCall
 ├── Configuration/ LLMConfiguration, LLMProvider, ProviderConfiguration, ToolCallFormat
 ├── Context/       ActiveMemory, ContextFile, DebugSnapshot
 ├── Database/      ConversationMessage, DatabaseBackup, Memory, SemanticSearchResult, Timeline
 ├── Tools/         Tool, ToolReference, ToolError, ToolParameters, …
-│   ├── Filesystem/  (7 tools: cd, find, inspect, ls, cat, grep, search)
-│   ├── JobQueue/    JobQueueGatewayTool, Job, JobQueueContext
-│   └── ToolContext/ ContextTool, ToolContext, ToolTimelineContext
+│   ├── Filesystem/         7 tools: cd, find, inspect, ls, cat, grep, search
+│   ├── BackgroundJobQueue/ BackgroundJobQueueGatewayTool, Job, BackgroundJobQueueContext
+│   └── ToolContext/        ContextTool, ToolContext, ToolTimelineContext
 └── Workspace/     WorkspaceAttachment, WorkspaceLock, WorkspaceProtocol,
                    WorkspaceReference, WorkspaceTool, WorkspaceToolDefinition,
                    WorkspaceToolError, WorkspaceURI
+
+Sources/MonadShared/SharedTypes/
+├── AgentInstance.swift   — Live agent entity (runtime)
+├── MSAgent.swift         — Agent template (static definition)
+├── ChatAPITypes.swift    — TimelineResponse, CreateTimelineRequest, etc.
+├── WorkspaceReference.swift, WorkspaceURI.swift
+├── ChatEvent.swift, Message.swift, ToolCall.swift
+└── LLMConfiguration.swift, ProviderConfiguration.swift, …
+
+Sources/MonadCore/Stores/
+└── WorkspaceStore.swift  — Actor cache for hydrated WorkspaceProtocol instances
 ```
 
 ## Service Organization
 
-Core services in `Sources/MonadCore/Services/`:
-
 ```
+Sources/MonadCore/Services/
 ├── ChatEngine.swift              — Unified chat/agent engine
-├── Agents/                       — AgentExecutor, AgentRegistry
+├── Agents/                       — AgentInstanceManager
 ├── Configuration/                — ConfigurationServiceProtocol
 ├── Context/                      — ContextManager, ContextRanker
 ├── Database/                     — Persistence protocols (7 store protocols)
-├── Embeddings/                   — EmbeddingService implementations
+├── Embeddings/                   — EmbeddingService, LocalEmbeddingService, OpenAIEmbeddingService
 ├── LLM/                          — LLMService, StreamingParser, StreamingCoordinator
 │   └── Providers/                — OpenAI, Ollama, OpenRouter clients
+├── MSAgents/                     — MSAgentExecutor, MSAgentRegistry
 ├── Prompting/                    — DefaultInstructions, PromptSections
-├── Session/                      — TimelineManager, TimelineToolManager
+├── Timeline/                     — TimelineManager, TimelineToolManager
 ├── Tools/                        — SystemToolRegistry, ToolExecutor, ToolRouter
-│   └── Agent/                    — LaunchSubagentTool, AgentAsTool
+│   ├── MSAgent/                  — LaunchSubagentTool, MSAgentAsTool
+│   └── Timeline/                 — TimelineListTool, TimelinePeekTool, TimelineSendTool
 ├── Vector/                       — VectorStore, MockVectorStore
 └── Workspace/                    — WorkspaceManager, WorkspaceRepository
 ```
 
-## System Tools (15 Implemented)
+## System Tools (18 Implemented)
 
-### Filesystem Tools (7)
-Location: `Sources/MonadCore/Models/Tools/Filesystem/`
+| Category | Tools |
+|:---------|:------|
+| Filesystem (7) | `cd`, `find`, `inspect_file`, `ls`, `cat`, `grep`, `search_files` |
+| MSAgent (2) | `LaunchSubagentTool`, `MSAgentAsTool` |
+| Timeline (3) | `timeline_list`, `timeline_peek`, `timeline_send` |
+| System (2) | `system_memory_search`, `system_web_search` |
+| Job Queue (1) | `BackgroundJobQueueGatewayTool` |
+| Client (1) | `AskAttachPWDTool` |
+| Context (1) | `ContextTool` (marker protocol) |
 
-1. `ChangeDirectoryTool` (`cd`) — Change working directory
-2. `FindFileTool` (`find`) — Find files by pattern
-3. `InspectFileTool` (`inspect_file`) — File metadata
-4. `ListDirectoryTool` (`ls`) — List directory contents
-5. `ReadFileTool` (`cat`) — Read file content (1MB limit)
-6. `SearchFileContentTool` (`grep`) — Search within files
-7. `SearchFilesTool` (`search_files`) — Search for files
+## Prompt Sections (Priority Order)
 
-### Agent Tools (2)
-Location: `Sources/MonadCore/Services/Tools/Agent/`
-
-1. `LaunchSubagentTool` — Launch isolated agent task
-2. `AgentAsTool` — Wrap agent as callable tool
-
-### System Tools (2)
-Location: `Sources/MonadCore/Services/Tools/SystemToolRegistry.swift`
-
-1. `system_memory_search` — Search long-term memories
-2. `system_web_search` — Web search (placeholder)
-
-### Job Queue Tools (1)
-Location: `Sources/MonadCore/Models/Tools/JobQueue/`
-
-1. `JobQueueGatewayTool` — Submit background jobs
-
-### Client Tools (1)
-Location: `Sources/MonadClient/Tools/`
-
-1. `AskAttachPWDTool` — Client-side workspace attachment
-
-### Context Tools (1)
-Location: `Sources/MonadCore/Models/Tools/ToolContext/`
-
-1. `ContextTool` — Marker protocol for context-aware tools
-
-## Architectural Patterns
-
-### Streaming Response Pattern
-Multi-phase streaming with `AsyncThrowingStream<ChatEvent, Error>`:
-
-**Phases:**
-1. `generationContext` — Initial metadata (session, agent, workspace)
-2. `thought` / `delta` — LLM output (CoT reasoning / user-facing content)
-3. `toolCall` — Tool request from LLM
-4. `toolExecution` — Tool execution status (attempting / success / failed)
-5. `generationCompleted` — Final message + metadata
-6. `streamCompleted` — End of stream
-
-**Parser:** `StreamingParser` extracts Chain of Thought from `<think>...</think>` tags
-
-### Tool Execution Flow
-1. LLM requests tool via `ToolCall`
-2. `ToolRouter` resolves workspace containing tool
-3. Execute locally (server) or throw `ToolError.clientExecutionRequired` (client)
-4. Result fed back to LLM as new `Message` with role `.tool`
-5. LLM continues generation with result context
-
-### Context Assembly Pipeline
-`ContextManager.gatherContext()` returns `AsyncThrowingStream<ContextGatheringEvent>`:
-
-**Events:**
-- `.augmenting` — Augmenting query with conversation history
-- `.tagging` — Generating search tags via LLM
-- `.embedding` — Creating query embedding
-- `.searching` — Parallel semantic + tag-based search
-- `.ranking` — Re-ranking combined results
-- `.complete` — Context ready
-
-**Process:**
-1. Read `Notes/` directory from primary workspace
-2. Augment query with recent conversation history
-3. Generate search tags via LLM (`generateTags()`)
-4. Create embedding for augmented query
-5. **Parallel search:** semantic (vector) + tag-based
-6. Re-rank combined results with `ContextRanker`
-7. Return top N memories
-
-## Deprecated/Removed
-
-These types/concepts have been removed from the codebase:
-
-- `MessageDebugInfo` — Removed
-- `SubagentContext` — Removed
-- `CompactificationNode` — Removed
-- `Configuration` wrapper struct — Replaced by `LLMConfiguration`
-- MCP configuration — Removed from config system
-- Custom `Locked` wrapper — Now uses Swift 6 `OSAllocatedUnfairLock`
-- `Timeline` — Renamed to `Timeline`
-
-## Assets
-
-- **[assets/](assets/)** — Images and diagrams (e.g., `spark.png`)
+| Section | Priority | Strategy | When |
+|:--------|:---------|:---------|:-----|
+| `SystemInstructions` | 100 | keep | Always |
+| `AgentContext` | 95 | keep | When agent attached |
+| `ContextNotes` | 90 | truncate | Always |
+| `Memories` | 85 | summarize | Always |
+| `Tools` | 80 | keep | Always |
+| `WorkspacesContext` | 75 | keep | Always |
+| `TimelineContext` | 72 | keep | When timeline available |
+| `ChatHistory` | 70 | truncate (oldest first) | Always |
+| `UserQuery` | 10 | keep | Always |

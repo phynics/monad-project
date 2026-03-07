@@ -42,9 +42,11 @@ Returns detailed health status of all system components.
 
 ---
 
-## Sessions
+## Timelines (Sessions)
 
-### List Sessions
+Route prefix: `/api/sessions`
+
+### List Timelines
 `GET /sessions`
 
 **Query Parameters:**
@@ -52,36 +54,33 @@ Returns detailed health status of all system components.
 - `perPage` (int, default: 20)
 - `archived` (bool, optional): Filter by archived status.
 
-### Create Session
+### Create Timeline
 `POST /sessions`
 
 **Body:**
 ```json
 {
-  "title": "Project Planning",
-  "persona": "architect.md",
-  "primaryWorkspaceId": "uuid"
+  "title": "Project Planning"
 }
 ```
 
-### Get Session
+### Get Timeline
 `GET /sessions/:id`
 
-### Update Session
+### Update Timeline
 `PATCH /sessions/:id`
 
 **Body:**
 ```json
 {
-  "title": "New Title",
-  "persona": "coder.md" 
+  "title": "New Title"
 }
 ```
 
-### Delete Session
+### Delete Timeline
 `DELETE /sessions/:id`
 
-### Get Session Messages
+### Get Timeline Messages
 `GET /sessions/:id/messages`
 
 **Query Parameters:**
@@ -91,6 +90,8 @@ Returns detailed health status of all system components.
 ### Chat (Stream)
 `POST /sessions/:id/chat/stream`
 
+Requires an agent instance to be attached to the timeline before use.
+
 **Headers:**
 - `Accept: text/event-stream`
 
@@ -98,16 +99,16 @@ Returns detailed health status of all system components.
 ```json
 {
   "message": "Hello",
-  "toolOutputs": [...] 
+  "toolOutputs": [...]
 }
 ```
 **Response:** Server-Sent Events (SSE) stream of `ChatEvent` objects.
 
-Each event in the SSE stream parses into a `ChatEvent` object with a specific nested structure indicating the phase of generation:
+Each event parses into a `ChatEvent` object:
 
 ```json
 {
-  "type": "thought", 
+  "type": "thought",
   "content": null,
   "thought": "I should call a tool here...",
   "toolCalls": null,
@@ -119,15 +120,21 @@ Each event in the SSE stream parses into a `ChatEvent` object with a specific ne
 ```
 
 **Known Event Types:**
-- `generationContext`: Sent once at the start. Contains `ChatMetadata`.
+- `generationContext`: Sent once at the start. Contains `ChatMetadata` (timelineId, agentId, workspace info).
 - `thought`: The model's raw internal reasoning process.
-- `thoughtCompleted`: Signals the reasoning phase has concluded. 
+- `thoughtCompleted`: Signals the reasoning phase has concluded.
 - `delta`: The model's content output intended for the user.
 - `toolCall`: JSON tool call signature delta.
 - `toolExecution`: Asynchronous status update of a tool executing (status: `attempting`, `success`, `failure`). Includes `toolExecution` block with `toolCallId`, `name`, `status`, `target`, and `result`.
 - `generationCompleted`: Sent when the turn is structurally complete. Includes the finalized `Message` object and token `responseMetadata`.
 - `streamCompleted`: The very last event. Closes the connection.
 - `error`: Indicates a failure. Includes an `error` string.
+
+### Timeline Workspaces
+- `GET /sessions/:id/workspaces` — List workspaces attached to timeline
+- `POST /sessions/:id/workspaces` — Attach a workspace to timeline (body: `{ "workspaceId": "uuid" }`)
+- `DELETE /sessions/:id/workspaces/:wsId` — Detach workspace from timeline
+- `POST /sessions/:id/workspaces/:wsId/restore` — Re-attach a previously detached workspace
 
 ---
 
@@ -176,55 +183,126 @@ Each event in the SSE stream parses into a `ChatEvent` object with a specific ne
 
 ## Workspaces
 
-- `GET /workspaces`: List all registered workspaces.
-- `POST /workspaces`: Register a new workspace.
-- `GET /workspaces/{id}`: Get workspace details and tool list.
-- `GET /sessions/{id}/workspaces`: Get workspaces attached to a session.
-- `POST /sessions/{id}/workspaces/{wsId}/attach`: Attach workspace to session.
-- `POST /sessions/{id}/workspaces/{wsId}/detach`: Detach workspace from session.
+- `GET /workspaces` — List all registered workspaces.
+- `POST /workspaces` — Register a new workspace.
+- `GET /workspaces/:id` — Get workspace details and tool list.
+- `GET /workspaces/:workspaceId/files` — List files in workspace.
+- `GET /workspaces/:workspaceId/files/:path` — Read a file.
+- `PUT /workspaces/:workspaceId/files/:path` — Write a file.
+
+---
+
+## Agent Instances
+
+Route prefix: `/api/agents`
+
+Agent instances are the live runtime entities that attach to timelines and drive conversations.
+
+### List Agent Instances
+`GET /agents`
+
+### Create Agent Instance
+`POST /agents`
+
+**Body:**
+```json
+{
+  "name": "Research Agent",
+  "description": "Specializes in searching and summarizing information.",
+  "msAgentId": "uuid"
+}
+```
+The `msAgentId` field is optional. If provided, the instance workspace is seeded from the MSAgent template.
+
+### Get Agent Instance
+`GET /agents/:id`
+
+### Update Agent Instance
+`PATCH /agents/:id`
+
+### Delete Agent Instance
+`DELETE /agents/:id`
+
+**Query Parameters:**
+- `force` (bool, default: false): Force-detach from all timelines before deletion.
+
+### Attach Agent to Timeline
+`POST /agents/:id/attach/:timelineId`
+
+Attaches the agent instance to a timeline. A timeline can have at most one attached agent. Idempotent if the same agent is already attached.
+
+### Detach Agent from Timeline
+`DELETE /agents/:id/attach/:timelineId`
+
+### List Timelines for Agent
+`GET /agents/:id/timelines`
+
+Returns all timelines the agent is currently attached to.
+
+---
+
+## MSAgents (Templates)
+
+Route prefix: `/api/msAgents`
+
+MSAgents are static templates used to seed new agent instance workspaces.
+
+- `GET /msAgents` — List all MSAgent templates.
+- `POST /msAgents` — Create a new MSAgent template.
+- `GET /msAgents/:id` — Get a specific MSAgent template.
+- `PATCH /msAgents/:id` — Update a template.
+- `DELETE /msAgents/:id` — Delete a template.
 
 ---
 
 ## Jobs
 
-- `GET /jobs`: List all background jobs.
-- `POST /jobs`: Create a new job.
-  - Body: `{ "timelineId": "UUID", "title": "string", "agentId": "string" }`
-- `GET /jobs/{id}`: Get job status and logs.
-- `DELETE /jobs/{id}`: Delete a job.
+- `GET /sessions/:id/...` — Job management scoped to a timeline session context.
+- `GET /jobs` (global) — List all background jobs.
+- `POST /jobs` — Create a new job.
+  - Body: `{ "timelineId": "UUID", "title": "string", "agentInstanceId": "uuid" }`
+- `GET /jobs/:id` — Get job status and logs.
+- `DELETE /jobs/:id` — Delete a job.
 
 ---
 
 ## Clients
 
-- `GET /clients`: List all registered clients.
-- `DELETE /clients/{id}`: Unregister a client.
+- `GET /clients` — List all registered clients.
+- `DELETE /clients/:id` — Unregister a client.
 
 ---
 
 ## Configuration
 
-- `GET /config`: Get current server configuration.
-- `PATCH /config`: Update configuration (API keys, models).
+- `GET /config` — Get current server configuration.
+- `PATCH /config` — Update configuration (API keys, models).
 
 ---
 
 ## Tools
 
-- `GET /tools`: List all available system tools.
+- `GET /tools` — List all available system tools.
 
 ---
 
-## SSE Chat Stream
+## Prune
 
-The `/sessions/{id}/chat` endpoint emits Server-Sent Events with the following types:
+- `POST /prune/sessions` — Remove old or orphaned timeline data.
+
+---
+
+## SSE Chat Stream Summary
+
+The `POST /sessions/{id}/chat/stream` endpoint emits Server-Sent Events:
 
 | Event Type | Description |
 | :--- | :--- |
-| `generationContext` | Initial context information for the turn (session, agent, primary workspace). |
-| `thought` | Hidden CoT reasoning of the model (inside `<think>` tags). |
+| `generationContext` | Initial context for the turn (timeline, agent, primary workspace). |
+| `thought` | Hidden CoT reasoning (inside `<think>` tags). |
 | `delta` | Text fragments generated by the model. |
-| `toolCall` | Notification that the model is requesting a tool. |
+| `toolCall` | The model is requesting a tool. |
 | `toolExecution` | Status of a tool execution (`attempting`, `success`, `failure`). |
-| `metadata` | Usage stats (tokens) and timings. |
-| `error` | Any error encountered during processing. |
+| `generationCompleted` | Turn complete — includes full `Message` and token metadata. |
+| `streamCompleted` | End of stream. |
+| `error` | Error encountered during processing. |

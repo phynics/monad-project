@@ -1,6 +1,6 @@
 import Foundation
-import MonadShared
 import MonadPrompt
+import MonadShared
 
 /// System instructions wrapper
 public struct SystemInstructions: ContextSection {
@@ -17,10 +17,10 @@ public struct SystemInstructions: ContextSection {
     public func render() async -> String? {
         guard !instructions.isEmpty else { return nil }
         return """
-            # System Instructions
+        # System Instructions
 
-            \(instructions)
-            """
+        \(instructions)
+        """
     }
 
     public var estimatedTokens: Int {
@@ -53,10 +53,10 @@ public struct Memories: ContextSection {
         if memories.isEmpty { return nil }
 
         return """
-            Found \(memories.count) relevant memories:
+        Found \(memories.count) relevant memories:
 
-            \(memories.promptContent)
-            """
+        \(memories.promptContent)
+        """
     }
 
     public var estimatedTokens: Int {
@@ -102,7 +102,7 @@ public struct ChatHistory: ContextSection {
     }
 
     public func render() async -> String? {
-        // Special case: History isn't rendered into system prompt text usually, 
+        // Special case: History isn't rendered into system prompt text usually,
         // it's handled as messages array. But for debug or raw prompt, we render it.
         // For actual LLM calls, LLMService handles message conversion.
         return nil
@@ -130,7 +130,7 @@ public struct ChatHistory: ContextSection {
         }
 
         // If we can't keep any messages but limit is > 0, keep at least the very last one if possible?
-        // Or just return empty. 
+        // Or just return empty.
         // Strict adherence to budget means return what fits.
         // If query is huge, history might be 0.
 
@@ -161,12 +161,12 @@ public struct ContextNotes: ContextSection {
         }.joined(separator: "\n\n")
 
         return """
-            The following context files contain important information about the user, the project, and your persona. Use them to provide accurate and personalized responses.
+        The following context files contain important information about the user, the project, and your persona. Use them to provide accurate and personalized responses.
 
-            You can edit or create new files in the `Notes/` directory to store long-term information.
+        You can edit or create new files in the `Notes/` directory to store long-term information.
 
-            \(notesText)
-            """
+        \(notesText)
+        """
     }
 
     public func render(constrainedTo tokens: Int?) async -> String? {
@@ -261,27 +261,27 @@ public struct WorkspacesContext: ContextSection {
             output.append("`\n  Environment: ")
 
             if isPrimary {
-                 output.append("Server (Primary)\n")
+                output.append("Server (Primary)\n")
             } else {
-                 output.append("Client (\(statusStr))\n")
+                output.append("Client (\(statusStr))\n")
             }
 
             if !ws.tools.isEmpty {
-                 output.append("  Available Tools:\n")
-                 for tool in ws.tools {
-                     output.append("    - `")
-                     output.append(tool.toolId)
-                     output.append("`\n")
-                     if let toolInjection = tool.contextInjection, !toolInjection.isEmpty {
-                         output.append("      Instructions: \(toolInjection)\n")
-                     }
-                 }
+                output.append("  Available Tools:\n")
+                for tool in ws.tools {
+                    output.append("    - `")
+                    output.append(tool.toolId)
+                    output.append("`\n")
+                    if let toolInjection = tool.contextInjection, !toolInjection.isEmpty {
+                        output.append("      Instructions: \(toolInjection)\n")
+                    }
+                }
             } else {
-                 if !isConnected {
-                     output.append("  Available Tools: Offline. Cannot execute tools on this workspace until client reconnects.\n")
-                 } else {
-                     output.append("  Available Tools: None specific to this workspace\n")
-                 }
+                if !isConnected {
+                    output.append("  Available Tools: Offline. Cannot execute tools on this workspace until client reconnects.\n")
+                } else {
+                    output.append("  Available Tools: None specific to this workspace\n")
+                }
             }
             if let wsInjection = ws.contextInjection, !wsInjection.isEmpty {
                 output.append("  Workspace Instructions: \(wsInjection)\n")
@@ -295,5 +295,64 @@ public struct WorkspacesContext: ContextSection {
 
     public var estimatedTokens: Int {
         TokenEstimator.estimate(text: "Workspaces section placeholder") + workspaces.count * 50
+    }
+}
+
+/// Agent identity context — injected when an agent instance is attached to the timeline.
+public struct AgentContext: ContextSection {
+    public let id = "agent_context"
+    public let priority = 95 // Just below system instructions (100)
+    public let strategy: CompressionStrategy = .keep
+    public let type: ContextSectionType = .text
+    public let agent: AgentInstance
+    public let timelineTitle: String?
+
+    public init(_ agent: AgentInstance, timelineTitle: String? = nil) {
+        self.agent = agent
+        self.timelineTitle = timelineTitle
+    }
+
+    public func render() async -> String? {
+        var lines: [String] = [
+            "## Your Identity",
+            "You are **\(agent.name)**.",
+        ]
+        if !agent.description.isEmpty {
+            lines.append("Description: \(agent.description)")
+        }
+        if let title = timelineTitle {
+            lines.append("Currently operating on timeline: \"\(title)\"")
+        }
+        lines.append("Your private workspace contains your persistent memory (`Notes/` directory).")
+        return lines.joined(separator: "\n")
+    }
+
+    public var estimatedTokens: Int {
+        TokenEstimator.estimate(text: agent.name + agent.description) + 30
+    }
+}
+
+/// Current timeline context — identifies the conversation thread the agent is participating in.
+public struct TimelineContext: ContextSection {
+    public let id = "timeline_context"
+    public let priority = 72 // Between workspaces (75) and chat history (70)
+    public let strategy: CompressionStrategy = .keep
+    public let type: ContextSectionType = .text
+    public let timeline: Timeline
+
+    public init(_ timeline: Timeline) {
+        self.timeline = timeline
+    }
+
+    public func render() async -> String? {
+        """
+        ## Current Timeline
+        - ID: `\(timeline.id.uuidString)`
+        - Title: \(timeline.title)
+        """
+    }
+
+    public var estimatedTokens: Int {
+        TokenEstimator.estimate(text: timeline.title) + 20
     }
 }

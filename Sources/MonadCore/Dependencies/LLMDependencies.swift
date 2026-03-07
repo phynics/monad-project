@@ -1,8 +1,8 @@
 import Dependencies
 import Foundation
+import MonadPrompt
 import MonadShared
 import OpenAI
-import MonadPrompt
 
 // MARK: - Dependency Keys
 
@@ -18,13 +18,13 @@ public enum EmbeddingServiceKey: DependencyKey {
 
 // MARK: - Dependency Values
 
-extension DependencyValues {
-    public var llmService: any LLMServiceProtocol {
+public extension DependencyValues {
+    var llmService: any LLMServiceProtocol {
         get { self[LLMServiceKey.self] }
         set { self[LLMServiceKey.self] = newValue }
     }
 
-    public var embeddingService: any EmbeddingServiceProtocol {
+    var embeddingService: any EmbeddingServiceProtocol {
         get { self[EmbeddingServiceKey.self] }
         set { self[EmbeddingServiceKey.self] = newValue }
     }
@@ -38,7 +38,10 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         fatalError("LLMService not configured. Call 'MonadCore.configure()'.")
     }
 
-    public var isConfigured: Bool { get async { false } }
+    public var isConfigured: Bool {
+        get async { false }
+    }
+
     public var configuration: LLMConfiguration {
         get async {
             .init(
@@ -51,39 +54,61 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         }
     }
 
-    public func getHealthStatus() async -> HealthStatus { .down }
-    public func getHealthDetails() async -> [String: String]? { ["error": "Unconfigured"] }
-    public func checkHealth() async -> HealthStatus { .down }
+    public func getHealthStatus() async -> HealthStatus {
+        .down
+    }
+
+    public func getHealthDetails() async -> [String: String]? {
+        ["error": "Unconfigured"]
+    }
+
+    public func checkHealth() async -> HealthStatus {
+        .down
+    }
 
     public func loadConfiguration() async {}
-    public func updateConfiguration(_ config: LLMConfiguration) async throws { fail() }
-    public func clearConfiguration() async {}
-    public func restoreFromBackup() async throws { fail() }
-    public func exportConfiguration() async throws -> Data { fail() }
-    public func importConfiguration(from data: Data) async throws { fail() }
+    public func updateConfiguration(_: LLMConfiguration) async throws {
+        fail()
+    }
 
-    public func sendMessage(_ content: String) async throws -> String { fail() }
+    public func clearConfiguration() async {}
+    public func restoreFromBackup() async throws {
+        fail()
+    }
+
+    public func exportConfiguration() async throws -> Data {
+        fail()
+    }
+
+    public func importConfiguration(from _: Data) async throws {
+        fail()
+    }
+
+    public func sendMessage(_: String) async throws -> String {
+        fail()
+    }
+
     public func sendMessage(
-        _ content: String,
-        responseFormat: ChatQuery.ResponseFormat?,
-        useUtilityModel: Bool
+        _: String,
+        responseFormat _: ChatQuery.ResponseFormat?,
+        useUtilityModel _: Bool
     ) async throws -> String {
         fail()
     }
 
     public func chatStreamWithContext(
-        userQuery: String,
-        contextNotes: [ContextFile],
-        memories: [Memory],
-        chatHistory: [Message],
-        tools: [AnyTool],
-        workspaces: [WorkspaceReference],
-        primaryWorkspace: WorkspaceReference?,
-        clientName: String?,
-        connectedClients: Set<UUID>,
-        systemInstructions: String?,
-        responseFormat: ChatQuery.ResponseFormat?,
-        useFastModel: Bool
+        userQuery _: String,
+        contextNotes _: [ContextFile],
+        memories _: [Memory],
+        chatHistory _: [Message],
+        tools _: [AnyTool],
+        workspaces _: [WorkspaceReference],
+        primaryWorkspace _: WorkspaceReference?,
+        clientName _: String?,
+        connectedClients _: Set<UUID>,
+        systemInstructions _: String?,
+        responseFormat _: ChatQuery.ResponseFormat?,
+        useFastModel _: Bool
     ) async -> (
         stream: AsyncThrowingStream<ChatStreamResult, any Error>,
         rawPrompt: String,
@@ -93,24 +118,24 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
     }
 
     public func chatStream(
-        messages: [ChatQuery.ChatCompletionMessageParam],
-        tools: [ChatQuery.ChatCompletionToolParam]?,
-        responseFormat: ChatQuery.ResponseFormat?
+        messages _: [ChatQuery.ChatCompletionMessageParam],
+        tools _: [ChatQuery.ChatCompletionToolParam]?,
+        responseFormat _: ChatQuery.ResponseFormat?
     ) async -> AsyncThrowingStream<ChatStreamResult, any Error> {
         return AsyncThrowingStream { _ in }
     }
 
     public func buildPrompt(
-        userQuery: String,
-        contextNotes: [ContextFile],
-        memories: [Memory],
-        chatHistory: [Message],
-        tools: [AnyTool],
-        workspaces: [WorkspaceReference],
-        primaryWorkspace: WorkspaceReference?,
-        clientName: String?,
-        connectedClients: Set<UUID>,
-        systemInstructions: String?
+        userQuery _: String,
+        contextNotes _: [ContextFile],
+        memories _: [Memory],
+        chatHistory _: [Message],
+        tools _: [AnyTool],
+        workspaces _: [WorkspaceReference],
+        primaryWorkspace _: WorkspaceReference?,
+        clientName _: String?,
+        connectedClients _: Set<UUID>,
+        systemInstructions _: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
         rawPrompt: String,
@@ -120,27 +145,45 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
     }
 
     public func buildContext(
-        userQuery: String,
-        contextNotes: [ContextFile],
-        memories: [Memory],
-        chatHistory: [Message],
-        tools: [AnyTool],
-        workspaces: [WorkspaceReference],
-        primaryWorkspace: WorkspaceReference?,
-        clientName: String?,
-        connectedClients: Set<UUID>,
-        systemInstructions: String?
+        userQuery _: String,
+        contextNotes _: [ContextFile],
+        memories _: [Memory],
+        chatHistory _: [Message],
+        tools _: [AnyTool],
+        workspaces _: [WorkspaceReference],
+        primaryWorkspace _: WorkspaceReference?,
+        clientName _: String?,
+        connectedClients _: Set<UUID>,
+        systemInstructions _: String?,
+        agentInstance _: AgentInstance?,
+        timeline _: Timeline?
     ) async -> Prompt {
         fail()
     }
 
-    public func getClient() async -> (any LLMClientProtocol)? { nil }
-    public func getUtilityClient() async -> (any LLMClientProtocol)? { nil }
+    public func getClient() async -> (any LLMClientProtocol)? {
+        nil
+    }
 
-    public func generateTags(for text: String) async throws -> [String] { fail() }
-    public func generateTitle(for messages: [Message]) async throws -> String { fail() }
-    public func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws -> [String: Double] { fail() }
-    public func fetchAvailableModels() async throws -> [String]? { nil }
+    public func getUtilityClient() async -> (any LLMClientProtocol)? {
+        nil
+    }
+
+    public func generateTags(for _: String) async throws -> [String] {
+        fail()
+    }
+
+    public func generateTitle(for _: [Message]) async throws -> String {
+        fail()
+    }
+
+    public func evaluateRecallPerformance(transcript _: String, recalledMemories _: [Memory]) async throws -> [String: Double] {
+        fail()
+    }
+
+    public func fetchAvailableModels() async throws -> [String]? {
+        nil
+    }
 }
 
 public struct UnconfiguredEmbeddingService: EmbeddingServiceProtocol {
@@ -148,6 +191,12 @@ public struct UnconfiguredEmbeddingService: EmbeddingServiceProtocol {
     private func fail() -> Never {
         fatalError("EmbeddingService not configured. Call 'MonadCore.configure()'.")
     }
-    public func generateEmbedding(for text: String) async throws -> [Float] { fail() }
-    public func generateEmbeddings(for texts: [String]) async throws -> [[Float]] { fail() }
+
+    public func generateEmbedding(for _: String) async throws -> [Float] {
+        fail()
+    }
+
+    public func generateEmbeddings(for _: [String]) async throws -> [[Float]] {
+        fail()
+    }
 }

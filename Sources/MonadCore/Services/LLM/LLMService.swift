@@ -1,10 +1,10 @@
+import Dependencies
 import Foundation
-import MonadShared
 import Logging
+import MonadPrompt
+import MonadShared
 import Observation
 import OpenAI
-import Dependencies
-import MonadPrompt
 
 /// Protocol for LLM Clients
 public protocol LLMClientProtocol: Sendable {
@@ -21,16 +21,16 @@ public protocol LLMClientProtocol: Sendable {
     func fetchAvailableModels() async throws -> [String]?
 }
 
-extension LLMClientProtocol {
-    public func fetchAvailableModels() async throws -> [String]? {
+public extension LLMClientProtocol {
+    func fetchAvailableModels() async throws -> [String]? {
         return nil
     }
 }
 
-// Conform OpenAIClient (Retroactive - now in same module)
+/// Conform OpenAIClient (Retroactive - now in same module)
 extension OpenAIClient: LLMClientProtocol {}
 
-// Conform OllamaClient
+/// Conform OllamaClient
 extension OllamaClient: LLMClientProtocol {}
 
 /// Service for managing LLM interactions with configuration support
@@ -47,7 +47,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     public func getHealthDetails() async -> [String: String]? {
         return [
             "model": configuration.modelName,
-            "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom")
+            "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom"),
         ]
     }
 
@@ -64,7 +64,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
             return .degraded
         } catch {
             logger.warning("LLM health check connectivity warning: \(error)")
-            // We return ok if configured even if network check fails, 
+            // We return ok if configured even if network check fails,
             // but we could return degraded if we want to be strict.
             return .ok
         }
@@ -79,7 +79,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
 
     private let storage: any ConfigurationServiceProtocol
 
-    internal let logger = Logger.module(named: "llm")
+    let logger = Logger.module(named: "llm")
 
     // MARK: - Client Accessors
 
@@ -99,9 +99,9 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         main: (any LLMClientProtocol)?, utility: (any LLMClientProtocol)?,
         fast: (any LLMClientProtocol)?
     ) {
-        self.client = main
-        self.utilityClient = utility
-        self.fastClient = fast
+        client = main
+        utilityClient = utility
+        fastClient = fast
     }
 
     // MARK: - Initialization
@@ -116,7 +116,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         self.client = client
         self.utilityClient = utilityClient
         self.fastClient = fastClient
-        self.isConfigured = client != nil
+        isConfigured = client != nil
 
         let needsLoad = client == nil
 
@@ -132,8 +132,8 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
 
     public func loadConfiguration() async {
         let config = await storage.load()
-        self.configuration = config
-        self.isConfigured = config.isValid
+        configuration = config
+        isConfigured = config.isValid
 
         if config.isValid {
             logger.info(
@@ -148,8 +148,8 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     public func restoreFromBackup() async throws {
         if let restored = try await storage.restoreFromBackup() {
             logger.info("Restored configuration from backup")
-            self.configuration = restored
-            self.isConfigured = restored.isValid
+            configuration = restored
+            isConfigured = restored.isValid
 
             if restored.isValid {
                 updateClient(with: restored)
@@ -172,8 +172,8 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
             "Updating configuration to models: \(config.modelName) / \(config.utilityModel) / \(config.fastModel)"
         )
         try await storage.save(config)
-        self.configuration = config
-        self.isConfigured = config.isValid
+        configuration = config
+        isConfigured = config.isValid
 
         if config.isValid {
             updateClient(with: config)
@@ -185,8 +185,8 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     public func clearConfiguration() async {
         logger.warning("Clearing configuration")
         await storage.clear()
-        self.configuration = .openAI
-        self.isConfigured = false
+        configuration = .openAI
+        isConfigured = false
         setClients(main: nil, utility: nil, fast: nil)
     }
 
@@ -227,12 +227,21 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         primaryWorkspace: WorkspaceReference?,
         clientName: String?,
         connectedClients: Set<UUID>,
-        systemInstructions: String?
+        systemInstructions: String?,
+        agentInstance: AgentInstance? = nil,
+        timeline: Timeline? = nil
     ) async -> Prompt {
         let instructions = systemInstructions ?? DefaultInstructions.system()
+        let capturedAgent = agentInstance
+        let capturedTimeline = timeline
 
         return Prompt {
             SystemInstructions(instructions)
+
+            // Agent identity (when an agent is attached)
+            if let agent = capturedAgent {
+                AgentContext(agent, timelineTitle: capturedTimeline?.title)
+            }
 
             // Context & Memories
             ContextNotes(contextNotes)
@@ -249,15 +258,20 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
                 connectedClients: connectedClients
             )
 
+            // Current timeline identity
+            if let tl = capturedTimeline {
+                TimelineContext(tl)
+            }
+
             // Conversation
-            ChatHistory(optimizeHistory(chatHistory, availableTokens: 120000 - 4000)) // Reserve ~4k for other sections
+            ChatHistory(optimizeHistory(chatHistory, availableTokens: 120_000 - 4000)) // Reserve ~4k for other sections
 
             // User Query
             UserQuery(userQuery)
         }
     }
 
-    internal func optimizeHistory(
+    func optimizeHistory(
         _ messages: [Message],
         availableTokens: Int
     ) -> [Message] {
@@ -339,7 +353,7 @@ public enum LLMServiceError: LocalizedError, Equatable {
             return "LLM service is not configured. Please set up your API endpoint and key."
         case .invalidConfiguration:
             return "Invalid LLM configuration. Please check your settings."
-        case .networkError(let message):
+        case let .networkError(message):
             return "Network error: \(message)"
         }
     }

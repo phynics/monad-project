@@ -23,10 +23,10 @@ It bridges the gap between the lightweight data-only `WorkspaceReference` stored
 
 > **Note on Initializer:** The store currently loads all workspaces greedily from the database upon initialization. If the workspace volume grows significantly, this should be refactored to a lazy-loading cache.
 
-## Deprecated Stores
+## Removed Stores
 
-### `SessionStore`
+### `SessionStore` (removed)
 
-The `SessionStore` was removed. Its responsibilities were fully subsumed by `TimelineManager`, which already maintains an active dictionary of `sessions: [UUID: Timeline]` and handles all session database reads and writes.
+The `SessionStore` was removed. Its responsibilities were fully subsumed by `TimelineManager`, which already maintains an active dictionary of `timelines: [UUID: Timeline]` and handles all timeline database reads and writes.
 
-Using `TimelineManager` is preferred for all session operations because session orchestration involves much more than just database synchronization (e.g. setting up `ContextManager`, `ToolExecutor`, and tracking tool sessions).
+Use `TimelineManager` for all timeline operations — it covers much more than database sync (context manager setup, tool executor lifecycle, workspace resolution, etc.).

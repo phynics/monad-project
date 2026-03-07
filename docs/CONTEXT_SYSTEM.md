@@ -34,16 +34,19 @@ flowchart LR
 
 The final prompt consists of sections assembled with the `@ContextBuilder` DSL:
 
-1. **System Instructions** — Base persona and behavioral rules (from `DefaultInstructions.swift`)
-2. **Context Notes** — Files from the `Notes/` directory in the Primary Workspace
-3. **Memories** — Relevant long-term facts retrieved via semantic search
-4. **Tools** — Definitions of available capabilities, formatted with workspace provenance
-5. **Chat History** — Recent messages from the current session (automatically truncated)
-6. **User Query** — The current user input
+1. **System Instructions** — Base persona and behavioral rules (`DefaultInstructions.system()` or `Notes/system.md` if an agent is attached)
+2. **Agent Context** — Agent name, description, and current timeline (only when an agent instance is attached)
+3. **Context Notes** — Files from the `Notes/` directory in the Primary Workspace
+4. **Memories** — Relevant long-term facts retrieved via semantic search
+5. **Tools** — Definitions of available capabilities, formatted with workspace provenance
+6. **Workspaces** — Available workspace list and their connection status
+7. **Timeline Context** — Current timeline ID and title
+8. **Chat History** — Recent messages from the current timeline (automatically truncated)
+9. **User Query** — The current user input
 
 **Priority Ordering:**
 - Higher priority sections receive token allocation first
-- Typical priorities: System (100) → Notes (90) → Memories (80) → Tools (70) → History (60) → Query (10)
+- Priorities: System (100) → AgentContext (95) → Notes (90) → Memories (85) → Tools (80) → Workspaces (75) → TimelineContext (72) → History (70) → Query (10)
 
 ---
 
@@ -169,44 +172,59 @@ Keep notes organized and up-to-date.
 
 ## 4. The Agent Model
 
-Agents provide high-level "profiles" that influence the prompt and behavior.
+The system distinguishes between **MSAgent** (a static template) and **AgentInstance** (a live runtime entity).
 
-### Agent Components
+### MSAgent — Template
 
-**Agent Model** (`Sources/MonadCore/Models/Agents/Agent.swift`):
+**Location:** `Sources/MonadShared/SharedTypes/MSAgent.swift`
+
 ```swift
-public struct Agent: Codable, Identifiable, Sendable {
+public struct MSAgent: Codable, Sendable, Identifiable {
     public let id: UUID
     public let name: String
     public let description: String
-    public let systemPrompt: String
-    public let personaPrompt: String?
-    public let guardrails: String?
-    // ... timestamps, metadata
+    public var systemPrompt: String
+    public var personaPrompt: String?
+    public var guardrails: String?
+    public var workspaceFilesSeed: [String: String]?
+    var composedInstructions: String { /* systemPrompt + personaPrompt + guardrails */ }
 }
 ```
 
-**Composed Instructions:**
-- System prompt (base behavior)
-- Persona prompt (character traits)
-- Guardrails (safety and formatting constraints)
+MSAgents are managed by `MSAgentRegistry` and served via `/api/msAgents`. They are used as seeds when creating `AgentInstance` objects.
 
-### Agent Registry
+### AgentInstance — Runtime Entity
 
-**Service:** `AgentRegistry` (`Sources/MonadCore/Services/Agents/AgentRegistry.swift`)
+**Location:** `Sources/MonadShared/SharedTypes/AgentInstance.swift`
+
+```swift
+public struct AgentInstance: Codable, Sendable, Identifiable {
+    public let id: UUID
+    public var name: String
+    public var description: String
+    public var primaryWorkspaceId: UUID?   // Private workspace with Notes/
+    public let privateTimelineId: UUID     // Internal monologue / cross-agent inbox
+    public var lastActiveAt: Date
+    // ...
+}
+```
+
+**Key behaviors:**
+- Created from an `MSAgent` template (which seeds `Notes/system.md` and other files), but is self-contained after creation.
+- Instructions loaded at runtime from `Notes/system.md` via `TimelineManager.getAgentSystemInstructions(for:)`.
+- Can be attached to multiple timelines simultaneously. Each timeline holds at most one agent at a time.
+- The **private timeline** (`isPrivate: true`) is the agent's internal monologue — attachment/detachment events are logged there, and it can be used for cross-agent communication.
+
+**Manager:** `AgentInstanceManager` (`Sources/MonadCore/Services/Agents/AgentInstanceManager.swift`)
 
 **Responsibilities:**
-- Seed default agents (Default Assistant, Agent Coordinator)
-- Load agents from persistence
-- Provide agent lookup
-
-**Default Agents:**
-- **Default Assistant**: General-purpose conversational agent
-- **Agent Coordinator**: Specialized for task decomposition and delegation
+- Create instances atomically (workspace + private timeline + DB record)
+- Attach/detach from timelines (with idempotency and dangling-reference cleanup)
+- Delete instances (with optional force-detach from all timelines)
 
 ### Conversation Records (Timeline)
 
-Conversation records are stored in `Timeline` (formerly `Timeline`).
+Conversation records are stored in `Timeline`.
 
 **Model:** `Sources/MonadCore/Models/Database/Timeline.swift`
 
@@ -216,14 +234,37 @@ Conversation records are stored in `Timeline` (formerly `Timeline`).
 - `workingDirectory`
 - `primaryWorkspaceId` — Reference to primary workspace
 - `attachedWorkspaceIds` — JSON array of attached workspace IDs
+- `attachedAgentInstanceId` — The agent instance currently running on this timeline
+- `isPrivate` — True for agent private timelines (excluded from general listing)
+- `ownerAgentInstanceId` — Identifies the owning agent when `isPrivate == true`
 
 **Persistence:** Managed via `TimelinePersistenceProtocol`
+
+### Context Injection for Agents
+
+When an agent is attached, the prompt pipeline injects two additional sections:
+
+1. **AgentContext** (priority 95) — Rendered between System Instructions and Context Notes:
+   ```
+   ## Your Identity
+   You are **<name>**.
+   Description: <description>
+   Currently operating on timeline: "<title>"
+   Your private workspace contains your persistent memory (Notes/ directory).
+   ```
+
+2. **TimelineContext** (priority 72) — Rendered between Workspaces and Chat History:
+   ```
+   ## Current Timeline
+   - ID: `<uuid>`
+   - Title: <title>
+   ```
 
 ### Default Prompts
 
 **Location:** `Sources/MonadCore/Services/Prompting/DefaultInstructions.swift`
 
-Contains default system instructions, persona, and guardrails.
+`DefaultInstructions.system()` describes the agent/timeline model, workspace management, workspace-tool relationship, and the timeline tools available for cross-agent coordination. This is used as the fallback when no agent-specific `system.md` is present.
 
 ---
 
@@ -307,14 +348,26 @@ The `TokenBudget` system ensures the generated prompt fits within the model's co
 
 ```swift
 public protocol ContextSection: Sendable {
+    var id: String { get }
     var estimatedTokens: Int { get }
     var priority: Int { get }
     var strategy: CompressionStrategy { get }
+    var type: ContextSectionType { get }
 
-    func buildContent() async throws -> String
-    func compress(to budget: Int) async throws -> String
+    func render() async -> String?
 }
 ```
+
+**Built-in sections** (in `Sources/MonadCore/Services/Prompting/Sections/PromptSections.swift`):
+- `SystemInstructions` — Base system prompt (priority 100)
+- `AgentContext` — Agent identity (priority 95, optional)
+- `ContextNotes` — Notes/ directory files (priority 90)
+- `Memories` — Recalled memories (priority 85)
+- `Tools` — Tool definitions (priority 80)
+- `WorkspacesContext` — Attached workspaces (priority 75)
+- `TimelineContext` — Current timeline (priority 72, optional)
+- `ChatHistory` — Conversation history (priority 70)
+- `UserQuery` — Current input (priority 10)
 
 **Custom Sections:**
 Implement `ContextSection` to create custom prompt sections with specific compression logic.
@@ -431,17 +484,38 @@ public struct ContextData: Sendable {
 `ChatEngine` uses `LLMService.buildContext()` which internally uses `@ContextBuilder`:
 
 ```swift
-let messages = try await llmService.buildContext(
+let prompt = await llmService.buildContext(
     userQuery: query,
     contextNotes: contextData.notes,
-    memories: contextData.memories,
+    memories: contextData.memories.map { $0.memory },
     chatHistory: history,
     tools: availableTools,
-    systemInstructions: agent.composedInstructions
+    workspaces: attachedWorkspaces,
+    primaryWorkspace: workspaces?.primary,
+    clientName: clientName,
+    connectedClients: connectedClients,
+    systemInstructions: systemInstructions, // from Notes/system.md if agent attached
+    agentInstance: agentInstance,           // injects AgentContext section
+    timeline: timeline                      // injects TimelineContext section
 )
 ```
 
 **Note:** The `buildContext` method is a convenience wrapper. For custom prompt construction, use `@ContextBuilder` directly.
+
+### ContextData
+
+```swift
+public struct ContextData: Sendable {
+    public let notes: [ContextFile]
+    public let memories: [SemanticSearchResult]
+    public let generatedTags: [String]
+    public let queryVector: [Double]
+    public let augmentedQuery: String?
+    public let semanticResults: [SemanticSearchResult]
+    public let tagResults: [Memory]
+    public let executionTime: TimeInterval
+}
+```
 
 ---
 
