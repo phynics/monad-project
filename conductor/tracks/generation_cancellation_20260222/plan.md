@@ -20,11 +20,11 @@
 - [x] Task: Implement minimal fix to pass tests (bdeb1c0)
 - [x] Task: Conductor - User Manual Verification 'API Implementation' (Protocol in workflow.md)
 
-## Phase 3: CLI Integration
-- [ ] Task: Implement "Double Escape" detection in `ChatREPL`
-    - [ ] Update input loop to monitor for specific key sequences during active streaming
-- [ ] Task: Implement `cancelCurrentGeneration()` in `ChatREPL`
-    - [ ] Call `client.cancelChat()` and cancel local streaming task
-- [ ] Task: Add `/cancel` slash command as a fallback
-- [ ] Task: Update CLI output to handle and display `generationCancelled` event
-- [ ] Task: Conductor - User Manual Verification 'CLI Integration' (Protocol in workflow.md)
+## Phase 3: CLI Integration [checkpoint: e55c159]
+- [x] Task: Implement "Double Escape" detection in `ChatREPL` (e55c159)
+    - [x] Update input loop to monitor for specific key sequences during active streaming
+- [x] Task: Implement `cancelCurrentGeneration()` in `ChatREPL` (e55c159)
+    - [x] Call `client.cancelChat()` and cancel local streaming task
+- [x] Task: Add `/cancel` slash command as a fallback (e55c159)
+- [x] Task: Update CLI output to handle and display `generationCancelled` event (e55c159)
+- [x] Task: Conductor - User Manual Verification 'CLI Integration' (Protocol in workflow.md)
