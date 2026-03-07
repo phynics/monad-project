@@ -1,0 +1,3 @@
+## 2024-05-19 - Vector Math Pre-calculation Optimization
+**Learning:** In linear vector comparisons, the query vector stays constant. Calculating its magnitude within the loop during `cosineSimilarity` operations creates unnecessary repeated computations. Using `vDSP_svesqD` inside the loop repeatedly for the same vector is an anti-pattern when it can be hoisted.
+**Action:** Expose a public `magnitude` function on `VectorMath` and create a `cosineSimilarity` overload that accepts the pre-calculated query magnitude. Apply this optimization to `ContextRanker` and `PersistenceService` when iterating over many memory items.
