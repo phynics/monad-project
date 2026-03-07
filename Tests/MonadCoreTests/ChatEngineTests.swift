@@ -1,15 +1,13 @@
-import OpenAI
-import Testing
-import Foundation
 import Dependencies
-import MonadTestSupport
+import Foundation
 @testable import MonadCore
 @testable import MonadShared
-@testable import MonadShared
+import MonadTestSupport
+import OpenAI
+import Testing
 
 @Suite @MainActor
 struct ChatEngineTests {
-
     private let timelineId = UUID()
 
     /// Helper to run a test with standard dependencies
@@ -57,7 +55,7 @@ struct ChatEngineTests {
 
             // Should have meta.generationContext, delta.generation, and completion.generationCompleted
             #expect(events.contains(where: { if case .meta(event: .generationContext(metadata: _)) = $0 { return true }; return false }))
-            #expect(events.contains(where: { if case .delta(event: .generation(text: let text)) = $0 { return text == "Hello, world!" }; return false }))
+            #expect(events.contains(where: { if case let .delta(event: .generation(text: text)) = $0 { return text == "Hello, world!" }; return false }))
             #expect(events.contains(where: { if case .completion(event: .generationCompleted(message: _, metadata: _)) = $0 { return true }; return false }))
         }
     }
@@ -140,9 +138,11 @@ struct ChatEngineTests {
         var result: ToolResult = .success("Tool result")
         var shouldWait: Bool = false
 
-        func canExecute() async -> Bool { true }
+        func canExecute() async -> Bool {
+            true
+        }
 
-        func execute(parameters: [String: Any]) async throws -> ToolResult {
+        func execute(parameters _: [String: Any]) async throws -> ToolResult {
             if shouldWait { try? await Task.sleep(nanoseconds: 100_000_000) }
             if !result.success && result.error == "client_execution_required" {
                 throw ToolError.clientExecutionRequired
@@ -169,25 +169,25 @@ struct ChatEngineTests {
             let events = try await collect(stream)
 
             // Should see toolCall delta
-            #expect(events.contains(where: { if case .delta(event: .toolCall(delta: let delta)) = $0 { return delta.name == "mock_tool" }; return false }))
+            #expect(events.contains(where: { if case let .delta(event: .toolCall(delta: delta)) = $0 { return delta.name == "mock_tool" }; return false }))
 
             // Should see tool execution attempting (delta)
             #expect(events.contains(where: {
-                if case .delta(event: .toolExecution(let id, let status)) = $0 {
+                if case let .delta(event: .toolExecution(id, status)) = $0 {
                     if case .attempting = status { return id == "call_1" }
                 }
                 return false
             }))
             // Should see tool execution success (completion)
             #expect(events.contains(where: {
-                if case .completion(event: .toolExecution(let id, let status)) = $0 {
-                    if case .success(let result) = status { return id == "call_1" && result.output == "Tool result" }
+                if case let .completion(event: .toolExecution(id, status)) = $0 {
+                    if case let .success(result) = status { return id == "call_1" && result.output == "Tool result" }
                 }
                 return false
             }))
 
             // Final response
-            #expect(events.contains(where: { if case .delta(event: .generation(text: let text)) = $0 { return text == "Processed result" }; return false }))
+            #expect(events.contains(where: { if case let .delta(event: .generation(text: text)) = $0 { return text == "Processed result" }; return false }))
         }
     }
 
@@ -209,7 +209,7 @@ struct ChatEngineTests {
             // Should NOT have completion.toolExecution events for "tool_call"
             #expect(!events.contains(where: { if case .completion(event: .toolExecution) = $0 { return true }; return false }))
             // Should just see the plain text delta
-            #expect(events.contains(where: { if case .delta(event: .generation(text: let text)) = $0 { return text == "Ignored tool name" }; return false }))
+            #expect(events.contains(where: { if case let .delta(event: .generation(text: text)) = $0 { return text == "Ignored tool name" }; return false }))
         }
     }
 
@@ -228,15 +228,15 @@ struct ChatEngineTests {
             let events = try await collect(stream)
 
             // Should see toolCall delta
-            #expect(events.contains(where: { if case .delta(event: .toolCall(delta: let delta)) = $0 { return delta.name == "unknown_tool" }; return false }))
+            #expect(events.contains(where: { if case let .delta(event: .toolCall(delta: delta)) = $0 { return delta.name == "unknown_tool" }; return false }))
 
             // Should have error.toolCallError event
-            #expect(events.contains(where: { if case .error(event: .toolCallError(let id, let name, _)) = $0 { return id == "call_1" && name == "unknown_tool" }; return false }))
+            #expect(events.contains(where: { if case let .error(event: .toolCallError(id, name, _)) = $0 { return id == "call_1" && name == "unknown_tool" }; return false }))
 
             // Should NOT have completion.toolExecution events
             #expect(!events.contains(where: { if case .completion(event: .toolExecution) = $0 { return true }; return false }))
 
-            #expect(events.contains(where: { if case .delta(event: .generation(text: let text)) = $0 { return text == "Unknown tool call" }; return false }))
+            #expect(events.contains(where: { if case let .delta(event: .generation(text: text)) = $0 { return text == "Unknown tool call" }; return false }))
         }
     }
 
@@ -259,7 +259,7 @@ struct ChatEngineTests {
 
             // Should emit attempt (delta) but NOT success/failure (handled by client)
             #expect(events.contains(where: {
-                if case .delta(event: .toolExecution(let id, let status)) = $0 {
+                if case let .delta(event: .toolExecution(id, status)) = $0 {
                     if case .attempting = status { return id == "call_1" }
                 }
                 return false
@@ -300,13 +300,13 @@ struct ChatEngineTests {
             let events = try await collect(stream)
 
             #expect(events.contains(where: {
-                if case .completion(event: .toolExecution(let id, let status)) = $0 {
+                if case let .completion(event: .toolExecution(id, status)) = $0 {
                     if case .failed = status { return id == "call_1" }
                 }
                 return false
             }))
 
-            #expect(events.contains(where: { if case .delta(event: .generation(text: let text)) = $0 { return text == "It failed." }; return false }))
+            #expect(events.contains(where: { if case let .delta(event: .generation(text: text)) = $0 { return text == "It failed." }; return false }))
         }
     }
 
@@ -320,7 +320,7 @@ struct ChatEngineTests {
             // Set up responses for both turns
             mockLLM.mockClient.nextResponses = [
                 "<tool_call>{\"name\":\"mock_tool\",\"arguments\":{}}</tool_call>",
-                "Fallback worked"
+                "Fallback worked",
             ]
 
             let stream = try await engine.chatStream(
@@ -332,17 +332,17 @@ struct ChatEngineTests {
             let events = try await collect(stream)
 
             // Fallback should yield a .delta(.toolCall) event for UI
-            #expect(events.contains(where: { if case .delta(event: .toolCall(delta: let delta)) = $0 { return delta.name == "mock_tool" }; return false }))
+            #expect(events.contains(where: { if case let .delta(event: .toolCall(delta: delta)) = $0 { return delta.name == "mock_tool" }; return false }))
 
             // Should see tool execution completion
             #expect(events.contains(where: {
                 if case .completion(event: .toolExecution(_, let status)) = $0 {
-                    if case .success(let result) = status { return result.output == "Tool result" }
+                    if case let .success(result) = status { return result.output == "Tool result" }
                 }
                 return false
             }))
 
-            #expect(events.contains(where: { if case .delta(event: .generation(text: let text)) = $0 { return text == "Fallback worked" }; return false }))
+            #expect(events.contains(where: { if case let .delta(event: .generation(text: text)) = $0 { return text == "Fallback worked" }; return false }))
         }
     }
 
@@ -356,7 +356,7 @@ struct ChatEngineTests {
             mockLLM.mockClient.nextToolCalls = [
                 [["id": "c1", "function": ["name": "mock_tool", "arguments": "{}"]]],
                 [["id": "c2", "function": ["name": "mock_tool", "arguments": "{}"]]],
-                [["id": "c3", "function": ["name": "mock_tool", "arguments": "{}"]]]
+                [["id": "c3", "function": ["name": "mock_tool", "arguments": "{}"]]],
             ]
             mockLLM.mockClient.nextResponses = ["", "", ""]
 
@@ -426,6 +426,166 @@ struct ChatEngineTests {
             } else {
                 #expect(Bool(false), "Stream was empty")
             }
+        }
+    }
+
+    // MARK: - Group 7: Tool Output Resume
+
+    @Test("Tool outputs are persisted before user message")
+    func toolOutputsPersistedBeforeUserMessage() async throws {
+        try await withChatEngineDependencies { engine, mockLLM, mockPersistence in
+            mockLLM.mockClient.nextResponse = "Continuing."
+
+            let stream = try await engine.chatStream(
+                timelineId: timelineId,
+                message: "Next question",
+                tools: [],
+                toolOutputs: [ToolOutputSubmission(toolCallId: "prev_call", output: "tool result")]
+            )
+
+            _ = try await collect(stream)
+
+            let messages = try await mockPersistence.fetchMessages(for: timelineId)
+            // tool output → user message → assistant message
+            #expect(messages.count == 3)
+            #expect(messages[0].role == "tool")
+            #expect(messages[1].role == "user")
+            #expect(messages[2].role == "assistant")
+        }
+    }
+
+    @Test("Empty message with tool outputs is valid")
+    func emptyMessageWithToolOutputsIsValid() async throws {
+        try await withChatEngineDependencies { engine, mockLLM, mockPersistence in
+            mockLLM.mockClient.nextResponse = "Reply."
+
+            let stream = try await engine.chatStream(
+                timelineId: timelineId,
+                message: "",
+                tools: [],
+                toolOutputs: [ToolOutputSubmission(toolCallId: "c1", output: "output")]
+            )
+
+            _ = try await collect(stream)
+
+            let messages = try await mockPersistence.fetchMessages(for: timelineId)
+            #expect(messages.contains(where: { $0.role == "tool" && $0.toolCallId == "c1" }))
+            #expect(!messages.contains(where: { $0.role == "user" }))
+        }
+    }
+
+    // MARK: - Group 8: Configuration
+
+    @Test("LLM service not configured throws executionFailed")
+    func llmNotConfiguredThrows() async throws {
+        _ = try await withChatEngineDependencies { engine, mockLLM, _ in
+            mockLLM.mockIsConfigured = false
+            await #expect(throws: ToolError.self) {
+                _ = try await engine.chatStream(
+                    timelineId: timelineId,
+                    message: "Hello",
+                    tools: []
+                )
+            }
+        }
+    }
+
+    // MARK: - Group 9: Multiple Tool Calls Per Turn
+
+    @Test("Multiple tool calls in one turn are all executed")
+    func multipleToolCallsExecuted() async throws {
+        try await withChatEngineDependencies { engine, mockLLM, _ in
+            let mockTool = MockTool()
+            mockLLM.mockClient.nextToolCalls = [[
+                ["id": "c1", "function": ["name": "mock_tool", "arguments": "{}"]],
+                ["id": "c2", "function": ["name": "mock_tool", "arguments": "{}"]],
+            ]]
+            mockLLM.mockClient.nextResponses = ["", "Both done"]
+
+            let stream = try await engine.chatStream(
+                timelineId: timelineId,
+                message: "Run two tools",
+                tools: [mockTool.toAnyTool()]
+            )
+
+            let events = try await collect(stream)
+
+            let successIds = events.compactMap { event -> String? in
+                if case let .completion(event: .toolExecution(id, status)) = event,
+                   case .success = status { return id }
+                return nil
+            }
+            #expect(successIds.contains("c1"))
+            #expect(successIds.contains("c2"))
+            #expect(successIds.count == 2)
+        }
+    }
+
+    // MARK: - Group 10: Event Invariants
+
+    @Test("Exactly one generationCompleted event for plain text response")
+    func exactlyOneGenerationCompletedForPlainText() async throws {
+        try await withChatEngineDependencies { engine, mockLLM, _ in
+            mockLLM.mockClient.nextResponse = "Done"
+
+            let stream = try await engine.chatStream(
+                timelineId: timelineId,
+                message: "Hi",
+                tools: []
+            )
+
+            let events = try await collect(stream)
+            let count = events.filter { if case .completion(event: .generationCompleted) = $0 { return true }; return false }.count
+            #expect(count == 1)
+        }
+    }
+
+    @Test("Exactly one generationCompleted event after multi-turn tool execution")
+    func exactlyOneCompletionAfterMultiTurn() async throws {
+        try await withChatEngineDependencies { engine, mockLLM, _ in
+            let mockTool = MockTool()
+            mockLLM.mockClient.nextToolCalls = [[["id": "c1", "function": ["name": "mock_tool", "arguments": "{}"]]]]
+            mockLLM.mockClient.nextResponses = ["", "Final answer"]
+
+            let stream = try await engine.chatStream(
+                timelineId: timelineId,
+                message: "Use tool",
+                tools: [mockTool.toAnyTool()]
+            )
+
+            let events = try await collect(stream)
+            let count = events.filter { if case .completion(event: .generationCompleted) = $0 { return true }; return false }.count
+            #expect(count == 1)
+        }
+    }
+
+    // MARK: - Group 11: Agent Instance
+
+    @Test("agentInstanceId is recorded on the persisted assistant message")
+    func agentInstanceIdSetOnMessage() async throws {
+        try await withChatEngineDependencies { engine, mockLLM, mockPersistence in
+            let agentId = UUID()
+            let agentInstance = AgentInstance(
+                id: agentId,
+                name: "Test Agent",
+                description: "Testing",
+                privateTimelineId: UUID()
+            )
+            try await mockPersistence.saveAgentInstance(agentInstance)
+            mockLLM.mockClient.nextResponse = "Agent reply"
+
+            let stream = try await engine.chatStream(
+                timelineId: timelineId,
+                message: "Hi agent",
+                tools: [],
+                agentInstanceId: agentId
+            )
+
+            _ = try await collect(stream)
+
+            let messages = try await mockPersistence.fetchMessages(for: timelineId)
+            let assistantMsg = messages.first { $0.role == "assistant" }
+            #expect(assistantMsg?.agentInstanceId == agentId)
         }
     }
 }
