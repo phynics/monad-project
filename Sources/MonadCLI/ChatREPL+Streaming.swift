@@ -98,7 +98,7 @@ extension ChatREPL {
                                 print("\n")
                                 TerminalUI.printError("Stream Error: \(message)")
                                 return
-                            case .cancelled:
+                            case .generationCancelled:
                                 print(TerminalUI.yellow("\n[Generation cancelled]"))
                             }
 

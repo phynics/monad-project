@@ -131,7 +131,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
                     continuation.finish()
                 } catch {
                     if error is CancellationError {
-                        let cancelEvent = ChatEvent.cancelled()
+                        let cancelEvent = ChatEvent.generationCancelled()
                         if let data = try? SerializationUtils.jsonEncoder.encode(cancelEvent) {
                             let sseString = "data: \(String(decoding: data, as: UTF8.self))\n\n"
                             continuation.yield(ByteBuffer(string: sseString))

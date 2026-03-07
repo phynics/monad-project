@@ -40,7 +40,7 @@ public enum ChatEvent: Sendable, Codable {
         /// General error occurred
         case error(String)
         /// Generation was explicitly cancelled
-        case cancelled
+        case generationCancelled
     }
 
     public enum CompletionEvent: Sendable, Codable {
@@ -96,8 +96,8 @@ public extension ChatEvent {
         .error(.error(msg))
     }
 
-    static func cancelled() -> ChatEvent {
-        .error(.cancelled)
+    static func generationCancelled() -> ChatEvent {
+        .error(.generationCancelled)
     }
 
     /// Completion shortcuts
