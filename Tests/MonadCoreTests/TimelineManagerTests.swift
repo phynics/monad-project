@@ -66,4 +66,33 @@ import MonadTestSupport
             #expect(retrieved == nil, "Session should be cleaned up")
         }
     }
+
+    @Test("Test Task Registration and Cancellation")
+    func testTaskCancellation() async throws {
+        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        let timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
+        let timelineId = UUID()
+        
+        let isCancelled = Locked(false)
+        
+        let task = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(10))
+            }
+            isCancelled.value = true
+        }
+        
+        await timelineManager.registerTask(task, for: timelineId)
+        
+        // Verify it's in the registry (using internal access if possible, or just through behavior)
+        await timelineManager.cancelGeneration(for: timelineId)
+        
+        // Wait a bit for task to finish
+        for _ in 0..<10 {
+            if isCancelled.value { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        
+        #expect(isCancelled.value, "Task should have been cancelled")
+    }
 }
