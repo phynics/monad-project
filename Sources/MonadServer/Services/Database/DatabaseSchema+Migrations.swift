@@ -547,5 +547,14 @@ public extension DatabaseSchema {
                 ifNotExists: true
             )
         }
+
+        // v33: Add workspaceFilesSeed to agent table
+        migrator.registerMigration("v33") { db in
+            if try !db.columns(in: "agent").contains(where: { $0.name == "workspaceFilesSeed" }) {
+                try db.alter(table: "agent") { table in
+                    table.add(column: "workspaceFilesSeed", .text)
+                }
+            }
+        }
     }
 }

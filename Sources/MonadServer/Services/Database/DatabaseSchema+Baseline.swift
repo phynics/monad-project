@@ -156,6 +156,7 @@ extension DatabaseSchema {
             t.column("guardrailsPrompt", .text)
             t.column("createdAt", .datetime).notNull()
             t.column("updatedAt", .datetime).notNull()
+            t.column("workspaceFilesSeed", .text)
         }
     }
 }

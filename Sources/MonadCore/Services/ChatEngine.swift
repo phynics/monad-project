@@ -8,12 +8,18 @@ import OpenAI
 /// Unified chat engine that handles both interactive chat and autonomous agent execution.
 /// Returns `AsyncThrowingStream<ChatEvent>` for all use cases — callers decide how to consume.
 ///
-/// - Interactive chat (MonadServer): streams deltas to the client via SSE.
-/// - Autonomous msAgents (MSAgentExecutor): consumes the stream internally for state tracking.
-///
-/// Tool resolution is the caller's responsibility. The engine accepts pre-resolved tools.
-/// Timeline hydration is also the caller's responsibility for autonomous use cases.
+/// The engine orchestrates the entire lifecycle of a chat turn, including context gathering,
+/// LLM interaction, tool execution, and state persistence.
 public final class ChatEngine: @unchecked Sendable {
+    // MARK: - Constants
+    
+    public enum Constants {
+        public static let maxHistoryTokens = 120_000
+        public static let historyTokenBuffer = 4000
+        public static let sentinelToolName = "tool_call"
+        public static let defaultMaxTurns = 5
+    }
+
     @Dependency(\.timelineManager) private var timelineManager
     @Dependency(\.persistenceService) private var persistenceService
     @Dependency(\.llmService) private var llmService
@@ -24,7 +30,8 @@ public final class ChatEngine: @unchecked Sendable {
 
     // MARK: - Pipeline Types
 
-    private struct ChatTurnContext {
+    /// Internal state container for a single chat turn as it moves through the pipeline.
+    internal struct ChatTurnContext {
         let timelineId: UUID
         let agentInstanceId: UUID?
         let modelName: String
@@ -52,8 +59,8 @@ public final class ChatEngine: @unchecked Sendable {
         var requiresClientExecution: Bool = false
     }
 
-    private struct LLMStreamingStage: PipelineStage {
-        let id = "LLMStreamingStage"
+    /// Pipeline stage responsible for streaming the response from the LLM and parsing deltas.
+    internal struct LLMStreamingStage: PipelineStage {
         let llmService: any LLMServiceProtocol
         let logger: Logger
 
@@ -142,9 +149,20 @@ public final class ChatEngine: @unchecked Sendable {
         }
     }
 
-    private struct ToolExecutionStage: PipelineStage {
-        let id = "ToolExecutionStage"
-        let engine: ChatEngine
+    /// Pipeline stage responsible for extracting and executing tool calls from the LLM response.
+    internal struct ToolExecutionStage: PipelineStage {
+        typealias ToolExecutor = @Sendable (
+            _ calls: [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam],
+            _ availableTools: [AnyTool],
+            _ turnCount: Int,
+            _ continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
+        ) async -> (
+            results: [ChatQuery.ChatCompletionMessageParam],
+            requiresClientExecution: Bool,
+            debugRecords: [ToolResultRecord]
+        )
+
+        let executeTools: ToolExecutor
         let logger: Logger
 
         func process(_ context: inout ChatTurnContext) async throws {
@@ -166,7 +184,7 @@ public final class ChatEngine: @unchecked Sendable {
             }
 
             let validToolCalls = finalToolCalls.filter { _, value in
-                !value.name.isEmpty && value.name != "tool_call"
+                !value.name.isEmpty && value.name != Constants.sentinelToolName
             }
 
             if !validToolCalls.isEmpty {
@@ -181,11 +199,11 @@ public final class ChatEngine: @unchecked Sendable {
 
                 let assistantMessage = ChatQuery.ChatCompletionMessageParam.assistant(.init(content: .textContent(.init(context.fullResponse)), toolCalls: toolCallsParam))
 
-                let (executionResults, requiresClientExecution, newDebugRecords) = await engine.executeTools(
-                    calls: toolCallsParam,
-                    availableTools: context.availableTools,
-                    turnCount: context.turnCount,
-                    continuation: context.continuation
+                let (executionResults, requiresClientExecution, newDebugRecords) = await executeTools(
+                    toolCallsParam,
+                    context.availableTools,
+                    context.turnCount,
+                    context.continuation
                 )
                 context.debugToolResults.append(contentsOf: newDebugRecords)
                 context.requiresClientExecution = requiresClientExecution
@@ -201,8 +219,8 @@ public final class ChatEngine: @unchecked Sendable {
         }
     }
 
-    private struct PersistenceStage: PipelineStage {
-        let id = "PersistenceStage"
+    /// Pipeline stage responsible for persisting the final turn state and yielding completion events.
+    internal struct PersistenceStage: PipelineStage {
         let persistenceService: any FullPersistenceService
         let timelineManager: TimelineManager
         let logger: Logger
@@ -294,6 +312,22 @@ public final class ChatEngine: @unchecked Sendable {
     ///   - systemInstructions: Optional system instructions to override the default.
     ///   - maxTurns: Maximum number of LLM turns before stopping. Defaults to 5.
     /// - Returns: An asynchronous stream of chat events.
+    /// Executes a streaming chat interaction.
+    ///
+    /// This is the primary entry point for starting a conversation turn. It manages the full loop of
+    /// generation, tool execution, and optional follow-up turns until the model finishes or max turns
+    /// are reached.
+    ///
+    /// - Parameters:
+    ///   - timelineId: Unique identifier for the conversation timeline.
+    ///   - message: The raw user query/message.
+    ///   - tools: List of tools available for the LLM to call during this turn.
+    ///   - toolOutputs: Optional pre-collected tool results (for client-side tool execution resume).
+    ///   - contextManager: Optional manager for custom context gathering logic.
+    ///   - systemInstructions: Optional overrides for the system prompt.
+    ///   - agentInstanceId: Optional identifier for the agent instance.
+    ///   - maxTurns: Maximum number of tool-execution follow-up turns (default from Constants).
+    /// - Returns: An asynchronous stream of `ChatEvent` deltas.
     public func chatStream(
         timelineId: UUID,
         message: String,
@@ -302,7 +336,7 @@ public final class ChatEngine: @unchecked Sendable {
         contextManager: ContextManager? = nil,
         systemInstructions: String? = nil,
         agentInstanceId: UUID? = nil,
-        maxTurns: Int = 5
+        maxTurns: Int = Constants.defaultMaxTurns
     ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
         let resolvedAgentId = agentInstanceId // capture for closure
         let sid = ANSIColors.colorize(timelineId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
@@ -384,7 +418,7 @@ public final class ChatEngine: @unchecked Sendable {
 
     // MARK: - Core Loop
 
-    private enum TurnResult {
+    internal enum TurnResult {
         case `continue`(newMessages: [ChatQuery.ChatCompletionMessageParam])
         case finish
     }
@@ -419,7 +453,7 @@ public final class ChatEngine: @unchecked Sendable {
             logger.info("Starting turn \(turnStr) for timeline \(sid)")
 
             if Task.isCancelled {
-                continuation.yield(.error(CancellationError()))
+                continuation.yield(.generationCancelled())
                 continuation.finish()
                 return
             }
@@ -496,7 +530,10 @@ public final class ChatEngine: @unchecked Sendable {
 
         let pipeline = Pipeline<ChatTurnContext>()
             .add(LLMStreamingStage(llmService: llmService, logger: logger))
-            .add(ToolExecutionStage(engine: self, logger: logger))
+            .add(ToolExecutionStage(executeTools: { [weak self] calls, tools, turn, cont in
+                guard let self = self else { return ([], false, []) }
+                return await self.executeTools(calls: calls, availableTools: tools, turnCount: turn, continuation: cont)
+            }, logger: logger))
             .add(PersistenceStage(persistenceService: persistenceService, timelineManager: timelineManager, logger: logger))
 
         try await pipeline.execute(&context)

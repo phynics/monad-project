@@ -25,7 +25,7 @@ public struct SSEStreamReader: Sendable {
                             buffer = String(buffer[range.upperBound...])
 
                             if let event = parseSSEMessage(message) {
-                                if case .completion(.streamCompleted) = event {
+                                if case .completion(event: .streamCompleted) = event {
                                     logger.debug("Stream done")
                                     continuation.finish()
                                     return

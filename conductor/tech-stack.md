@@ -19,6 +19,7 @@
 
 ## Architecture & Infrastructure
 - **Modular Architecture**: Separated into Core, Server, CLI, Client, Prompt, and Shared modules.
+- **Pipeline Pattern**: Generic asynchronous pipeline utility for orchestrating complex multi-stage processes (e.g., ChatEngine, ContextManager).
 - **Swift Dependencies**: For robust dependency injection and testing.
 - **Swift Argument Parser**: For a powerful and typed CLI experience.
 - **Swift Log**: Standard logging for server and core logic.

@@ -17,11 +17,11 @@ public enum ToolExecutionStatus: Sendable, Codable {
 public enum ChatEvent: Sendable, Codable {
     public enum DeltaEvent: Sendable, Codable {
         /// Chain-of-thought reasoning chunk
-        case thinking(String)
+        case thinking(text: String)
         /// Incremental content chunk from the LLM
-        case generation(String)
+        case generation(text: String)
         /// Tool call being assembled (streaming deltas)
-        case toolCall(ToolCallDelta)
+        case toolCall(delta: ToolCallDelta)
 
         /// Asynchronous tool execution status update (progress)
         case toolExecution(toolCallId: String, status: ToolExecutionStatus)
@@ -29,7 +29,7 @@ public enum ChatEvent: Sendable, Codable {
 
     public enum MetaEvent: Sendable, Codable {
         /// RAG context metadata — emitted once at the start of the loop
-        case generationContext(ChatMetadata)
+        case generationContext(metadata: ChatMetadata)
         /// Generation completed with metadata (informational)
         case generationCompleted(message: Message, metadata: APIResponseMetadata)
     }
@@ -38,7 +38,7 @@ public enum ChatEvent: Sendable, Codable {
         /// Tool call failed before execution (e.g. not found, invalid arguments)
         case toolCallError(toolCallId: String, name: String, error: String)
         /// General error occurred
-        case error(String)
+        case error(message: String)
         /// Generation was explicitly cancelled
         case generationCancelled
     }
@@ -52,10 +52,10 @@ public enum ChatEvent: Sendable, Codable {
         case streamCompleted
     }
 
-    case delta(DeltaEvent)
-    case meta(MetaEvent)
-    case error(ErrorEvent)
-    case completion(CompletionEvent)
+    case delta(event: DeltaEvent)
+    case meta(event: MetaEvent)
+    case error(event: ErrorEvent)
+    case completion(event: CompletionEvent)
 }
 
 // MARK: - Factory Methods (Producer Ergonomics)
@@ -63,54 +63,54 @@ public enum ChatEvent: Sendable, Codable {
 public extension ChatEvent {
     /// Delta shortcuts
     static func thinking(_ text: String) -> ChatEvent {
-        .delta(.thinking(text))
+        .delta(event: .thinking(text: text))
     }
 
     static func generation(_ text: String) -> ChatEvent {
-        .delta(.generation(text))
+        .delta(event: .generation(text: text))
     }
 
     static func toolCall(_ delta: ToolCallDelta) -> ChatEvent {
-        .delta(.toolCall(delta))
+        .delta(event: .toolCall(delta: delta))
     }
 
     static func toolProgress(toolCallId: String, status: ToolExecutionStatus) -> ChatEvent {
-        .delta(.toolExecution(toolCallId: toolCallId, status: status))
+        .delta(event: .toolExecution(toolCallId: toolCallId, status: status))
     }
 
     /// Meta shortcuts
     static func generationContext(_ metadata: ChatMetadata) -> ChatEvent {
-        .meta(.generationContext(metadata))
+        .meta(event: .generationContext(metadata: metadata))
     }
 
     /// Error shortcuts
     static func toolCallError(toolCallId: String, name: String, error: String) -> ChatEvent {
-        .error(.toolCallError(toolCallId: toolCallId, name: name, error: error))
+        .error(event: .toolCallError(toolCallId: toolCallId, name: name, error: error))
     }
 
     static func error(_ err: Error) -> ChatEvent {
-        .error(.error(err.localizedDescription))
+        .error(event: .error(message: err.localizedDescription))
     }
 
     static func error(_ msg: String) -> ChatEvent {
-        .error(.error(msg))
+        .error(event: .error(message: msg))
     }
 
     static func generationCancelled() -> ChatEvent {
-        .error(.generationCancelled)
+        .error(event: .generationCancelled)
     }
 
     /// Completion shortcuts
     static func generationCompleted(message: Message, metadata: APIResponseMetadata) -> ChatEvent {
-        .completion(.generationCompleted(message: message, metadata: metadata))
+        .completion(event: .generationCompleted(message: message, metadata: metadata))
     }
 
     static func toolCompleted(toolCallId: String, status: ToolExecutionStatus) -> ChatEvent {
-        .completion(.toolExecution(toolCallId: toolCallId, status: status))
+        .completion(event: .toolExecution(toolCallId: toolCallId, status: status))
     }
 
     static func streamCompleted() -> ChatEvent {
-        .completion(.streamCompleted)
+        .completion(event: .streamCompleted)
     }
 }
 
@@ -119,19 +119,19 @@ public extension ChatEvent {
 public extension ChatEvent {
     /// The text content if this is a `.delta(.generation(...))` event.
     var textContent: String? {
-        if case let .delta(.generation(text)) = self { return text }
+        if case let .delta(event) = self, case let .generation(text) = event { return text }
         return nil
     }
 
     /// The thinking content if this is a `.delta(.thinking(...))` event.
     var thinkingContent: String? {
-        if case let .delta(.thinking(text)) = self { return text }
+        if case let .delta(event) = self, case let .thinking(text) = event { return text }
         return nil
     }
 
     /// The completed message and metadata if this is a `.completion(.generationCompleted(...))` event.
     var completedMessage: (message: Message, metadata: APIResponseMetadata)? {
-        if case let .completion(.generationCompleted(msg, meta)) = self { return (msg, meta) }
+        if case let .completion(event) = self, case let .generationCompleted(msg, meta) = event { return (msg, meta) }
         return nil
     }
 }

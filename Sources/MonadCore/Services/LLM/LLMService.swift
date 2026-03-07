@@ -35,6 +35,13 @@ extension OllamaClient: LLMClientProtocol {}
 
 /// Service for managing LLM interactions with configuration support
 public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendable {
+    // MARK: - Constants
+    
+    private enum Constants {
+        static let maxHistoryTokens = 120_000
+        static let historyTokenBuffer = 4000
+    }
+
     public private(set) var configuration: LLMConfiguration = .openAI
     public private(set) var isConfigured: Bool = false
 
@@ -264,7 +271,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
             }
 
             // Conversation
-            ChatHistory(optimizeHistory(chatHistory, availableTokens: 120_000 - 4000)) // Reserve ~4k for other sections
+            ChatHistory(optimizeHistory(chatHistory, availableTokens: Constants.maxHistoryTokens - Constants.historyTokenBuffer)) // Reserve buffer for other sections
 
             // User Query
             UserQuery(userQuery)

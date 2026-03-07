@@ -46,7 +46,8 @@ import Testing
             configURL: tempURL,
             userDefaults: #require(UserDefaults(suiteName: "TestTags"))
         )
-        let service = LLMService(storage: storage)
+        // Pass a dummy mock to init to prevent auto-load race
+        let service = LLMService(storage: storage, client: MockLLMClient())
 
         // Setup mock config
         var config = LLMConfiguration.openAI
@@ -54,14 +55,14 @@ import Testing
         try await service.updateConfiguration(config)
 
         let mockClient = MockLLMClient()
+        // Inject the actual mock we want to use after config update
+        await service.setClients(main: mockClient, utility: mockClient, fast: mockClient)
+
         mockClient.nextResponse = """
         {
             "tags": ["swift", "testing", "llm"]
         }
         """
-
-        // Inject mock
-        await service.setClients(main: mockClient, utility: mockClient, fast: mockClient)
 
         let tags = try await service.generateTags(for: "This is a post about Swift testing.")
         #expect(tags == ["swift", "testing", "llm"])
@@ -77,12 +78,10 @@ import Testing
             configURL: tempURL,
             userDefaults: #require(UserDefaults(suiteName: "TestTitle"))
         )
-        let service = LLMService(storage: storage)
-
         let mockClient = MockLLMClient()
-        mockClient.nextResponse = "Test Conversation"
+        let service = LLMService(storage: storage, client: mockClient, utilityClient: mockClient, fastClient: mockClient)
 
-        await service.setClients(main: mockClient, utility: mockClient, fast: mockClient)
+        mockClient.nextResponse = "Test Conversation"
 
         let messages: [Message] = [
             Message(content: "Hello", role: .user),
@@ -102,17 +101,15 @@ import Testing
             configURL: tempURL,
             userDefaults: #require(UserDefaults(suiteName: "TestRecall"))
         )
-        let service = LLMService(storage: storage)
-
         let mockClient = MockLLMClient()
+        let service = LLMService(storage: storage, client: mockClient, utilityClient: mockClient, fastClient: mockClient)
+
         mockClient.nextResponse = """
         {
             "uuid-1": 1.0,
             "uuid-2": -0.5
         }
         """
-
-        await service.setClients(main: mockClient, utility: mockClient, fast: mockClient)
 
         let memory1 = Memory(
             id: UUID(), title: "Mem1", content: "Content1", tags: [], embedding: []
@@ -134,12 +131,10 @@ import Testing
             configURL: tempURL,
             userDefaults: #require(UserDefaults(suiteName: "TestStream"))
         )
-        let service = LLMService(storage: storage)
-
         let mockClient = MockLLMClient()
-        mockClient.nextResponse = "Hello"
+        let service = LLMService(storage: storage, client: mockClient, utilityClient: mockClient, fastClient: mockClient)
 
-        await service.setClients(main: mockClient, utility: mockClient, fast: mockClient)
+        mockClient.nextResponse = "Hello"
 
         let (stream, prompt, _) = await service.chatStreamWithContext(
             userQuery: "Hi",

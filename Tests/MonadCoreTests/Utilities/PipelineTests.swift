@@ -1,4 +1,5 @@
 import XCTest
+import Logging
 @testable import MonadCore
 
 final class PipelineTests: XCTestCase {
@@ -16,6 +17,10 @@ final class PipelineTests: XCTestCase {
         }
     }
     
+    struct DefaultIDStage: PipelineStage {
+        func process(_ context: inout TestContext) async throws {}
+    }
+    
     struct ErrorStage: PipelineStage {
         let id: String
         let error: Error
@@ -31,6 +36,26 @@ final class PipelineTests: XCTestCase {
         var errorDescription: String? {
             return "Mock error occurred"
         }
+    }
+    
+    func testDefaultID() {
+        let stage = DefaultIDStage()
+        XCTAssertEqual(stage.id, "DefaultIDStage")
+    }
+    
+    func testPipelineExecutionWithLogger() async throws {
+        // Given
+        let pipeline = Pipeline<TestContext>()
+            .withLogger(Logger(label: "test"))
+            .add(MockStage(id: "stage1", value: "one"))
+        
+        var context = TestContext()
+        
+        // When
+        try await pipeline.execute(&context)
+        
+        // Then
+        XCTAssertEqual(context.values, ["one"])
     }
     
     func testPipelineExecution() async throws {
@@ -115,6 +140,25 @@ final class PipelineTests: XCTestCase {
             XCTFail("Should have thrown error")
         } catch let PipelineError.cleanupFailed(id, _) {
             XCTAssertEqual(id, "cleanupError")
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
+    }
+    
+    func testPipelineCleanupFailureDoesNotOverridePrimaryError() async throws {
+        // Given
+        let pipeline = Pipeline<TestContext>()
+            .add(ErrorStage(id: "primaryError", error: MockError.someError))
+            .cleanup(ErrorStage(id: "cleanupError", error: MockError.someError))
+        
+        var context = TestContext()
+        
+        // When / Then
+        do {
+            try await pipeline.execute(&context)
+            XCTFail("Should have thrown error")
+        } catch let PipelineError.stageFailed(id, _) {
+            XCTAssertEqual(id, "primaryError")
         } catch {
             XCTFail("Unexpected error type: \(error)")
         }

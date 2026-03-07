@@ -28,7 +28,7 @@ final class SessionSeedingTests: XCTestCase {
 
             let session = try await timelineManager.createTimeline(title: "Test Session")
 
-            let sessionDir = workspaceRoot.appendingPathComponent("sessions").appendingPathComponent(session.id.uuidString)
+            let sessionDir = workspaceRoot.appendingPathComponent("timelines").appendingPathComponent(session.id.uuidString)
             let notesDir = sessionDir.appendingPathComponent("Notes")
             XCTAssertTrue(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Welcome.md").path))
             XCTAssertTrue(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Project.md").path))

@@ -41,7 +41,6 @@ public actor ContextManager: @unchecked Sendable {
     }
 
     private struct QueryAugmentationStage: PipelineStage {
-        let id = "QueryAugmentationStage"
         let manager: ContextManager
 
         func process(_ context: inout ContextGatheringContext) async throws {
@@ -51,7 +50,6 @@ public actor ContextManager: @unchecked Sendable {
     }
 
     private struct MemoryRetrievalStage: PipelineStage {
-        let id = "MemoryRetrievalStage"
         let manager: ContextManager
 
         func process(_ context: inout ContextGatheringContext) async throws {
@@ -74,7 +72,6 @@ public actor ContextManager: @unchecked Sendable {
     }
 
     private struct NoteDiscoveryStage: PipelineStage {
-        let id = "NoteDiscoveryStage"
         let manager: ContextManager
 
         func process(_ context: inout ContextGatheringContext) async throws {
@@ -83,7 +80,6 @@ public actor ContextManager: @unchecked Sendable {
     }
 
     private struct ContextAssemblyStage: PipelineStage {
-        let id = "ContextAssemblyStage"
         let logger: Logger
 
         func process(_ context: inout ContextGatheringContext) async throws {

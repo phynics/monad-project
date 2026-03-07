@@ -24,7 +24,7 @@ public struct ConversationMessage: Codable, Identifiable, Sendable {
     public init(
         id: UUID = UUID(),
         timelineId: UUID,
-        role: MessageRole,
+        role: Message.MessageRole,
         content: String,
         timestamp: Date = Date(),
         recalledMemories: String = "[]",
@@ -49,16 +49,8 @@ public struct ConversationMessage: Codable, Identifiable, Sendable {
         self.remoteDepth = remoteDepth
     }
 
-    public enum MessageRole: String, Codable, Sendable {
-        case user
-        case assistant
-        case system
-        case tool
-        case summary
-    }
-
-    public var messageRole: MessageRole {
-        MessageRole(rawValue: role) ?? .user
+    public var messageRole: Message.MessageRole {
+        Message.MessageRole(rawValue: role) ?? .user
     }
 
     /// Convert to UI Message model
@@ -77,21 +69,11 @@ public struct ConversationMessage: Codable, Identifiable, Sendable {
             calls = []
         }
 
-        let uiRole: Message.MessageRole =
-            switch role {
-            case "user": .user
-            case "assistant": .assistant
-            case "system": .system
-            case "tool": .tool
-            case "summary": .summary
-            default: .user
-            }
-
         return Message(
             id: id,
             timestamp: timestamp,
             content: content,
-            role: uiRole,
+            role: messageRole,
             think: think,
             toolCalls: calls.isEmpty ? nil : calls,
             toolCallId: toolCallId,

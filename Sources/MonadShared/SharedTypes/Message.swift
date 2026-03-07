@@ -1,49 +1,83 @@
 import Foundation
 
-/// UI message model for chat interface
+/// UI message model for chat interface.
 ///
-/// Supports Chain of Thought (CoT) reasoning models that use `<think>` tags
-/// to show their reasoning process separately from the final answer.
+/// This model is used by clients to display messages in the conversation. It supports
+/// Chain of Thought (CoT) reasoning models that use `<think>` tags to show their
+/// reasoning process separately from the final answer.
 public struct Message: Identifiable, Equatable, Sendable, Codable {
+    /// Unique identifier for the message.
     public let id: UUID
 
-    /// The main response content (with <think> tags removed)
+    /// The main response content (with `<think>` and `<tool_call>` tags removed for display).
     public var content: String
 
+    /// The role of the message author.
     public var role: MessageRole
+    
+    /// The time at which the message was created.
     public let timestamp: Date
 
-    /// Chain of Thought reasoning extracted from <think>...</think> blocks
-    /// Only present for models that support reasoning tags (e.g., DeepSeek R1, QwQ)
+    /// Chain of Thought reasoning extracted from `<think>...</think>` blocks.
+    /// Only present for models that support reasoning tags (e.g., DeepSeek R1, QwQ).
     public var think: String?
 
-    /// Tool calls extracted from <tool_call>...</tool_call> blocks
+    /// Tool calls extracted from `<tool_call>...</tool_call>` blocks.
     public var toolCalls: [ToolCall]?
 
-    /// ID of the tool call this message is a response to (only for .tool role)
+    /// ID of the tool call this message is a response to (only for `.tool` role).
     public var toolCallId: String?
 
-    /// Optional ID of the parent message in the forest structure
+    /// Optional ID of the parent message in the conversation forest structure.
     public var parentId: UUID?
 
-    /// Memories that were provided as context for this message
+    /// Memories that were provided as context for generating this message.
     public var recalledMemories: [Memory]?
 
-    /// Whether this message is a system summary/truncation notice
+    /// Whether this message represents a system summary or truncation notice.
     public var isSummary: Bool
 
-    /// Type of summary (if role is .summary)
+    /// Type of summary (only applicable if `role` is `.summary`).
     public var summaryType: SummaryType?
 
+    /// Represents the role of a message in a conversation.
+    public enum MessageRole: String, Sendable, Codable, CaseIterable {
+        /// A message from the user.
+        case user
+        /// A response from the AI assistant.
+        case assistant
+        /// A system instruction or notification.
+        case system
+        /// A message containing the output of a tool execution.
+        case tool
+        /// A system-generated summary of the conversation.
+        case summary
+    }
+
+    /// Types of conversation summaries.
     public enum SummaryType: String, Codable, Sendable {
-        case topic // Vertical line
-        case broad // Middle blob
+        /// A summary marking a specific topic shift.
+        case topic
+        /// A broad summary of preceding conversation context.
+        case broad
+    }
+
+    public enum ContextGatheringProgress: String, Sendable, Codable, CaseIterable {
+        case augmenting = "Augmenting Query"
+        case tagging = "Generating Tags"
+        case embedding = "Generating Embedding"
+        case searching = "Searching Memories"
+        case ranking = "Ranking Results"
+        case complete = "Context Ready"
     }
 
     public init(
         id: UUID = UUID(),
         timestamp: Date = Date(),
-        content: String, role: MessageRole, think: String? = nil, toolCalls: [ToolCall]? = nil,
+        content: String,
+        role: MessageRole,
+        think: String? = nil,
+        toolCalls: [ToolCall]? = nil,
         toolCallId: String? = nil,
         parentId: UUID? = nil,
         recalledMemories: [Memory]? = nil,
@@ -61,23 +95,6 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
         self.recalledMemories = recalledMemories
         self.isSummary = isSummary
         self.summaryType = summaryType
-    }
-
-    public enum MessageRole: String, Sendable, Codable {
-        case user
-        case assistant
-        case system
-        case tool
-        case summary
-    }
-
-    public enum ContextGatheringProgress: String, Sendable, Codable, CaseIterable {
-        case augmenting = "Augmenting Query"
-        case tagging = "Generating Tags"
-        case embedding = "Generating Embedding"
-        case searching = "Searching Memories"
-        case ranking = "Ranking Results"
-        case complete = "Context Ready"
     }
 
     /// Content cleaned for UI display (removes <tool_call> tags)

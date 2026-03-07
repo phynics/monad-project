@@ -73,8 +73,8 @@ final class SSEStreamReaderTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Stream completes")
         
         MockURLProtocol.mockEvents = [
-            (0, "data: {\"delta\":{\"generation\":\"Hello\"}}\n\n"),
-            (0, "data: {\"completion\":\"streamCompleted\"}\n\n"),
+            (0, "data: {\"delta\":{\"event\":{\"generation\":{\"text\":\"Hello\"}}}}\n\n"),
+            (0, "data: {\"completion\":{\"event\":\"streamCompleted\"}}\n\n"),
             (0, nil)
         ]
         
@@ -100,10 +100,10 @@ final class SSEStreamReaderTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Stream completes")
         
         MockURLProtocol.mockEvents = [
-            (0, "data: {\"delta\":{\"generation\":\"Hel\"}}\n"),
+            (0, "data: {\"delta\":{\"event\":{\"generation\":{\"text\":\"Hel\"}}}}\n"),
             (0.01, "\n"),
-            (0.01, "data: {\"delta\":{\"generation\":\"lo\"}}\n\n"),
-            (0, "data: {\"completion\":\"streamCompleted\"}\n\n"),
+            (0.01, "data: {\"delta\":{\"event\":{\"generation\":{\"text\":\"lo\"}}}}\n\n"),
+            (0, "data: {\"completion\":{\"event\":\"streamCompleted\"}}\n\n"),
             (0, nil)
         ]
         
