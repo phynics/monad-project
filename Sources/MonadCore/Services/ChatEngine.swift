@@ -22,6 +22,268 @@ public final class ChatEngine: @unchecked Sendable {
 
     public init() {}
 
+    // MARK: - Pipeline Types
+
+    private struct ChatTurnContext {
+        let timelineId: UUID
+        let agentInstanceId: UUID?
+        let modelName: String
+        let turnCount: Int
+        let currentMessages: [ChatQuery.ChatCompletionMessageParam]
+        let toolParams: [ChatQuery.ChatCompletionToolParam]
+        let availableTools: [AnyTool]
+        let contextData: ContextData
+        let structuredContext: [String: String]
+        let continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
+        
+        // Output from stages
+        var fullResponse: String = ""
+        var fullThinking: String = ""
+        var toolCallAccumulators: [Int: (id: String, name: String, args: String)] = [:]
+        var streamUsage: ChatResult.CompletionUsage?
+        var turnDuration: TimeInterval = 0
+        var tokensPerSecond: Double?
+        var accumulatedRawOutput: String = ""
+        
+        var debugToolCalls: [ToolCallRecord] = []
+        var debugToolResults: [ToolResultRecord] = []
+        
+        var turnResult: TurnResult = .finish
+        var requiresClientExecution: Bool = false
+    }
+
+    private struct LLMStreamingStage: PipelineStage {
+        let id = "LLMStreamingStage"
+        let llmService: any LLMServiceProtocol
+        let logger: Logger
+
+        func process(_ context: inout ChatTurnContext) async throws {
+            let streamData = await llmService.chatStream(
+                messages: context.currentMessages,
+                tools: context.toolParams.isEmpty ? nil : context.toolParams,
+                responseFormat: nil
+            )
+
+            var parser = StreamingParser()
+            let turnStartTime = Date()
+
+            for try await result in streamData {
+                if Task.isCancelled { break }
+
+                if let usage = result.usage { context.streamUsage = usage }
+
+                if let delta = result.choices.first?.delta.content {
+                    let oldThinkingCount = parser.thinking.count
+                    let oldContentCount = parser.content.count
+
+                    parser.process(delta)
+
+                    let thinkingChunk: Substring
+                    let contentChunk: Substring
+
+                    if parser.hasReclassified {
+                        thinkingChunk = parser.thinking.dropFirst(oldThinkingCount)
+                        contentChunk = ""
+                    } else {
+                        thinkingChunk = parser.thinking.dropFirst(oldThinkingCount)
+                        contentChunk = parser.content.dropFirst(oldContentCount)
+                    }
+
+                    if !thinkingChunk.isEmpty {
+                        context.fullThinking += thinkingChunk
+                        context.continuation.yield(.thinking(String(thinkingChunk)))
+                    }
+
+                    if !contentChunk.isEmpty {
+                        context.fullResponse += contentChunk
+                        context.continuation.yield(.generation(String(contentChunk)))
+                    }
+                }
+
+                if let calls = result.choices.first?.delta.toolCalls {
+                    for call in calls {
+                        guard let index = call.index else { continue }
+                        var acc = context.toolCallAccumulators[index] ?? ("", "", "")
+                        if let id = call.id { acc.id = id }
+                        if let name = call.function?.name { acc.name += name }
+                        if let args = call.function?.arguments { acc.args += args }
+                        context.toolCallAccumulators[index] = acc
+
+                        context.continuation.yield(.toolCall(ToolCallDelta(
+                            index: index,
+                            id: call.id,
+                            name: call.function?.name,
+                            arguments: call.function?.arguments
+                        )))
+                    }
+                }
+            }
+
+            if !parser.buffer.isEmpty {
+                if parser.isThinking {
+                    context.fullThinking += parser.buffer
+                    context.continuation.yield(.thinking(parser.buffer))
+                } else {
+                    context.fullResponse += parser.buffer
+                    context.continuation.yield(.generation(parser.buffer))
+                }
+            }
+
+            context.accumulatedRawOutput += context.fullThinking
+            context.accumulatedRawOutput += context.fullResponse
+            context.turnDuration = Date().timeIntervalSince(turnStartTime)
+            
+            let completionTokens = context.streamUsage?.completionTokens
+                ?? TokenEstimator.estimate(text: context.fullResponse + context.fullThinking)
+            context.tokensPerSecond = context.turnDuration > 0
+                ? Double(completionTokens) / context.turnDuration : nil
+
+            if Task.isCancelled { throw CancellationError() }
+        }
+    }
+
+    private struct ToolExecutionStage: PipelineStage {
+        let id = "ToolExecutionStage"
+        let engine: ChatEngine
+        let logger: Logger
+
+        func process(_ context: inout ChatTurnContext) async throws {
+            var finalToolCalls = context.toolCallAccumulators
+
+            if finalToolCalls.isEmpty {
+                let fallbackCalls = ToolOutputParser.parse(from: context.fullResponse)
+                if !fallbackCalls.isEmpty {
+                    logger.warning("Structured tool calls empty — falling back to text parsing. Parsed \(fallbackCalls.count) call(s) from response text.")
+                    for (index, call) in fallbackCalls.enumerated() {
+                        let argsJson = (try? SerializationUtils.jsonEncoder.encode(call.arguments)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+                        finalToolCalls[index] = (id: UUID().uuidString, name: call.name, args: argsJson)
+                    }
+
+                    for (index, value) in finalToolCalls.sorted(by: { $0.key < $1.key }) {
+                        context.continuation.yield(.toolCall(ToolCallDelta(index: index, id: value.id, name: value.name, arguments: value.args)))
+                    }
+                }
+            }
+
+            let validToolCalls = finalToolCalls.filter { _, value in
+                !value.name.isEmpty && value.name != "tool_call"
+            }
+
+            if !validToolCalls.isEmpty {
+                let sortedCalls = validToolCalls.sorted(by: { $0.key < $1.key })
+                let toolCallsParam: [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam] = sortedCalls.map { _, value in
+                    .init(id: value.id, function: .init(arguments: value.args, name: value.name))
+                }
+
+                for (_, value) in sortedCalls {
+                    context.debugToolCalls.append(ToolCallRecord(name: value.name, arguments: value.args, turn: context.turnCount))
+                }
+
+                let assistantMessage = ChatQuery.ChatCompletionMessageParam.assistant(.init(content: .textContent(.init(context.fullResponse)), toolCalls: toolCallsParam))
+
+                let (executionResults, requiresClientExecution, newDebugRecords) = await engine.executeTools(
+                    calls: toolCallsParam,
+                    availableTools: context.availableTools,
+                    turnCount: context.turnCount,
+                    continuation: context.continuation
+                )
+                context.debugToolResults.append(contentsOf: newDebugRecords)
+                context.requiresClientExecution = requiresClientExecution
+
+                if !requiresClientExecution {
+                    var newMessages: [ChatQuery.ChatCompletionMessageParam] = [assistantMessage]
+                    newMessages.append(contentsOf: executionResults)
+                    context.turnResult = .continue(newMessages: newMessages)
+                }
+            } else {
+                context.turnResult = .finish
+            }
+        }
+    }
+
+    private struct PersistenceStage: PipelineStage {
+        let id = "PersistenceStage"
+        let persistenceService: any FullPersistenceService
+        let timelineManager: TimelineManager
+        let logger: Logger
+
+        func process(_ context: inout ChatTurnContext) async throws {
+            let authorId = context.agentInstanceId
+            
+            if context.requiresClientExecution {
+                // Parse tool calls for DB
+                let sortedCalls = context.toolCallAccumulators.sorted(by: { $0.key < $1.key })
+                let toolCallsParam: [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam] = sortedCalls.map { _, value in
+                    .init(id: value.id, function: .init(arguments: value.args, name: value.name))
+                }
+                
+                let callsForDB = toolCallsParam.compactMap { param -> ToolCall? in
+                    let argsData = param.function.arguments.data(using: .utf8) ?? Data()
+                    let args = (try? JSONDecoder().decode([String: AnyCodable].self, from: argsData)) ?? [:]
+                    return ToolCall(name: param.function.name, arguments: args)
+                }
+                let callsJSON = (try? SerializationUtils.jsonEncoder.encode(callsForDB)).flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
+
+                let assistantMsg = ConversationMessage(timelineId: context.timelineId, role: .assistant, content: context.fullResponse, think: context.fullThinking.isEmpty ? nil : context.fullThinking, toolCalls: callsJSON, agentInstanceId: authorId)
+                try await persistenceService.saveMessage(assistantMsg)
+
+                let snapshot = DebugSnapshot(structuredContext: context.structuredContext, toolCalls: context.debugToolCalls, toolResults: context.debugToolResults, model: context.modelName, turnCount: context.turnCount)
+                await timelineManager.setDebugSnapshot(snapshot, for: context.timelineId)
+
+                let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
+                context.continuation.yield(.generationCompleted(
+                    message: assistantMsg.toMessage(),
+                    metadata: APIResponseMetadata(
+                        model: context.modelName,
+                        promptTokens: context.streamUsage?.promptTokens,
+                        completionTokens: context.streamUsage?.completionTokens,
+                        totalTokens: context.streamUsage?.totalTokens,
+                        duration: context.turnDuration,
+                        tokensPerSecond: context.tokensPerSecond,
+                        debugSnapshotData: snapshotData
+                    )
+                ))
+                context.turnResult = .finish
+            } else if case .finish = context.turnResult {
+                let assistantMsg = ConversationMessage(
+                    timelineId: context.timelineId,
+                    role: .assistant,
+                    content: context.fullResponse,
+                    recalledMemories: String(decoding: (try? SerializationUtils.jsonEncoder.encode(context.contextData.memories.map { $0.memory })) ?? Data(), as: UTF8.self),
+                    think: context.fullThinking.isEmpty ? nil : context.fullThinking,
+                    agentInstanceId: authorId
+                )
+                try await persistenceService.saveMessage(assistantMsg)
+
+                let renderedPrompt = ChatEngine.renderMessagesStatic(context.currentMessages)
+                let snapshot = DebugSnapshot(
+                    structuredContext: context.structuredContext,
+                    toolCalls: context.debugToolCalls,
+                    toolResults: context.debugToolResults,
+                    renderedPrompt: renderedPrompt,
+                    rawOutput: context.accumulatedRawOutput,
+                    model: context.modelName,
+                    turnCount: context.turnCount
+                )
+                await timelineManager.setDebugSnapshot(snapshot, for: context.timelineId)
+
+                let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
+                context.continuation.yield(.generationCompleted(
+                    message: assistantMsg.toMessage(),
+                    metadata: APIResponseMetadata(
+                        model: context.modelName,
+                        promptTokens: context.streamUsage?.promptTokens,
+                        completionTokens: context.streamUsage?.completionTokens,
+                        totalTokens: context.streamUsage?.totalTokens,
+                        duration: context.turnDuration,
+                        tokensPerSecond: context.tokensPerSecond,
+                        debugSnapshotData: snapshotData
+                    )
+                ))
+            }
+        }
+    }
+
     /// Execute a chat turn and return a stream of deltas.
     /// - Parameters:
     ///   - timelineId: The unique identifier for the chat session.
@@ -218,234 +480,29 @@ public final class ChatEngine: @unchecked Sendable {
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation,
         accumulatedRawOutput: inout String
     ) async throws -> TurnResult {
-        let authorId = agentInstanceId // stamp on assistant messages
-        var debugToolCalls: [ToolCallRecord] = []
-        var debugToolResults: [ToolResultRecord] = []
-
-        let streamData = await llmService.chatStream(
-            messages: currentMessages,
-            tools: toolParams.isEmpty ? nil : toolParams,
-            responseFormat: nil
+        var context = ChatTurnContext(
+            timelineId: timelineId,
+            agentInstanceId: agentInstanceId,
+            modelName: modelName,
+            turnCount: turnCount,
+            currentMessages: currentMessages,
+            toolParams: toolParams,
+            availableTools: availableTools,
+            contextData: contextData,
+            structuredContext: structuredContext,
+            continuation: continuation,
+            accumulatedRawOutput: accumulatedRawOutput
         )
 
-        var fullResponse = ""
-        var fullThinking = ""
-        var toolCallAccumulators: [Int: (id: String, name: String, args: String)] = [:]
+        let pipeline = Pipeline<ChatTurnContext>()
+            .add(LLMStreamingStage(llmService: llmService, logger: logger))
+            .add(ToolExecutionStage(engine: self, logger: logger))
+            .add(PersistenceStage(persistenceService: persistenceService, timelineManager: timelineManager, logger: logger))
 
-        var parser = StreamingParser()
-
-        // Bug 1: Track timing and token usage
-        let turnStartTime = Date()
-        var streamUsage: ChatResult.CompletionUsage?
-
-        for try await result in streamData {
-            if Task.isCancelled { break }
-
-            // Capture usage stats (sent in final chunk when includeUsage: true)
-            if let usage = result.usage { streamUsage = usage }
-
-            // Forward Content and Thinking
-            if let delta = result.choices.first?.delta.content {
-                let oldThinkingCount = parser.thinking.count
-                let oldContentCount = parser.content.count
-
-                parser.process(delta)
-
-                let thinkingChunk: Substring
-                let contentChunk: Substring
-
-                if parser.hasReclassified {
-                    thinkingChunk = parser.thinking.dropFirst(oldThinkingCount)
-                    contentChunk = ""
-                } else {
-                    thinkingChunk = parser.thinking.dropFirst(oldThinkingCount)
-                    contentChunk = parser.content.dropFirst(oldContentCount)
-                }
-
-                if !thinkingChunk.isEmpty {
-                    fullThinking += thinkingChunk
-                    continuation.yield(.thinking(String(thinkingChunk)))
-                }
-
-                if !contentChunk.isEmpty {
-                    fullResponse += contentChunk
-                    continuation.yield(.generation(String(contentChunk)))
-                }
-            }
-
-            // Accumulate Tool Calls
-            if let calls = result.choices.first?.delta.toolCalls {
-                for call in calls {
-                    guard let index = call.index else { continue }
-                    var acc = toolCallAccumulators[index] ?? ("", "", "")
-                    if let id = call.id { acc.id = id }
-                    if let name = call.function?.name { acc.name += name }
-                    if let args = call.function?.arguments { acc.args += args }
-                    toolCallAccumulators[index] = acc
-
-                    continuation.yield(.toolCall(ToolCallDelta(
-                        index: index,
-                        id: call.id,
-                        name: call.function?.name,
-                        arguments: call.function?.arguments
-                    )))
-                }
-            }
-        }
-
-        // Flush Any Pending Text
-        if !parser.buffer.isEmpty {
-            if parser.isThinking {
-                fullThinking += parser.buffer
-                continuation.yield(.thinking(parser.buffer))
-            } else {
-                fullResponse += parser.buffer
-                continuation.yield(.generation(parser.buffer))
-            }
-        }
-
-        // Accumulate raw output for debug
-        accumulatedRawOutput += fullThinking
-        accumulatedRawOutput += fullResponse
-
-        let renderedPrompt = renderMessages(currentMessages)
-
-        if Task.isCancelled { throw CancellationError() }
-
-        var finalToolCalls = toolCallAccumulators
-
-        // Parse fallback calls if needed
-        if finalToolCalls.isEmpty {
-            let fallbackCalls = ToolOutputParser.parse(from: fullResponse)
-            if !fallbackCalls.isEmpty {
-                logger.warning("Structured tool calls empty — falling back to text parsing. Parsed \(fallbackCalls.count) call(s) from response text.")
-                for (index, call) in fallbackCalls.enumerated() {
-                    let argsJson = (try? SerializationUtils.jsonEncoder.encode(call.arguments)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
-                    finalToolCalls[index] = (id: UUID().uuidString, name: call.name, args: argsJson)
-                }
-
-                for (index, value) in finalToolCalls.sorted(by: { $0.key < $1.key }) {
-                    continuation.yield(.toolCall(ToolCallDelta(index: index, id: value.id, name: value.name, arguments: value.args)))
-                }
-            } else if fullResponse.contains("tool_call") || fullResponse.contains("\"name\"") {
-                logger.warning("No structured tool calls and fallback parser found nothing, but response contains tool-like text. Response prefix: \(String(fullResponse.prefix(200)))")
-            }
-        }
-
-        // Filter out sentinel tool call names. Some models emit artifacts like
-        // name="tool_call" as a formatting token.
-        let validToolCalls = finalToolCalls.filter { _, value in
-            !value.name.isEmpty && value.name != "tool_call"
-        }
-
-        finalToolCalls = validToolCalls
-
-        // Bug 1: Compute timing and token metadata after the stream loop
-        let turnDuration = Date().timeIntervalSince(turnStartTime)
-        let completionTokens = streamUsage?.completionTokens
-            ?? TokenEstimator.estimate(text: fullResponse + fullThinking)
-        let tokensPerSecond: Double? = turnDuration > 0
-            ? Double(completionTokens) / turnDuration : nil
-
-        if !finalToolCalls.isEmpty {
-            let sortedCalls = finalToolCalls.sorted(by: { $0.key < $1.key })
-            let toolCallsParam: [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam] = sortedCalls.map { _, value in
-                .init(id: value.id, function: .init(arguments: value.args, name: value.name))
-            }
-
-            for (_, value) in sortedCalls {
-                debugToolCalls.append(ToolCallRecord(name: value.name, arguments: value.args, turn: turnCount))
-            }
-
-            let assistantMessage = ChatQuery.ChatCompletionMessageParam.assistant(.init(content: .textContent(.init(fullResponse)), toolCalls: toolCallsParam))
-
-            let (executionResults, requiresClientExecution, newDebugRecords) = await executeTools(
-                calls: toolCallsParam,
-                availableTools: availableTools,
-                turnCount: turnCount,
-                continuation: continuation
-            )
-            debugToolResults.append(contentsOf: newDebugRecords)
-
-            if requiresClientExecution {
-                let callsForDB = toolCallsParam.compactMap { param -> ToolCall? in
-                    let argsData = param.function.arguments.data(using: .utf8) ?? Data()
-                    let args = (try? JSONDecoder().decode([String: AnyCodable].self, from: argsData)) ?? [:]
-                    return ToolCall(name: param.function.name, arguments: args)
-                }
-                let callsJSON = (try? SerializationUtils.jsonEncoder.encode(callsForDB)).flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
-
-                let assistantMsg = ConversationMessage(timelineId: timelineId, role: .assistant, content: fullResponse, think: fullThinking.isEmpty ? nil : fullThinking, toolCalls: callsJSON, agentInstanceId: authorId)
-                do {
-                    try await persistenceService.saveMessage(assistantMsg)
-                } catch {
-                    logger.error("Failed to save assistant message: \(error)")
-                }
-
-                let snapshot = DebugSnapshot(structuredContext: structuredContext, toolCalls: debugToolCalls, toolResults: debugToolResults, model: modelName, turnCount: turnCount)
-                await timelineManager.setDebugSnapshot(snapshot, for: timelineId)
-
-                let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
-                continuation.yield(.generationCompleted(
-                    message: assistantMsg.toMessage(),
-                    metadata: APIResponseMetadata(
-                        model: modelName,
-                        promptTokens: streamUsage?.promptTokens,
-                        completionTokens: streamUsage?.completionTokens,
-                        totalTokens: streamUsage?.totalTokens,
-                        duration: turnDuration,
-                        tokensPerSecond: tokensPerSecond,
-                        debugSnapshotData: snapshotData
-                    )
-                ))
-                return .finish
-            }
-
-            var newMessages: [ChatQuery.ChatCompletionMessageParam] = [assistantMessage]
-            newMessages.append(contentsOf: executionResults)
-            return .continue(newMessages: newMessages)
-
-        } else {
-            let assistantMsg = ConversationMessage(
-                timelineId: timelineId,
-                role: .assistant,
-                content: fullResponse,
-                recalledMemories: String(decoding: (try? SerializationUtils.jsonEncoder.encode(contextData.memories.map { $0.memory })) ?? Data(), as: UTF8.self),
-                think: fullThinking.isEmpty ? nil : fullThinking,
-                agentInstanceId: authorId
-            )
-            do {
-                try await persistenceService.saveMessage(assistantMsg)
-            } catch {
-                logger.error("Failed to save assistant message: \(error)")
-            }
-
-            let snapshot = DebugSnapshot(
-                structuredContext: structuredContext,
-                toolCalls: debugToolCalls,
-                toolResults: debugToolResults,
-                renderedPrompt: renderedPrompt,
-                rawOutput: accumulatedRawOutput,
-                model: modelName,
-                turnCount: turnCount
-            )
-            await timelineManager.setDebugSnapshot(snapshot, for: timelineId)
-
-            let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
-            continuation.yield(.generationCompleted(
-                message: assistantMsg.toMessage(),
-                metadata: APIResponseMetadata(
-                    model: modelName,
-                    promptTokens: streamUsage?.promptTokens,
-                    completionTokens: streamUsage?.completionTokens,
-                    totalTokens: streamUsage?.totalTokens,
-                    duration: turnDuration,
-                    tokensPerSecond: tokensPerSecond,
-                    debugSnapshotData: snapshotData
-                )
-            ))
-            return .finish
-        }
+        try await pipeline.execute(&context)
+        
+        accumulatedRawOutput = context.accumulatedRawOutput
+        return context.turnResult
     }
 
     // MARK: - Helper Methods
@@ -592,7 +649,7 @@ public final class ChatEngine: @unchecked Sendable {
         return (executionResults, requiresClientExecution, debugRecords)
     }
 
-    private func renderMessages(_ messages: [ChatQuery.ChatCompletionMessageParam]) -> String {
+    private static func renderMessagesStatic(_ messages: [ChatQuery.ChatCompletionMessageParam]) -> String {
         var output = ""
         for message in messages {
             switch message {

@@ -19,6 +19,90 @@ public actor ContextManager: @unchecked Sendable {
         self.workspace = workspace
     }
 
+    // MARK: - Pipeline Types
+
+    private struct ContextGatheringContext {
+        let query: String
+        let history: [Message]
+        let limit: Int
+        let tagGenerator: (@Sendable (String) async throws -> [String])?
+        let continuation: AsyncThrowingStream<ContextGatheringEvent, Error>.Continuation
+        
+        var startTime: CFAbsoluteTime = 0
+        var augmentedQuery: String = ""
+        var notes: [ContextFile] = []
+        var memories: [SemanticSearchResult] = []
+        var generatedTags: [String] = []
+        var queryVector: [Double] = []
+        var semanticResults: [SemanticSearchResult] = []
+        var tagResults: [Memory] = []
+        
+        var contextData: ContextData?
+    }
+
+    private struct QueryAugmentationStage: PipelineStage {
+        let id = "QueryAugmentationStage"
+        let manager: ContextManager
+
+        func process(_ context: inout ContextGatheringContext) async throws {
+            context.continuation.yield(.progress(.augmenting))
+            context.augmentedQuery = manager.buildAugmentedContext(query: context.query, history: context.history)
+        }
+    }
+
+    private struct MemoryRetrievalStage: PipelineStage {
+        let id = "MemoryRetrievalStage"
+        let manager: ContextManager
+
+        func process(_ context: inout ContextGatheringContext) async throws {
+            let continuation = context.continuation
+            let memoriesData = try await manager.fetchRelevantMemories(
+                for: context.query,
+                tagContext: context.augmentedQuery,
+                limit: context.limit,
+                tagGenerator: context.tagGenerator,
+                onProgress: { progress in
+                    continuation.yield(.progress(progress))
+                }
+            )
+            context.memories = memoriesData.memories
+            context.generatedTags = memoriesData.tags
+            context.queryVector = memoriesData.vector
+            context.semanticResults = memoriesData.semanticResults
+            context.tagResults = memoriesData.tagResults
+        }
+    }
+
+    private struct NoteDiscoveryStage: PipelineStage {
+        let id = "NoteDiscoveryStage"
+        let manager: ContextManager
+
+        func process(_ context: inout ContextGatheringContext) async throws {
+            context.notes = try await manager.fetchAllNotes()
+        }
+    }
+
+    private struct ContextAssemblyStage: PipelineStage {
+        let id = "ContextAssemblyStage"
+        let logger: Logger
+
+        func process(_ context: inout ContextGatheringContext) async throws {
+            let duration = CFAbsoluteTimeGetCurrent() - context.startTime
+            logger.info("Context gathered in \(String(format: "%.3f", duration))s")
+
+            context.contextData = ContextData(
+                notes: context.notes,
+                memories: context.memories,
+                generatedTags: context.generatedTags,
+                queryVector: context.queryVector,
+                augmentedQuery: context.augmentedQuery,
+                semanticResults: context.semanticResults,
+                tagResults: context.tagResults,
+                executionTime: duration
+            )
+        }
+    }
+
     /// Events emitted during the context gathering process
     public enum ContextGatheringEvent: Sendable {
         case progress(Message.ContextGatheringProgress)
@@ -45,41 +129,28 @@ public actor ContextManager: @unchecked Sendable {
                     "Gathering context for query length: \(query.count), history count: \(history.count)"
                 )
 
-                continuation.yield(.progress(.augmenting))
-                // Augment query with recent history for better tag generation
-                let tagGenerationContext = buildAugmentedContext(query: query, history: history)
-
-                // Parallel execution of tasks
-                async let notesTask = fetchAllNotes()
-                async let memoriesDataTask = fetchRelevantMemories(
-                    for: query,
-                    tagContext: tagGenerationContext,
+                var context = ContextGatheringContext(
+                    query: query,
+                    history: history,
                     limit: limit,
                     tagGenerator: tagGenerator,
-                    onProgress: { progress in
-                        continuation.yield(.progress(progress))
-                    }
+                    continuation: continuation,
+                    startTime: startTime
                 )
 
+                let pipeline = Pipeline<ContextGatheringContext>()
+                    .add(QueryAugmentationStage(manager: self))
+                    .add(MemoryRetrievalStage(manager: self))
+                    .add(NoteDiscoveryStage(manager: self))
+                    .add(ContextAssemblyStage(logger: logger))
+
                 do {
-                    let (notes, memoriesData) = try await (notesTask, memoriesDataTask)
-
-                    let duration = CFAbsoluteTimeGetCurrent() - startTime
-                    logger.info("Context gathered in \(String(format: "%.3f", duration))s")
-
-                    let contextData = ContextData(
-                        notes: notes,
-                        memories: memoriesData.memories,
-                        generatedTags: memoriesData.tags,
-                        queryVector: memoriesData.vector,
-                        augmentedQuery: tagGenerationContext,
-                        semanticResults: memoriesData.semanticResults,
-                        tagResults: memoriesData.tagResults,
-                        executionTime: duration
-                    )
-
-                    continuation.yield(.progress(.complete))
-                    continuation.yield(.complete(contextData))
+                    try await pipeline.execute(&context)
+                    
+                    if let data = context.contextData {
+                        continuation.yield(.progress(.complete))
+                        continuation.yield(.complete(data))
+                    }
                     continuation.finish()
                 } catch {
                     logger.error("Context gathering failed: \(error.localizedDescription)")
@@ -124,7 +195,7 @@ public actor ContextManager: @unchecked Sendable {
         return allNotes.sorted(by: { $0.name < $1.name })
     }
 
-    private func buildAugmentedContext(query: String, history: [Message]) -> String {
+    nonisolated private func buildAugmentedContext(query: String, history: [Message]) -> String {
         guard !history.isEmpty else { return query }
 
         // Take the last few user/assistant messages to provide context for tags

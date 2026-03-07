@@ -70,6 +70,56 @@ final class PipelineTests: XCTestCase {
         }
     }
     
+    func testPipelineCleanup() async throws {
+        // Given
+        let pipeline = Pipeline<TestContext>()
+            .add(MockStage(id: "stage1", value: "one"))
+            .cleanup(MockStage(id: "cleanup1", value: "clean"))
+        
+        var context = TestContext()
+        
+        // When
+        try await pipeline.execute(&context)
+        
+        // Then
+        XCTAssertEqual(context.values, ["one", "clean"])
+    }
+    
+    func testPipelineCleanupAfterFailure() async throws {
+        // Given
+        let pipeline = Pipeline<TestContext>()
+            .add(ErrorStage(id: "errorStage", error: MockError.someError))
+            .cleanup(MockStage(id: "cleanup1", value: "clean"))
+        
+        var context = TestContext()
+        
+        // When / Then
+        do {
+            try await pipeline.execute(&context)
+            XCTFail("Should have thrown error")
+        } catch {
+            XCTAssertEqual(context.values, ["clean"])
+        }
+    }
+    
+    func testPipelineCleanupFailure() async throws {
+        // Given
+        let pipeline = Pipeline<TestContext>()
+            .cleanup(ErrorStage(id: "cleanupError", error: MockError.someError))
+        
+        var context = TestContext()
+        
+        // When / Then
+        do {
+            try await pipeline.execute(&context)
+            XCTFail("Should have thrown error")
+        } catch let PipelineError.cleanupFailed(id, _) {
+            XCTAssertEqual(id, "cleanupError")
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
+    }
+    
     func testEmptyPipeline() async throws {
         // Given
         let pipeline = Pipeline<TestContext>()
