@@ -18,4 +18,5 @@ Monad moves beyond simple message history by treating context as a stateful comp
 - **MonadCore Framework**: A pure logic framework providing session management, context engine, and tool execution.
 - **Semantic Memory**: Vector-based retrieval (USearch) with LLM-driven tag boosting and adaptive learning.
 - **Modular Architecture**: Clean separation between logic (Core), prompts (Prompt), server (Hummingbird), and client interfaces (CLI).
+- **Generation Control**: Precise management of LLM turns, including real-time cancellation across REST and CLI interfaces.
 - **PoC Implementation**: A fully functional server and CLI demonstrating the workspace and context engine capabilities.
