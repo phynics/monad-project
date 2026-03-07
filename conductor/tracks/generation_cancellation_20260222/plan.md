@@ -1,24 +1,24 @@
 # Implementation Plan: Generation Cancellation
 
-## Phase 1: Core Logic & Shared Models
+## Phase 1: Core Logic & Shared Models [checkpoint: 4df5c4a]
 - [x] Task: Add `generationCancelled` event type to `StreamEventType` in `MonadShared` (6d83916)
 - [x] Task: Implement Task Registry in `SessionManager` (b887131)
     - [x] Add `activeTasks: [UUID: Task<Void, Never>]` to `SessionManager` actor
     - [x] Implement `registerTask(_:for:)` and `cancelGeneration(for:)` methods
-- [ ] Task: Update `ChatEngine` to handle cancellation
-    - [ ] Check `Task.isCancelled` in `runChatLoop` and `processTurn`
-    - [ ] Yield `.error(CancellationError())` to the stream when cancelled
-- [ ] Task: Conductor - User Manual Verification 'Core Logic & Shared Models' (Protocol in workflow.md)
+- [x] Task: Update `ChatEngine` to handle cancellation (bdeb1c0)
+    - [x] Check `Task.isCancelled` in `runChatLoop` and `processTurn`
+    - [x] Yield `.generationCancelled()` to the stream when cancelled
+- [x] Task: Conductor - User Manual Verification 'Core Logic & Shared Models' (Protocol in workflow.md)
 
-## Phase 2: API Implementation
-- [ ] Task: Update `ChatAPIController`
-    - [ ] Implement `POST /api/sessions/{id}/chat/cancel` endpoint
-    - [ ] Update `chatStream` to register the generation task with `SessionManager`
-    - [ ] Update SSE loop to catch `CancellationError` and yield `generationCancelled` event
-- [ ] Task: Add `cancelChat(sessionId:)` to `MonadClient`
-- [ ] Task: Write failing integration tests for API cancellation in `ChatControllerStreamingTests`
-- [ ] Task: Implement minimal fix to pass tests
-- [ ] Task: Conductor - User Manual Verification 'API Implementation' (Protocol in workflow.md)
+## Phase 2: API Implementation [checkpoint: 4df5c4a]
+- [x] Task: Update `ChatAPIController` (bdeb1c0)
+    - [x] Implement `POST /api/sessions/{id}/chat/cancel` endpoint
+    - [x] Update `chatStream` to register the generation task with `SessionManager`
+    - [x] Update SSE loop to catch `CancellationError` and yield `generationCancelled` event
+- [x] Task: Add `cancelChat(sessionId:)` to `MonadClient` (bdeb1c0)
+- [x] Task: Write failing integration tests for API cancellation in `ChatControllerStreamingTests` (bdeb1c0)
+- [x] Task: Implement minimal fix to pass tests (bdeb1c0)
+- [x] Task: Conductor - User Manual Verification 'API Implementation' (Protocol in workflow.md)
 
 ## Phase 3: CLI Integration
 - [ ] Task: Implement "Double Escape" detection in `ChatREPL`
