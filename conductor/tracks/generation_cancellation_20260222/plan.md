@@ -1,7 +1,7 @@
 # Implementation Plan: Generation Cancellation
 
 ## Phase 1: Core Logic & Shared Models
-- [ ] Task: Add `generationCancelled` event type to `StreamEventType` in `MonadShared`
+- [x] Task: Add `generationCancelled` event type to `StreamEventType` in `MonadShared` (6d83916)
 - [ ] Task: Implement Task Registry in `SessionManager`
     - [ ] Add `activeTasks: [UUID: Task<Void, Never>]` to `SessionManager` actor
     - [ ] Implement `registerTask(_:for:)` and `cancelGeneration(for:)` methods
