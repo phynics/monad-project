@@ -54,6 +54,41 @@ final class VectorMathTests: XCTestCase {
         XCTAssertEqual(sim, 0.0)
     }
     
+    // MARK: - Magnitude
+
+    func testMagnitude() {
+        let v1 = [3.0, 4.0]
+        XCTAssertEqual(VectorMath.magnitude(v1), 5.0, accuracy: 0.0001)
+
+        let v2: [Double] = []
+        XCTAssertEqual(VectorMath.magnitude(v2), 0.0)
+
+        let v3 = [0.0, 0.0]
+        XCTAssertEqual(VectorMath.magnitude(v3), 0.0)
+    }
+
+    // MARK: - Optimized Cosine Similarity
+
+    func testOptimizedCosineSimilarityMatchesStandard() {
+        let v1 = [1.0, 2.0, 3.0]
+        let v2 = [4.0, 5.0, 6.0]
+
+        let standard = VectorMath.cosineSimilarity(v1, v2)
+        let optimized = VectorMath.cosineSimilarity(v1, v2, magnitudeA: VectorMath.magnitude(v1))
+
+        XCTAssertEqual(standard, optimized, accuracy: 0.0001)
+    }
+
+    func testOptimizedCosineSimilarityInvalidMagnitude() {
+        let v1 = [1.0, 2.0, 3.0]
+        let v2 = [4.0, 5.0, 6.0]
+
+        // If an invalid magnitude is passed (e.g. 0.0 or negative), it should safeguard and return 0.0
+        let sim = VectorMath.cosineSimilarity(v1, v2, magnitudeA: 0.0)
+
+        XCTAssertEqual(sim, 0.0)
+    }
+
     // MARK: - Normalization
     
     func testNormalizeVector() {
