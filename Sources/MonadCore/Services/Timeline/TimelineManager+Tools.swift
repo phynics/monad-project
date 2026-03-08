@@ -30,7 +30,8 @@ public extension TimelineManager {
 
             // MSAgent Coordination
             AnyTool(LaunchSubagentTool(
-                persistenceService: persistenceService,
+                backgroundJobStore: backgroundJobStore,
+                messageStore: messageStore,
                 timelineId: session.id,
                 parentId: parentId,
                 msAgentRegistry: msAgentRegistry
@@ -40,14 +41,15 @@ public extension TimelineManager {
             AnyTool(BackgroundJobQueueGatewayTool(context: jobQueueContext, timelineContext: toolContextTimeline)),
 
             // Timeline Observation Tools (always available)
-            AnyTool(TimelineListTool(persistenceService: persistenceService)),
-            AnyTool(TimelinePeekTool(persistenceService: persistenceService)),
+            AnyTool(TimelineListTool(timelineStore: timelineStore)),
+            AnyTool(TimelinePeekTool(messageStore: messageStore, timelineStore: timelineStore)),
         ]
 
         // Timeline Send: only available when an agent is attached (needs sender identity)
         if let agentId = session.attachedAgentInstanceId {
             availableTools.append(AnyTool(TimelineSendTool(
-                persistenceService: persistenceService,
+                messageStore: messageStore,
+                timelineStore: timelineStore,
                 agentInstanceId: agentId
             )))
         }
@@ -63,7 +65,7 @@ public extension TimelineManager {
         let jailRoot = workspaceRoot.path
         let dummyId = UUID()
         let toolTimelineContext = ToolTimelineContext()
-        let jobQueueContext = BackgroundJobQueueContext(persistenceService: persistenceService, timelineId: dummyId)
+        let jobQueueContext = BackgroundJobQueueContext(backgroundJobStore: backgroundJobStore, timelineId: dummyId)
         let dummyTimeline = Timeline(id: dummyId, workingDirectory: jailRoot)
         let manager = await createToolManager(
             for: dummyTimeline,
@@ -77,7 +79,7 @@ public extension TimelineManager {
     func findWorkspaceForTool(_ tool: ToolReference, in workspaceIds: [UUID]) async throws
         -> UUID?
     {
-        return try await persistenceService.findWorkspaceId(forToolId: tool.toolId, in: workspaceIds)
+        return try await toolPersistence.findWorkspaceId(forToolId: tool.toolId, in: workspaceIds)
     }
 
     func getAggregatedTools(for timelineId: UUID) async throws -> [ToolReference] {
@@ -90,11 +92,11 @@ public extension TimelineManager {
         let workspaceIds = ids
         guard !workspaceIds.isEmpty else { return [] }
 
-        return try await persistenceService.fetchTools(forWorkspaces: workspaceIds)
+        return try await toolPersistence.fetchTools(forWorkspaces: workspaceIds)
     }
 
     func getClientTools(clientId: UUID) async throws -> [ToolReference] {
-        return try await persistenceService.fetchClientTools(clientId: clientId)
+        return try await clientStore.fetchClientTools(clientId: clientId)
     }
 
     /// Aggregates all available tool references for a session, including those from the client.
@@ -128,7 +130,7 @@ public extension TimelineManager {
         if let primaryId = timeline.primaryWorkspaceId { ids.append(primaryId) }
         ids.append(contentsOf: timeline.attachedWorkspaces)
 
-        return try? await persistenceService.fetchToolSource(
+        return try? await toolPersistence.fetchToolSource(
             toolId: toolId,
             workspaceIds: ids,
             primaryWorkspaceId: timeline.primaryWorkspaceId

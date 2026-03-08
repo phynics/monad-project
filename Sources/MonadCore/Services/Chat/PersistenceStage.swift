@@ -5,7 +5,7 @@ import OpenAI
 
 /// Pipeline stage responsible for persisting the final turn state and yielding completion events.
 struct PersistenceStage: PipelineStage {
-    let persistenceService: any FullPersistenceService
+    let messageStore: any MessageStoreProtocol
     let timelineManager: TimelineManager
     let logger: Logger
 
@@ -27,7 +27,7 @@ struct PersistenceStage: PipelineStage {
             let callsJSON = (try? SerializationUtils.jsonEncoder.encode(callsForDB)).flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
 
             let assistantMsg = ConversationMessage(timelineId: context.timelineId, role: .assistant, content: context.fullResponse, think: context.fullThinking.isEmpty ? nil : context.fullThinking, toolCalls: callsJSON, agentInstanceId: authorId)
-            try await persistenceService.saveMessage(assistantMsg)
+            try await messageStore.saveMessage(assistantMsg)
 
             let snapshot = DebugSnapshot(structuredContext: context.structuredContext, toolCalls: context.debugToolCalls, toolResults: context.debugToolResults, model: context.modelName, turnCount: context.turnCount)
             await timelineManager.setDebugSnapshot(snapshot, for: context.timelineId)
@@ -55,7 +55,7 @@ struct PersistenceStage: PipelineStage {
                 think: context.fullThinking.isEmpty ? nil : context.fullThinking,
                 agentInstanceId: authorId
             )
-            try await persistenceService.saveMessage(assistantMsg)
+            try await messageStore.saveMessage(assistantMsg)
 
             let renderedPrompt = ChatEngine.renderMessagesStatic(context.currentMessages)
             let snapshot = DebugSnapshot(

@@ -5,7 +5,7 @@ import Logging
 
 /// Manages the retrieval and organization of context for the chat
 public actor ContextManager: @unchecked Sendable {
-    @Dependency(\.persistenceService) var persistenceService
+    @Dependency(\.memoryStore) var memoryStore
     @Dependency(\.embeddingService) var embeddingService
 
     private let workspace: (any WorkspaceProtocol)?
@@ -261,13 +261,13 @@ public actor ContextManager: @unchecked Sendable {
         // Convert Float embedding to Double for PersistenceService (GRDB compatibility)
         let doubleEmbedding = embedding.map { Double($0) }
 
-        async let semanticTask = persistenceService.searchMemories(
+        async let semanticTask = memoryStore.searchMemories(
             embedding: doubleEmbedding,
             limit: limit * 2, // Search for more to allow for tag-boosted re-ranking
             minSimilarity: 0.35 // Slightly lower to catch more candidates for re-ranking
         )
 
-        async let tagTask = persistenceService.searchMemories(matchingAnyTag: searchTags)
+        async let tagTask = memoryStore.searchMemories(matchingAnyTag: searchTags)
 
         let (rawSemanticResults, tagResults) = try await (semanticTask, tagTask)
         let semanticResults = rawSemanticResults.map {

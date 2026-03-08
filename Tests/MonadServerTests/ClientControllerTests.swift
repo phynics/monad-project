@@ -2,6 +2,7 @@ import MonadShared
 import MonadCore
 import Foundation
 import GRDB
+import Dependencies
 import Hummingbird
 import HummingbirdTesting
 @testable import MonadServer
@@ -21,10 +22,16 @@ struct ClientControllerTests {
     }
 
     private func makeApp() -> some ApplicationProtocol {
-        let router = Router()
-        let controller = ClientAPIController<BasicRequestContext>(persistenceService: persistence)
-        controller.addRoutes(to: router.group("/clients"))
-        return Application(router: router)
+        return withDependencies {
+            $0.clientStore = persistence.clientStore
+            $0.workspacePersistence = persistence.workspaceStore
+            $0.toolPersistence = persistence.toolStore
+        } operation: {
+            let router = Router()
+            let controller = ClientAPIController<BasicRequestContext>()
+            controller.addRoutes(to: router.group("/clients"))
+            return Application(router: router)
+        }
     }
 
     // MARK: - POST /clients/register

@@ -8,10 +8,10 @@ public struct TimelineListTool: MonadShared.Tool, Sendable {
     public let description = "List all non-private conversation timelines. Use this to discover timelines you can peek at or send messages to."
     public let requiresPermission = false
 
-    private let persistenceService: any TimelinePersistenceProtocol
+    private let timelineStore: any TimelinePersistenceProtocol
 
-    public init(persistenceService: any TimelinePersistenceProtocol) {
-        self.persistenceService = persistenceService
+    public init(timelineStore: any TimelinePersistenceProtocol) {
+        self.timelineStore = timelineStore
     }
 
     public var parametersSchema: [String: AnyCodable] {
@@ -23,7 +23,7 @@ public struct TimelineListTool: MonadShared.Tool, Sendable {
     }
 
     public func execute(parameters _: [String: Any]) async throws -> ToolResult {
-        let timelines = try await persistenceService.fetchAllTimelines(includeArchived: false)
+        let timelines = try await timelineStore.fetchAllTimelines(includeArchived: false)
         let visible = timelines.filter { !$0.isPrivate }
 
         let entries = visible.map { t -> [String: String] in

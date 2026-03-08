@@ -14,7 +14,7 @@ public actor BackgroundJobQueueContext: ToolContext {
     public static let contextDescription = "Manage a queue of jobs with priorities and statuses"
 
     private let logger = Logger.module(named: "tools")
-    private let persistenceService: any BackgroundJobStoreProtocol
+    private let backgroundJobStore: any BackgroundJobStoreProtocol
     private let timelineId: UUID
 
     public var contextTools: [AnyTool] {
@@ -28,8 +28,8 @@ public actor BackgroundJobQueueContext: ToolContext {
         ]
     }
 
-    public init(persistenceService: any BackgroundJobStoreProtocol, timelineId: UUID) {
-        self.persistenceService = persistenceService
+    public init(backgroundJobStore: any BackgroundJobStoreProtocol, timelineId: UUID) {
+        self.backgroundJobStore = backgroundJobStore
         self.timelineId = timelineId
     }
 
@@ -42,7 +42,7 @@ public actor BackgroundJobQueueContext: ToolContext {
     }
 
     public func formatState() async -> String {
-        guard let jobs = try? await persistenceService.fetchJobs(for: timelineId) else {
+        guard let jobs = try? await backgroundJobStore.fetchJobs(for: timelineId) else {
             return "**BackgroundJob Queue**: Error fetching jobs"
         }
 
@@ -79,7 +79,7 @@ public actor BackgroundJobQueueContext: ToolContext {
 
     public func addJob(title: String, description: String?, priority: Int) async throws -> BackgroundJob {
         let job = BackgroundJob(timelineId: timelineId, title: title, description: description, priority: priority)
-        try await persistenceService.saveJob(job)
+        try await backgroundJobStore.saveJob(job)
         logger.info("Added job: \(job.id)")
         return job
     }
@@ -93,14 +93,14 @@ public actor BackgroundJobQueueContext: ToolContext {
             priority: request.priority,
             agentId: request.agentId ?? "default"
         )
-        try await persistenceService.saveJob(job)
+        try await backgroundJobStore.saveJob(job)
         logger.info("Launched subagent job: \(job.id) (agent: \(job.agentId))")
         return job
     }
 
     public func removeJob(id: UUID) async throws -> BackgroundJob? {
-        if let job = try await persistenceService.fetchJob(id: id) {
-            try await persistenceService.deleteJob(id: id)
+        if let job = try await backgroundJobStore.fetchJob(id: id) {
+            try await backgroundJobStore.deleteJob(id: id)
             logger.info("Removed job: \(id)")
             return job
         }
@@ -108,10 +108,10 @@ public actor BackgroundJobQueueContext: ToolContext {
     }
 
     public func changePriority(id: UUID, newPriority: Int) async throws -> BackgroundJob? {
-        if var job = try await persistenceService.fetchJob(id: id) {
+        if var job = try await backgroundJobStore.fetchJob(id: id) {
             job.priority = newPriority
             job.updatedAt = Date()
-            try await persistenceService.saveJob(job)
+            try await backgroundJobStore.saveJob(job)
             logger.info("Changed priority for job: \(id) to \(newPriority)")
             return job
         }
@@ -119,10 +119,10 @@ public actor BackgroundJobQueueContext: ToolContext {
     }
 
     public func updateStatus(id: UUID, status: BackgroundJob.Status) async throws -> BackgroundJob? {
-        if var job = try await persistenceService.fetchJob(id: id) {
+        if var job = try await backgroundJobStore.fetchJob(id: id) {
             job.status = status
             job.updatedAt = Date()
-            try await persistenceService.saveJob(job)
+            try await backgroundJobStore.saveJob(job)
             logger.info("Updated status for job: \(id) to \(status.rawValue)")
             return job
         }
@@ -130,24 +130,24 @@ public actor BackgroundJobQueueContext: ToolContext {
     }
 
     public func listJobs() async throws -> [BackgroundJob] {
-        return try await persistenceService.fetchJobs(for: timelineId).sorted { $0.priority > $1.priority }
+        return try await backgroundJobStore.fetchJobs(for: timelineId).sorted { $0.priority > $1.priority }
     }
 
     public func clearQueue() async throws -> Int {
-        let jobs = try await persistenceService.fetchJobs(for: timelineId)
+        let jobs = try await backgroundJobStore.fetchJobs(for: timelineId)
         for job in jobs {
-            try await persistenceService.deleteJob(id: job.id)
+            try await backgroundJobStore.deleteJob(id: job.id)
         }
         logger.info("Cleared \(jobs.count) jobs from queue")
         return jobs.count
     }
 
     public func getJob(id: UUID) async throws -> BackgroundJob? {
-        try await persistenceService.fetchJob(id: id)
+        try await backgroundJobStore.fetchJob(id: id)
     }
 
     public func findJob(idPrefix: String) async throws -> BackgroundJob? {
-        let jobs = try await persistenceService.fetchJobs(for: timelineId)
+        let jobs = try await backgroundJobStore.fetchJobs(for: timelineId)
         return jobs.first { $0.id.uuidString.lowercased().hasPrefix(idPrefix.lowercased()) }
     }
 
@@ -155,7 +155,7 @@ public actor BackgroundJobQueueContext: ToolContext {
     /// Marks the job as in_progress and returns it for processing.
     /// Returns nil if no pending jobs are available.
     public func dequeueNext() async throws -> BackgroundJob? {
-        let jobs = try await persistenceService.fetchJobs(for: timelineId)
+        let jobs = try await backgroundJobStore.fetchJobs(for: timelineId)
 
         // Find highest priority pending job
         let pending = jobs.filter { $0.status == .pending }
@@ -168,7 +168,7 @@ public actor BackgroundJobQueueContext: ToolContext {
         // Mark as in progress
         nextJob.status = .inProgress
         nextJob.updatedAt = Date()
-        try await persistenceService.saveJob(nextJob)
+        try await backgroundJobStore.saveJob(nextJob)
 
         logger.info("Dequeued job: \(nextJob.title) (priority: \(nextJob.priority))")
         return nextJob
@@ -176,7 +176,7 @@ public actor BackgroundJobQueueContext: ToolContext {
 
     /// Check if there are pending jobs that can be dequeued
     public func hasPendingJobs() async throws -> Bool {
-        let jobs = try await persistenceService.fetchJobs(for: timelineId)
+        let jobs = try await backgroundJobStore.fetchJobs(for: timelineId)
         return jobs.contains { $0.status == .pending }
     }
 

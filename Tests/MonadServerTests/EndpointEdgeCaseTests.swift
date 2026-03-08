@@ -21,7 +21,15 @@ import MonadTestSupport
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
@@ -43,9 +51,7 @@ import MonadTestSupport
                     let router = Router()
                     router.add(middleware: ErrorMiddleware())
                     let protected = router.group("/api").add(middleware: AuthMiddleware())
-                    ChatAPIController<BasicRequestContext>(
-                        timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter
-                    ).addRoutes(to: protected.group("/sessions"))
+                    ChatAPIController<BasicRequestContext>().addRoutes(to: protected.group("/sessions"))
 
                     let app = Application(router: router)
 
@@ -75,7 +81,15 @@ import MonadTestSupport
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
@@ -96,9 +110,7 @@ import MonadTestSupport
                     let router = Router()
                     router.add(middleware: ErrorMiddleware())
                     let protected = router.group("/api").add(middleware: AuthMiddleware())
-                    ChatAPIController<BasicRequestContext>(
-                        timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter
-                    ).addRoutes(to: protected.group("/sessions"))
+                    ChatAPIController<BasicRequestContext>().addRoutes(to: protected.group("/sessions"))
 
                     let app = Application(router: router)
 
@@ -128,7 +140,15 @@ import MonadTestSupport
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
@@ -140,7 +160,7 @@ import MonadTestSupport
             let router = Router()
             router.add(middleware: ErrorMiddleware())
             let protected = router.group("/api").add(middleware: AuthMiddleware())
-            MemoryAPIController<BasicRequestContext>(timelineManager: timelineManager).addRoutes(
+            MemoryAPIController<BasicRequestContext>().addRoutes(
                 to: protected.group("/memories"))
 
             let app = Application(router: router)
@@ -162,7 +182,15 @@ import MonadTestSupport
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
@@ -174,7 +202,7 @@ import MonadTestSupport
             let router = Router()
             router.add(middleware: ErrorMiddleware())
             let protected = router.group("/api").add(middleware: AuthMiddleware())
-            MemoryAPIController<BasicRequestContext>(timelineManager: timelineManager).addRoutes(
+            MemoryAPIController<BasicRequestContext>().addRoutes(
                 to: protected.group("/memories"))
 
             let app = Application(router: router)
@@ -199,7 +227,15 @@ import MonadTestSupport
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
@@ -211,7 +247,7 @@ import MonadTestSupport
             let router = Router()
             router.add(middleware: ErrorMiddleware())
             let protected = router.group("/api").add(middleware: AuthMiddleware())
-            MemoryAPIController<BasicRequestContext>(timelineManager: timelineManager).addRoutes(
+            MemoryAPIController<BasicRequestContext>().addRoutes(
                 to: protected.group("/memories"))
 
             let app = Application(router: router)

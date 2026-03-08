@@ -1,10 +1,10 @@
-import MonadShared
-import MonadCore
-import XCTest
-import GRDB
-import MonadTestSupport
-@testable import MonadServer
 import Dependencies
+import GRDB
+import MonadCore
+@testable import MonadServer
+import MonadShared
+import MonadTestSupport
+import XCTest
 
 final class SessionWorkspaceTests: XCTestCase {
     var persistenceService: PersistenceService!
@@ -29,7 +29,15 @@ final class SessionWorkspaceTests: XCTestCase {
 
     func testCreateSessionCreatesDedicatedWorkspace() async throws {
         try await withDependencies {
-            $0.persistenceService = persistenceService
+            $0.workspacePersistence = persistenceService.workspaceStore
+            $0.timelinePersistence = persistenceService.timelineStore
+            $0.toolPersistence = persistenceService.toolStore
+            $0.memoryStore = persistenceService.memoryStore
+            $0.messageStore = persistenceService.messageStore
+            $0.msAgentStore = persistenceService.msAgentStore
+            $0.backgroundJobStore = persistenceService.backgroundJobStore
+            $0.clientStore = persistenceService.clientStore
+            $0.agentInstanceStore = persistenceService.agentInstanceStore
             $0.embeddingService = embeddingService
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()

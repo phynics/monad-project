@@ -21,7 +21,15 @@ struct ChatEngineTests {
 
         return try await withDependencies {
             $0.llmService = mockLLM
-            $0.persistenceService = mockPersistence
+            $0.timelinePersistence = mockPersistence
+            $0.workspacePersistence = mockPersistence
+            $0.memoryStore = mockPersistence
+            $0.messageStore = mockPersistence
+            $0.msAgentStore = mockPersistence
+            $0.backgroundJobStore = mockPersistence
+            $0.clientStore = mockPersistence
+            $0.toolPersistence = mockPersistence
+            $0.agentInstanceStore = mockPersistence
             $0.timelineManager = TimelineManager(workspaceRoot: URL(fileURLWithPath: "/tmp/monad-test"))
         } operation: {
             let engine = ChatEngine()

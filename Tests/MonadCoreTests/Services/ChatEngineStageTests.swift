@@ -35,7 +35,7 @@ final class ChatEngineStageTests: XCTestCase {
         // Given
         let persistence = MockPersistenceService()
         let timelineManager = TimelineManager(workspaceRoot: URL(fileURLWithPath: "/tmp"))
-        let stage = PersistenceStage(persistenceService: persistence, timelineManager: timelineManager, logger: logger)
+        let stage = PersistenceStage(messageStore: persistence, timelineManager: timelineManager, logger: logger)
 
         var context = createTestContext()
         context.fullResponse = "Hello world"

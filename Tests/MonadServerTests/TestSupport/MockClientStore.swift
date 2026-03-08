@@ -29,4 +29,8 @@ public final class MockClientStore: ClientStoreProtocol, @unchecked Sendable {
         clients.removeAll(where: { $0.id == id })
         return countBefore > clients.count
     }
+
+    public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] {
+        return []
+    }
 }

@@ -4,7 +4,7 @@ import Dependencies
 
 /// Repository for managing Workspace data persistence and business logic.
 public actor WorkspaceRepository {
-    @Dependency(\.persistenceService) private var persistenceService
+    @Dependency(\.workspacePersistence) private var persistenceService
 
     public init() {}
 

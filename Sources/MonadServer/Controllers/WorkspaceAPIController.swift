@@ -6,14 +6,14 @@ import Logging
 import MonadCore
 import MonadShared
 import NIOCore
+import Dependencies
 
 /// Controller for managing workspaces
 public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
-    let persistenceService: any WorkspacePersistenceProtocol & ToolPersistenceProtocol
+    @Dependency(\.workspacePersistence) var workspaceStore
+    @Dependency(\.toolPersistence) var toolStore
 
-    public init(persistenceService: any WorkspacePersistenceProtocol & ToolPersistenceProtocol) {
-        self.persistenceService = persistenceService
-    }
+    public init() {}
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post(use: create)
@@ -48,11 +48,9 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
             createdAt: now
         )
 
-        try await persistenceService.saveWorkspace(workspace)
-
         // Persist any tools declared at creation time
         for tool in input.tools {
-            try await persistenceService.addToolToWorkspace(workspaceId: id, tool: tool)
+            try await toolStore.addToolToWorkspace(workspaceId: id, tool: tool)
         }
 
         return try workspace.response(status: .created, from: request, context: context)
@@ -64,7 +62,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         let page = pagination.page
         let perPage = pagination.perPage
 
-        let workspaces = try await persistenceService.fetchAllWorkspaces()
+        let workspaces = try await workspaceStore.fetchAllWorkspaces()
 
         // In-memory pagination
         let total = workspaces.count
@@ -82,7 +80,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     }
 
     public func getWorkspace(id: UUID) async throws -> WorkspaceReference? {
-        return try await persistenceService.fetchWorkspace(id: id)
+        return try await workspaceStore.fetchWorkspace(id: id)
     }
 
     /// GET /workspaces/:id
@@ -102,7 +100,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         let input = try await request.decode(as: UpdateWorkspaceRequest.self, context: context)
 
-        guard var workspace = try await persistenceService.fetchWorkspace(id: id) else {
+        guard var workspace = try await workspaceStore.fetchWorkspace(id: id) else {
             throw HTTPError(.notFound)
         }
 
@@ -113,7 +111,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
             workspace.trustLevel = trustLevel
         }
 
-        try await persistenceService.saveWorkspace(workspace)
+        try await workspaceStore.saveWorkspace(workspace)
 
         return workspace
     }
@@ -121,7 +119,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     /// DELETE /workspaces/:id
     @Sendable func delete(request _: Request, context: Context) async throws -> HTTPResponse.Status {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
-        try await persistenceService.deleteWorkspace(id: id)
+        try await workspaceStore.deleteWorkspace(id: id)
         return .noContent
     }
 
@@ -130,7 +128,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         let input = try await request.decode(as: RegisterToolRequest.self, context: context)
 
-        try await persistenceService.addToolToWorkspace(workspaceId: id, tool: input.tool)
+        try await toolStore.addToolToWorkspace(workspaceId: id, tool: input.tool)
 
         return .created
     }
@@ -141,7 +139,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         let input = try await request.decode(as: SyncToolsRequest.self, context: context)
 
-        try await persistenceService.syncTools(workspaceId: id, tools: input.tools)
+        try await toolStore.syncTools(workspaceId: id, tools: input.tools)
 
         return .ok
     }
@@ -150,6 +148,6 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     @Sendable func listTools(request _: Request, context: Context) async throws -> [ToolReference] {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
 
-        return try await persistenceService.fetchTools(forWorkspaces: [id])
+        return try await toolStore.fetchTools(forWorkspaces: [id])
     }
 }

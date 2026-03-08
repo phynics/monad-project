@@ -14,4 +14,6 @@ public protocol MemoryStoreProtocol: Sendable {
     func updateMemory(_ memory: Memory) async throws
     func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws
     func vacuumMemories(threshold: Double) async throws -> Int
+    func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int
+    func pruneMemories(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int
 }

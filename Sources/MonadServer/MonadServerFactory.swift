@@ -23,15 +23,26 @@ public struct MonadServerFactory {
         verbose: Bool = false,
         logger: Logger = Logger.module(named: "server")
     ) async throws -> ServerContext {
-        // Initialize Persistence
-        let persistenceService: PersistenceService
+        // Initialize Database Manager and Repositories
+        let databaseManager: DatabaseManager
         do {
-            persistenceService = try PersistenceService.create()
-            logger.info("Persistence initialized.")
+            databaseManager = try DatabaseManager.create()
+            logger.info("Database initialized.")
         } catch {
-            logger.error("Failed to initialize persistence: \(error)")
+            logger.error("Failed to initialize database: \(error)")
             throw error
         }
+
+        let dbQueue = databaseManager.dbQueue
+        let agentInstanceStore = AgentInstanceDataRepository(dbQueue: dbQueue)
+        let backgroundJobStore = BackgroundJobRepository(dbQueue: dbQueue)
+        let clientStore = ClientIdentityRepository(dbQueue: dbQueue)
+        let msAgentStore = MSAgentRepository(dbQueue: dbQueue)
+        let memoryStore = MemoryRepository(dbQueue: dbQueue)
+        let messageStore = MessageRepository(dbQueue: dbQueue)
+        let timelinePersistence = TimelineRepository(dbQueue: dbQueue)
+        let toolPersistence = ToolDataRepository(dbQueue: dbQueue)
+        let workspacePersistence = WorkspaceDataRepository(dbQueue: dbQueue)
 
         let router = Router(context: AppRequestContext.self)
 
@@ -84,22 +95,40 @@ public struct MonadServerFactory {
         let agentInstanceManager = AgentInstanceManager(workspaceRoot: workspaceRoot)
         let toolRouter = ToolRouter()
         let chatEngine = ChatEngine()
+
         let msAgentExecutor = MSAgentExecutor(
-            persistenceService: persistenceService,
+            backgroundJobStore: backgroundJobStore,
+            messageStore: messageStore,
             chatEngine: chatEngine
         )
+
         let jobRunner = BackgroundJobRunnerService(
             timelineManager: timelineManager,
             msAgentRegistry: msAgentRegistry,
             msAgentExecutor: msAgentExecutor
         )
         let orphanCleanup = OrphanCleanupService(
-            workspaceRoot: workspaceRoot,
-            persistenceService: persistenceService
+            workspaceRoot: workspaceRoot
+        )
+
+        let workspaceManager = WorkspaceManager(
+            repository: WorkspaceRepository(),
+            connectionManager: connectionManager,
+            workspaceCreator: WorkspaceFactory()
         )
 
         return try await withDependencies {
-            $0.persistenceService = persistenceService
+            $0.databaseManager = databaseManager
+            $0.agentInstanceStore = agentInstanceStore
+            $0.backgroundJobStore = backgroundJobStore
+            $0.clientStore = clientStore
+            $0.msAgentStore = msAgentStore
+            $0.memoryStore = memoryStore
+            $0.messageStore = messageStore
+            $0.timelinePersistence = timelinePersistence
+            $0.toolPersistence = toolPersistence
+            $0.workspacePersistence = workspacePersistence
+
             $0.llmService = llmService
             $0.embeddingService = embeddingService
             $0.vectorStore = vectorStore
@@ -109,6 +138,7 @@ public struct MonadServerFactory {
             $0.chatEngine = chatEngine
             $0.msAgentExecutor = msAgentExecutor
             $0.agentInstanceManager = agentInstanceManager
+            $0.workspaceManager = workspaceManager
         } operation: {
             // Public routes
             router.get("/health") { _, _ -> String in
@@ -117,8 +147,6 @@ public struct MonadServerFactory {
 
             let startTime = Date()
             let statusController = StatusAPIController<AppRequestContext>(
-                persistenceService: persistenceService,
-                llmService: llmService,
                 startTime: startTime
             )
             statusController.addRoutes(to: router)
@@ -142,39 +170,25 @@ public struct MonadServerFactory {
                 return "Authenticated!"
             }
 
-            let timelineController = TimelineAPIController<AppRequestContext>(
-                timelineManager: timelineManager
-            )
+            let timelineController = TimelineAPIController<AppRequestContext>()
             timelineController.addRoutes(to: protected.group("/sessions"))
 
-            let chatController = ChatAPIController<AppRequestContext>(
-                timelineManager: timelineManager,
-                chatEngine: chatEngine,
-                toolRouter: toolRouter,
-                verbose: verbose
-            )
+            let chatController = ChatAPIController<AppRequestContext>(verbose: verbose)
             chatController.addRoutes(to: protected.group("/sessions"))
 
-            let jobController = BackgroundJobAPIController<AppRequestContext>(timelineManager: timelineManager)
+            let jobController = BackgroundJobAPIController<AppRequestContext>()
             jobController.addRoutes(to: protected.group("/sessions"))
 
-            let memoryController = MemoryAPIController<AppRequestContext>(timelineManager: timelineManager)
+            let memoryController = MemoryAPIController<AppRequestContext>()
             memoryController.addRoutes(to: protected.group("/memories"))
 
-            let pruneController = PruneAPIController<AppRequestContext>(
-                persistenceService: persistenceService
-            )
+            let pruneController = PruneAPIController<AppRequestContext>()
             pruneController.addRoutes(to: protected.group("/prune"))
 
-            let toolController = ToolAPIController<AppRequestContext>(
-                timelineManager: timelineManager,
-                toolRouter: toolRouter
-            )
+            let toolController = ToolAPIController<AppRequestContext>()
             toolController.addRoutes(to: protected.group("/tools"))
 
-            let msAgentController = MSAgentAPIController<AppRequestContext>(
-                msAgentRegistry: msAgentRegistry
-            )
+            let msAgentController = MSAgentAPIController<AppRequestContext>()
             msAgentController.addRoutes(to: protected.group("/msAgents"))
 
             let agentInstanceController = AgentInstanceAPIController<AppRequestContext>(
@@ -184,24 +198,13 @@ public struct MonadServerFactory {
 
             let workspacesGroup = protected.group("/workspaces")
 
-            let workspaceAPIController = WorkspaceAPIController<AppRequestContext>(
-                persistenceService: persistenceService
-            )
+            let workspaceAPIController = WorkspaceAPIController<AppRequestContext>()
             workspaceAPIController.addRoutes(to: workspacesGroup)
 
-            let workspaceManager = WorkspaceManager(
-                repository: WorkspaceRepository(),
-                connectionManager: connectionManager,
-                workspaceCreator: WorkspaceFactory()
-            )
-            let filesController = FilesAPIController<AppRequestContext>(
-                workspaceManager: workspaceManager
-            )
+            let filesController = FilesAPIController<AppRequestContext>()
             filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
 
-            let clientController = ClientAPIController<AppRequestContext>(
-                persistenceService: persistenceService
-            )
+            let clientController = ClientAPIController<AppRequestContext>()
             clientController.addRoutes(to: protected.group("/clients"))
 
             let configController = ConfigurationAPIController<AppRequestContext>(llmService: llmService)

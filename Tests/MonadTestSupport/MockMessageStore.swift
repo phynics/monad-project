@@ -18,4 +18,8 @@ public final class MockMessageStore: MessageStoreProtocol, @unchecked Sendable {
     public func deleteMessages(for timelineId: UUID) async throws {
         messages.removeAll(where: { $0.timelineId == timelineId })
     }
+
+    public func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int {
+        return 0
+    }
 }

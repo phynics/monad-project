@@ -8,4 +8,5 @@ public protocol TimelinePersistenceProtocol: Sendable {
     func fetchTimeline(id: UUID) async throws -> Timeline?
     func fetchAllTimelines(includeArchived: Bool) async throws -> [Timeline]
     func deleteTimeline(id: UUID) async throws
+    func pruneTimelines(olderThan timeInterval: TimeInterval, excluding excludedTimelineIds: [UUID], dryRun: Bool) async throws -> Int
 }

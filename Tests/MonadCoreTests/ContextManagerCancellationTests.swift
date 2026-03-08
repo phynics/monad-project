@@ -8,7 +8,15 @@ import Testing
 @Suite(.serialized) struct ContextManagerCancellationTests {
     private func makeContextManager() async throws -> ContextManager {
         return try await withDependencies {
-            $0.persistenceService = MockPersistenceService()
+            $0.timelinePersistence = MockPersistenceService()
+            $0.workspacePersistence = MockPersistenceService()
+            $0.memoryStore = MockPersistenceService()
+            $0.messageStore = MockPersistenceService()
+            $0.msAgentStore = MockPersistenceService()
+            $0.backgroundJobStore = MockPersistenceService()
+            $0.clientStore = MockPersistenceService()
+            $0.toolPersistence = MockPersistenceService()
+            $0.agentInstanceStore = MockPersistenceService()
             $0.embeddingService = MockEmbeddingService()
         } operation: {
             ContextManager(workspace: nil)

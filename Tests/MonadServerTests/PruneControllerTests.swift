@@ -1,10 +1,11 @@
-import MonadShared
-import MonadCore
+import Dependencies
 import Foundation
 import GRDB
 import Hummingbird
 import HummingbirdTesting
+import MonadCore
 @testable import MonadServer
+import MonadShared
 import Testing
 
 @Suite(.serialized)
@@ -21,10 +22,16 @@ struct PruneControllerTests {
     }
 
     private func makeApp() -> some ApplicationProtocol {
-        let router = Router()
-        let controller = PruneAPIController<BasicRequestContext>(persistenceService: persistence)
-        controller.addRoutes(to: router.group("/prune"))
-        return Application(router: router)
+        return withDependencies {
+            $0.memoryStore = persistence.memoryStore
+            $0.timelinePersistence = persistence.timelineStore
+            $0.messageStore = persistence.messageStore
+        } operation: {
+            let router = Router()
+            let controller = PruneAPIController<BasicRequestContext>()
+            controller.addRoutes(to: router.group("/prune"))
+            return Application(router: router)
+        }
     }
 
     // MARK: - pruneMemories

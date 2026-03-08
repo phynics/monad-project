@@ -5,13 +5,15 @@ import Dependencies
 
 /// Service responsible for executing autonomous msAgents and managing their reasoning loops.
 public struct MSAgentExecutor: Sendable {
-    private let persistenceService: any BackgroundJobStoreProtocol & MessageStoreProtocol
+    private let backgroundJobStore: any BackgroundJobStoreProtocol
+    private let messageStore: any MessageStoreProtocol
     private let chatEngine: ChatEngine
 
     private let logger = Logger.module(named: "agent-executor")
 
-    public init(persistenceService: any BackgroundJobStoreProtocol & MessageStoreProtocol, chatEngine: ChatEngine) {
-        self.persistenceService = persistenceService
+    public init(backgroundJobStore: any BackgroundJobStoreProtocol, messageStore: any MessageStoreProtocol, chatEngine: ChatEngine) {
+        self.backgroundJobStore = backgroundJobStore
+        self.messageStore = messageStore
         self.chatEngine = chatEngine
     }
 
@@ -31,7 +33,7 @@ public struct MSAgentExecutor: Sendable {
             currentJob.status = .inProgress
             currentJob.updatedAt = Date()
             currentJob.logs.append("MSAgent \(agent.id) started execution at \(Date())")
-            try? await persistenceService.saveJob(currentJob)
+            try? await backgroundJobStore.saveJob(currentJob)
         }
 
         // 2. Construct Initial Trigger Message if this is the start of the job
@@ -51,7 +53,7 @@ public struct MSAgentExecutor: Sendable {
                 content: jobPrompt,
                 timestamp: Date()
             )
-            try? await persistenceService.saveMessage(triggerMessage)
+            try? await messageStore.saveMessage(triggerMessage)
         }
 
         // 3. Run Chat Engine — consume stream internally for state tracking
@@ -79,7 +81,7 @@ public struct MSAgentExecutor: Sendable {
             currentJob.status = .completed
             currentJob.updatedAt = Date()
             currentJob.logs.append("Task completed: \(fullContent.prefix(100))...")
-            try? await persistenceService.saveJob(currentJob)
+            try? await backgroundJobStore.saveJob(currentJob)
         } catch {
             await failJob(currentJob, reason: error.localizedDescription)
         }
@@ -111,9 +113,9 @@ public struct MSAgentExecutor: Sendable {
                 content: "BackgroundJob [\(job.id.uuidString.prefix(8))] Failed: \(reason)",
                 timestamp: Date()
             )
-            try? await persistenceService.saveMessage(msg)
+            try? await messageStore.saveMessage(msg)
         }
 
-        try? await persistenceService.saveJob(currentJob)
+        try? await backgroundJobStore.saveJob(currentJob)
     }
 }

@@ -44,17 +44,21 @@ final class MockPersistenceStore:
     func updateMemory(_ memory: Memory) async throws {}
     func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws {}
     func vacuumMemories(threshold: Double) async throws -> Int { 0 }
+    func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int { 0 }
+    func pruneMemories(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int { 0 }
 
     // MessageStoreProtocol
     func saveMessage(_ message: ConversationMessage) async throws {}
     func fetchMessages(for timelineId: UUID) async throws -> [ConversationMessage] { [] }
     func deleteMessages(for timelineId: UUID) async throws {}
+    func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int { 0 }
 
     // TimelinePersistenceProtocol
     func saveTimeline(_ session: Timeline) async throws {}
     func fetchTimeline(id: UUID) async throws -> Timeline? { nil }
     func fetchAllTimelines(includeArchived: Bool) async throws -> [Timeline] { [] }
     func deleteTimeline(id: UUID) async throws {}
+    func pruneTimelines(olderThan timeInterval: TimeInterval, excluding excludedTimelineIds: [UUID], dryRun: Bool) async throws -> Int { 0 }
 
     // BackgroundJobStoreProtocol
     func saveJob(_ job: BackgroundJob) async throws {}

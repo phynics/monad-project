@@ -33,7 +33,15 @@ struct MSAgentRegistryTests {
         self.persistence = mock
 
         self.registry = try await withDependencies {
-            $0.persistenceService = mock
+            $0.timelinePersistence = mock
+            $0.workspacePersistence = mock
+            $0.memoryStore = mock
+            $0.messageStore = mock
+            $0.msAgentStore = mock
+            $0.backgroundJobStore = mock
+            $0.clientStore = mock
+            $0.toolPersistence = mock
+            $0.agentInstanceStore = mock
         } operation: {
             MSAgentRegistry()
         }

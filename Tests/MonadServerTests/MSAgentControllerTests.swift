@@ -1,33 +1,39 @@
-import MonadShared
-import MonadCore
 import Dependencies
 import Foundation
 import Hummingbird
 import HummingbirdTesting
-import MonadTestSupport
+import MonadCore
 @testable import MonadServer
+import MonadShared
+import MonadTestSupport
 import Testing
 
 @Suite struct MSAgentControllerTests {
-    private func makeApp(msAgents: [MSAgent] = []) async throws -> some ApplicationProtocol {
+    private func withApp(
+        msAgents: [MSAgent] = [],
+        operation: @escaping @Sendable (any TestClientProtocol) async throws -> Void
+    ) async throws {
         let mockPersistence = MockPersistenceService()
         mockPersistence.msAgents = msAgents
 
-        return try await withDependencies {
-            $0.persistenceService = mockPersistence
+        try await withDependencies {
+            $0.msAgentStore = mockPersistence
+            $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let registry = MSAgentRegistry()
             let router = Router()
-            let controller = MSAgentAPIController<BasicRequestContext>(msAgentRegistry: registry)
+            let controller = MSAgentAPIController<BasicRequestContext>()
             controller.addRoutes(to: router.group("/msAgents"))
-            return Application(router: router)
+            let app = Application(router: router)
+
+            try await app.test(.router) { client in
+                try await operation(client)
+            }
         }
     }
 
     @Test("GET /msAgents returns empty array when no msAgents registered")
     func listMSAgents_empty() async throws {
-        let app = try await makeApp()
-        try await app.test(.router) { client in
+        try await withApp { client in
             try await client.execute(uri: "/msAgents", method: .get) { response in
                 #expect(response.status == .ok)
                 let msAgents = try JSONDecoder().decode([MSAgent].self, from: response.body)
@@ -40,8 +46,7 @@ import Testing
     func listMSAgents_withMSAgents() async throws {
         let agentId = UUID()
         let agent = MSAgent(id: agentId, name: "Summarizer", description: "Summarizes text", systemPrompt: "You summarize.")
-        let app = try await makeApp(msAgents: [agent])
-        try await app.test(.router) { client in
+        try await withApp(msAgents: [agent]) { client in
             try await client.execute(uri: "/msAgents", method: .get) { response in
                 #expect(response.status == .ok)
                 let decoder = JSONDecoder()
@@ -57,8 +62,7 @@ import Testing
     func getMSAgent_foundByUUID() async throws {
         let agentId = UUID()
         let agent = MSAgent(id: agentId, name: "Writer", description: "Writes content", systemPrompt: "You write.")
-        let app = try await makeApp(msAgents: [agent])
-        try await app.test(.router) { client in
+        try await withApp(msAgents: [agent]) { client in
             try await client.execute(uri: "/msAgents/\(agentId.uuidString)", method: .get) { response in
                 #expect(response.status == .ok)
                 let decoder = JSONDecoder()
@@ -73,8 +77,7 @@ import Testing
     @Test("GET /msAgents/default returns the first agent")
     func getMSAgent_defaultKey() async throws {
         let agent = MSAgent(id: UUID(), name: "Default MSAgent", description: "Default", systemPrompt: "Default agent.")
-        let app = try await makeApp(msAgents: [agent])
-        try await app.test(.router) { client in
+        try await withApp(msAgents: [agent]) { client in
             try await client.execute(uri: "/msAgents/default", method: .get) { response in
                 #expect(response.status == .ok)
                 let decoder = JSONDecoder()
@@ -87,8 +90,7 @@ import Testing
 
     @Test("GET /msAgents/{id} returns 404 when agent not found")
     func getMSAgent_notFound() async throws {
-        let app = try await makeApp()
-        try await app.test(.router) { client in
+        try await withApp { client in
             try await client.execute(uri: "/msAgents/\(UUID().uuidString)", method: .get) { response in
                 #expect(response.status == .notFound)
             }
@@ -97,8 +99,7 @@ import Testing
 
     @Test("GET /msAgents returns JSON content-type")
     func listMSAgents_contentType() async throws {
-        let app = try await makeApp()
-        try await app.test(.router) { client in
+        try await withApp { client in
             try await client.execute(uri: "/msAgents", method: .get) { response in
                 #expect(response.headers[.contentType] == "application/json")
             }

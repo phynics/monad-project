@@ -4,21 +4,54 @@ import MonadShared
 
 // MARK: - Dependency Keys
 
-public typealias FullPersistenceService =
-    AgentInstanceStoreProtocol &
-    BackgroundJobStoreProtocol &
-    ClientStoreProtocol &
-    HealthCheckable &
-    MSAgentStoreProtocol &
-    MemoryStoreProtocol &
-    MessageStoreProtocol &
-    TimelinePersistenceProtocol &
-    ToolPersistenceProtocol &
-    WorkspacePersistenceProtocol
+public enum DatabaseManagerKey: DependencyKey {
+    public static let liveValue: any HealthCheckable = UnconfiguredDatabaseManager()
+    public static let testValue: any HealthCheckable = UnconfiguredDatabaseManager()
+}
 
-public enum PersistenceServiceKey: DependencyKey {
-    public static let liveValue: any FullPersistenceService = UnconfiguredPersistenceService()
-    public static let testValue: any FullPersistenceService = UnconfiguredPersistenceService()
+public enum AgentInstanceStoreKey: DependencyKey {
+    public static let liveValue: any AgentInstanceStoreProtocol = UnconfiguredAgentInstanceStore()
+    public static let testValue: any AgentInstanceStoreProtocol = UnconfiguredAgentInstanceStore()
+}
+
+public enum BackgroundJobStoreKey: DependencyKey {
+    public static let liveValue: any BackgroundJobStoreProtocol = UnconfiguredBackgroundJobStore()
+    public static let testValue: any BackgroundJobStoreProtocol = UnconfiguredBackgroundJobStore()
+}
+
+public enum ClientStoreKey: DependencyKey {
+    public static let liveValue: any ClientStoreProtocol = UnconfiguredClientStore()
+    public static let testValue: any ClientStoreProtocol = UnconfiguredClientStore()
+}
+
+public enum MSAgentStoreKey: DependencyKey {
+    public static let liveValue: any MSAgentStoreProtocol = UnconfiguredMSAgentStore()
+    public static let testValue: any MSAgentStoreProtocol = UnconfiguredMSAgentStore()
+}
+
+public enum MemoryStoreKey: DependencyKey {
+    public static let liveValue: any MemoryStoreProtocol = UnconfiguredMemoryStore()
+    public static let testValue: any MemoryStoreProtocol = UnconfiguredMemoryStore()
+}
+
+public enum MessageStoreKey: DependencyKey {
+    public static let liveValue: any MessageStoreProtocol = UnconfiguredMessageStore()
+    public static let testValue: any MessageStoreProtocol = UnconfiguredMessageStore()
+}
+
+public enum TimelinePersistenceKey: DependencyKey {
+    public static let liveValue: any TimelinePersistenceProtocol = UnconfiguredTimelinePersistence()
+    public static let testValue: any TimelinePersistenceProtocol = UnconfiguredTimelinePersistence()
+}
+
+public enum ToolPersistenceKey: DependencyKey {
+    public static let liveValue: any ToolPersistenceProtocol = UnconfiguredToolPersistence()
+    public static let testValue: any ToolPersistenceProtocol = UnconfiguredToolPersistence()
+}
+
+public enum WorkspacePersistenceKey: DependencyKey {
+    public static let liveValue: any WorkspacePersistenceProtocol = UnconfiguredWorkspacePersistence()
+    public static let testValue: any WorkspacePersistenceProtocol = UnconfiguredWorkspacePersistence()
 }
 
 public enum VectorStoreKey: DependencyKey {
@@ -28,9 +61,54 @@ public enum VectorStoreKey: DependencyKey {
 // MARK: - Dependency Values
 
 public extension DependencyValues {
-    var persistenceService: any FullPersistenceService {
-        get { self[PersistenceServiceKey.self] }
-        set { self[PersistenceServiceKey.self] = newValue }
+    var databaseManager: any HealthCheckable {
+        get { self[DatabaseManagerKey.self] }
+        set { self[DatabaseManagerKey.self] = newValue }
+    }
+
+    var agentInstanceStore: any AgentInstanceStoreProtocol {
+        get { self[AgentInstanceStoreKey.self] }
+        set { self[AgentInstanceStoreKey.self] = newValue }
+    }
+
+    var backgroundJobStore: any BackgroundJobStoreProtocol {
+        get { self[BackgroundJobStoreKey.self] }
+        set { self[BackgroundJobStoreKey.self] = newValue }
+    }
+
+    var clientStore: any ClientStoreProtocol {
+        get { self[ClientStoreKey.self] }
+        set { self[ClientStoreKey.self] = newValue }
+    }
+
+    var msAgentStore: any MSAgentStoreProtocol {
+        get { self[MSAgentStoreKey.self] }
+        set { self[MSAgentStoreKey.self] = newValue }
+    }
+
+    var memoryStore: any MemoryStoreProtocol {
+        get { self[MemoryStoreKey.self] }
+        set { self[MemoryStoreKey.self] = newValue }
+    }
+
+    var messageStore: any MessageStoreProtocol {
+        get { self[MessageStoreKey.self] }
+        set { self[MessageStoreKey.self] = newValue }
+    }
+
+    var timelinePersistence: any TimelinePersistenceProtocol {
+        get { self[TimelinePersistenceKey.self] }
+        set { self[TimelinePersistenceKey.self] = newValue }
+    }
+
+    var toolPersistence: any ToolPersistenceProtocol {
+        get { self[ToolPersistenceKey.self] }
+        set { self[ToolPersistenceKey.self] = newValue }
+    }
+
+    var workspacePersistence: any WorkspacePersistenceProtocol {
+        get { self[WorkspacePersistenceKey.self] }
+        set { self[WorkspacePersistenceKey.self] = newValue }
     }
 
     var vectorStore: (any VectorStoreProtocol)? {
@@ -41,220 +119,109 @@ public extension DependencyValues {
 
 // MARK: - Placeholder Implementations
 
-public struct UnconfiguredPersistenceService: FullPersistenceService {
+public struct UnconfiguredDatabaseManager: HealthCheckable {
     public init() {}
+    private func fail() -> Never { fatalError("DatabaseManager not configured.") }
+    public func getHealthStatus() async -> HealthStatus { .down }
+    public func getHealthDetails() async -> [String: String]? { ["error": "Unconfigured"] }
+    public func checkHealth() async -> HealthStatus { .down }
+}
 
-    private func fail() -> Never {
-        fatalError("PersistenceService not configured. Call 'MonadCore.configure()'.")
-    }
+public struct UnconfiguredAgentInstanceStore: AgentInstanceStoreProtocol {
+    public init() {}
+    private func fail() -> Never { fatalError("AgentInstanceStore not configured.") }
+    public func saveAgentInstance(_: AgentInstance) async throws { fail() }
+    public func fetchAgentInstance(id _: UUID) async throws -> AgentInstance? { fail() }
+    public func fetchAllAgentInstances() async throws -> [AgentInstance] { fail() }
+    public func deleteAgentInstance(id _: UUID) async throws { fail() }
+    public func fetchTimelines(attachedToAgent _: UUID) async throws -> [Timeline] { fail() }
+}
 
-    public func getHealthStatus() async -> HealthStatus {
-        .down
-    }
+public struct UnconfiguredBackgroundJobStore: BackgroundJobStoreProtocol {
+    public init() {}
+    private func fail() -> Never { fatalError("BackgroundJobStore not configured.") }
+    public func saveJob(_: BackgroundJob) async throws { fail() }
+    public func fetchJob(id _: UUID) async throws -> BackgroundJob? { fail() }
+    public func fetchAllJobs() async throws -> [BackgroundJob] { fail() }
+    public func fetchJobs(for _: UUID) async throws -> [BackgroundJob] { fail() }
+    public func fetchPendingJobs(limit _: Int) async throws -> [BackgroundJob] { fail() }
+    public func deleteJob(id _: UUID) async throws { fail() }
+    public func monitorJobs() async -> AsyncStream<BackgroundJobEvent> { fail() }
+}
 
-    public func getHealthDetails() async -> [String: String]? {
-        ["error": "Unconfigured"]
-    }
+public struct UnconfiguredClientStore: ClientStoreProtocol {
+    public init() {}
+    private func fail() -> Never { fatalError("ClientStore not configured.") }
+    public func saveClient(_: ClientIdentity) async throws { fail() }
+    public func fetchClient(id _: UUID) async throws -> ClientIdentity? { fail() }
+    public func fetchAllClients() async throws -> [ClientIdentity] { fail() }
+    public func deleteClient(id _: UUID) async throws -> Bool { fail() }
+    public func fetchClientTools(clientId _: UUID) async throws -> [ToolReference] { fail() }
+}
 
-    public func checkHealth() async -> HealthStatus {
-        .down
-    }
+public struct UnconfiguredMSAgentStore: MSAgentStoreProtocol {
+    public init() {}
+    private func fail() -> Never { fatalError("MSAgentStore not configured.") }
+    public func saveMSAgent(_: MSAgent) async throws { fail() }
+    public func fetchMSAgent(id _: UUID) async throws -> MSAgent? { fail() }
+    public func fetchMSAgent(key _: String) async throws -> MSAgent? { fail() }
+    public func fetchAllMSAgents() async throws -> [MSAgent] { fail() }
+    public func hasMSAgent(id _: String) async -> Bool { fail() }
+}
 
-    public func saveMemory(_: Memory, policy _: MemorySavePolicy) async throws -> UUID {
-        fail()
-    }
+public struct UnconfiguredMemoryStore: MemoryStoreProtocol {
+    public init() {}
+    private func fail() -> Never { fatalError("MemoryStore not configured.") }
+    public func saveMemory(_: Memory, policy _: MemorySavePolicy) async throws -> UUID { fail() }
+    public func fetchMemory(id _: UUID) async throws -> Memory? { fail() }
+    public func fetchAllMemories() async throws -> [Memory] { fail() }
+    public func searchMemories(query _: String) async throws -> [Memory] { fail() }
+    public func searchMemories(embedding _: [Double], limit _: Int, minSimilarity _: Double) async throws -> [(memory: Memory, similarity: Double)] { fail() }
+    public func searchMemories(matchingAnyTag _: [String]) async throws -> [Memory] { fail() }
+    public func deleteMemory(id _: UUID) async throws { fail() }
+    public func updateMemory(_: Memory) async throws { fail() }
+    public func updateMemoryEmbedding(id _: UUID, newEmbedding _: [Double]) async throws { fail() }
+    public func vacuumMemories(threshold _: Double) async throws -> Int { fail() }
+    public func pruneMemories(matching _: String, dryRun _: Bool) async throws -> Int { fail() }
+    public func pruneMemories(olderThan _: TimeInterval, dryRun _: Bool) async throws -> Int { fail() }
+}
 
-    public func fetchMemory(id _: UUID) async throws -> Memory? {
-        fail()
-    }
+public struct UnconfiguredMessageStore: MessageStoreProtocol {
+    public init() {}
+    private func fail() -> Never { fatalError("MessageStore not configured.") }
+    public func saveMessage(_: ConversationMessage) async throws { fail() }
+    public func fetchMessages(for _: UUID) async throws -> [ConversationMessage] { fail() }
+    public func deleteMessages(for _: UUID) async throws { fail() }
+    public func pruneMessages(olderThan _: TimeInterval, dryRun _: Bool) async throws -> Int { fail() }
+}
 
-    public func fetchAllMemories() async throws -> [Memory] {
-        fail()
-    }
+public struct UnconfiguredTimelinePersistence: TimelinePersistenceProtocol {
+    public init() {}
+    private func fail() -> Never { fatalError("TimelinePersistence not configured.") }
+    public func saveTimeline(_: Timeline) async throws { fail() }
+    public func fetchTimeline(id _: UUID) async throws -> Timeline? { fail() }
+    public func fetchAllTimelines(includeArchived _: Bool) async throws -> [Timeline] { fail() }
+    public func deleteTimeline(id _: UUID) async throws { fail() }
+    public func pruneTimelines(olderThan _: TimeInterval, excluding _: [UUID], dryRun _: Bool) async throws -> Int { fail() }
+}
 
-    public func searchMemories(query _: String) async throws -> [Memory] {
-        fail()
-    }
+public struct UnconfiguredToolPersistence: ToolPersistenceProtocol {
+    public init() {}
+    private func fail() -> Never { fatalError("ToolPersistence not configured.") }
+    public func addToolToWorkspace(workspaceId _: UUID, tool _: ToolReference) async throws { fail() }
+    public func syncTools(workspaceId _: UUID, tools _: [ToolReference]) async throws { fail() }
+    public func fetchTools(forWorkspaces _: [UUID]) async throws -> [ToolReference] { fail() }
+    public func fetchClientTools(clientId _: UUID) async throws -> [ToolReference] { fail() }
+    public func findWorkspaceId(forToolId _: String, in _: [UUID]) async throws -> UUID? { fail() }
+    public func fetchToolSource(toolId _: String, workspaceIds _: [UUID], primaryWorkspaceId _: UUID?) async throws -> String? { fail() }
+}
 
-    public func searchMemories(embedding _: [Double], limit _: Int, minSimilarity _: Double) async throws -> [(memory: Memory, similarity: Double)] {
-        fail()
-    }
-
-    public func searchMemories(matchingAnyTag _: [String]) async throws -> [Memory] {
-        fail()
-    }
-
-    public func deleteMemory(id _: UUID) async throws {
-        fail()
-    }
-
-    public func updateMemory(_: Memory) async throws {
-        fail()
-    }
-
-    public func updateMemoryEmbedding(id _: UUID, newEmbedding _: [Double]) async throws {
-        fail()
-    }
-
-    public func vacuumMemories(threshold _: Double) async throws -> Int {
-        fail()
-    }
-
-    public func saveMessage(_: ConversationMessage) async throws {
-        fail()
-    }
-
-    public func fetchMessages(for _: UUID) async throws -> [ConversationMessage] {
-        fail()
-    }
-
-    public func deleteMessages(for _: UUID) async throws {
-        fail()
-    }
-
-    public func saveTimeline(_: Timeline) async throws {
-        fail()
-    }
-
-    public func fetchTimeline(id _: UUID) async throws -> Timeline? {
-        fail()
-    }
-
-    public func fetchAllTimelines(includeArchived _: Bool) async throws -> [Timeline] {
-        fail()
-    }
-
-    public func deleteTimeline(id _: UUID) async throws {
-        fail()
-    }
-
-    public func saveJob(_: BackgroundJob) async throws {
-        fail()
-    }
-
-    public func fetchJob(id _: UUID) async throws -> BackgroundJob? {
-        fail()
-    }
-
-    public func fetchAllJobs() async throws -> [BackgroundJob] {
-        fail()
-    }
-
-    public func fetchJobs(for _: UUID) async throws -> [BackgroundJob] {
-        fail()
-    }
-
-    public func fetchPendingJobs(limit _: Int) async throws -> [BackgroundJob] {
-        fail()
-    }
-
-    public func deleteJob(id _: UUID) async throws {
-        fail()
-    }
-
-    public func monitorJobs() async -> AsyncStream<BackgroundJobEvent> {
-        fail()
-    }
-
-    public func saveMSAgent(_: MSAgent) async throws {
-        fail()
-    }
-
-    public func fetchMSAgent(id _: UUID) async throws -> MSAgent? {
-        fail()
-    }
-
-    public func fetchMSAgent(key _: String) async throws -> MSAgent? {
-        fail()
-    }
-
-    public func fetchAllMSAgents() async throws -> [MSAgent] {
-        fail()
-    }
-
-    public func hasMSAgent(id _: String) async -> Bool {
-        fail()
-    }
-
-    public func saveWorkspace(_: WorkspaceReference) async throws {
-        fail()
-    }
-
-    public func fetchWorkspace(id _: UUID) async throws -> WorkspaceReference? {
-        fail()
-    }
-
-    public func fetchWorkspace(id _: UUID, includeTools _: Bool) async throws -> WorkspaceReference? {
-        fail()
-    }
-
-    public func fetchAllWorkspaces() async throws -> [WorkspaceReference] {
-        fail()
-    }
-
-    public func deleteWorkspace(id _: UUID) async throws {
-        fail()
-    }
-
-    public func addToolToWorkspace(workspaceId _: UUID, tool _: ToolReference) async throws {
-        fail()
-    }
-
-    public func syncTools(workspaceId _: UUID, tools _: [ToolReference]) async throws {
-        fail()
-    }
-
-    public func fetchTools(forWorkspaces _: [UUID]) async throws -> [ToolReference] {
-        fail()
-    }
-
-    public func fetchClientTools(clientId _: UUID) async throws -> [ToolReference] {
-        fail()
-    }
-
-    public func findWorkspaceId(forToolId _: String, in _: [UUID]) async throws -> UUID? {
-        fail()
-    }
-
-    public func fetchToolSource(toolId _: String, workspaceIds _: [UUID], primaryWorkspaceId _: UUID?) async throws -> String? {
-        fail()
-    }
-
-    /// AgentInstanceStoreProtocol
-    public func saveAgentInstance(_: AgentInstance) async throws {
-        fail()
-    }
-
-    public func fetchAgentInstance(id _: UUID) async throws -> AgentInstance? {
-        fail()
-    }
-
-    public func fetchAllAgentInstances() async throws -> [AgentInstance] {
-        fail()
-    }
-
-    public func deleteAgentInstance(id _: UUID) async throws {
-        fail()
-    }
-
-    public func fetchTimelines(attachedToAgent _: UUID) async throws -> [Timeline] {
-        fail()
-    }
-
-    /// ClientStoreProtocol
-    public func saveClient(_: ClientIdentity) async throws {
-        fail()
-    }
-
-    public func fetchClient(id _: UUID) async throws -> ClientIdentity? {
-        fail()
-    }
-
-    public func fetchAllClients() async throws -> [ClientIdentity] {
-        fail()
-    }
-
-    public func deleteClient(id _: UUID) async throws -> Bool {
-        fail()
-    }
+public struct UnconfiguredWorkspacePersistence: WorkspacePersistenceProtocol {
+    public init() {}
+    private func fail() -> Never { fatalError("WorkspacePersistence not configured.") }
+    public func saveWorkspace(_: WorkspaceReference) async throws { fail() }
+    public func fetchWorkspace(id _: UUID) async throws -> WorkspaceReference? { fail() }
+    public func fetchWorkspace(id _: UUID, includeTools _: Bool) async throws -> WorkspaceReference? { fail() }
+    public func fetchAllWorkspaces() async throws -> [WorkspaceReference] { fail() }
+    public func deleteWorkspace(id _: UUID) async throws { fail() }
 }

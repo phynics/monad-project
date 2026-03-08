@@ -13,7 +13,7 @@ struct JobQueueTests {
         let mock = MockPersistenceService()
         let sid = UUID()
         persistence = mock
-        context = BackgroundJobQueueContext(persistenceService: mock, timelineId: sid)
+        context = BackgroundJobQueueContext(backgroundJobStore: mock, timelineId: sid)
 
         let session = Timeline(id: sid, title: "Test Session")
         try await mock.saveTimeline(session)

@@ -12,7 +12,10 @@ import MonadShared
 /// - `attach` is idempotent: re-attaching the same agent to the same timeline is a no-op.
 /// - If `attachedAgentInstanceId` references a deleted agent, it is nulled on access.
 public actor AgentInstanceManager {
-    @Dependency(\.persistenceService) private var persistence
+    @Dependency(\.agentInstanceStore) private var instanceStore
+    @Dependency(\.timelinePersistence) private var timelineStore
+    @Dependency(\.messageStore) private var messageStore
+    @Dependency(\.workspacePersistence) private var workspaceStore
 
     private let workspaceRoot: URL
     private let logger = Logger.module(named: "agent-instance-manager")
@@ -69,7 +72,7 @@ public actor AgentInstanceManager {
             rootPath: agentWorkspaceURL.path,
             trustLevel: .full
         )
-        try await persistence.saveWorkspace(workspace)
+        try await workspaceStore.saveWorkspace(workspace)
 
         // 4. Persist private timeline
         let privateTimeline = Timeline(
@@ -79,7 +82,7 @@ public actor AgentInstanceManager {
             isPrivate: true,
             ownerAgentInstanceId: instanceId
         )
-        try await persistence.saveTimeline(privateTimeline)
+        try await timelineStore.saveTimeline(privateTimeline)
 
         // 5. Persist agent instance
         let instance = AgentInstance(
@@ -89,7 +92,7 @@ public actor AgentInstanceManager {
             primaryWorkspaceId: workspace.id,
             privateTimelineId: privateTimelineId
         )
-        try await persistence.saveAgentInstance(instance)
+        try await instanceStore.saveAgentInstance(instance)
 
         // 6. Log creation to private timeline
         let creationMsg = ConversationMessage(
@@ -97,7 +100,7 @@ public actor AgentInstanceManager {
             role: .system,
             content: "[CREATED] Agent instance '\(name)' (\(instanceId.uuidString)) created."
         )
-        try await persistence.saveMessage(creationMsg)
+        try await messageStore.saveMessage(creationMsg)
 
         logger.info("Created agent instance '\(name)' (\(instanceId))")
         return instance
@@ -111,10 +114,10 @@ public actor AgentInstanceManager {
     /// - Fails if a different agent is attached (caller must detach it first).
     /// - If `attachedAgentInstanceId` references a non-existent agent, it is cleared automatically.
     public func attach(agentId: UUID, to timelineId: UUID) async throws {
-        guard var timeline = try await persistence.fetchTimeline(id: timelineId) else {
+        guard var timeline = try await timelineStore.fetchTimeline(id: timelineId) else {
             throw AgentInstanceError.timelineNotFound(timelineId)
         }
-        guard let agent = try await persistence.fetchAgentInstance(id: agentId) else {
+        guard let agent = try await instanceStore.fetchAgentInstance(id: agentId) else {
             throw AgentInstanceError.instanceNotFound(agentId)
         }
 
@@ -123,7 +126,7 @@ public actor AgentInstanceManager {
 
         // Check for existing attachment
         if let existingId = timeline.attachedAgentInstanceId {
-            if try await persistence.fetchAgentInstance(id: existingId) != nil {
+            if try await instanceStore.fetchAgentInstance(id: existingId) != nil {
                 throw AgentInstanceError.differentAgentAlreadyAttached(existingId)
             }
             // Dangling reference — clear it with a warning
@@ -132,7 +135,7 @@ public actor AgentInstanceManager {
 
         timeline.attachedAgentInstanceId = agentId
         timeline.updatedAt = Date()
-        try await persistence.saveTimeline(timeline)
+        try await timelineStore.saveTimeline(timeline)
 
         // Log to agent's private timeline
         let logMsg = ConversationMessage(
@@ -140,7 +143,7 @@ public actor AgentInstanceManager {
             role: .system,
             content: "[ATTACH] timeline \"\(timeline.title)\" (\(timelineId.uuidString))"
         )
-        try? await persistence.saveMessage(logMsg)
+        try? await messageStore.saveMessage(logMsg)
 
         logger.info("Agent '\(agent.name)' attached to timeline '\(timeline.title)'")
     }
@@ -148,7 +151,7 @@ public actor AgentInstanceManager {
     /// Detaches an agent instance from a timeline.
     /// No-op if the agent is not attached to that timeline.
     public func detach(agentId: UUID, from timelineId: UUID) async throws {
-        guard var timeline = try await persistence.fetchTimeline(id: timelineId) else {
+        guard var timeline = try await timelineStore.fetchTimeline(id: timelineId) else {
             throw AgentInstanceError.timelineNotFound(timelineId)
         }
 
@@ -156,16 +159,16 @@ public actor AgentInstanceManager {
 
         timeline.attachedAgentInstanceId = nil
         timeline.updatedAt = Date()
-        try await persistence.saveTimeline(timeline)
+        try await timelineStore.saveTimeline(timeline)
 
         // Log to agent's private timeline if it still exists
-        if let agent = try? await persistence.fetchAgentInstance(id: agentId) {
+        if let agent = try? await instanceStore.fetchAgentInstance(id: agentId) {
             let logMsg = ConversationMessage(
                 timelineId: agent.privateTimelineId,
                 role: .system,
                 content: "[DETACH] timeline \"\(timeline.title)\" (\(timelineId.uuidString))"
             )
-            try? await persistence.saveMessage(logMsg)
+            try? await messageStore.saveMessage(logMsg)
             logger.info("Agent '\(agent.name)' detached from timeline '\(timeline.title)'")
         }
     }
@@ -175,38 +178,38 @@ public actor AgentInstanceManager {
     /// Returns the agent instance attached to a timeline, or nil.
     /// Clears dangling references if the referenced agent no longer exists.
     public func getAttachedAgent(for timelineId: UUID) async -> AgentInstance? {
-        guard let timeline = try? await persistence.fetchTimeline(id: timelineId),
+        guard let timeline = try? await timelineStore.fetchTimeline(id: timelineId),
               let agentId = timeline.attachedAgentInstanceId else { return nil }
 
-        if let agent = try? await persistence.fetchAgentInstance(id: agentId) {
+        if let agent = try? await instanceStore.fetchAgentInstance(id: agentId) {
             return agent
         }
 
         // Dangling reference — clear it
-        if var stale = try? await persistence.fetchTimeline(id: timelineId) {
+        if var stale = try? await timelineStore.fetchTimeline(id: timelineId) {
             stale.attachedAgentInstanceId = nil
-            try? await persistence.saveTimeline(stale)
+            try? await timelineStore.saveTimeline(stale)
             logger.warning("Cleared dangling agent \(agentId) reference on timeline \(timelineId)")
         }
         return nil
     }
 
     public func getInstance(id: UUID) async throws -> AgentInstance? {
-        try await persistence.fetchAgentInstance(id: id)
+        try await instanceStore.fetchAgentInstance(id: id)
     }
 
     public func listInstances() async throws -> [AgentInstance] {
-        try await persistence.fetchAllAgentInstances()
+        try await instanceStore.fetchAllAgentInstances()
     }
 
     public func getTimelines(attachedTo agentId: UUID) async throws -> [Timeline] {
-        try await persistence.fetchTimelines(attachedToAgent: agentId)
+        try await instanceStore.fetchTimelines(attachedToAgent: agentId)
     }
 
     public func updateInstance(_ instance: AgentInstance) async throws {
         var updated = instance
         updated.updatedAt = Date()
-        try await persistence.saveAgentInstance(updated)
+        try await instanceStore.saveAgentInstance(updated)
     }
 
     // MARK: - Delete
@@ -214,7 +217,7 @@ public actor AgentInstanceManager {
     /// Deletes an agent instance and optionally force-detaches it from all timelines.
     /// - Parameter force: If false, throws if the agent is still attached to any timelines.
     public func deleteInstance(id: UUID, force: Bool = false) async throws {
-        let attachedTimelines = try await persistence.fetchTimelines(attachedToAgent: id)
+        let attachedTimelines = try await instanceStore.fetchTimelines(attachedToAgent: id)
 
         if !attachedTimelines.isEmpty, !force {
             throw AgentInstanceError.hasAttachedTimelines(count: attachedTimelines.count)
@@ -224,10 +227,10 @@ public actor AgentInstanceManager {
         for var timeline in attachedTimelines {
             timeline.attachedAgentInstanceId = nil
             timeline.updatedAt = Date()
-            try await persistence.saveTimeline(timeline)
+            try await timelineStore.saveTimeline(timeline)
         }
 
-        try await persistence.deleteAgentInstance(id: id)
+        try await instanceStore.deleteAgentInstance(id: id)
         logger.info("Deleted agent instance \(id)")
     }
 }

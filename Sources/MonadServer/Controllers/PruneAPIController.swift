@@ -3,13 +3,14 @@ import HTTPTypes
 import Hummingbird
 import MonadShared
 import NIOCore
+import Dependencies
 
 public struct PruneAPIController<Context: RequestContext>: Sendable {
-    public let persistenceService: PersistenceService
+    @Dependency(\.memoryStore) var memoryStore
+    @Dependency(\.timelinePersistence) var timelineStore
+    @Dependency(\.messageStore) var messageStore
 
-    public init(persistenceService: PersistenceService) {
-        self.persistenceService = persistenceService
-    }
+    public init() {}
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("/memories", use: pruneMemories)
@@ -25,10 +26,10 @@ public struct PruneAPIController<Context: RequestContext>: Sendable {
         let count: Int
 
         if let query = input.query {
-            count = try await persistenceService.pruneMemories(matching: query, dryRun: dryRun)
+            count = try await memoryStore.pruneMemories(matching: query, dryRun: dryRun)
         } else if let days = input.days {
             let timeInterval = Double(days) * 24 * 60 * 60
-            count = try await persistenceService.pruneMemories(
+            count = try await memoryStore.pruneMemories(
                 olderThan: timeInterval, dryRun: dryRun)
         } else {
             // Default to 0 or error? Currently treating as empty op if neither provided
@@ -45,7 +46,7 @@ public struct PruneAPIController<Context: RequestContext>: Sendable {
         let dryRun = input.dryRun
         let count: Int
         do {
-            count = try await persistenceService.pruneTimelines(
+            count = try await timelineStore.pruneTimelines(
                 olderThan: timeInterval, excluding: input.excludedTimelineIds, dryRun: dryRun
             )
         } catch {
@@ -60,7 +61,7 @@ public struct PruneAPIController<Context: RequestContext>: Sendable {
         let input = try await request.decode(as: PruneMessagesRequest.self, context: context)
         let timeInterval = Double(input.days) * 24 * 60 * 60
         let dryRun = input.dryRun
-        let count = try await persistenceService.pruneMessages(
+        let count = try await messageStore.pruneMessages(
             olderThan: timeInterval, dryRun: dryRun)
 
         return PruneResponse(count: count, dryRun: dryRun)

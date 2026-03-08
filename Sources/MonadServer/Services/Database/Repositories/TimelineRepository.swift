@@ -1,10 +1,53 @@
+import GRDB
+import MonadCore
 import MonadShared
 import Foundation
-import GRDB
 import Logging
-import MonadCore
 
-extension PersistenceService {
+public actor TimelineRepository: TimelinePersistenceProtocol {
+    private let dbQueue: DatabaseQueue
+    private let logger = Logger.module(named: "TimelineRepository")
+
+    public init(dbQueue: DatabaseQueue) {
+        self.dbQueue = dbQueue
+    }
+
+    public func saveTimeline(_ session: Timeline) async throws {
+        logger.debug("Saving session: \(session.id)")
+        try await dbQueue.write { db in
+            try session.save(db)
+        }
+    }
+
+    public func fetchTimeline(id: UUID) async throws -> Timeline? {
+        try await dbQueue.read { db in
+            try Timeline.fetchOne(db, key: ["id": id])
+        }
+    }
+
+    public func fetchAllTimelines(includeArchived: Bool = false) async throws -> [Timeline] {
+        try await dbQueue.read { db in
+            if includeArchived {
+                return
+                    try Timeline
+                    .order(Column("updatedAt").desc)
+                    .fetchAll(db)
+            } else {
+                return
+                    try Timeline
+                    .filter(Column("isArchived") == false)
+                    .order(Column("updatedAt").desc)
+                    .fetchAll(db)
+            }
+        }
+    }
+
+    public func deleteTimeline(id: UUID) async throws {
+        _ = try await dbQueue.write { db in
+            try Timeline.deleteOne(db, key: ["id": id])
+        }
+    }
+
     /// Search archived timelines by title, tags, or message content
     public func searchArchivedTimelines(query: String) throws -> [Timeline] {
         try dbQueue.read { database in
@@ -91,59 +134,6 @@ extension PersistenceService {
                     }
                 }
                 return deletedCount
-            }
-        }
-    }
-
-    public func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws
-        -> Int {
-        try await dbQueue.write { database in
-            let cutoffDate = Date().addingTimeInterval(-timeInterval)
-            let query =
-                ConversationMessage
-                .filter(Column("timestamp") < cutoffDate)
-                .filter(
-                    sql: "timelineId IN (SELECT id FROM timeline WHERE isArchived = 0)")
-
-            if dryRun {
-                return try query.fetchCount(database)
-            } else {
-                return try query.deleteAll(database)
-            }
-        }
-    }
-
-    public func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int {
-        try await dbQueue.write { database in
-            let pattern = "%\(query)%"
-            let request =
-                Memory
-                .filter(
-                    Column("title").like(pattern) || Column("content").like(pattern)
-                        || Column("tags").like(pattern)
-                )
-
-            if dryRun {
-                return try request.fetchCount(database)
-            } else {
-                return try request.deleteAll(database)
-            }
-        }
-    }
-
-    public func pruneMemories(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws
-        -> Int {
-        let cutoffDate = Date().addingTimeInterval(-timeInterval)
-
-        return try await dbQueue.write { database in
-            let request =
-                Memory
-                .filter(Column("createdAt") < cutoffDate)
-
-            if dryRun {
-                return try request.fetchCount(database)
-            } else {
-                return try request.deleteAll(database)
             }
         }
     }

@@ -13,7 +13,15 @@ struct WorkspaceRepositoryTests {
     func testCreateWorkspace() async throws {
         let persistence = MockPersistenceService()
         let repository = try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
         } operation: {
             WorkspaceRepository()
         }
@@ -42,7 +50,15 @@ struct WorkspaceRepositoryTests {
     func testGetWorkspace() async throws {
         let persistence = MockPersistenceService()
         let repository = try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
         } operation: {
             WorkspaceRepository()
         }
@@ -65,7 +81,15 @@ struct WorkspaceRepositoryTests {
     func testListWorkspaces() async throws {
         let persistence = MockPersistenceService()
         let repository = try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
         } operation: {
             WorkspaceRepository()
         }
@@ -85,7 +109,15 @@ struct WorkspaceRepositoryTests {
     func testDeleteWorkspace() async throws {
         let persistence = MockPersistenceService()
         let repository = try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
         } operation: {
             WorkspaceRepository()
         }
@@ -102,7 +134,15 @@ struct WorkspaceRepositoryTests {
     func testUpdateWorkspace() async throws {
         let persistence = MockPersistenceService()
         let repository = try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
         } operation: {
             WorkspaceRepository()
         }

@@ -6,7 +6,7 @@ import Dependencies
 /// Registry for managing available msAgents in the system.
 /// Now backed by the Persistence Layer (Database).
 public actor MSAgentRegistry {
-    @Dependency(\.persistenceService) private var persistence
+    @Dependency(\.msAgentStore) private var persistence
     private let logger = Logger.module(named: "agent-registry")
 
     public init() {}

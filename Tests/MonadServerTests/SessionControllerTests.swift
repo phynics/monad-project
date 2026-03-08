@@ -1,49 +1,50 @@
-import MonadShared
-import MonadCore
-import Testing
+import Dependencies
+import Foundation
 import Hummingbird
 import HummingbirdTesting
-import Foundation
-import MonadTestSupport
+import MonadCore
 @testable import MonadServer
-import Dependencies
+import MonadShared
+import MonadTestSupport
+import Testing
 
 @Suite struct SessionControllerTests {
-
     @Test("Test Create Session Endpoint")
-    func testCreateSession() async throws {
-        // Setup deps
+    func createSession() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
             $0.msAgentRegistry = MSAgentRegistry()
         } operation: {
-            let timelineManager = TimelineManager(
-                workspaceRoot: workspaceRoot
-            )
+            let timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
 
-            // Setup App
-            let router = Router()
-            let controller = TimelineAPIController<BasicRequestContext>(timelineManager: timelineManager)
-            controller.addRoutes(to: router.group("/sessions"))
+            try await withDependencies {
+                $0.timelineManager = timelineManager
+            } operation: {
+                let router = Router()
+                let controller = TimelineAPIController<BasicRequestContext>()
+                controller.addRoutes(to: router.group("/sessions"))
+                let app = Application(router: router)
 
-            let app = Application(router: router)
+                try await app.test(.router) { client in
+                    try await client.execute(uri: "/sessions", method: .post) { response in
+                        #expect(response.status == .created)
 
-            // Test
-            try await app.test(.router) { client in
-                try await client.execute(uri: "/sessions", method: .post) { response in
-                    #expect(response.status == .created)
-
-                    let decoder = JSONDecoder()
-                    decoder.dateDecodingStrategy = .iso8601
-                    let session = try decoder.decode(TimelineResponse.self, from: response.body)
-                    #expect(session.id.uuidString.isEmpty == false)
+                        let decoder = JSONDecoder()
+                        decoder.dateDecodingStrategy = .iso8601
+                        let session = try decoder.decode(TimelineResponse.self, from: response.body)
+                        #expect(session.id.uuidString.isEmpty == false)
+                    }
                 }
             }
         }

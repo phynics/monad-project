@@ -22,7 +22,15 @@ import NIOCore
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
@@ -50,13 +58,13 @@ import NIOCore
             } operation: {
                 let toolRouter = ToolRouter()
                 try await withDependencies {
+                    $0.chatEngine = ChatEngine()
                     $0.toolRouter = toolRouter
                 } operation: {
-                    let engine = ChatEngine()
 
                     // Setup App
                     let router = Router()
-                    let controller = ChatAPIController<BasicRequestContext>(timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter)
+                    let controller = ChatAPIController<BasicRequestContext>()
                     controller.addRoutes(to: router.group("/sessions"))
 
                     let app = Application(router: router)
@@ -89,7 +97,15 @@ import NIOCore
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
@@ -117,13 +133,13 @@ import NIOCore
             } operation: {
                 let toolRouter = ToolRouter()
                 try await withDependencies {
+                    $0.chatEngine = ChatEngine()
                     $0.toolRouter = toolRouter
                 } operation: {
-                    let engine = ChatEngine()
 
                     // Setup App
                     let router = Router()
-                    let controller = ChatAPIController<BasicRequestContext>(timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter)
+                    let controller = ChatAPIController<BasicRequestContext>()
                     controller.addRoutes(to: router.group("/sessions"))
 
                     let app = Application(router: router)

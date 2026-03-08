@@ -12,14 +12,16 @@ public struct TimelineSendTool: MonadShared.Tool, Sendable {
     public let description = "Post a message to another conversation timeline without attaching to it. The message is queued and will be visible to the next agent that processes that timeline."
     public let requiresPermission = true
 
-    private let persistenceService: any MessageStoreProtocol & TimelinePersistenceProtocol
+    private let messageStore: any MessageStoreProtocol
+    private let timelineStore: any TimelinePersistenceProtocol
     private let agentInstanceId: UUID
-
     public init(
-        persistenceService: any MessageStoreProtocol & TimelinePersistenceProtocol,
+        messageStore: any MessageStoreProtocol,
+        timelineStore: any TimelinePersistenceProtocol,
         agentInstanceId: UUID
     ) {
-        self.persistenceService = persistenceService
+        self.messageStore = messageStore
+        self.timelineStore = timelineStore
         self.agentInstanceId = agentInstanceId
     }
 
@@ -51,7 +53,7 @@ public struct TimelineSendTool: MonadShared.Tool, Sendable {
         }
 
         // Validate target timeline exists and is accessible
-        guard let timeline = try? await persistenceService.fetchTimeline(id: timelineId) else {
+        guard let timeline = try? await timelineStore.fetchTimeline(id: timelineId) else {
             return .failure("Timeline not found: \(timelineIdStr)")
         }
         if timeline.isPrivate && timeline.ownerAgentInstanceId != agentInstanceId {
@@ -65,7 +67,7 @@ public struct TimelineSendTool: MonadShared.Tool, Sendable {
             agentInstanceId: agentInstanceId,
             remoteDepth: 1
         )
-        try await persistenceService.saveMessage(msg)
+        try await messageStore.saveMessage(msg)
 
         return .success("Message posted to timeline '\(timeline.title)'.")
     }

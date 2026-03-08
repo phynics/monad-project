@@ -8,4 +8,5 @@ public protocol ClientStoreProtocol: Sendable {
     func fetchClient(id: UUID) async throws -> ClientIdentity?
     func fetchAllClients() async throws -> [ClientIdentity]
     func deleteClient(id: UUID) async throws -> Bool
+    func fetchClientTools(clientId: UUID) async throws -> [ToolReference]
 }

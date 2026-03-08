@@ -30,4 +30,8 @@ public final class MockTimelinePersistence: TimelinePersistenceProtocol, @unchec
     public func deleteTimeline(id: UUID) async throws {
         timelines.removeAll(where: { $0.id == id })
     }
+
+    public func pruneTimelines(olderThan timeInterval: TimeInterval, excluding excludedTimelineIds: [UUID], dryRun: Bool) async throws -> Int {
+        return 0
+    }
 }

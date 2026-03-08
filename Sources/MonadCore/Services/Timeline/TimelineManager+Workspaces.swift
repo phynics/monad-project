@@ -10,7 +10,7 @@ extension TimelineManager {
 
         if let memoryTimeline = timelines[timelineId] {
             timeline = memoryTimeline
-        } else if let dbTimeline = try await persistenceService.fetchTimeline(id: timelineId) {
+        } else if let dbTimeline = try await timelineStore.fetchTimeline(id: timelineId) {
             timeline = dbTimeline
         } else {
             throw TimelineError.timelineNotFound
@@ -39,7 +39,7 @@ extension TimelineManager {
             timelines[timelineId] = timeline
         }
         // Always save to DB
-        try await persistenceService.saveTimeline(timeline)
+        try await timelineStore.saveTimeline(timeline)
 
         // Update ToolManager
         if let toolManager = toolManagers[timelineId] {
@@ -55,7 +55,7 @@ extension TimelineManager {
 
         if let memoryTimeline = timelines[timelineId] {
             timeline = memoryTimeline
-        } else if let dbTimeline = try await persistenceService.fetchTimeline(id: timelineId) {
+        } else if let dbTimeline = try await timelineStore.fetchTimeline(id: timelineId) {
             timeline = dbTimeline
         } else {
             throw TimelineError.timelineNotFound
@@ -82,7 +82,7 @@ extension TimelineManager {
             timelines[timelineId] = timeline
         }
 
-        try await persistenceService.saveTimeline(timeline)
+        try await timelineStore.saveTimeline(timeline)
 
         // Update ToolManager
         if let toolManager = toolManagers[timelineId] {
@@ -97,7 +97,7 @@ extension TimelineManager {
         if let timeline = timelines[timelineId] {
             primaryId = timeline.primaryWorkspaceId
             attachedIds = timeline.attachedWorkspaces
-        } else if let timeline = try? await persistenceService.fetchTimeline(id: timelineId) {
+        } else if let timeline = try? await timelineStore.fetchTimeline(id: timelineId) {
             primaryId = timeline.primaryWorkspaceId
             attachedIds = timeline.attachedWorkspaces
         } else {
@@ -151,6 +151,6 @@ extension TimelineManager {
     }
 
     public func getWorkspace(_ id: UUID) async throws -> WorkspaceReference? {
-        return try await persistenceService.fetchWorkspace(id: id, includeTools: true)
+        return try await workspaceStore.fetchWorkspace(id: id, includeTools: true)
     }
 }

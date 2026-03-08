@@ -17,13 +17,13 @@ extension ChatEngine {
                     content: output.output,
                     toolCallId: output.toolCallId
                 )
-                try await persistenceService.saveMessage(msg)
+                try await messageStore.saveMessage(msg)
             }
         }
 
         if !message.isEmpty {
             let userMsg = ConversationMessage(timelineId: timelineId, role: .user, content: message)
-            try await persistenceService.saveMessage(userMsg)
+            try await messageStore.saveMessage(userMsg)
         } else if toolOutputs?.isEmpty ?? true {
             throw ToolError.invalidArgument("input", expected: "message or toolOutputs", got: "empty")
         }

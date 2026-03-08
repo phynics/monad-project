@@ -8,6 +8,13 @@ public enum MSAgentRegistryKey: DependencyKey {
     public static let liveValue = MSAgentRegistry()
 }
 
+public enum WorkspaceManagerKey: DependencyKey {
+    public static let liveValue = WorkspaceManager(
+        repository: WorkspaceRepository(),
+        workspaceCreator: NullWorkspaceCreator()
+    )
+}
+
 public enum TimelineManagerKey: DependencyKey {
     public static let liveValue = TimelineManager(
         workspaceRoot: FileManager.default.temporaryDirectory // Default for unconfigured
@@ -24,7 +31,8 @@ public enum ChatEngineKey: DependencyKey {
 
 public enum MSAgentExecutorKey: DependencyKey {
     public static let liveValue = MSAgentExecutor(
-        persistenceService: UnconfiguredPersistenceService(),
+        backgroundJobStore: UnconfiguredBackgroundJobStore(),
+        messageStore: UnconfiguredMessageStore(),
         chatEngine: ChatEngine()
     )
 }
@@ -41,6 +49,11 @@ public extension DependencyValues {
     var msAgentRegistry: MSAgentRegistry {
         get { self[MSAgentRegistryKey.self] }
         set { self[MSAgentRegistryKey.self] = newValue }
+    }
+
+    var workspaceManager: WorkspaceManager {
+        get { self[WorkspaceManagerKey.self] }
+        set { self[WorkspaceManagerKey.self] = newValue }
     }
 
     var timelineManager: TimelineManager {

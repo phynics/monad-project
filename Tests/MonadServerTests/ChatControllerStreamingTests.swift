@@ -24,7 +24,15 @@ import MonadTestSupport
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
@@ -55,14 +63,13 @@ import MonadTestSupport
                 let toolRouter = ToolRouter()
                 // Also override toolRouter for ChatEngine
                 try await withDependencies {
+                    $0.chatEngine = ChatEngine()
                     $0.toolRouter = toolRouter
                 } operation: {
-                    let engine = ChatEngine()
 
                     // Setup App
                     let router = Router()
-                    let controller = ChatAPIController<BasicRequestContext>(
-                        timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter)
+                    let controller = ChatAPIController<BasicRequestContext>()
                     controller.addRoutes(to: router.group("/sessions"))
 
                     let app = Application(router: router)
@@ -102,7 +109,15 @@ import MonadTestSupport
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
@@ -126,12 +141,11 @@ import MonadTestSupport
             } operation: {
                 let toolRouter = ToolRouter()
                 try await withDependencies {
+                    $0.chatEngine = ChatEngine()
                     $0.toolRouter = toolRouter
                 } operation: {
-                    let engine = ChatEngine()
                     let router = Router()
-                    let controller = ChatAPIController<BasicRequestContext>(
-                        timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter)
+                    let controller = ChatAPIController<BasicRequestContext>()
                     controller.addRoutes(to: router.group("/sessions"))
                     let app = Application(router: router)
                     let chatRequest = ChatRequest(message: "Wait for it")
@@ -176,7 +190,15 @@ import MonadTestSupport
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
             $0.msAgentRegistry = MSAgentRegistry()
@@ -193,14 +215,13 @@ import MonadTestSupport
             } operation: {
                 let toolRouter = ToolRouter()
                  try await withDependencies {
+                    $0.chatEngine = ChatEngine()
                     $0.toolRouter = toolRouter
                 } operation: {
-                    let engine = ChatEngine()
 
                     // Setup App
                     let router = Router()
-                    let controller = ChatAPIController<BasicRequestContext>(
-                        timelineManager: timelineManager, chatEngine: engine, toolRouter: toolRouter)
+                    let controller = ChatAPIController<BasicRequestContext>()
                     controller.addRoutes(to: router.group("/sessions"))
 
                     let app = Application(router: router)

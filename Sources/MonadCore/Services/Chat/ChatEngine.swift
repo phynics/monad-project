@@ -21,7 +21,9 @@ public final class ChatEngine: @unchecked Sendable {
     }
 
     @Dependency(\.timelineManager) var timelineManager
-    @Dependency(\.persistenceService) var persistenceService
+    @Dependency(\.agentInstanceStore) var agentInstanceStore
+    @Dependency(\.clientStore) var clientStore
+    @Dependency(\.messageStore) var messageStore
     @Dependency(\.llmService) var llmService
 
     let logger = Logger.module(named: "com.monad.chat-engine")
@@ -75,7 +77,7 @@ public final class ChatEngine: @unchecked Sendable {
 
         // Fetch attached agent instance for identity context
         let agentInstance: AgentInstance? = resolvedAgentId != nil
-            ? try? await persistenceService.fetchAgentInstance(id: resolvedAgentId!)
+            ? try? await agentInstanceStore.fetchAgentInstance(id: resolvedAgentId!)
             : nil
 
         var clientName: String?
@@ -85,7 +87,7 @@ public final class ChatEngine: @unchecked Sendable {
         if let primaryWorkspace = workspaces?.primary {
             if let ownerId = primaryWorkspace.ownerId {
                 // Try to get client
-                if let client = try? await persistenceService.fetchClient(id: ownerId) {
+                if let client = try? await clientStore.fetchClient(id: ownerId) {
                     clientName = client.displayName
                 }
             }
@@ -242,7 +244,7 @@ public final class ChatEngine: @unchecked Sendable {
                 guard let self = self else { return ([], false, []) }
                 return await self.executeTools(calls: calls, availableTools: tools, turnCount: turn, continuation: cont)
             }, logger: logger))
-            .add(PersistenceStage(persistenceService: persistenceService, timelineManager: timelineManager, logger: logger))
+            .add(PersistenceStage(messageStore: messageStore, timelineManager: timelineManager, logger: logger))
 
         try await pipeline.execute(&context)
 

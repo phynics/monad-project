@@ -17,7 +17,15 @@ final class SessionSeedingTests: XCTestCase {
 
     func testSessionSeeding() async throws {
         try await withDependencies {
-            $0.persistenceService = persistence
+            $0.timelinePersistence = persistence
+            $0.workspacePersistence = persistence
+            $0.memoryStore = persistence
+            $0.messageStore = persistence
+            $0.msAgentStore = persistence
+            $0.backgroundJobStore = persistence
+            $0.clientStore = persistence
+            $0.toolPersistence = persistence
+            $0.agentInstanceStore = persistence
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()
             $0.msAgentRegistry = MSAgentRegistry()

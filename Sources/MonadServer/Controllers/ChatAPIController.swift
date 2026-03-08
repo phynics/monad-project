@@ -1,5 +1,7 @@
 import Foundation
+import Dependencies
 import HTTPTypes
+import Dependencies
 import Hummingbird
 import Logging
 import MonadCore
@@ -8,20 +10,12 @@ import NIOCore
 import OpenAI
 
 public struct ChatAPIController<Context: RequestContext>: Sendable {
-    public let timelineManager: TimelineManager
-    public let chatEngine: ChatEngine
-    public let toolRouter: ToolRouter
+    @Dependency(\.timelineManager) var timelineManager: TimelineManager
+    @Dependency(\.chatEngine) var chatEngine: ChatEngine
+    @Dependency(\.toolRouter) var toolRouter: ToolRouter
     public let verbose: Bool
 
-    public init(
-        timelineManager: TimelineManager,
-        chatEngine: ChatEngine,
-        toolRouter: ToolRouter,
-        verbose: Bool = false
-    ) {
-        self.timelineManager = timelineManager
-        self.chatEngine = chatEngine
-        self.toolRouter = toolRouter
+    public init(verbose: Bool = false) {
         self.verbose = verbose
     }
 

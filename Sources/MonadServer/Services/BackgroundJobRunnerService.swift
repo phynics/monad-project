@@ -10,6 +10,7 @@ public final class BackgroundJobRunnerService: Service, @unchecked Sendable {
     private let timelineManager: TimelineManager
     private let msAgentRegistry: MSAgentRegistry
     private let msAgentExecutor: MSAgentExecutor
+    @Dependency(\.backgroundJobStore) private var backgroundJobStore
 
     private let logger = Logger(label: "com.monad.job-runner")
 
@@ -27,11 +28,9 @@ public final class BackgroundJobRunnerService: Service, @unchecked Sendable {
     public func run() async throws {
         logger.info("BackgroundJob Runner Service started (Event Driven)")
 
-        let persistence = await timelineManager.getPersistenceService()
-
         // Initial scan
         do {
-            try await processPendingJobs(persistence)
+            try await processPendingJobs(backgroundJobStore)
         } catch {
             logger.error("Initial job scan failed: \(error)")
         }
@@ -40,7 +39,7 @@ public final class BackgroundJobRunnerService: Service, @unchecked Sendable {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 // 1. Event Stream Listener
                 group.addTask {
-                    for await event in await persistence.monitorJobs() {
+                    for await event in await self.backgroundJobStore.monitorJobs() {
                         if Task.isCancelled { break }
                         switch event {
                         case let .jobAdded(job), let .jobUpdated(job):
@@ -50,7 +49,7 @@ public final class BackgroundJobRunnerService: Service, @unchecked Sendable {
                                     continue
                                 }
                                 do {
-                                    try await self.processJob(job, persistence: persistence)
+                                    try await self.processJob(job, persistence: self.backgroundJobStore)
                                 } catch {
                                     self.logger.error("Failed to process event-driven job \(job.id): \(error)")
                                 }
@@ -66,7 +65,7 @@ public final class BackgroundJobRunnerService: Service, @unchecked Sendable {
                     while !Task.isCancelled {
                         do {
                             try await Task.sleep(nanoseconds: 10 * 1_000_000_000) // Check every 10s
-                            try await self.processPendingJobs(persistence)
+                            try await self.processPendingJobs(self.backgroundJobStore)
                         } catch is CancellationError {
                             break
                         } catch {

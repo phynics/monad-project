@@ -1,22 +1,18 @@
 import Foundation
+import Dependencies
 import Hummingbird
+import Dependencies
 import MonadCore
 import MonadShared
 import NIOCore
 
 public struct StatusAPIController<Context: RequestContext>: Sendable {
-    public let persistenceService: any HealthCheckable
-    public let llmService: any LLMServiceProtocol
+    @Dependency(\.databaseManager) var databaseManager
+    @Dependency(\.llmService) var llmService
     public let startTime: Date
     public let version = "1.0.0"
 
-    public init(
-        persistenceService: any HealthCheckable,
-        llmService: any LLMServiceProtocol,
-        startTime: Date
-    ) {
-        self.persistenceService = persistenceService
-        self.llmService = llmService
+    public init(startTime: Date) {
         self.startTime = startTime
     }
 
@@ -26,8 +22,8 @@ public struct StatusAPIController<Context: RequestContext>: Sendable {
 
     @Sendable func getStatus(_ request: Request, context: Context) async throws -> StatusResponse {
         // Run health checks
-        let dbHealth = await persistenceService.checkHealth()
-        let dbDetails = await persistenceService.getHealthDetails()
+        let dbHealth = await databaseManager.checkHealth()
+        let dbDetails = await databaseManager.getHealthDetails()
 
         let aiHealth = await llmService.checkHealth()
         let aiDetails = await llmService.getHealthDetails()

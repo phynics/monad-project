@@ -4,13 +4,13 @@ import Hummingbird
 import MonadCore
 import MonadShared
 import NIOCore
+import Dependencies
 
 public struct TimelineAPIController<Context: RequestContext>: Sendable {
-    public let timelineManager: TimelineManager
+    @Dependency(\.timelineManager) var timelineManager
+    @Dependency(\.timelinePersistence) var timelineStore
 
-    public init(timelineManager: TimelineManager) {
-        self.timelineManager = timelineManager
-    }
+    public init() {}
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("/", use: create)
@@ -91,8 +91,7 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
 
         guard let timeline = await timelineManager.getTimeline(id: id) else {
              // Fallback to DB if not in memory
-             let persistence = await timelineManager.getPersistenceService()
-             if let dbTimeline = try? await persistence.fetchTimeline(id: id) {
+             if let dbTimeline = try? await timelineStore.fetchTimeline(id: id) {
                  return TimelineResponse(
                      id: dbTimeline.id,
                      title: dbTimeline.title,
@@ -142,8 +141,7 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         await timelineManager.deleteTimeline(id: id)
 
         // Remove from DB
-        let persistence = await timelineManager.getPersistenceService()
-        try await persistence.deleteTimeline(id: id)
+        try await timelineStore.deleteTimeline(id: id)
 
         return .noContent
     }

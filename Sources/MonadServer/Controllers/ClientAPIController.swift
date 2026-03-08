@@ -2,16 +2,16 @@ import Foundation
 import GRDB
 import Hummingbird
 import Logging
-import MonadCore
 import MonadShared
+import Dependencies
 
 /// Controller for managing client identities
 public struct ClientAPIController<Context: RequestContext>: Sendable {
-    let persistenceService: any ClientStoreProtocol & WorkspacePersistenceProtocol & ToolPersistenceProtocol
+    @Dependency(\.clientStore) var clientStore
+    @Dependency(\.workspacePersistence) var workspaceStore
+    @Dependency(\.toolPersistence) var toolStore
 
-    public init(persistenceService: any ClientStoreProtocol & WorkspacePersistenceProtocol & ToolPersistenceProtocol) {
-        self.persistenceService = persistenceService
-    }
+    public init() {}
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("register", use: register)
@@ -47,12 +47,12 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
             trustLevel: .full
         )
 
-        try await persistenceService.saveClient(client)
-        try await persistenceService.saveWorkspace(defaultWorkspace)
+        try await clientStore.saveClient(client)
+        try await workspaceStore.saveWorkspace(defaultWorkspace)
 
         // Save tools
         for toolRef in input.tools {
-            try await persistenceService.addToolToWorkspace(workspaceId: defaultWorkspace.id, tool: toolRef)
+            try await toolStore.addToolToWorkspace(workspaceId: defaultWorkspace.id, tool: toolRef)
         }
 
         let response = ClientRegistrationResponse(
@@ -64,7 +64,7 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
     /// GET /clients/:id
     @Sendable func get(request _: Request, context: Context) async throws -> ClientIdentity {
         let id = try context.parameters.require("id", as: UUID.self)
-        let client = try await persistenceService.fetchClient(id: id)
+        let client = try await clientStore.fetchClient(id: id)
 
         guard let client = client else {
             throw HTTPError(.notFound)
@@ -75,13 +75,13 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
 
     /// GET /clients
     @Sendable func list(request _: Request, context _: Context) async throws -> [ClientIdentity] {
-        return try await persistenceService.fetchAllClients()
+        return try await clientStore.fetchAllClients()
     }
 
     /// DELETE /clients/:id
     @Sendable func delete(request _: Request, context: Context) async throws -> HTTPResponse.Status {
         let id = try context.parameters.require("id", as: UUID.self)
-        let deleted = try await persistenceService.deleteClient(id: id)
+        let deleted = try await clientStore.deleteClient(id: id)
 
         guard deleted else {
             throw HTTPError(.notFound)

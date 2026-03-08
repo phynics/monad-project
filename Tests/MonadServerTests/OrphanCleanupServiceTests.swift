@@ -37,11 +37,19 @@ final class OrphanCleanupServiceTests: XCTestCase {
         let session = Timeline(id: UUID(), title: "Test", primaryWorkspaceId: activeId)
         mockPersistence.timelines = [session]
 
-        let service = OrphanCleanupService(workspaceRoot: workspaceRoot, persistenceService: mockPersistence)
+        let service = OrphanCleanupService(workspaceRoot: workspaceRoot)
 
         // Act
         try await withDependencies {
-            $0.persistenceService = mockPersistence
+            $0.timelinePersistence = mockPersistence
+            $0.workspacePersistence = mockPersistence
+            $0.memoryStore = mockPersistence
+            $0.messageStore = mockPersistence
+            $0.msAgentStore = mockPersistence
+            $0.backgroundJobStore = mockPersistence
+            $0.clientStore = mockPersistence
+            $0.toolPersistence = mockPersistence
+            $0.agentInstanceStore = mockPersistence
         } operation: {
             // Internal cleanup method is private, but run() calls it once on start.
             // We'll use Task and cancellation to run it just once.
@@ -71,11 +79,19 @@ final class OrphanCleanupServiceTests: XCTestCase {
         mockPersistence.workspaces = [wsUser]
         mockPersistence.timelines = [] // No sessions, so it is technically "orphaned"
 
-        let service = OrphanCleanupService(workspaceRoot: workspaceRoot, persistenceService: mockPersistence)
+        let service = OrphanCleanupService(workspaceRoot: workspaceRoot)
 
         // Act
         try await withDependencies {
-            $0.persistenceService = mockPersistence
+            $0.timelinePersistence = mockPersistence
+            $0.workspacePersistence = mockPersistence
+            $0.memoryStore = mockPersistence
+            $0.messageStore = mockPersistence
+            $0.msAgentStore = mockPersistence
+            $0.backgroundJobStore = mockPersistence
+            $0.clientStore = mockPersistence
+            $0.toolPersistence = mockPersistence
+            $0.agentInstanceStore = mockPersistence
         } operation: {
             let task = Task {
                 try await service.run()

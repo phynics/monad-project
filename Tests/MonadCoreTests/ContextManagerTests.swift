@@ -14,7 +14,15 @@ struct ContextManagerTests {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
         let contextManager = try await withDependencies {
-            $0.persistenceService = mockPersistence
+            $0.timelinePersistence = mockPersistence
+            $0.workspacePersistence = mockPersistence
+            $0.memoryStore = mockPersistence
+            $0.messageStore = mockPersistence
+            $0.msAgentStore = mockPersistence
+            $0.backgroundJobStore = mockPersistence
+            $0.clientStore = mockPersistence
+            $0.toolPersistence = mockPersistence
+            $0.agentInstanceStore = mockPersistence
             $0.embeddingService = mockEmbedding
         } operation: {
             ContextManager(workspace: nil)
@@ -50,7 +58,15 @@ struct ContextManagerTests {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
         let contextManager = try await withDependencies {
-            $0.persistenceService = mockPersistence
+            $0.timelinePersistence = mockPersistence
+            $0.workspacePersistence = mockPersistence
+            $0.memoryStore = mockPersistence
+            $0.messageStore = mockPersistence
+            $0.msAgentStore = mockPersistence
+            $0.backgroundJobStore = mockPersistence
+            $0.clientStore = mockPersistence
+            $0.toolPersistence = mockPersistence
+            $0.agentInstanceStore = mockPersistence
             $0.embeddingService = mockEmbedding
         } operation: {
             ContextManager(workspace: nil)
@@ -89,7 +105,15 @@ struct ContextManagerTests {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
         let contextManager = try await withDependencies {
-            $0.persistenceService = mockPersistence
+            $0.timelinePersistence = mockPersistence
+            $0.workspacePersistence = mockPersistence
+            $0.memoryStore = mockPersistence
+            $0.messageStore = mockPersistence
+            $0.msAgentStore = mockPersistence
+            $0.backgroundJobStore = mockPersistence
+            $0.clientStore = mockPersistence
+            $0.toolPersistence = mockPersistence
+            $0.agentInstanceStore = mockPersistence
             $0.embeddingService = mockEmbedding
         } operation: {
             ContextManager(workspace: nil)
@@ -148,7 +172,15 @@ struct ContextManagerTests {
         let workspace = try MockLocalWorkspace(reference: ref)
 
         let manager = try await withDependencies {
-            $0.persistenceService = mockPersistence
+            $0.timelinePersistence = mockPersistence
+            $0.workspacePersistence = mockPersistence
+            $0.memoryStore = mockPersistence
+            $0.messageStore = mockPersistence
+            $0.msAgentStore = mockPersistence
+            $0.backgroundJobStore = mockPersistence
+            $0.clientStore = mockPersistence
+            $0.toolPersistence = mockPersistence
+            $0.agentInstanceStore = mockPersistence
             $0.embeddingService = mockEmbedding
         } operation: {
             ContextManager(workspace: workspace)

@@ -1,8 +1,8 @@
-import MonadShared
-import MonadCore
 import Foundation
 import GRDB
+import MonadCore
 import MonadServer
+import MonadShared
 import Testing
 
 @Suite(.serialized)
@@ -22,7 +22,7 @@ struct PruneComplexSessionTests {
     }
 
     @Test("pruneTimelines should handle archived sessions with complex dependencies")
-    func testPruneComplexDependencies() async throws {
+    func pruneComplexDependencies() async throws {
         // 1. Create archived session
         var archivedSession = Timeline(title: "Archived Session")
         archivedSession.isArchived = true
@@ -44,9 +44,9 @@ struct PruneComplexSessionTests {
         try await dbQueue.write { db in
             try db.execute(
                 sql: """
-                    INSERT INTO compactificationNode (id, timelineId, type, summary, displayHint, childIds, metadata, createdAt)
-                    VALUES (?, ?, 'summary', 'Summary', 'hint', '[]', '{}', ?)
-                    """,
+                INSERT INTO compactificationNode (id, timelineId, type, summary, displayHint, childIds, metadata, createdAt)
+                VALUES (?, ?, 'summary', 'Summary', 'hint', '[]', '{}', ?)
+                """,
                 arguments: [UUID(), archivedSessionId, Date()]
             )
         }
@@ -72,15 +72,15 @@ struct PruneComplexSessionTests {
         try await dbQueue.write { db in
             try db.execute(
                 sql: """
-                    INSERT INTO compactificationNode (id, timelineId, type, summary, displayHint, childIds, metadata, createdAt)
-                    VALUES (?, ?, 'summary', 'Summary', 'hint', '[]', '{}', ?)
-                    """,
+                INSERT INTO compactificationNode (id, timelineId, type, summary, displayHint, childIds, metadata, createdAt)
+                VALUES (?, ?, 'summary', 'Summary', 'hint', '[]', '{}', ?)
+                """,
                 arguments: [UUID(), liveSessionId, Date()]
             )
         }
 
         // 3. Call pruneTimelines (olderThan: 0 = all)
-        let count = try await persistence.pruneTimelines(olderThan: 0, dryRun: false)
+        let count = try await persistence.pruneTimelines(olderThan: 0, excluding: [], dryRun: false)
 
         // 4. Verify results
         #expect(count == 1)
@@ -94,7 +94,8 @@ struct PruneComplexSessionTests {
         let liveNodes = try await dbQueue.read { db in
             try Int.fetchOne(
                 db, sql: "SELECT COUNT(*) FROM compactificationNode WHERE timelineId = ?",
-                arguments: [liveID]) ?? 0
+                arguments: [liveID]
+            ) ?? 0
         }
         #expect(liveNodes == 0)
 
@@ -107,7 +108,8 @@ struct PruneComplexSessionTests {
         let archivedNodes = try await dbQueue.read { db in
             try Int.fetchOne(
                 db, sql: "SELECT COUNT(*) FROM compactificationNode WHERE timelineId = ?",
-                arguments: [archivedID]) ?? 0
+                arguments: [archivedID]
+            ) ?? 0
         }
         #expect(archivedNodes == 1)
     }

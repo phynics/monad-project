@@ -10,18 +10,21 @@ public struct LaunchSubagentTool: MonadShared.Tool, Sendable {
     public let description = "Delegate a specific task to another agent. This task will run in the background."
     public let requiresPermission = true
 
-    private let persistenceService: any BackgroundJobStoreProtocol
+    private let backgroundJobStore: any BackgroundJobStoreProtocol
+    private let messageStore: any MessageStoreProtocol
     private let timelineId: UUID
     private let parentId: UUID?
     private let msAgentRegistry: MSAgentRegistry
 
     public init(
-        persistenceService: any BackgroundJobStoreProtocol,
+        backgroundJobStore: any BackgroundJobStoreProtocol,
+        messageStore: any MessageStoreProtocol,
         timelineId: UUID,
         parentId: UUID? = nil,
         msAgentRegistry: MSAgentRegistry
     ) {
-        self.persistenceService = persistenceService
+        self.backgroundJobStore = backgroundJobStore
+        self.messageStore = messageStore
         self.timelineId = timelineId
         self.parentId = parentId
         self.msAgentRegistry = msAgentRegistry
@@ -80,7 +83,7 @@ public struct LaunchSubagentTool: MonadShared.Tool, Sendable {
         )
 
         do {
-            try await persistenceService.saveJob(job)
+            try await backgroundJobStore.saveJob(job)
             return .success("Launched subagent '\(agentId)' for task: '\(title)'. BackgroundJob ID: \(job.id)")
         } catch {
             return .failure("Failed to create job: \(error.localizedDescription)")

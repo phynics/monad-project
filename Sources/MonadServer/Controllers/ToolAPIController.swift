@@ -1,3 +1,4 @@
+import Dependencies
 import Foundation
 import HTTPTypes
 import Hummingbird
@@ -18,13 +19,10 @@ public struct ExecuteToolRequest: Codable, Sendable {
 }
 
 public struct ToolAPIController<Context: RequestContext>: Sendable {
-    public let timelineManager: TimelineManager
-    public let toolRouter: ToolRouter
+    @Dependency(\.timelineManager) var timelineManager
+    @Dependency(\.toolRouter) var toolRouter
 
-    public init(timelineManager: TimelineManager, toolRouter: ToolRouter) {
-        self.timelineManager = timelineManager
-        self.toolRouter = toolRouter
-    }
+    public init() {}
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.get("/", use: listSystemTools)
@@ -125,7 +123,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
 
         do {
             return try await toolRouter.execute(
-                tool: .known(execReq.name),
+                tool: .known(id: execReq.name),
                 arguments: execReq.arguments,
                 timelineId: execReq.timelineId
             )

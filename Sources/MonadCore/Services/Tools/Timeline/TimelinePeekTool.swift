@@ -8,10 +8,12 @@ public struct TimelinePeekTool: MonadShared.Tool, Sendable {
     public let description = "Read the most recent messages from a conversation timeline. Use this to observe what is happening in a timeline without attaching to it."
     public let requiresPermission = false
 
-    private let persistenceService: any MessageStoreProtocol & TimelinePersistenceProtocol
+    private let messageStore: any MessageStoreProtocol
+    private let timelineStore: any TimelinePersistenceProtocol
 
-    public init(persistenceService: any MessageStoreProtocol & TimelinePersistenceProtocol) {
-        self.persistenceService = persistenceService
+    public init(messageStore: any MessageStoreProtocol, timelineStore: any TimelinePersistenceProtocol) {
+        self.messageStore = messageStore
+        self.timelineStore = timelineStore
     }
 
     public var parametersSchema: [String: AnyCodable] {
@@ -39,7 +41,7 @@ public struct TimelinePeekTool: MonadShared.Tool, Sendable {
         }
 
         // Validate timeline exists and is not private
-        guard let timeline = try? await persistenceService.fetchTimeline(id: timelineId) else {
+        guard let timeline = try? await timelineStore.fetchTimeline(id: timelineId) else {
             return .failure("Timeline not found: \(timelineIdStr)")
         }
         if timeline.isPrivate {
@@ -47,7 +49,7 @@ public struct TimelinePeekTool: MonadShared.Tool, Sendable {
         }
 
         let limit = min(params.optional("limit", as: Int.self) ?? 10, 50)
-        let messages = try await persistenceService.fetchMessages(for: timelineId)
+        let messages = try await messageStore.fetchMessages(for: timelineId)
         let recent = Array(messages.suffix(limit))
 
         struct MessageSummary: Encodable {

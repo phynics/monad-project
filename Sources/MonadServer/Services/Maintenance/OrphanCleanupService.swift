@@ -7,13 +7,13 @@ import Dependencies
 
 /// Service that cleans up orphaned workspaces
 public final class OrphanCleanupService: Service, @unchecked Sendable {
-    private let persistenceService: any WorkspacePersistenceProtocol & TimelinePersistenceProtocol
+    @Dependency(\.workspacePersistence) var workspaceStore
+    @Dependency(\.timelinePersistence) var timelineStore
     private let workspaceRoot: URL
     private let logger = Logger(label: "com.monad.orphan-cleanup")
 
-    public init(workspaceRoot: URL, persistenceService: any WorkspacePersistenceProtocol & TimelinePersistenceProtocol) {
+    public init(workspaceRoot: URL) {
         self.workspaceRoot = workspaceRoot
-        self.persistenceService = persistenceService
     }
 
     /// Run the cleanup loop
@@ -43,8 +43,8 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
     private func cleanup() async {
         logger.info("Starting orphaned workspace cleanup...")
         do {
-            let workspaces = try await persistenceService.fetchAllWorkspaces()
-            let timelines = try await persistenceService.fetchAllTimelines(includeArchived: true)
+            let workspaces = try await workspaceStore.fetchAllWorkspaces()
+            let timelines = try await timelineStore.fetchAllTimelines(includeArchived: true)
 
             var referencedIds: Set<UUID> = []
 
@@ -66,7 +66,7 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
                        rootPath.hasPrefix(workspaceRoot.path) || rootPath.contains("/.monad/workspaces/") || rootPath.contains("/Monad/Workspaces/") {
 
                         // Delete DB Record
-                        try await persistenceService.deleteWorkspace(id: ws.id)
+                        try await workspaceStore.deleteWorkspace(id: ws.id)
 
                         // Delete Filesystem
                         if FileManager.default.fileExists(atPath: rootPath) {

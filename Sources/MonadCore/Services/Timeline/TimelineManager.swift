@@ -30,25 +30,17 @@ public actor TimelineManager {
     /// Ongoing generation tasks for each timeline.
     var activeTasks: [UUID: Task<Void, Never>] = [:]
 
-    @Dependency(\.persistenceService) private var _persistenceService
-    @Dependency(\.msAgentRegistry) private var _msAgentRegistry
+    @Dependency(\.timelinePersistence) var timelineStore
+    @Dependency(\.messageStore) var messageStore
+    @Dependency(\.workspacePersistence) var workspaceStore
+    @Dependency(\.memoryStore) var memoryStore
+    @Dependency(\.toolPersistence) var toolPersistence
+    @Dependency(\.backgroundJobStore) var backgroundJobStore
+    @Dependency(\.msAgentStore) var msAgentStore
+    @Dependency(\.clientStore) var clientStore
+    @Dependency(\.agentInstanceStore) var agentInstanceStore
 
-    var persistenceService: any TimelinePersistenceProtocol
-        & MessageStoreProtocol
-        & WorkspacePersistenceProtocol
-        & MemoryStoreProtocol
-        & ToolPersistenceProtocol
-        & BackgroundJobStoreProtocol
-        & MSAgentStoreProtocol
-        & ClientStoreProtocol
-        & AgentInstanceStoreProtocol
-    {
-        _persistenceService
-    }
-
-    var msAgentRegistry: MSAgentRegistry {
-        _msAgentRegistry
-    }
+    @Dependency(\.msAgentRegistry) var msAgentRegistry
 
     let vectorStore: (any VectorStoreProtocol)?
     let workspaceRoot: URL
@@ -109,7 +101,7 @@ public actor TimelineManager {
         let toolContextTimeline = ToolTimelineContext()
         toolContextTimelines[timeline.id] = toolContextTimeline
 
-        let jobQueueContext = BackgroundJobQueueContext(persistenceService: persistenceService, timelineId: timeline.id)
+        let jobQueueContext = BackgroundJobQueueContext(backgroundJobStore: backgroundJobStore, timelineId: timeline.id)
 
         // Setup Tools for timeline
         let toolManager = await createToolManager(
@@ -201,7 +193,7 @@ public actor TimelineManager {
             trustLevel: .full
         )
 
-        try await persistenceService.saveWorkspace(workspace)
+        try await workspaceStore.saveWorkspace(workspace)
 
         var timeline = Timeline(
             id: timelineId,
@@ -212,7 +204,7 @@ public actor TimelineManager {
 
         timelines[timeline.id] = timeline
         await setupTimelineComponents(timeline: timeline, workspaceURL: timelineWorkspaceURL)
-        try await persistenceService.saveTimeline(timeline)
+        try await timelineStore.saveTimeline(timeline)
 
         return timeline
     }
@@ -234,7 +226,7 @@ public actor TimelineManager {
     public func hydrateTimeline(id: UUID, parentId: UUID? = nil) async throws {
         if toolExecutors[id] != nil { return }
 
-        guard let timeline = try await persistenceService.fetchTimeline(id: id) else {
+        guard let timeline = try await timelineStore.fetchTimeline(id: id) else {
             throw TimelineError.timelineNotFound
         }
 
@@ -263,7 +255,7 @@ public actor TimelineManager {
         var timeline: Timeline
         if let memoryTimeline = timelines[id] {
             timeline = memoryTimeline
-        } else if let dbTimeline = try await persistenceService.fetchTimeline(id: id) {
+        } else if let dbTimeline = try await timelineStore.fetchTimeline(id: id) {
             timeline = dbTimeline
         } else {
             throw TimelineError.timelineNotFound
@@ -275,7 +267,7 @@ public actor TimelineManager {
         if timelines[id] != nil {
             timelines[id] = timeline
         }
-        try await persistenceService.saveTimeline(timeline)
+        try await timelineStore.saveTimeline(timeline)
     }
 
     /// Retrieves the context manager for a timeline if it is active.
@@ -305,14 +297,11 @@ public actor TimelineManager {
 
     /// Fetches the message history for a specific timeline from persistence.
     public func getHistory(for timelineId: UUID) async throws -> [Message] {
-        let conversationMessages = try await persistenceService.fetchMessages(for: timelineId)
+        let conversationMessages = try await messageStore.fetchMessages(for: timelineId)
         return conversationMessages.map { $0.toMessage() }
     }
 
-    /// Returns the underlying persistence service.
-    public func getPersistenceService() -> any TimelinePersistenceProtocol & MessageStoreProtocol & WorkspacePersistenceProtocol & MemoryStoreProtocol & ToolPersistenceProtocol & BackgroundJobStoreProtocol & MSAgentStoreProtocol & ClientStoreProtocol & AgentInstanceStoreProtocol {
-        return persistenceService
-    }
+
 
     // MARK: - Agent Support
 
@@ -321,7 +310,7 @@ public actor TimelineManager {
         let agentId: UUID?
         if let cached = timelines[timelineId] {
             agentId = cached.attachedAgentInstanceId
-        } else if let fetched = try? await persistenceService.fetchTimeline(id: timelineId) {
+        } else if let fetched = try? await timelineStore.fetchTimeline(id: timelineId) {
             agentId = fetched.attachedAgentInstanceId
         } else {
             return nil
@@ -329,14 +318,14 @@ public actor TimelineManager {
 
         guard let agentId else { return nil }
 
-        if let agent = try? await persistenceService.fetchAgentInstance(id: agentId) {
+        if let agent = try? await agentInstanceStore.fetchAgentInstance(id: agentId) {
             return agent
         }
 
         // Dangling reference cleanup
-        if var stale = try? await persistenceService.fetchTimeline(id: timelineId) {
+        if var stale = try? await timelineStore.fetchTimeline(id: timelineId) {
             stale.attachedAgentInstanceId = nil
-            try? await persistenceService.saveTimeline(stale)
+            try? await timelineStore.saveTimeline(stale)
             timelines[timelineId] = stale
             Logger.module(named: "timeline-manager").warning("Cleared dangling agent \(agentId) reference on timeline \(timelineId)")
         }
@@ -347,7 +336,7 @@ public actor TimelineManager {
     public func getAgentSystemInstructions(for timelineId: UUID) async -> String? {
         guard let agent = await getAttachedAgentInstance(for: timelineId),
               let workspaceId = agent.primaryWorkspaceId,
-              let workspace = try? await persistenceService.fetchWorkspace(id: workspaceId),
+              let workspace = try? await workspaceStore.fetchWorkspace(id: workspaceId),
               let rootPath = workspace.rootPath
         else { return nil }
 
@@ -371,7 +360,7 @@ public actor TimelineManager {
 
     /// Lists all active (non-archived) timelines from persistence.
     public func listTimelines() async throws -> [Timeline] {
-        return try await persistenceService.fetchAllTimelines(includeArchived: false)
+        return try await timelineStore.fetchAllTimelines(includeArchived: false)
     }
 
     /// Removes active timelines from memory that have not been updated within the specified interval.

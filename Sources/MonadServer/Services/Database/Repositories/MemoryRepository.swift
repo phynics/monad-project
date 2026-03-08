@@ -1,11 +1,15 @@
-import MonadShared
-import MonadCore
-import Foundation
 import GRDB
+import MonadCore
+import MonadShared
+import Foundation
 
-// ...
+public actor MemoryRepository: MemoryStoreProtocol {
+    private let dbQueue: DatabaseQueue
 
-extension PersistenceService {
+    public init(dbQueue: DatabaseQueue) {
+        self.dbQueue = dbQueue
+    }
+
     public func saveMemory(_ memory: Memory, policy: MemorySavePolicy) async throws -> UUID {
         try await dbQueue.write { db in
             try memory.save(db)
@@ -98,5 +102,38 @@ extension PersistenceService {
         return 0
     }
 
-// Methods moved to MonadServerCore/Extensions/PersistenceService+Server.swift
+    public func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int {
+        try await dbQueue.write { database in
+            let pattern = "%\(query)%"
+            let request =
+                Memory
+                .filter(
+                    Column("title").like(pattern) || Column("content").like(pattern)
+                        || Column("tags").like(pattern)
+                )
+
+            if dryRun {
+                return try request.fetchCount(database)
+            } else {
+                return try request.deleteAll(database)
+            }
+        }
+    }
+
+    public func pruneMemories(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws
+        -> Int {
+        let cutoffDate = Date().addingTimeInterval(-timeInterval)
+
+        return try await dbQueue.write { database in
+            let request =
+                Memory
+                .filter(Column("createdAt") < cutoffDate)
+
+            if dryRun {
+                return try request.fetchCount(database)
+            } else {
+                return try request.deleteAll(database)
+            }
+        }
+    }
 }

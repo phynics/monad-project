@@ -58,4 +58,12 @@ public final class MockMemoryStore: MemoryStoreProtocol, @unchecked Sendable {
     public func vacuumMemories(threshold: Double) async throws -> Int {
         return 0
     }
+
+    public func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int {
+        return 0
+    }
+
+    public func pruneMemories(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int {
+        return 0
+    }
 }

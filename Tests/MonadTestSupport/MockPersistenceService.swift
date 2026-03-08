@@ -1,8 +1,9 @@
 import Foundation
 import MonadCore
 import MonadShared
+import Dependencies
 
-public final class MockPersistenceService: FullPersistenceService, @unchecked Sendable {
+public final class MockPersistenceService: MemoryStoreProtocol, MessageStoreProtocol, TimelinePersistenceProtocol, WorkspacePersistenceProtocol, MSAgentStoreProtocol, BackgroundJobStoreProtocol, ClientStoreProtocol, ToolPersistenceProtocol, AgentInstanceStoreProtocol, HealthCheckable, @unchecked Sendable {
     private let memoriesMock = MockMemoryStore()
     private let messagesMock = MockMessageStore()
     private let timelinesMock = MockTimelinePersistence()
@@ -86,6 +87,14 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
         try await memoriesMock.vacuumMemories(threshold: threshold)
     }
 
+    public func pruneMemories(matching query: String, dryRun: Bool) async throws -> Int {
+        try await memoriesMock.pruneMemories(matching: query, dryRun: dryRun)
+    }
+
+    public func pruneMemories(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int {
+        try await memoriesMock.pruneMemories(olderThan: timeInterval, dryRun: dryRun)
+    }
+
     // MARK: - MessageStoreProtocol
 
     public var messages: [ConversationMessage] {
@@ -103,6 +112,10 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
 
     public func deleteMessages(for timelineId: UUID) async throws {
         try await messagesMock.deleteMessages(for: timelineId)
+    }
+
+    public func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int {
+        try await messagesMock.pruneMessages(olderThan: timeInterval, dryRun: dryRun)
     }
 
     // MARK: - TimelinePersistenceProtocol
@@ -126,6 +139,10 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
 
     public func deleteTimeline(id: UUID) async throws {
         try await timelinesMock.deleteTimeline(id: id)
+    }
+
+    public func pruneTimelines(olderThan timeInterval: TimeInterval, excluding excludedTimelineIds: [UUID], dryRun: Bool) async throws -> Int {
+        try await timelinesMock.pruneTimelines(olderThan: timeInterval, excluding: excludedTimelineIds, dryRun: dryRun)
     }
 
     // MARK: - BackgroundJobStoreProtocol
@@ -265,7 +282,9 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
     }
 
     public func deleteClient(id: UUID) async throws -> Bool {
-        if let mock = deleteClientMock { return try await mock(id) }
+        if let mock = deleteClientMock {
+            return try await mock(id)
+        }
         return false
     }
 
@@ -305,5 +324,22 @@ public final class MockPersistenceService: FullPersistenceService, @unchecked Se
         jobs = []
         msAgents = []
         workspaces = []
+    }
+}
+
+extension DependencyValues {
+    public var persistenceService: MockPersistenceService {
+        get { fatalError("persistenceService is deprecated. Use individual stores.") }
+        set {
+            self.workspacePersistence = newValue
+            self.timelinePersistence = newValue
+            self.memoryStore = newValue
+            self.messageStore = newValue
+            self.clientStore = newValue
+            self.toolPersistence = newValue
+            self.msAgentStore = newValue
+            self.backgroundJobStore = newValue
+            self.agentInstanceStore = newValue
+        }
     }
 }

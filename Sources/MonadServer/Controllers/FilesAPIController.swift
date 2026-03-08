@@ -1,16 +1,16 @@
 import Foundation
+import Dependencies
 import HTTPTypes
+import Dependencies
 import Hummingbird
 import MonadCore
 import MonadShared
 import NIOCore
 
 public struct FilesAPIController<Context: RequestContext>: Sendable {
-    public let workspaceManager: WorkspaceManager
+    @Dependency(\.workspaceManager) var workspaceManager
 
-    public init(workspaceManager: WorkspaceManager) {
-        self.workspaceManager = workspaceManager
-    }
+    public init() {}
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.get(use: listFiles)
