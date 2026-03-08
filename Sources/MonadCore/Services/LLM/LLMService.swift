@@ -1,4 +1,5 @@
 import Dependencies
+import ErrorKit
 import Foundation
 import Logging
 import MonadPrompt
@@ -36,7 +37,7 @@ extension OllamaClient: LLMClientProtocol {}
 /// Service for managing LLM interactions with configuration support
 public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendable {
     // MARK: - Constants
-    
+
     private enum Constants {
         static let maxHistoryTokens = 120_000
         static let historyTokenBuffer = 4000
@@ -349,12 +350,12 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
 
 // MARK: - Error Types
 
-public enum LLMServiceError: LocalizedError, Equatable {
+public enum LLMServiceError: Throwable, Equatable {
     case notConfigured
     case invalidConfiguration
     case networkError(String)
 
-    public var errorDescription: String? {
+    public var userFriendlyMessage: String {
         switch self {
         case .notConfigured:
             return "LLM service is not configured. Please set up your API endpoint and key."

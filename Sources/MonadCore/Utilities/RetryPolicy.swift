@@ -1,6 +1,7 @@
-import MonadShared
+import ErrorKit
 import Foundation
 import Logging
+import MonadShared
 import OpenAI
 
 public enum RetryPolicy {
@@ -25,12 +26,12 @@ public enum RetryPolicy {
                 return try await operation()
             } catch {
                 if attempts >= maxRetries {
-                    logger.error("Max retries (\(maxRetries)) reached. Final error: \(error.localizedDescription)")
+                    logger.error("Max retries (\(maxRetries)) reached. Final error: \(ErrorKit.userFriendlyMessage(for: error))")
                     throw error
                 }
 
                 if !shouldRetry(error) {
-                    logger.error("Non-retryable error encountered: \(error.localizedDescription)")
+                    logger.error("Non-retryable error encountered: \(ErrorKit.userFriendlyMessage(for: error))")
                     throw error
                 }
 
@@ -39,10 +40,10 @@ public enum RetryPolicy {
                 // Exponential backoff: base * 2^(attempt-1)
                 let delay = baseDelay * pow(2.0, Double(attempts - 1))
                 // Add jitter (0-10% of delay)
-                let jitter = Double.random(in: 0.0...(delay * 0.1))
+                let jitter = Double.random(in: 0.0 ... (delay * 0.1))
                 let finalDelay = delay + jitter
 
-                logger.warning("Retry attempt \(attempts)/\(maxRetries) in \(String(format: "%.2f", finalDelay))s due to: \(error.localizedDescription)")
+                logger.warning("Retry attempt \(attempts)/\(maxRetries) in \(String(format: "%.2f", finalDelay))s due to: \(ErrorKit.userFriendlyMessage(for: error))")
 
                 try await Task.sleep(nanoseconds: UInt64(finalDelay * 1_000_000_000))
             }
