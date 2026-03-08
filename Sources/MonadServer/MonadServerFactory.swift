@@ -189,12 +189,13 @@ public struct MonadServerFactory {
             )
             workspaceAPIController.addRoutes(to: workspacesGroup)
 
-            let workspaceStore = try await WorkspaceStore(
-                persistenceService: persistenceService,
+            let workspaceManager = WorkspaceManager(
+                repository: WorkspaceRepository(),
+                connectionManager: connectionManager,
                 workspaceCreator: WorkspaceFactory()
             )
             let filesController = FilesAPIController<AppRequestContext>(
-                workspaceStore: workspaceStore
+                workspaceManager: workspaceManager
             )
             filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
 

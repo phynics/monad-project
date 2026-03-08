@@ -1,19 +1,18 @@
-import MonadShared
-import MonadCore
-import Testing
+import Dependencies
+import Foundation
 import Hummingbird
 import HummingbirdTesting
-import Foundation
-import MonadTestSupport
-@testable import MonadServer
-import NIOCore
 import Logging
-import Dependencies
+import MonadCore
+@testable import MonadServer
+import MonadShared
+import MonadTestSupport
+import NIOCore
+import Testing
 
 @Suite struct FilesControllerTests {
-
     @Test("Test Get Nested File Content (Manual Path Extraction)")
-    func testGetNestedFileContent() async throws {
+    func getNestedFileContent() async throws {
         // Setup Deps
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
@@ -35,7 +34,8 @@ import Dependencies
             // Create Timeline (which creates the workspace)
             let timeline = try await timelineManager.createTimeline(title: "Files Test Session")
             guard let workspaceId = timeline.primaryWorkspaceId,
-                  let workingDirectory = timeline.workingDirectory else {
+                  let workingDirectory = timeline.workingDirectory
+            else {
                 Issue.record("Timeline should have a primary workspace and working directory")
                 return
             }
@@ -51,8 +51,8 @@ import Dependencies
 
             // Setup App & Controller
             let router = Router()
-            let workspaceStore = try await WorkspaceStore(persistenceService: persistence, workspaceCreator: WorkspaceFactory())
-            let controller = FilesAPIController<BasicRequestContext>(workspaceStore: workspaceStore)
+            let workspaceManager = WorkspaceManager(repository: WorkspaceRepository(), workspaceCreator: WorkspaceFactory())
+            let controller = FilesAPIController<BasicRequestContext>(workspaceManager: workspaceManager)
 
             // Register routes similar to MonadServerApp (flattened)
             controller.addRoutes(to: router.group("/workspaces/:workspaceId/files"))
@@ -62,7 +62,7 @@ import Dependencies
             // Test Request: GET /workspaces/:id/files/Notes/TestFile.md
             // This validates that the ** wildcard and manual extraction logic works
             try await app.test(.router) { client in
-                 try await client.execute(uri: "/workspaces/\(workspaceId)/files/Notes/TestFile.md", method: .get) { response in
+                try await client.execute(uri: "/workspaces/\(workspaceId)/files/Notes/TestFile.md", method: .get) { response in
                     #expect(response.status == .ok)
                     let bodyString = String(buffer: response.body)
                     #expect(bodyString == content)
@@ -72,8 +72,8 @@ import Dependencies
     }
 
     @Test("Test List Files")
-    func testListFiles() async throws {
-         // Setup Deps
+    func listFiles() async throws {
+        // Setup Deps
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
         let llmService = MockLLMService()
@@ -105,13 +105,13 @@ import Dependencies
             try "Content".write(to: noteDir.appendingPathComponent("TestNote.md"), atomically: true, encoding: .utf8)
 
             let router = Router()
-            let workspaceStore = try await WorkspaceStore(persistenceService: persistence, workspaceCreator: WorkspaceFactory())
-            let controller = FilesAPIController<BasicRequestContext>(workspaceStore: workspaceStore)
+            let workspaceManager = WorkspaceManager(repository: WorkspaceRepository(), workspaceCreator: WorkspaceFactory())
+            let controller = FilesAPIController<BasicRequestContext>(workspaceManager: workspaceManager)
             controller.addRoutes(to: router.group("/workspaces/:workspaceId/files"))
             let app = Application(router: router)
 
             try await app.test(.router) { client in
-                 try await client.execute(uri: "/workspaces/\(workspaceId)/files", method: .get) { response in
+                try await client.execute(uri: "/workspaces/\(workspaceId)/files", method: .get) { response in
                     #expect(response.status == .ok)
                     // Should return JSON array
                     _ = try JSONDecoder().decode([String].self, from: response.body)

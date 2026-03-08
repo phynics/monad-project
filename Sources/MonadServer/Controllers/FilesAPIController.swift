@@ -1,15 +1,15 @@
-import MonadShared
 import Foundation
 import HTTPTypes
 import Hummingbird
 import MonadCore
+import MonadShared
 import NIOCore
 
 public struct FilesAPIController<Context: RequestContext>: Sendable {
-    public let workspaceStore: MonadCore.WorkspaceStore
+    public let workspaceManager: WorkspaceManager
 
-    public init(workspaceStore: MonadCore.WorkspaceStore) {
-        self.workspaceStore = workspaceStore
+    public init(workspaceManager: WorkspaceManager) {
+        self.workspaceManager = workspaceManager
     }
 
     public func addRoutes(to group: RouterGroup<Context>) {
@@ -22,11 +22,11 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
 
     // MARK: - Handlers
 
-    @Sendable func listFiles(_ request: Request, context: Context) async throws -> [String] {
+    @Sendable func listFiles(_: Request, context: Context) async throws -> [String] {
         let workspaceId = try context.parameters.require("workspaceId", as: UUID.self)
 
-        guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
-             throw HTTPError(.notFound)
+        guard let workspace = try await workspaceManager.getWorkspace(id: workspaceId) else {
+            throw HTTPError(.notFound)
         }
 
         // Use an empty path to list from root, or implement recursive list in the workspace
@@ -42,11 +42,11 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
         }
         let rawPath = String(uriPath[range.upperBound...])
         guard let path = rawPath.removingPercentEncoding else {
-             throw HTTPError(.badRequest, message: "Invalid path encoding")
+            throw HTTPError(.badRequest, message: "Invalid path encoding")
         }
 
-        guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
-             throw HTTPError(.notFound)
+        guard let workspace = try await workspaceManager.getWorkspace(id: workspaceId) else {
+            throw HTTPError(.notFound)
         }
 
         do {
@@ -54,7 +54,8 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
             var headers = HTTPFields()
             headers[.contentType] = "text/plain"
             return Response(
-                status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(string: content)))
+                status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(string: content))
+            )
         } catch {
             context.logger.error("[FilesController] Failed to read file: \(error)")
             throw HTTPError(.notFound)
@@ -67,11 +68,11 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.badRequest, message: "Missing path")
         }
 
-        guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
+        guard let workspace = try await workspaceManager.getWorkspace(id: workspaceId) else {
             throw HTTPError(.notFound)
         }
 
-        let buffer = try await request.body.collect(upTo: 10 * 1024 * 1024)  // 10MB limit
+        let buffer = try await request.body.collect(upTo: 10 * 1024 * 1024) // 10MB limit
         let content = String(buffer: buffer)
 
         try await workspace.writeFile(path: path, content: content)
@@ -79,13 +80,13 @@ public struct FilesAPIController<Context: RequestContext>: Sendable {
         return Response(status: .ok)
     }
 
-    @Sendable func deleteFile(_ request: Request, context: Context) async throws -> Response {
+    @Sendable func deleteFile(_: Request, context: Context) async throws -> Response {
         let workspaceId = try context.parameters.require("workspaceId", as: UUID.self)
         guard let path = context.parameters.get("path") else {
             throw HTTPError(.badRequest, message: "Missing path")
         }
 
-        guard let workspace = await workspaceStore.getWorkspace(id: workspaceId) else {
+        guard let workspace = try await workspaceManager.getWorkspace(id: workspaceId) else {
             throw HTTPError(.notFound)
         }
 
