@@ -7,7 +7,7 @@ Quick reference for agents working with the Monad project.
 - **Language:** Swift 6.0 (macOS 15+)
 - **Architecture:** Server/CLI with six modular targets (no circular dependencies)
 - **Build System:** Swift Package Manager
-- **Key Tech:** Hummingbird (REST/SSE), GRDB/SQLite, USearch (embeddings), swift-dependencies
+- **Key Tech:** Hummingbird (REST/SSE), GRDB/SQLite, USearch (embeddings), swift-dependencies, ErrorKit
 
 ## Quick Commands
 
@@ -101,6 +101,14 @@ Six targets with strict dependency hierarchy:
 - **`AnyTool`** — type-erased tool wrapper with optional `provenance` for labeling
 
 ## Critical Conventions
+
+### Error Handling (Gradual Rollout)
+- We are adopting [ErrorKit](https://github.com/FlineDev/ErrorKit) for structured error handling across the codebase.
+- **New errors** should conform to `Throwable` (from ErrorKit) instead of plain `Error`.
+- **Existing errors** are being migrated incrementally — do not refactor error types en masse, only convert them when already touching the file.
+- Use ErrorKit's built-in types (`NetworkError`, `DatabaseError`, `FileError`, `ValidationError`, `GenericError`, etc.) where they fit.
+- Prefer `userFriendlyMessage` over `localizedDescription` when surfacing errors to users or logs.
+- The `Catching` protocol (for wrapping nested errors) should be used in types that propagate errors from sub-layers.
 
 ### Concurrency
 - Use `AsyncThrowingStream` for streaming/progress (not callbacks)

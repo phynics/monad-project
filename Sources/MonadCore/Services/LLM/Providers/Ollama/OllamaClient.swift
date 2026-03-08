@@ -1,10 +1,11 @@
 import MonadShared
+import Synchronization
 import Foundation
 import Logging
 import OpenAI
 
 public actor OllamaClient {
-    private let endpoint: URL
+    private let endpoint: OllamaEndpoint
     private let modelName: String
     private let maxRetries: Int
     private let session: URLSession
@@ -16,21 +17,7 @@ public actor OllamaClient {
         timeoutInterval: TimeInterval = 120.0,
         maxRetries: Int = 3
     ) {
-        var cleanEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
-        if cleanEndpoint.hasSuffix("/") {
-            cleanEndpoint.removeLast()
-        }
-        if cleanEndpoint.hasSuffix("/api") {
-            cleanEndpoint.removeLast(4)
-        }
-
-        if let url = URL(string: cleanEndpoint) {
-            self.endpoint = url
-        } else {
-            logger.warning("Invalid Ollama endpoint '\(cleanEndpoint)', falling back to http://localhost:11434")
-            self.endpoint = URL(string: "http://localhost:11434")!
-        }
-
+        self.endpoint = OllamaEndpoint(rawValue: endpoint)
         self.modelName = modelName
         self.maxRetries = maxRetries
 
@@ -40,7 +27,7 @@ public actor OllamaClient {
         config.timeoutIntervalForResource = timeoutInterval * 5
         config.waitsForConnectivity = true
         self.session = URLSession(configuration: config)
-        logger.debug("Initialized OllamaClient with model: \(modelName), endpoint: \(self.endpoint.absoluteString), timeout: \(timeoutInterval)s")
+        logger.debug("Initialized OllamaClient with model: \(modelName), endpoint: \(self.endpoint.url.absoluteString), timeout: \(timeoutInterval)s")
     }
 
     public func chatStream(
@@ -56,13 +43,16 @@ public actor OllamaClient {
 
         return AsyncThrowingStream { continuation in
             Task {
-                let hasYielded = Locked(false)
+                let hasYielded = Mutex(false)
 
                 do {
                     try await RetryPolicy.retry(
                         maxRetries: maxRetries,
                         shouldRetry: { error in
-                            !hasYielded.value && RetryPolicy.isTransient(error: error)
+                            hasYielded.withLock {
+                                !$0
+                            }
+                            && RetryPolicy.isTransient(error: error)
                         }
                     ) {
                         // Access self safely inside Task (on actor).
@@ -105,10 +95,14 @@ public actor OllamaClient {
                                 if let converted = await self.convertToOpenAI(response) {
                                     // Check content or tool calls to mark yielded
                                     if let content = converted.choices.first?.delta.content, !content.isEmpty {
-                                        hasYielded.value = true
+                                        hasYielded.withLock {
+                                            $0 = true
+                                        }
                                     }
                                     if converted.choices.first?.delta.toolCalls != nil {
-                                        hasYielded.value = true
+                                        hasYielded.withLock {
+                                            $0 = true
+                                        }
                                     }
 
                                     logger.debug("Yielding Ollama chunk: \(converted.choices.first?.delta.content ?? "")")
@@ -132,59 +126,11 @@ public actor OllamaClient {
         tools: [ChatQuery.ChatCompletionToolParam]?,
         responseFormat: ChatQuery.ResponseFormat?
     ) throws -> URLRequest {
-        let chatURL = endpoint.appendingPathComponent("api/chat")
-        var request = URLRequest(url: chatURL)
+        var request = URLRequest(url: endpoint.chatURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let ollamaMessages = messages.map { msg -> OllamaMessage in
-            var role = "user"
-            var content = ""
-
-            switch msg {
-            case let .system(message):
-                role = "system"
-                if case let .textContent(text) = message.content {
-                    content = text
-                } else {
-                    content = "\(message.content)"
-                }
-            case let .user(message):
-                role = "user"
-                if case let .string(text) = message.content {
-                    content = text
-                } else {
-                    content = "\(message.content)"
-                }
-            case let .assistant(message):
-                role = "assistant"
-                if let messageContent = message.content {
-                    if case let .textContent(text) = messageContent {
-                        content = text
-                    } else {
-                        content = "\(messageContent)"
-                    }
-                } else {
-                    content = ""
-                }
-            case let .tool(message):
-                role = "tool"
-                if case let .textContent(text) = message.content {
-                    content = text
-                } else {
-                    content = "\(message.content)"
-                }
-            case let .developer(message):
-                role = "system"
-                if case let .textContent(text) = message.content {
-                    content = text
-                } else {
-                    content = "\(message.content)"
-                }
-            }
-
-            return OllamaMessage(role: role, content: content, toolCalls: nil)
-        }
+        let ollamaMessages = messages.map { OllamaMessage(from: $0) }
 
         var format: String?
         if let responseFormat = responseFormat {
@@ -203,16 +149,7 @@ public actor OllamaClient {
             messages: ollamaMessages,
             stream: true,
             format: format,
-            tools: tools?.map { tool in
-                OllamaTool(
-                    type: "function",
-                    function: OllamaToolFunction(
-                        name: tool.function.name,
-                        description: tool.function.description ?? "",
-                        parameters: tool.function.parameters ?? .object([:])
-                    )
-                )
-            }
+            tools: tools?.map { OllamaTool(from: $0) }
         )
 
         request.httpBody = try JSONEncoder().encode(payload)
@@ -338,9 +275,8 @@ public actor OllamaClient {
         let logger = self.logger
 
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
-            let tagsURL = endpoint.appendingPathComponent("api/tags")
-            let request = URLRequest(url: tagsURL)
-            logger.debug("Fetching Ollama models from: \(tagsURL.absoluteString)")
+            let request = URLRequest(url: endpoint.tagsURL)
+            logger.debug("Fetching Ollama models from: \(endpoint.tagsURL.absoluteString)")
 
             let (data, response) = try await self.session.data(for: request)
 
@@ -367,69 +303,5 @@ public actor OllamaClient {
             logger.debug("Found \(models.count) Ollama models: \(models.joined(separator: ", "))")
             return models
         }
-    }
-}
-
-// MARK: - Internal Models
-
-struct OllamaChatRequest: Codable {
-    let model: String
-    let messages: [OllamaMessage]
-    let stream: Bool
-    let format: String?
-    let tools: [OllamaTool]?
-}
-
-struct OllamaTool: Codable {
-    let type: String
-    let function: OllamaToolFunction
-}
-
-struct OllamaToolFunction: Codable {
-    let name: String
-    let description: String
-    let parameters: JSONSchema
-}
-
-struct OllamaMessage: Codable {
-    let role: String
-    let content: String
-    let toolCalls: [OllamaToolCall]?
-
-    enum CodingKeys: String, CodingKey {
-        case role
-        case content
-        case toolCalls = "tool_calls"
-    }
-}
-
-struct OllamaToolCall: Codable {
-    let function: OllamaToolCallFunction
-}
-
-struct OllamaToolCallFunction: Codable {
-    let name: String
-    let arguments: [String: AnyCodable]
-}
-
-struct OllamaChatResponse: Codable {
-    let model: String
-    let createdAt: String?
-    let message: OllamaMessage
-    let done: Bool
-    let totalDuration: Int64?
-    let loadDuration: Int64?
-    let promptEvalCount: Int?
-    let evalCount: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case model
-        case createdAt = "created_at"
-        case message
-        case done
-        case totalDuration = "total_duration"
-        case loadDuration = "load_duration"
-        case promptEvalCount = "prompt_eval_count"
-        case evalCount = "eval_count"
     }
 }

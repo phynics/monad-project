@@ -78,7 +78,7 @@ public struct AgentInstanceAPIController<Context: RequestContext>: Sendable {
         do {
             try await agentInstanceManager.deleteInstance(id: id, force: force)
         } catch let error as AgentInstanceError {
-            throw HTTPError(.unprocessableContent, message: error.localizedDescription ?? "Cannot delete agent")
+            throw HTTPError(.unprocessableContent, message: error.localizedDescription)
         }
         return Response(status: .noContent)
     }
@@ -89,7 +89,7 @@ public struct AgentInstanceAPIController<Context: RequestContext>: Sendable {
         do {
             try await agentInstanceManager.attach(agentId: agentId, to: timelineId)
         } catch let error as AgentInstanceError {
-            throw HTTPError(.unprocessableContent, message: error.localizedDescription ?? "Cannot attach agent")
+            throw HTTPError(.unprocessableContent, message: error.localizedDescription)
         }
         return Response(status: .noContent)
     }

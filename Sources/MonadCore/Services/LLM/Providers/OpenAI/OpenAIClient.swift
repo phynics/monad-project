@@ -1,4 +1,5 @@
 import MonadShared
+import Synchronization
 import Foundation
 import Logging
 import OpenAI
@@ -61,7 +62,7 @@ public actor OpenAIClient {
 
         return AsyncThrowingStream { continuation in
             Task {
-                let hasYielded = Locked(false)
+                let hasYielded = Mutex(false)
 
                 do {
                     try await RetryPolicy.retry(
@@ -69,7 +70,7 @@ public actor OpenAIClient {
                         shouldRetry: { error in
                             // Only retry if we haven't started yielding data to avoid duplication
                             // and if the error is transient
-                            !hasYielded.value && RetryPolicy.isTransient(error: error)
+                            !hasYielded.withLock { $0 } && RetryPolicy.isTransient(error: error)
                         }
                     ) {
                         // Create a new stream for each attempt
@@ -78,13 +79,13 @@ public actor OpenAIClient {
                         for try await result in stream {
                             if let delta = result.choices.first?.delta.content {
                                 if !delta.isEmpty {
-                                    hasYielded.value = true
+                                    hasYielded.withLock { $0 = true }
                                     logger.debug("Yielding OpenAI chunk (\(delta.count) chars)")
                                 }
                             }
                             // Also mark as yielded if we get tool calls or other content
                             if result.choices.first?.delta.toolCalls != nil {
-                                hasYielded.value = true
+                                hasYielded.withLock { $0 = true }
                             }
 
                             continuation.yield(result)

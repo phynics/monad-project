@@ -1,4 +1,5 @@
 import MonadShared
+import Synchronization
 import Foundation
 import Logging
 import OpenAI
@@ -70,13 +71,13 @@ public actor OpenRouterClient {
 
         return AsyncThrowingStream { continuation in
             Task {
-                let hasYielded = Locked(false)
+                let hasYielded = Mutex(false)
 
                 do {
                     try await RetryPolicy.retry(
                         maxRetries: maxRetries,
                         shouldRetry: { error in
-                            !hasYielded.value && RetryPolicy.isTransient(error: error)
+                            !hasYielded.withLock { $0 } && RetryPolicy.isTransient(error: error)
                         }
                     ) {
                         var request = URLRequest(url: chatURL)
@@ -132,10 +133,10 @@ public actor OpenRouterClient {
                                         let result = try JSONDecoder().decode(ChatStreamResult.self, from: data)
                                         // Mark as yielded if we have content or tool calls
                                         if let content = result.choices.first?.delta.content, !content.isEmpty {
-                                            hasYielded.value = true
+                                            hasYielded.withLock { $0 = true }
                                         }
                                         if result.choices.first?.delta.toolCalls != nil {
-                                            hasYielded.value = true
+                                            hasYielded.withLock { $0 = true }
                                         }
 
                                         continuation.yield(result)

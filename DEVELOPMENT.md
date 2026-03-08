@@ -115,16 +115,21 @@ public actor SessionManager {
 
 #### Locked for Fine-Grained Synchronization
 
-For fine-grained locking, use `Locked<T>` (wraps Swift 6's `OSAllocatedUnfairLock`):
+For fine-grained locking, use `Mutex<T>`:
 
 ```swift
-let counter = Locked(initialValue: 0)
-counter.withLock { value in
-    value += 1
+class Manager {
+  let cache = Mutex<[Key: Resource]>([:])
+
+
+  func saveResource(_ resource: Resource, as key: Key) {
+    cache.withLock {
+      $0[key] = resource
+    }
+  }
 }
 ```
 
-**File:** `Sources/MonadCore/Utilities/Locked.swift`
 
 ### Graceful Shutdown
 

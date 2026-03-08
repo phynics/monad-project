@@ -24,12 +24,14 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
         .package(url: "https://github.com/unum-cloud/USearch", from: "2.0.0"),
         .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.0.0"),
+        .package(url: "https://github.com/FlineDev/ErrorKit", from: "1.0.0"),
     ],
     targets: [
         .target(
             name: "MonadShared",
             dependencies: [
-                .product(name: "OpenAI", package: "OpenAI")
+                .product(name: "OpenAI", package: "OpenAI"),
+                .product(name: "ErrorKit", package: "ErrorKit"),
             ],
             path: "Sources/MonadShared"
         ),
@@ -46,6 +48,7 @@ let package = Package(
                 .product(name: "OpenAI", package: "OpenAI"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "ErrorKit", package: "ErrorKit"),
             ],
             path: "Sources/MonadCore"
         ),
@@ -62,6 +65,7 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "USearch", package: "USearch"),
+                .product(name: "ErrorKit", package: "ErrorKit"),
             ],
             path: "Sources/MonadServer"
         ),
@@ -69,8 +73,8 @@ let package = Package(
             name: "MonadClient",
             dependencies: [
                 "MonadShared",
-
                 .product(name: "Logging", package: "swift-log"),
+                .product(name: "ErrorKit", package: "ErrorKit"),
             ],
             path: "Sources/MonadClient"
         ),
@@ -79,6 +83,7 @@ let package = Package(
             dependencies: [
                 "MonadClient",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                .product(name: "ErrorKit", package: "ErrorKit"),
             ],
             path: "Sources/MonadCLI"
         ),

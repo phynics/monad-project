@@ -1,10 +1,11 @@
 import Testing
 import Foundation
+import Synchronization
 import Dependencies
 import MonadTestSupport
 @testable import MonadCore
 @testable import MonadShared
-@testable import MonadShared
+
 @Suite struct TimelineManagerTests {
 
     @Test("Test Session Creation and Context Manager Access")
@@ -73,13 +74,13 @@ import MonadTestSupport
         let timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
         let timelineId = UUID()
         
-        let isCancelled = Locked(false)
+        let isCancelled = Mutex(false)
         
         let task = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(10))
             }
-            isCancelled.value = true
+            isCancelled.withLock { $0 = true }
         }
         
         await timelineManager.registerTask(task, for: timelineId)
@@ -89,10 +90,12 @@ import MonadTestSupport
         
         // Wait a bit for task to finish
         for _ in 0..<10 {
-            if isCancelled.value { break }
+            let cancelled = isCancelled.withLock { $0 }
+            if cancelled { break }
             try? await Task.sleep(for: .milliseconds(10))
         }
         
-        #expect(isCancelled.value, "Task should have been cancelled")
+        let cancelledFinal = isCancelled.withLock { $0 }
+        #expect(cancelledFinal, "Task should have been cancelled")
     }
 }
