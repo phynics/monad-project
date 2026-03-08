@@ -5,7 +5,7 @@ import Foundation
 
 public actor BackgroundJobRepository: BackgroundJobStoreProtocol {
     private let dbQueue: DatabaseQueue
-    
+
     private let jobStream: AsyncStream<BackgroundJobEvent>
     private let jobContinuation: AsyncStream<BackgroundJobEvent>.Continuation
 

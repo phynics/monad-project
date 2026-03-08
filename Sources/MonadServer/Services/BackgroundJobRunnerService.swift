@@ -8,20 +8,20 @@ import ServiceLifecycle
 /// Service that monitors and executes background jobs
 public final class BackgroundJobRunnerService: Service, @unchecked Sendable {
     private let timelineManager: TimelineManager
-    private let msAgentRegistry: MSAgentRegistry
-    private let msAgentExecutor: MSAgentExecutor
+    private let agentTemplateRegistry: AgentTemplateRegistry
+    private let agentTemplateExecutor: AgentTemplateExecutor
     @Dependency(\.backgroundJobStore) private var backgroundJobStore
 
     private let logger = Logger(label: "com.monad.job-runner")
 
     public init(
         timelineManager: TimelineManager,
-        msAgentRegistry: MSAgentRegistry,
-        msAgentExecutor: MSAgentExecutor
+        agentTemplateRegistry: AgentTemplateRegistry,
+        agentTemplateExecutor: AgentTemplateExecutor
     ) {
         self.timelineManager = timelineManager
-        self.msAgentRegistry = msAgentRegistry
-        self.msAgentExecutor = msAgentExecutor
+        self.agentTemplateRegistry = agentTemplateRegistry
+        self.agentTemplateExecutor = agentTemplateExecutor
     }
 
     /// Run the job execution loop
@@ -102,7 +102,7 @@ public final class BackgroundJobRunnerService: Service, @unchecked Sendable {
         guard let timeline = await timelineManager.getTimeline(id: job.timelineId) else {
             let reason = "Timeline \(job.timelineId) not found"
             logger.warning("Found pending job \(jid) but \(reason). Marking as failed.")
-            await msAgentExecutor.failJob(job, reason: reason)
+            await agentTemplateExecutor.failJob(job, reason: reason)
             return
         }
 
@@ -110,31 +110,31 @@ public final class BackgroundJobRunnerService: Service, @unchecked Sendable {
         do {
             try await timelineManager.hydrateTimeline(id: timeline.id, parentId: job.id)
         } catch {
-            await msAgentExecutor.failJob(job, reason: "Failed to hydrate timeline: \(error.localizedDescription)")
+            await agentTemplateExecutor.failJob(job, reason: "Failed to hydrate timeline: \(error.localizedDescription)")
             return
         }
 
         // 3. Get ToolExecutor
         guard let toolExecutor = await timelineManager.getToolExecutor(for: timeline.id) else {
-            await msAgentExecutor.failJob(job, reason: "ToolExecutor not found after hydration")
+            await agentTemplateExecutor.failJob(job, reason: "ToolExecutor not found after hydration")
             return
         }
 
-        // 4. Initialize MSAgent with ContextManager (RAG)
+        // 4. Initialize AgentTemplate with ContextManager (RAG)
         let contextManager = await timelineManager.getContextManager(for: timeline.id)
 
-        // 5. Resolve MSAgent
+        // 5. Resolve AgentTemplate
         let agentId = job.agentId
-        guard let agent = await msAgentRegistry.getMSAgent(id: agentId) else {
-            logger.error("MSAgent '\(agentId)' not found for job \(jid)")
-            await msAgentExecutor.failJob(job, reason: "MSAgent '\(agentId)' not found")
+        guard let agent = await agentTemplateRegistry.getAgentTemplate(id: agentId) else {
+            logger.error("AgentTemplate '\(agentId)' not found for job \(jid)")
+            await agentTemplateExecutor.failJob(job, reason: "AgentTemplate '\(agentId)' not found")
             return
         }
 
         logger.info("Executing job \(jid) with agent \(ANSIColors.colorize(agentId, color: ANSIColors.brightMagenta))")
 
         // 6. Execute
-        await msAgentExecutor.execute(
+        await agentTemplateExecutor.execute(
             job: job,
             agent: agent,
             timeline: timeline,

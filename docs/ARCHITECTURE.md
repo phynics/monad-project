@@ -51,7 +51,7 @@ Contains the foundational library for all domain logic, data models, and busines
 - `ToolRouter` — Actor routing tool execution to appropriate handler
 - `LLMService` — Multi-provider LLM client with streaming
 - `WorkspaceManager` — Actor managing workspace lifecycle
-- `MSAgentExecutor` — Service executing autonomous MSAgent tasks
+- `AgentTemplateExecutor` — Service executing autonomous AgentTemplate tasks
 - `VectorStore` — Vector search for semantic memory retrieval
 
 **Models Organized Into:**
@@ -69,8 +69,8 @@ Sources/MonadCore/Models/
                    WorkspaceReference, WorkspaceTool, WorkspaceToolDefinition
 
 Sources/MonadShared/SharedTypes/
-├── AgentInstance.swift  — Live agent entity (runtime, created from MSAgent template)
-└── MSAgent.swift        — Agent template (static definition with systemPrompt, persona, seed files)
+├── AgentInstance.swift   — Live agent entity (runtime, created from AgentTemplate)
+└── AgentTemplate.swift   — Agent template (static definition with systemPrompt, persona, seed files)
 
 Sources/MonadCore/Stores/
 └── WorkspaceStore — Actor cache for hydrated WorkspaceProtocol instances
@@ -78,8 +78,8 @@ Sources/MonadCore/Stores/
 
 **Key Model Notes:**
 - **`Timeline`** (formerly `ConversationSession`) — Persistent conversation record. Now includes `attachedAgentInstanceId`, `isPrivate`, and `ownerAgentInstanceId` for the agent system.
-- **`AgentInstance`** — Runtime agent entity in `MonadShared`. Has its own private workspace and private timeline. Created from an `MSAgent` template.
-- **`MSAgent`** — Static agent template in `MonadShared`. Defines `systemPrompt`, `personaPrompt`, `guardrails`, and `workspaceFilesSeed`.
+- **`AgentInstance`** — Runtime agent entity in `MonadShared`. Has its own private workspace and private timeline. Created from an `AgentTemplate`.
+- **`AgentTemplate`** — Static agent template in `MonadShared`. Defines `systemPrompt`, `personaPrompt`, `guardrails`, and `workspaceFilesSeed`.
 - **`LLMConfiguration`** — Multi-provider config (replaces old monolithic `Configuration`)
 - **`Message`** — Includes optional `think` field for Chain of Thought reasoning
 - **`ToolReference`** — Enum: `.known(id)` or `.custom(definition)`
@@ -110,7 +110,7 @@ API contract types in `Sources/MonadShared/Models/`:
 
 Shared runtime types in `Sources/MonadShared/SharedTypes/`:
 - `AgentInstance.swift` — Live agent entity
-- `MSAgent.swift` — Agent template
+- `AgentTemplate.swift` — Agent template
 - `LLMConfiguration.swift`, `ProviderConfiguration.swift` — LLM config
 - `WorkspaceReference.swift`, `WorkspaceURI.swift` — Workspace metadata
 - `ChatEvent.swift`, `Message.swift`, `ToolCall.swift` — Streaming types
@@ -151,7 +151,7 @@ The backend server hosting the agent and exposing the brain to clients.
 - `ConfigurationAPIController` — Configuration management (`/config`)
 - `ToolAPIController` — Tool listing (`/tools`)
 - `AgentInstanceAPIController` — Agent instance CRUD and attachment (`/agents`)
-- `MSAgentAPIController` — MSAgent template management (`/msAgents`)
+- `AgentTemplateAPIController` — AgentTemplate management (`/agentTemplates`)
 - `StatusAPIController` — Health/status endpoints
 - `FilesAPIController` — File operations (`/workspaces/:id/files`)
 - `PruneAPIController` — Data cleanup (`/prune`)
@@ -169,7 +169,7 @@ The backend server hosting the agent and exposing the brain to clients.
 
 **Database Schema:**
 - Migrations managed via GRDB
-- Tables: `timelines`, `messages`, `memories`, `jobs`, `agentInstances`, `msAgents`, `workspaces`, `clients`, etc.
+- Tables: `timelines`, `messages`, `memories`, `jobs`, `agentInstances`, `agentTemplates`, `workspaces`, `clients`, etc.
 - Schema versioning for backward compatibility
 
 ---
@@ -485,7 +485,7 @@ Uses Point-Free's `swift-dependencies` for DI:
 
 **Dependency Keys** (in `Sources/MonadCore/Dependencies/`):
 - `LLMDependencies.swift` — LLMService, EmbeddingService
-- `OrchestrationDependencies.swift` — TimelineManager, ChatEngine, MSAgentExecutor, etc.
+- `OrchestrationDependencies.swift` — TimelineManager, ChatEngine, AgentTemplateExecutor, etc.
 - `StorageDependencies.swift` — PersistenceService, VectorStore
 
 **Usage:**

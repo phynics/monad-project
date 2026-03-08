@@ -14,7 +14,7 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
 
     /// The role of the message author.
     public var role: MessageRole
-    
+
     /// The time at which the message was created.
     public let timestamp: Date
 

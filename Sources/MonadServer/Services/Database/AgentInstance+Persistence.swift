@@ -20,8 +20,7 @@ extension AgentInstance: FetchableRecord, PersistableRecord {
         container["updatedAt"] = updatedAt
 
         if let metadataData = try? JSONEncoder().encode(metadata),
-           let metadataString = String(data: metadataData, encoding: .utf8)
-        {
+           let metadataString = String(data: metadataData, encoding: .utf8) {
             container["metadata"] = metadataString
         } else {
             container["metadata"] = "{}"
@@ -33,8 +32,7 @@ extension AgentInstance: FetchableRecord, PersistableRecord {
         let decodedMetadata: [String: AnyCodable]
         if let metaStr = metadataString, !metaStr.isEmpty,
            let data = metaStr.data(using: .utf8),
-           let decoded = try? JSONDecoder().decode([String: AnyCodable].self, from: data)
-        {
+           let decoded = try? JSONDecoder().decode([String: AnyCodable].self, from: data) {
             decodedMetadata = decoded
         } else {
             decodedMetadata = [:]

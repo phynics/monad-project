@@ -19,14 +19,14 @@ import Testing
             $0.workspacePersistence = persistence
             $0.memoryStore = persistence
             $0.messageStore = persistence
-            $0.msAgentStore = persistence
+            $0.agentTemplateStore = persistence
             $0.backgroundJobStore = persistence
             $0.clientStore = persistence
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
-            $0.msAgentRegistry = MSAgentRegistry()
+            $0.agentTemplateRegistry = AgentTemplateRegistry()
             $0.timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
         } operation: {
             TimelineManager(workspaceRoot: workspaceRoot)
@@ -43,14 +43,14 @@ import Testing
             $0.workspacePersistence = MockPersistenceService()
             $0.memoryStore = MockPersistenceService()
             $0.messageStore = MockPersistenceService()
-            $0.msAgentStore = MockPersistenceService()
+            $0.agentTemplateStore = MockPersistenceService()
             $0.backgroundJobStore = MockPersistenceService()
             $0.clientStore = MockPersistenceService()
             $0.toolPersistence = MockPersistenceService()
             $0.agentInstanceStore = MockPersistenceService()
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()
-            $0.msAgentRegistry = MSAgentRegistry()
+            $0.agentTemplateRegistry = AgentTemplateRegistry()
             $0.timelineManager = manager
         } operation: {
             try await manager.createTimeline().id

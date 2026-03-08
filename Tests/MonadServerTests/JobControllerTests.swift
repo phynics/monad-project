@@ -20,14 +20,14 @@ import Testing
             $0.workspacePersistence = persistence
             $0.memoryStore = persistence
             $0.messageStore = persistence
-            $0.msAgentStore = persistence
+            $0.agentTemplateStore = persistence
             $0.backgroundJobStore = persistence
             $0.clientStore = persistence
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
-            $0.msAgentRegistry = MSAgentRegistry()
+            $0.agentTemplateRegistry = AgentTemplateRegistry()
         } operation: {
             let manager = TimelineManager(workspaceRoot: workspaceRoot)
             let router = Router()
@@ -72,7 +72,7 @@ import Testing
     }
 
     @Test("POST /{id}/jobs uses provided agentId")
-    func createJob_usesProvidedMSAgentId() async throws {
+    func createJob_usesProvidedAgentTemplateId() async throws {
         let (app, _, _) = try await makeApp()
         let timelineId = UUID()
         let body = try JSONEncoder().encode(AddBackgroundJobRequest(

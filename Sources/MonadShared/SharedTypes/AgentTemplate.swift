@@ -1,7 +1,7 @@
 import Foundation
 
 /// Represents an agent definition in the system, consisting of instructions and prompts.
-public struct MSAgent: Codable, Sendable, Identifiable, Equatable {
+public struct AgentTemplate: Codable, Sendable, Identifiable, Equatable {
     /// Unique identifier for the agent (e.g. "default", "coder")
     public let id: UUID
 
@@ -54,7 +54,7 @@ public struct MSAgent: Codable, Sendable, Identifiable, Equatable {
     }
 }
 
-public extension MSAgent {
+public extension AgentTemplate {
     /// Composed full system instructions for the LLM
     var composedInstructions: String {
         var parts = [systemPrompt]

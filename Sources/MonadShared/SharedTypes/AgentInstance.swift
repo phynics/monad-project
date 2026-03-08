@@ -2,7 +2,7 @@ import Foundation
 
 /// A live agent entity with its own workspace and private timeline.
 ///
-/// `AgentInstance` is created from an `MSAgent` template (which provides initial instructions),
+/// `AgentInstance` is created from an `AgentTemplate` template (which provides initial instructions),
 /// but is self-contained — it holds its own copies of configuration and does not reference
 /// the source template. Instructions are loaded at runtime from workspace files
 /// (`Notes/system.md`, `Notes/persona.md`) rather than stored on the struct.

@@ -24,9 +24,9 @@ public enum ClientStoreKey: DependencyKey {
     public static let testValue: any ClientStoreProtocol = UnconfiguredClientStore()
 }
 
-public enum MSAgentStoreKey: DependencyKey {
-    public static let liveValue: any MSAgentStoreProtocol = UnconfiguredMSAgentStore()
-    public static let testValue: any MSAgentStoreProtocol = UnconfiguredMSAgentStore()
+public enum AgentTemplateStoreKey: DependencyKey {
+    public static let liveValue: any AgentTemplateStoreProtocol = UnconfiguredAgentTemplateStore()
+    public static let testValue: any AgentTemplateStoreProtocol = UnconfiguredAgentTemplateStore()
 }
 
 public enum MemoryStoreKey: DependencyKey {
@@ -81,9 +81,9 @@ public extension DependencyValues {
         set { self[ClientStoreKey.self] = newValue }
     }
 
-    var msAgentStore: any MSAgentStoreProtocol {
-        get { self[MSAgentStoreKey.self] }
-        set { self[MSAgentStoreKey.self] = newValue }
+    var agentTemplateStore: any AgentTemplateStoreProtocol {
+        get { self[AgentTemplateStoreKey.self] }
+        set { self[AgentTemplateStoreKey.self] = newValue }
     }
 
     var memoryStore: any MemoryStoreProtocol {
@@ -159,14 +159,14 @@ public struct UnconfiguredClientStore: ClientStoreProtocol {
     public func fetchClientTools(clientId _: UUID) async throws -> [ToolReference] { fail() }
 }
 
-public struct UnconfiguredMSAgentStore: MSAgentStoreProtocol {
+public struct UnconfiguredAgentTemplateStore: AgentTemplateStoreProtocol {
     public init() {}
-    private func fail() -> Never { fatalError("MSAgentStore not configured.") }
-    public func saveMSAgent(_: MSAgent) async throws { fail() }
-    public func fetchMSAgent(id _: UUID) async throws -> MSAgent? { fail() }
-    public func fetchMSAgent(key _: String) async throws -> MSAgent? { fail() }
-    public func fetchAllMSAgents() async throws -> [MSAgent] { fail() }
-    public func hasMSAgent(id _: String) async -> Bool { fail() }
+    private func fail() -> Never { fatalError("AgentTemplateStore not configured.") }
+    public func saveAgentTemplate(_: AgentTemplate) async throws { fail() }
+    public func fetchAgentTemplate(id _: UUID) async throws -> AgentTemplate? { fail() }
+    public func fetchAgentTemplate(key _: String) async throws -> AgentTemplate? { fail() }
+    public func fetchAllAgentTemplates() async throws -> [AgentTemplate] { fail() }
+    public func hasAgentTemplate(id _: String) async -> Bool { fail() }
 }
 
 public struct UnconfiguredMemoryStore: MemoryStoreProtocol {

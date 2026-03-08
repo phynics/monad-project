@@ -7,17 +7,11 @@ struct ClientToolExecutor {
     let client: MonadClient
     let timeline: Timeline
     let repl: ChatREPL
-    
-    init(client: MonadClient, timeline: Timeline, repl: ChatREPL) {
-        self.client = client
-        self.timeline = timeline
-        self.repl = repl
-    }
-    
+
     func execute(toolCalls: [ToolCall], in workspace: WorkspaceReference) async -> [ToolOutputSubmission] {
         var submissions: [ToolOutputSubmission] = []
         let rootPath = workspace.rootPath ?? FileManager.default.currentDirectoryPath
-        
+
         for call in toolCalls {
             // Internal REPL interaction tool
             if call.name == "request_write_access" {
@@ -25,7 +19,7 @@ struct ClientToolExecutor {
                 submissions.append(submission)
                 continue
             }
-            
+
             // Standard shared tools
             guard let tool = instantiateTool(name: call.name, rootPath: rootPath) else {
                 submissions.append(ToolOutputSubmission(
@@ -34,7 +28,7 @@ struct ClientToolExecutor {
                 ))
                 continue
             }
-            
+
             do {
                 let dict = call.arguments.mapValues { $0.value }
                 let result = try await tool.execute(parameters: dict)
@@ -49,35 +43,35 @@ struct ClientToolExecutor {
                 ))
             }
         }
-        
+
         return submissions
     }
-    
+
     private func handleRequestWriteAccess(toolCall: ToolCall, workspace: WorkspaceReference) async -> ToolOutputSubmission {
         let reason = toolCall.arguments["reason"]?.value as? String ?? "No reason provided."
-        
+
         let answer = await repl.promptForWriteAccess(reason: reason, workspaceURI: workspace.uri.description)
-        
+
         guard answer else {
             return ToolOutputSubmission(
                 toolCallId: toolCall.id.uuidString,
                 output: "User denied write access."
             )
         }
-        
+
         do {
             // Update workspace to full trust
             _ = try await client.workspace.updateWorkspace(
                 id: workspace.id,
                 trustLevel: .full
             )
-            
+
             // Sync read/write tools
             try await client.workspace.syncWorkspaceTools(
                 ClientConstants.readOnlyToolReferences + ClientConstants.readWriteToolReferences,
                 workspaceId: workspace.id
             )
-            
+
             return ToolOutputSubmission(
                 toolCallId: toolCall.id.uuidString,
                 output: "Write access granted successfully. You may now use write-enabled tools."
@@ -89,7 +83,7 @@ struct ClientToolExecutor {
             )
         }
     }
-    
+
     private func instantiateTool(name: String, rootPath: String) -> MonadShared.Tool? {
         // Shared filesystem tools require currentDirectory and jailRoot initialization
         switch name {

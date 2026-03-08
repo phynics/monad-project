@@ -3,12 +3,12 @@ import MonadCore
 import MonadShared
 import Dependencies
 
-public final class MockPersistenceService: MemoryStoreProtocol, MessageStoreProtocol, TimelinePersistenceProtocol, WorkspacePersistenceProtocol, MSAgentStoreProtocol, BackgroundJobStoreProtocol, ClientStoreProtocol, ToolPersistenceProtocol, AgentInstanceStoreProtocol, HealthCheckable, @unchecked Sendable {
+public final class MockPersistenceService: MemoryStoreProtocol, MessageStoreProtocol, TimelinePersistenceProtocol, WorkspacePersistenceProtocol, AgentTemplateStoreProtocol, BackgroundJobStoreProtocol, ClientStoreProtocol, ToolPersistenceProtocol, AgentInstanceStoreProtocol, HealthCheckable, @unchecked Sendable {
     private let memoriesMock = MockMemoryStore()
     private let messagesMock = MockMessageStore()
     private let timelinesMock = MockTimelinePersistence()
     private let jobsMock = MockBackgroundJobStore()
-    private let msAgentsMock = MockMSAgentStore()
+    private let agentTemplatesMock = MockAgentTemplateStore()
     private let workspacesMock = MockWorkspacePersistence()
     private let toolsMock = MockToolPersistence()
 
@@ -180,31 +180,31 @@ public final class MockPersistenceService: MemoryStoreProtocol, MessageStoreProt
         await jobsMock.monitorJobs()
     }
 
-    // MARK: - MSAgentStoreProtocol
+    // MARK: - AgentTemplateStoreProtocol
 
-    public var msAgents: [MSAgent] {
-        get { msAgentsMock.msAgents }
-        set { msAgentsMock.msAgents = newValue }
+    public var agentTemplates: [AgentTemplate] {
+        get { agentTemplatesMock.agentTemplates }
+        set { agentTemplatesMock.agentTemplates = newValue }
     }
 
-    public func saveMSAgent(_ agent: MSAgent) async throws {
-        try await msAgentsMock.saveMSAgent(agent)
+    public func saveAgentTemplate(_ agent: AgentTemplate) async throws {
+        try await agentTemplatesMock.saveAgentTemplate(agent)
     }
 
-    public func fetchMSAgent(id: UUID) async throws -> MSAgent? {
-        try await msAgentsMock.fetchMSAgent(id: id)
+    public func fetchAgentTemplate(id: UUID) async throws -> AgentTemplate? {
+        try await agentTemplatesMock.fetchAgentTemplate(id: id)
     }
 
-    public func fetchMSAgent(key: String) async throws -> MSAgent? {
-        try await msAgentsMock.fetchMSAgent(key: key)
+    public func fetchAgentTemplate(key: String) async throws -> AgentTemplate? {
+        try await agentTemplatesMock.fetchAgentTemplate(key: key)
     }
 
-    public func fetchAllMSAgents() async throws -> [MSAgent] {
-        try await msAgentsMock.fetchAllMSAgents()
+    public func fetchAllAgentTemplates() async throws -> [AgentTemplate] {
+        try await agentTemplatesMock.fetchAllAgentTemplates()
     }
 
-    public func hasMSAgent(id: String) async -> Bool {
-        await msAgentsMock.hasMSAgent(id: id)
+    public func hasAgentTemplate(id: String) async -> Bool {
+        await agentTemplatesMock.hasAgentTemplate(id: id)
     }
 
     // MARK: - WorkspacePersistenceProtocol
@@ -322,7 +322,7 @@ public final class MockPersistenceService: MemoryStoreProtocol, MessageStoreProt
         messages = []
         timelines = []
         jobs = []
-        msAgents = []
+        agentTemplates = []
         workspaces = []
     }
 }
@@ -337,7 +337,7 @@ extension DependencyValues {
             self.messageStore = newValue
             self.clientStore = newValue
             self.toolPersistence = newValue
-            self.msAgentStore = newValue
+            self.agentTemplateStore = newValue
             self.backgroundJobStore = newValue
             self.agentInstanceStore = newValue
         }

@@ -176,7 +176,7 @@ extension ChatREPL {
             if let wsId = targetWorkspaceId {
                 let timelineWS = try await client.workspace.listTimelineWorkspaces(timelineId: timeline.id)
                 let isAttached = timelineWS.attached.contains { $0.id == wsId }
-                
+
                 if !isAttached {
                     try await client.workspace.attachWorkspace(wsId, to: timeline.id, isPrimary: false)
                 }
@@ -196,13 +196,13 @@ extension ChatREPL {
         print("\n\(TerminalUI.bold("⚠️  Write Access Requested"))")
         print("The assistant wants to modify files in this read-only workspace (\(workspaceURI)).")
         print("Reason: \(TerminalUI.dim(reason))")
-        
+
         print("Grant full write access? [y/N] ", terminator: "")
         fflush(stdout)
-        
+
         let answer = lineReader.readLine(prompt: "", completion: nil)?
             .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        
+
         return answer == "y"
     }
 }

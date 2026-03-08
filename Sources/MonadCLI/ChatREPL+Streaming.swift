@@ -20,7 +20,7 @@ extension ChatREPL {
         startEscapeMonitor()
         currentGenerationTask = Task {
             var currentMessage = initialMessage
-            var currentToolOutputs: [ToolOutputSubmission]? = nil
+            var currentToolOutputs: [ToolOutputSubmission]?
             var keepGoing = true
 
             while keepGoing && !Task.isCancelled {
@@ -112,7 +112,7 @@ extension ChatREPL {
                                 let tokens = meta.totalTokens ?? 0
                                 let dur = String(format: "%.1fs", meta.duration ?? 0)
                                 print(TerminalUI.dim("\n[Generated in \(dur), \(tokens) tokens]"))
-                                
+
                                 if let calls = msg.toolCalls, !calls.isEmpty {
                                     pendingToolCalls = calls
                                 }
@@ -137,25 +137,25 @@ extension ChatREPL {
 
                     if !pendingToolCalls.isEmpty && !Task.isCancelled {
                         print("") // Spacing for local tools
-                        
+
                         let timelineWS = try? await client.workspace.listTimelineWorkspaces(timelineId: timelineId)
                         let targetWsId = selectedWorkspaceId ?? timelineWS?.primary?.id ?? timelineWS?.attached.first?.id
-                        
+
                         guard let wsId = targetWsId,
                               let workspace = try? await client.workspace.getWorkspace(wsId) else {
                             print(TerminalUI.red("  ✗ Cannot execute local tools: no active workspace found."))
                             break
                         }
-                        
+
                         for call in pendingToolCalls {
                             let arguments = (try? SerializationUtils.jsonEncoder.encode(call.arguments))
                                 .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
                             printToolAttempt(name: call.name, argsJSON: arguments, reference: nil)
                         }
-                        
+
                         let executor = ClientToolExecutor(client: client, timeline: timeline, repl: self)
                         let submissions = await executor.execute(toolCalls: pendingToolCalls, in: workspace)
-                        
+
                         for submission in submissions {
                             if submission.output.hasPrefix("Error:") {
                                 print(TerminalUI.red("  ✗ \(submission.output)"))
@@ -163,7 +163,7 @@ extension ChatREPL {
                                 printToolResult(submission.output)
                             }
                         }
-                        
+
                         currentMessage = ""
                         currentToolOutputs = submissions
                         keepGoing = true

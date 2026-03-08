@@ -1,7 +1,6 @@
 import Foundation
 import Dependencies
 import Hummingbird
-import Dependencies
 import MonadCore
 import MonadShared
 import NIOCore

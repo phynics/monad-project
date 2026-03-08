@@ -144,9 +144,9 @@ extension DatabaseSchema {
         )
     }
 
-    // MARK: - MSAgent Table
+    // MARK: - AgentTemplate Table
 
-    static func createMSAgentTable(in db: Database) throws {
+    static func createAgentTemplateTable(in db: Database) throws {
         try db.create(table: "agent") { t in
             t.column("id", .text).primaryKey()
             t.column("name", .text).notNull()

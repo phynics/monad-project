@@ -24,14 +24,14 @@ import Testing
             $0.workspacePersistence = persistence
             $0.memoryStore = persistence
             $0.messageStore = persistence
-            $0.msAgentStore = persistence
+            $0.agentTemplateStore = persistence
             $0.backgroundJobStore = persistence
             $0.clientStore = persistence
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
-            $0.msAgentRegistry = MSAgentRegistry()
+            $0.agentTemplateRegistry = AgentTemplateRegistry()
             $0.timelineManager = timelineManager
         } operation: {
             let toolRouter = ToolRouter()

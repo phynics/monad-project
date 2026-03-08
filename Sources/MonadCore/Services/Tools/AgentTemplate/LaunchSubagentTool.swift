@@ -14,20 +14,20 @@ public struct LaunchSubagentTool: MonadShared.Tool, Sendable {
     private let messageStore: any MessageStoreProtocol
     private let timelineId: UUID
     private let parentId: UUID?
-    private let msAgentRegistry: MSAgentRegistry
+    private let agentTemplateRegistry: AgentTemplateRegistry
 
     public init(
         backgroundJobStore: any BackgroundJobStoreProtocol,
         messageStore: any MessageStoreProtocol,
         timelineId: UUID,
         parentId: UUID? = nil,
-        msAgentRegistry: MSAgentRegistry
+        agentTemplateRegistry: AgentTemplateRegistry
     ) {
         self.backgroundJobStore = backgroundJobStore
         self.messageStore = messageStore
         self.timelineId = timelineId
         self.parentId = parentId
-        self.msAgentRegistry = msAgentRegistry
+        self.agentTemplateRegistry = agentTemplateRegistry
     }
 
     public var parametersSchema: [String: AnyCodable] {
@@ -67,9 +67,9 @@ public struct LaunchSubagentTool: MonadShared.Tool, Sendable {
         }
 
         // Verify agent exists
-        guard await msAgentRegistry.hasMSAgent(id: agentId) else {
-            let available = await msAgentRegistry.listMSAgents().map { "\($0.id) (\($0.name))" }.joined(separator: ", ")
-            return .failure("MSAgent '\(agentId)' not found. Available msAgents: \(available)")
+        guard await agentTemplateRegistry.hasAgentTemplate(id: agentId) else {
+            let available = await agentTemplateRegistry.listAgentTemplates().map { "\($0.id) (\($0.name))" }.joined(separator: ", ")
+            return .failure("AgentTemplate '\(agentId)' not found. Available agentTemplates: \(available)")
         }
 
         // Create the job

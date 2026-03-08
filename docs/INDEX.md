@@ -36,7 +36,7 @@ Comprehensive guide to Monad documentation.
 ### Feature Docs
 
 **[AGENT.md](AGENT.md)** — Agent system
-- `MSAgent` templates vs `AgentInstance` runtime entities
+- `AgentTemplate` templates vs `AgentInstance` runtime entities
 - Creating, attaching, and deleting agents
 - Agent identity in prompts (`AgentContext`, `TimelineContext` sections)
 - Inter-agent communication (timeline tools)
@@ -68,7 +68,7 @@ Comprehensive guide to Monad documentation.
 
 **[API_REFERENCE.md](API_REFERENCE.md)** — MonadServer HTTP API (complete endpoint listing)
 - System status, timelines, chat streaming
-- Memories, workspaces, agent instances, MSAgents
+- Memories, workspaces, agent instances, agent templates
 - Jobs, clients, configuration
 
 ### State Stores
@@ -132,7 +132,7 @@ Live runtime agent entity with its own workspace and private timeline.
 
 → See **[AGENT.md](AGENT.md)** for full details.
 
-### MSAgent
+### AgentTemplate
 Static agent template used to seed `AgentInstance` workspaces.
 
 **Fields:** `id`, `name`, `description`, `systemPrompt`, `personaPrompt`, `guardrails`, `workspaceFilesSeed`
@@ -164,7 +164,7 @@ Sources/MonadCore/Models/
 
 Sources/MonadShared/SharedTypes/
 ├── AgentInstance.swift   — Live agent entity (runtime)
-├── MSAgent.swift         — Agent template (static definition)
+├── AgentTemplate.swift   — Agent template (static definition)
 ├── ChatAPITypes.swift    — TimelineResponse, CreateTimelineRequest, etc.
 ├── WorkspaceReference.swift, WorkspaceURI.swift
 ├── ChatEvent.swift, Message.swift, ToolCall.swift
@@ -186,11 +186,11 @@ Sources/MonadCore/Services/
 ├── Embeddings/                   — EmbeddingService, LocalEmbeddingService, OpenAIEmbeddingService
 ├── LLM/                          — LLMService, StreamingParser, StreamingCoordinator
 │   └── Providers/                — OpenAI, Ollama, OpenRouter clients
-├── MSAgents/                     — MSAgentExecutor, MSAgentRegistry
+├── AgentTemplates/               — AgentTemplateExecutor, AgentTemplateRegistry
 ├── Prompting/                    — DefaultInstructions, PromptSections
 ├── Timeline/                     — TimelineManager, TimelineToolManager
 ├── Tools/                        — SystemToolRegistry, ToolExecutor, ToolRouter
-│   ├── MSAgent/                  — LaunchSubagentTool, MSAgentAsTool
+│   ├── AgentTemplate/            — LaunchSubagentTool, AgentTemplateAsTool
 │   └── Timeline/                 — TimelineListTool, TimelinePeekTool, TimelineSendTool
 ├── Vector/                       — VectorStore, MockVectorStore
 └── Workspace/                    — WorkspaceManager, WorkspaceRepository
@@ -201,7 +201,7 @@ Sources/MonadCore/Services/
 | Category | Tools |
 |:---------|:------|
 | Filesystem (7) | `cd`, `find`, `inspect_file`, `ls`, `cat`, `grep`, `search_files` |
-| MSAgent (2) | `LaunchSubagentTool`, `MSAgentAsTool` |
+| AgentTemplate (2) | `LaunchSubagentTool`, `AgentTemplateAsTool` |
 | Timeline (3) | `timeline_list`, `timeline_peek`, `timeline_send` |
 | System (2) | `system_memory_search`, `system_web_search` |
 | Job Queue (1) | `BackgroundJobQueueGatewayTool` |

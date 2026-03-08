@@ -37,7 +37,7 @@ public struct MonadServerFactory {
         let agentInstanceStore = AgentInstanceDataRepository(dbQueue: dbQueue)
         let backgroundJobStore = BackgroundJobRepository(dbQueue: dbQueue)
         let clientStore = ClientIdentityRepository(dbQueue: dbQueue)
-        let msAgentStore = MSAgentRepository(dbQueue: dbQueue)
+        let agentTemplateStore = AgentTemplateRepository(dbQueue: dbQueue)
         let memoryStore = MemoryRepository(dbQueue: dbQueue)
         let messageStore = MessageRepository(dbQueue: dbQueue)
         let timelinePersistence = TimelineRepository(dbQueue: dbQueue)
@@ -85,7 +85,7 @@ public struct MonadServerFactory {
         let connectionManager = WebSocketConnectionManager()
 
         // Initialize Core Services
-        let msAgentRegistry = MSAgentRegistry()
+        let agentTemplateRegistry = AgentTemplateRegistry()
         let timelineManager = TimelineManager(
             workspaceRoot: workspaceRoot,
             connectionManager: connectionManager,
@@ -96,7 +96,7 @@ public struct MonadServerFactory {
         let toolRouter = ToolRouter()
         let chatEngine = ChatEngine()
 
-        let msAgentExecutor = MSAgentExecutor(
+        let agentTemplateExecutor = AgentTemplateExecutor(
             backgroundJobStore: backgroundJobStore,
             messageStore: messageStore,
             chatEngine: chatEngine
@@ -104,8 +104,8 @@ public struct MonadServerFactory {
 
         let jobRunner = BackgroundJobRunnerService(
             timelineManager: timelineManager,
-            msAgentRegistry: msAgentRegistry,
-            msAgentExecutor: msAgentExecutor
+            agentTemplateRegistry: agentTemplateRegistry,
+            agentTemplateExecutor: agentTemplateExecutor
         )
         let orphanCleanup = OrphanCleanupService(
             workspaceRoot: workspaceRoot
@@ -122,7 +122,7 @@ public struct MonadServerFactory {
             $0.agentInstanceStore = agentInstanceStore
             $0.backgroundJobStore = backgroundJobStore
             $0.clientStore = clientStore
-            $0.msAgentStore = msAgentStore
+            $0.agentTemplateStore = agentTemplateStore
             $0.memoryStore = memoryStore
             $0.messageStore = messageStore
             $0.timelinePersistence = timelinePersistence
@@ -132,11 +132,11 @@ public struct MonadServerFactory {
             $0.llmService = llmService
             $0.embeddingService = embeddingService
             $0.vectorStore = vectorStore
-            $0.msAgentRegistry = msAgentRegistry
+            $0.agentTemplateRegistry = agentTemplateRegistry
             $0.timelineManager = timelineManager
             $0.toolRouter = toolRouter
             $0.chatEngine = chatEngine
-            $0.msAgentExecutor = msAgentExecutor
+            $0.agentTemplateExecutor = agentTemplateExecutor
             $0.agentInstanceManager = agentInstanceManager
             $0.workspaceManager = workspaceManager
         } operation: {
@@ -188,8 +188,8 @@ public struct MonadServerFactory {
             let toolController = ToolAPIController<AppRequestContext>()
             toolController.addRoutes(to: protected.group("/tools"))
 
-            let msAgentController = MSAgentAPIController<AppRequestContext>()
-            msAgentController.addRoutes(to: protected.group("/msAgents"))
+            let agentTemplateController = AgentTemplateAPIController<AppRequestContext>()
+            agentTemplateController.addRoutes(to: protected.group("/agentTemplates"))
 
             let agentInstanceController = AgentInstanceAPIController<AppRequestContext>(
                 agentInstanceManager: agentInstanceManager
@@ -226,7 +226,7 @@ public struct MonadServerFactory {
                         .init(service: app),
                         .init(service: jobRunner),
                         .init(service: orphanCleanup),
-                        .init(service: bonjourAdvertiser),
+                        .init(service: bonjourAdvertiser)
                     ],
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                     logger: logger

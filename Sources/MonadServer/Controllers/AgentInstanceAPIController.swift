@@ -43,7 +43,7 @@ public struct AgentInstanceAPIController<Context: RequestContext>: Sendable {
 
     @Sendable func create(_ request: Request, context: Context) async throws -> Response {
         let input = try await request.decode(as: CreateAgentInstanceRequest.self, context: context)
-        let template: MSAgent? = nil // Template lookup not supported in this endpoint
+        let template: AgentTemplate? = nil // Template lookup not supported in this endpoint
         let instance = try await agentInstanceManager.createInstance(
             from: template,
             name: input.name,

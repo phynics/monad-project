@@ -72,8 +72,7 @@ public extension DatabaseSchema {
                     if let data = Data(base64Encoded: timeline.tags),
                        let tagsArray = try? JSONDecoder().decode([String].self, from: data),
                        let newData = try? JSONEncoder().encode(tagsArray),
-                       let newString = String(data: newData, encoding: .utf8)
-                    {
+                       let newString = String(data: newData, encoding: .utf8) {
                         timeline.tags = newString
                         try timeline.update(db)
                     }
@@ -419,12 +418,12 @@ public extension DatabaseSchema {
             try db.create(index: "idx_job_parent", on: "job", columns: ["parentId"])
         }
 
-        // v27: Add agent table for simplified, data-driven msAgents
+        // v27: Add agent table for simplified, data-driven agentTemplates
         migrator.registerMigration("v27") { db in
-            try createMSAgentTable(in: db)
+            try createAgentTemplateTable(in: db)
 
             // Seed with default agent
-            let defaultMSAgent = MSAgent(
+            let defaultAgentTemplate = AgentTemplate(
                 id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
                 name: "Default Assistant",
                 description: "A general purpose assistant focused on helpfulness and accuracy.",
@@ -433,19 +432,19 @@ public extension DatabaseSchema {
                 Your goal is to assist the user with their tasks while being concise and professional.
                 """
             )
-            try defaultMSAgent.insert(db)
+            try defaultAgentTemplate.insert(db)
 
             // Seed with coordinator agent
-            let coordinatorMSAgent = MSAgent(
+            let coordinatorAgentTemplate = AgentTemplate(
                 id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
-                name: "MSAgent Coordinator",
-                description: "Coordinates multiple msAgents and complex workflows.",
+                name: "AgentTemplate Coordinator",
+                description: "Coordinates multiple agentTemplates and complex workflows.",
                 systemPrompt: """
                 You are the Monad Coordinator. Your role is to break down complex tasks into smaller sub-tasks
-                and delegate them to specialized msAgents.
+                and delegate them to specialized agentTemplates.
                 """
             )
-            try coordinatorMSAgent.insert(db)
+            try coordinatorAgentTemplate.insert(db)
         }
 
         // v28: Ensure tools column exists on workspace table

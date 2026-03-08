@@ -209,10 +209,10 @@ Agent instances are the live runtime entities that attach to timelines and drive
 {
   "name": "Research Agent",
   "description": "Specializes in searching and summarizing information.",
-  "msAgentId": "uuid"
+  "agentTemplateId": "uuid"
 }
 ```
-The `msAgentId` field is optional. If provided, the instance workspace is seeded from the MSAgent template.
+The `agentTemplateId` field is optional. If provided, the instance workspace is seeded from the AgentTemplate.
 
 ### Get Agent Instance
 `GET /agents/:id`
@@ -241,17 +241,17 @@ Returns all timelines the agent is currently attached to.
 
 ---
 
-## MSAgents (Templates)
+## AgentTemplates
 
-Route prefix: `/api/msAgents`
+Route prefix: `/api/agentTemplates`
 
-MSAgents are static templates used to seed new agent instance workspaces.
+AgentTemplates are static templates used to seed new agent instance workspaces.
 
-- `GET /msAgents` — List all MSAgent templates.
-- `POST /msAgents` — Create a new MSAgent template.
-- `GET /msAgents/:id` — Get a specific MSAgent template.
-- `PATCH /msAgents/:id` — Update a template.
-- `DELETE /msAgents/:id` — Delete a template.
+- `GET /agentTemplates` — List all AgentTemplate templates.
+- `POST /agentTemplates` — Create a new AgentTemplate.
+- `GET /agentTemplates/:id` — Get a specific AgentTemplate.
+- `PATCH /agentTemplates/:id` — Update a template.
+- `DELETE /agentTemplates/:id` — Delete a template.
 
 ---
 

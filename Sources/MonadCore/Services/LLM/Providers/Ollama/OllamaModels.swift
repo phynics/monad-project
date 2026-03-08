@@ -134,7 +134,7 @@ extension OllamaTool {
 
 struct OllamaEndpoint {
     let rawValue: String
-    
+
     var url: URL {
         var cleanEndpoint = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         if cleanEndpoint.hasSuffix("/") {
@@ -150,11 +150,11 @@ struct OllamaEndpoint {
             return URL(string: "http://localhost:11434")!
         }
     }
-    
+
     var chatURL: URL {
         url.appendingPathComponent("api/chat")
     }
-    
+
     var tagsURL: URL {
         url.appendingPathComponent("api/tags")
     }

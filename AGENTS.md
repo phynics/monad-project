@@ -86,7 +86,7 @@ Six targets with strict dependency hierarchy:
 
 1. **MonadPrompt** — Standalone DSL for prompt construction (`@ContextBuilder`). No dependencies.
 2. **MonadCore** — Core business logic. Contains `ChatEngine`, `TimelineManager`, `AgentInstanceManager`, `ContextManager`, `ToolRouter`/`ToolExecutor`, LLM providers (OpenAI/Ollama/OpenRouter), embeddings, persistence. **Works as a standalone library.**
-3. **MonadShared** — Common types for client/server (`AgentInstance`, `MSAgent`, `ToolReference`, `WorkspaceReference`, `AnyCodable`, `ChatEvent`). No MonadCore dependency.
+3. **MonadShared** — Common types for client/server (`AgentInstance`, `AgentTemplate`, `ToolReference`, `WorkspaceReference`, `AnyCodable`, `ChatEvent`). No MonadCore dependency.
 4. **MonadServer** — Hummingbird REST API, SSE streaming, GRDB persistence, WebSocket, service lifecycle.
 5. **MonadClient** — Core HTTP/SSE networking layer and base client. Exposes `chat` and `workspace` facades for domain-specific operations.
 6. **MonadCLI** — Command-line interface with slash commands.
@@ -96,7 +96,7 @@ Six targets with strict dependency hierarchy:
 **Key Model Notes:**
 - **`Timeline`** — persistent conversation record (formerly `ConversationSession`). Fields: `attachedAgentInstanceId`, `isPrivate`, `ownerAgentInstanceId` support the agent system.
 - **`AgentInstance`** — live runtime agent entity in `MonadShared`. Has private workspace + private timeline.
-- **`MSAgent`** — static agent template in `MonadShared`. Seeds new `AgentInstance` workspaces.
+- **`AgentTemplate`** — static agent template in `MonadShared`. Seeds new `AgentInstance` workspaces.
 - **`LLMConfiguration`** — multi-provider config. Split into `LLMProvider`, `ProviderConfiguration`, `ToolCallFormat`.
 - **`AnyTool`** — type-erased tool wrapper with optional `provenance` for labeling
 
@@ -160,8 +160,8 @@ Six targets with strict dependency hierarchy:
 **Filesystem (7):**
 - `cd`, `find`, `inspect_file`, `ls`, `cat`, `grep`, `search_files`
 
-**MSAgent (2):**
-- `LaunchSubagentTool`, `MSAgentAsTool`
+**AgentTemplate (2):**
+- `LaunchSubagentTool`, `AgentTemplateAsTool`
 
 **Timeline (3):**
 - `timeline_list`, `timeline_peek`, `timeline_send`
@@ -190,7 +190,7 @@ See **[docs/INDEX.md](docs/INDEX.md)** for comprehensive documentation index.
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** — Developer guide (creating tools, endpoints, workflows)
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System architecture deep dive
 - **[docs/CONTEXT_SYSTEM.md](docs/CONTEXT_SYSTEM.md)** — Context assembly pipeline
-- **[docs/AGENT.md](docs/AGENT.md)** — Agent system (MSAgent, AgentInstance, CLI, API)
+- **[docs/AGENT.md](docs/AGENT.md)** — Agent system (AgentTemplate, AgentInstance, CLI, API)
 - **[docs/TIMELINE.md](docs/TIMELINE.md)** — Timeline model, chat stream, SSE events
 - **[docs/WORKSPACE.md](docs/WORKSPACE.md)** — Workspace model, tool execution, security
 - **[docs/CLIENT.md](docs/CLIENT.md)** — MonadClient library, CLI slash commands

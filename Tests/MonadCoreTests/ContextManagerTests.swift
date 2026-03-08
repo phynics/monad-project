@@ -18,7 +18,7 @@ struct ContextManagerTests {
             $0.workspacePersistence = mockPersistence
             $0.memoryStore = mockPersistence
             $0.messageStore = mockPersistence
-            $0.msAgentStore = mockPersistence
+            $0.agentTemplateStore = mockPersistence
             $0.backgroundJobStore = mockPersistence
             $0.clientStore = mockPersistence
             $0.toolPersistence = mockPersistence
@@ -62,7 +62,7 @@ struct ContextManagerTests {
             $0.workspacePersistence = mockPersistence
             $0.memoryStore = mockPersistence
             $0.messageStore = mockPersistence
-            $0.msAgentStore = mockPersistence
+            $0.agentTemplateStore = mockPersistence
             $0.backgroundJobStore = mockPersistence
             $0.clientStore = mockPersistence
             $0.toolPersistence = mockPersistence
@@ -109,7 +109,7 @@ struct ContextManagerTests {
             $0.workspacePersistence = mockPersistence
             $0.memoryStore = mockPersistence
             $0.messageStore = mockPersistence
-            $0.msAgentStore = mockPersistence
+            $0.agentTemplateStore = mockPersistence
             $0.backgroundJobStore = mockPersistence
             $0.clientStore = mockPersistence
             $0.toolPersistence = mockPersistence
@@ -176,7 +176,7 @@ struct ContextManagerTests {
             $0.workspacePersistence = mockPersistence
             $0.memoryStore = mockPersistence
             $0.messageStore = mockPersistence
-            $0.msAgentStore = mockPersistence
+            $0.agentTemplateStore = mockPersistence
             $0.backgroundJobStore = mockPersistence
             $0.clientStore = mockPersistence
             $0.toolPersistence = mockPersistence

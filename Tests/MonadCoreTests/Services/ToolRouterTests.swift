@@ -32,14 +32,14 @@ final class ToolRouterTests: XCTestCase {
             $0.workspacePersistence = mockPersistence
             $0.memoryStore = mockPersistence
             $0.messageStore = mockPersistence
-            $0.msAgentStore = mockPersistence
+            $0.agentTemplateStore = mockPersistence
             $0.backgroundJobStore = mockPersistence
             $0.clientStore = mockPersistence
             $0.toolPersistence = mockPersistence
             $0.agentInstanceStore = mockPersistence
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()
-            $0.msAgentRegistry = MSAgentRegistry()
+            $0.agentTemplateRegistry = AgentTemplateRegistry()
         } operation: {
             TimelineManager(workspaceRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         }

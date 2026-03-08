@@ -6,9 +6,9 @@ import MonadCore
 import MonadShared
 import NIOCore
 
-/// Controller for discovering available msAgents in the framework
-public struct MSAgentAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.msAgentRegistry) var msAgentRegistry
+/// Controller for discovering available agentTemplates in the framework
+public struct AgentTemplateAPIController<Context: RequestContext>: Sendable {
+    @Dependency(\.agentTemplateRegistry) var agentTemplateRegistry
 
     public init() {}
 
@@ -18,9 +18,9 @@ public struct MSAgentAPIController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func list(_: Request, context _: Context) async throws -> Response {
-        let msAgents = await msAgentRegistry.listMSAgents()
+        let agentTemplates = await agentTemplateRegistry.listAgentTemplates()
 
-        let data = try SerializationUtils.jsonEncoder.encode(msAgents)
+        let data = try SerializationUtils.jsonEncoder.encode(agentTemplates)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
         return Response(status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
@@ -29,7 +29,7 @@ public struct MSAgentAPIController<Context: RequestContext>: Sendable {
     @Sendable func get(_: Request, context: Context) async throws -> Response {
         let id = try context.parameters.require("id")
 
-        guard let agent = await msAgentRegistry.getMSAgent(id: id) else {
+        guard let agent = await agentTemplateRegistry.getAgentTemplate(id: id) else {
             throw HTTPError(.notFound)
         }
 

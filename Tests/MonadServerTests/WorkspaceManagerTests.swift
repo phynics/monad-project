@@ -18,7 +18,7 @@ final class WorkspaceManagerTests: XCTestCase {
             $0.workspacePersistence = persistence
             $0.memoryStore = persistence
             $0.messageStore = persistence
-            $0.msAgentStore = persistence
+            $0.agentTemplateStore = persistence
             $0.backgroundJobStore = persistence
             $0.clientStore = persistence
             $0.toolPersistence = persistence

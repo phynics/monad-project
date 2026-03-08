@@ -2,9 +2,9 @@ import Foundation
 import MonadShared
 import Logging
 
-/// A tool wrapper that allows an MSAgent definition to be called as a tool by another agent or chat session.
+/// A tool wrapper that allows an AgentTemplate definition to be called as a tool by another agent or chat session.
 /// Executing this tool results in a background BackgroundJob being queued for the target agent.
-public struct MSAgentAsTool: MonadShared.Tool, Sendable {
+public struct AgentTemplateAsTool: MonadShared.Tool, Sendable {
     public let id: String
     public let name: String
     public let description: String
@@ -14,7 +14,7 @@ public struct MSAgentAsTool: MonadShared.Tool, Sendable {
     private let agentName: String
     private let jobQueueContext: BackgroundJobQueueContext
 
-    public init(agent: MSAgent, jobQueueContext: BackgroundJobQueueContext) {
+    public init(agent: AgentTemplate, jobQueueContext: BackgroundJobQueueContext) {
         self.agentId = agent.id.uuidString
         self.agentName = agent.name
         self.jobQueueContext = jobQueueContext

@@ -11,7 +11,7 @@ The persistence layer is split into 8 focused protocols to ensure high cohesion 
 - `MessageStoreProtocol`: Chat history management.
 - `TimelinePersistenceProtocol`: Conversation timeline lifecycle.
 - `BackgroundJobStoreProtocol`: Background task and subagent job queue.
-- `MSAgentStoreProtocol`: Static agent definitions.
+- `AgentTemplateStoreProtocol`: Static agent definitions.
 - `WorkspacePersistenceProtocol`: Virtual document workspace tracking.
 - `ClientStoreProtocol`: Remote client identity and state.
 - `ToolPersistenceProtocol`: Tool registry and routing metadata.

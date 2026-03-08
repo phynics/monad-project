@@ -28,12 +28,12 @@ public actor AgentInstanceManager {
 
     /// Creates a new agent instance, its private workspace, and its private timeline atomically.
     /// - Parameters:
-    ///   - template: Optional `MSAgent` template to seed workspace files from.
+    ///   - template: Optional `AgentTemplate` template to seed workspace files from.
     ///   - name: Display name for the instance.
     ///   - description: Purpose description.
     /// - Returns: The created `AgentInstance`.
     public func createInstance(
-        from template: MSAgent? = nil,
+        from template: AgentTemplate? = nil,
         name: String,
         description: String
     ) async throws -> AgentInstance {

@@ -68,11 +68,11 @@ public actor MockSession: URLSessionProtocol {
         #expect(lastReq?.url?.path == "/api/memories/\(memoryId.uuidString)")
         #expect(lastReq?.httpMethod == "GET")
 
-        // 2. MSAgents Test
-        try await mockSession.setMockData(JSONEncoder().encode([] as [MSAgent]))
-        _ = try await client.chat.listMSAgents()
+        // 2. AgentTemplates Test
+        try await mockSession.setMockData(JSONEncoder().encode([] as [AgentTemplate]))
+        _ = try await client.chat.listAgentTemplates()
         lastReq = await mockSession.lastRequest
-        #expect(lastReq?.url?.path == "/api/msAgents")
+        #expect(lastReq?.url?.path == "/api/agentTemplates")
         #expect(lastReq?.httpMethod == "GET")
 
         // 3. System Configuration Clear Test

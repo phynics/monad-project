@@ -1,21 +1,6 @@
 import Foundation
 import MonadShared
 import Logging
-import MonadShared
-
-// MARK: - ToolContext Protocol
-
-/// A scoped tool environment with its own state and tools.
-///
-/// ToolContexts are activated by gateway tools and provide additional
-/// context-specific tools that are only available within the active context.
-///
-/// **Persistence Modes**:
-/// - Non-persistent (default): Auto-deactivates when any non-context tool is called
-/// - Persistent: Stays active even when other tools are called (e.g., job queues)
-///
-/// **Pinning**: Pinned contexts inject their state into the LLM prompt even after deactivation,
-/// ensuring the LLM has access to relevant context (e.g., loaded metadata or state).
 public protocol ToolContext: AnyObject, Sendable {
     /// Unique identifier for this context type
     static var contextId: String { get }

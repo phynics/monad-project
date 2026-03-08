@@ -2,17 +2,17 @@
 
 Monad's agent system distinguishes between two types:
 
-- **`MSAgent`** — A static template that defines initial instructions, persona, and workspace seed files.
+- **`AgentTemplate`** — A static template that defines initial instructions, persona, and workspace seed files.
 - **`AgentInstance`** — A live, persistent runtime entity created from a template. Has its own workspace, private timeline, and identity.
 
 ---
 
-## MSAgent (Template)
+## AgentTemplate (Template)
 
-**Location:** `Sources/MonadShared/SharedTypes/MSAgent.swift`
+**Location:** `Sources/MonadShared/SharedTypes/AgentTemplate.swift`
 
 ```swift
-public struct MSAgent: Codable, Sendable, Identifiable {
+public struct AgentTemplate: Codable, Sendable, Identifiable {
     public let id: UUID
     public let name: String
     public let description: String
@@ -24,11 +24,11 @@ public struct MSAgent: Codable, Sendable, Identifiable {
 }
 ```
 
-**Managed by:** `MSAgentRegistry` (`Sources/MonadCore/Services/MSAgents/MSAgentRegistry.swift`)
+**Managed by:** `AgentTemplateRegistry` (`Sources/MonadCore/Services/AgentTemplates/AgentTemplateRegistry.swift`)
 
-**API:** `GET/POST/PATCH/DELETE /api/msAgents`
+**API:** `GET/POST/PATCH/DELETE /api/agentTemplates`
 
-MSAgents are seed templates — they are consumed at agent instance creation time and not referenced again at runtime.
+AgentTemplates are seed templates — they are consumed at agent instance creation time and not referenced again at runtime.
 
 ---
 
@@ -80,7 +80,7 @@ POST /api/agents
 {
   "name": "Research Agent",
   "description": "Specializes in searching and summarizing information.",
-  "msAgentId": "uuid"   // optional — seeds workspace from template
+  "agentTemplateId": "uuid"   // optional — seeds workspace from template
 }
 ```
 
@@ -90,7 +90,7 @@ POST /api/agents
 @Dependency(\.agentInstanceManager) var agentInstanceManager
 
 let instance = try await agentInstanceManager.createInstance(
-    from: template,          // optional MSAgent seed
+    from: template,          // optional AgentTemplate seed
     name: "Research Agent",
     description: "Specializes in searching and summarizing information."
 )
@@ -101,7 +101,7 @@ try await agentInstanceManager.attach(agentId: instance.id, to: timeline.id)
 
 **What `createInstance` does atomically:**
 1. Creates workspace directory at `<workspaceRoot>/agents/<instanceId>/Notes/`
-2. Seeds `Notes/system.md` from `MSAgent.composedInstructions` (or custom `workspaceFilesSeed`)
+2. Seeds `Notes/system.md` from `AgentTemplate.composedInstructions` (or custom `workspaceFilesSeed`)
 3. Creates a private timeline (`isPrivate: true`, `ownerAgentInstanceId = instanceId`)
 4. Persists workspace reference, private timeline, and agent instance
 
@@ -159,16 +159,16 @@ Agents communicate through **timeline tools**:
 4. Monitors sub-agents via `timeline_peek`
 5. Synthesizes results
 
-### MSAgentAsTool
+### AgentTemplateAsTool
 
-Expose an MSAgent template as a directly callable tool:
+Expose an AgentTemplate as a directly callable tool:
 
 ```swift
-let tool = MSAgentAsTool(agent: template, jobQueueContext: jobQueue)
+let tool = AgentTemplateAsTool(agent: template, jobQueueContext: jobQueue)
 // LLM can call this agent as if it were a function
 ```
 
-**Location:** `Sources/MonadCore/Services/Tools/MSAgent/MSAgentAsTool.swift`
+**Location:** `Sources/MonadCore/Services/Tools/AgentTemplate/AgentTemplateAsTool.swift`
 
 ---
 
@@ -191,7 +191,7 @@ let tool = MSAgentAsTool(agent: template, jobQueueContext: jobQueue)
 | Method | Path | Description |
 |:-------|:-----|:------------|
 | `GET` | `/agents` | List all instances |
-| `POST` | `/agents` | Create instance (`name`, `description`, optional `msAgentId`) |
+| `POST` | `/agents` | Create instance (`name`, `description`, optional `agentTemplateId`) |
 | `GET` | `/agents/:id` | Get instance |
 | `PATCH` | `/agents/:id` | Update instance |
 | `DELETE` | `/agents/:id` | Delete (`?force=true` to force-detach) |
@@ -199,15 +199,15 @@ let tool = MSAgentAsTool(agent: template, jobQueueContext: jobQueue)
 | `DELETE` | `/agents/:id/attach/:timelineId` | Detach from timeline |
 | `GET` | `/agents/:id/timelines` | List attached timelines |
 
-### MSAgent Templates (`/api/msAgents`)
+### AgentTemplate Templates (`/api/agentTemplates`)
 
 | Method | Path | Description |
 |:-------|:-----|:------------|
-| `GET` | `/msAgents` | List all templates |
-| `POST` | `/msAgents` | Create template |
-| `GET` | `/msAgents/:id` | Get template |
-| `PATCH` | `/msAgents/:id` | Update template |
-| `DELETE` | `/msAgents/:id` | Delete template |
+| `GET` | `/agentTemplates` | List all templates |
+| `POST` | `/agentTemplates` | Create template |
+| `GET` | `/agentTemplates/:id` | Get template |
+| `PATCH` | `/agentTemplates/:id` | Update template |
+| `DELETE` | `/agentTemplates/:id` | Delete template |
 
 ---
 

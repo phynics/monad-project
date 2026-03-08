@@ -17,7 +17,7 @@ struct PersistenceProtocolTests {
         let _: MessageStoreProtocol = mock
         let _: TimelinePersistenceProtocol = mock
         let _: BackgroundJobStoreProtocol = mock
-        let _: MSAgentStoreProtocol = mock
+        let _: AgentTemplateStoreProtocol = mock
         let _: WorkspacePersistenceProtocol = mock
         let _: ToolPersistenceProtocol = mock
     }
@@ -29,7 +29,7 @@ final class MockPersistenceStore:
     MessageStoreProtocol,
     TimelinePersistenceProtocol,
     BackgroundJobStoreProtocol,
-    MSAgentStoreProtocol,
+    AgentTemplateStoreProtocol,
     WorkspacePersistenceProtocol,
     ToolPersistenceProtocol,
     @unchecked Sendable {
@@ -69,12 +69,12 @@ final class MockPersistenceStore:
     func deleteJob(id: UUID) async throws {}
     func monitorJobs() async -> AsyncStream<BackgroundJobEvent> { .init { _ in } }
 
-    // MSAgentStoreProtocol
-    func saveMSAgent(_ agent: MSAgent) async throws {}
-    func fetchMSAgent(id: UUID) async throws -> MSAgent? { nil }
-    func fetchMSAgent(key: String) async throws -> MSAgent? { nil }
-    func fetchAllMSAgents() async throws -> [MSAgent] { [] }
-    func hasMSAgent(id: String) async -> Bool { false }
+    // AgentTemplateStoreProtocol
+    func saveAgentTemplate(_ agent: AgentTemplate) async throws {}
+    func fetchAgentTemplate(id: UUID) async throws -> AgentTemplate? { nil }
+    func fetchAgentTemplate(key: String) async throws -> AgentTemplate? { nil }
+    func fetchAllAgentTemplates() async throws -> [AgentTemplate] { [] }
+    func hasAgentTemplate(id: String) async -> Bool { false }
 
     // WorkspacePersistenceProtocol
     func saveWorkspace(_ workspace: WorkspaceReference) async throws {}

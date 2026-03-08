@@ -11,15 +11,15 @@ import Glibc
 /// Manages terminal raw mode state
 public final class TerminalRawMode: Sendable {
     private let originalTerm = Mutex<termios?>(nil)
-    
+
     public init() {}
-    
+
     public func enable() {
         var term = termios()
         tcgetattr(STDIN_FILENO, &term)
         originalTerm
             .withLock { $0 = term }
-        
+
         var raw = term
 #if canImport(Darwin)
         raw.c_lflag &= ~UInt(ECHO | ICANON)
@@ -32,10 +32,10 @@ public final class TerminalRawMode: Sendable {
         raw.c_cc.6 = 1 // VMIN
         raw.c_cc.7 = 0 // VTIME
 #endif
-        
+
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw)
     }
-    
+
     public func disable() {
         originalTerm.withLock {
             if let term = $0 {

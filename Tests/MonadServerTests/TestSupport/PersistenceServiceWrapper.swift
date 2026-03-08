@@ -13,7 +13,7 @@ public final class PersistenceService: HealthCheckable, @unchecked Sendable {
     public let clientStore: ClientIdentityRepository
     public let toolStore: ToolDataRepository
     public let agentInstanceStore: AgentInstanceDataRepository
-    public let msAgentStore: MSAgentRepository
+    public let agentTemplateStore: AgentTemplateRepository
     public let backgroundJobStore: BackgroundJobRepository
     public let dbQueue: DatabaseQueue
 
@@ -27,7 +27,7 @@ public final class PersistenceService: HealthCheckable, @unchecked Sendable {
         self.clientStore = ClientIdentityRepository(dbQueue: dbQueue)
         self.toolStore = ToolDataRepository(dbQueue: dbQueue)
         self.agentInstanceStore = AgentInstanceDataRepository(dbQueue: dbQueue)
-        self.msAgentStore = MSAgentRepository(dbQueue: dbQueue)
+        self.agentTemplateStore = AgentTemplateRepository(dbQueue: dbQueue)
         self.backgroundJobStore = BackgroundJobRepository(dbQueue: dbQueue)
     }
 
@@ -65,12 +65,12 @@ public final class PersistenceService: HealthCheckable, @unchecked Sendable {
     public func fetchAllWorkspaces() async throws -> [WorkspaceReference] { try await workspaceStore.fetchAllWorkspaces() }
     public func deleteWorkspace(id: UUID) async throws { try await workspaceStore.deleteWorkspace(id: id) }
 
-    // MARK: - MSAgentStoreProtocol
-    public func saveMSAgent(_ agent: MSAgent) async throws { try await msAgentStore.saveMSAgent(agent) }
-    public func fetchMSAgent(id: UUID) async throws -> MSAgent? { try await msAgentStore.fetchMSAgent(id: id) }
-    public func fetchMSAgent(key: String) async throws -> MSAgent? { try await msAgentStore.fetchMSAgent(key: key) }
-    public func fetchAllMSAgents() async throws -> [MSAgent] { try await msAgentStore.fetchAllMSAgents() }
-    public func hasMSAgent(id: String) async -> Bool { await msAgentStore.hasMSAgent(id: id) }
+    // MARK: - AgentTemplateStoreProtocol
+    public func saveAgentTemplate(_ agent: AgentTemplate) async throws { try await agentTemplateStore.saveAgentTemplate(agent) }
+    public func fetchAgentTemplate(id: UUID) async throws -> AgentTemplate? { try await agentTemplateStore.fetchAgentTemplate(id: id) }
+    public func fetchAgentTemplate(key: String) async throws -> AgentTemplate? { try await agentTemplateStore.fetchAgentTemplate(key: key) }
+    public func fetchAllAgentTemplates() async throws -> [AgentTemplate] { try await agentTemplateStore.fetchAllAgentTemplates() }
+    public func hasAgentTemplate(id: String) async -> Bool { await agentTemplateStore.hasAgentTemplate(id: id) }
 
     // MARK: - BackgroundJobStoreProtocol
     public func saveJob(_ job: BackgroundJob) async throws { try await backgroundJobStore.saveJob(job) }

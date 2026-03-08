@@ -55,7 +55,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     public func getHealthDetails() async -> [String: String]? {
         return [
             "model": configuration.modelName,
-            "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom"),
+            "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom")
         ]
     }
 

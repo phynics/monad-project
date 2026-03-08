@@ -99,7 +99,7 @@ public actor MonadClient {
             throw MonadClientError.httpError(statusCode: httpResponse.statusCode, message: message)
         }
     }
-    
+
     public func fetchStreamBytes(request: URLRequest) async throws -> (URLSession.AsyncBytes, URLResponse) {
         return try await session.bytes(for: request)
     }

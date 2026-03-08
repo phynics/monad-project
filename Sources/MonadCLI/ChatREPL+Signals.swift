@@ -53,23 +53,23 @@ extension ChatREPL {
 
     func startEscapeMonitor() {
         stopEscapeMonitor()
-        
+
         escapeMonitorTask = Task.detached { [weak self] in
             let rawMode = TerminalRawMode()
             rawMode.enable()
             defer { rawMode.disable() }
-            
+
             var lastEscapeTime: Date?
-            
+
             while !Task.isCancelled {
                 var byte: UInt8 = 0
                 let bytesRead = read(STDIN_FILENO, &byte, 1)
-                
+
                 if bytesRead <= 0 {
                     try? await Task.sleep(for: .milliseconds(50))
                     continue
                 }
-                
+
                 let char = Character(UnicodeScalar(byte))
                 if char == "\u{1B}" {
                     let now = Date()

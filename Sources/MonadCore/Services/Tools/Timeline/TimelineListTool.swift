@@ -29,7 +29,7 @@ public struct TimelineListTool: MonadShared.Tool, Sendable {
         let entries = visible.map { t -> [String: String] in
             var entry: [String: String] = [
                 "id": t.id.uuidString,
-                "title": t.title,
+                "title": t.title
             ]
             if let agentId = t.attachedAgentInstanceId {
                 entry["attachedAgentId"] = agentId.uuidString

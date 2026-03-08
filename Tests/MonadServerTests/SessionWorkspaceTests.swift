@@ -34,13 +34,13 @@ final class SessionWorkspaceTests: XCTestCase {
             $0.toolPersistence = persistenceService.toolStore
             $0.memoryStore = persistenceService.memoryStore
             $0.messageStore = persistenceService.messageStore
-            $0.msAgentStore = persistenceService.msAgentStore
+            $0.agentTemplateStore = persistenceService.agentTemplateStore
             $0.backgroundJobStore = persistenceService.backgroundJobStore
             $0.clientStore = persistenceService.clientStore
             $0.agentInstanceStore = persistenceService.agentInstanceStore
             $0.embeddingService = embeddingService
             $0.llmService = llmService
-            $0.msAgentRegistry = MSAgentRegistry()
+            $0.agentTemplateRegistry = AgentTemplateRegistry()
         } operation: {
             let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot

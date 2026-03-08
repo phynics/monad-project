@@ -56,8 +56,7 @@ public struct Timeline: Codable, Identifiable, Sendable {
         }
 
         if let data = try? JSONEncoder().encode(attachedWorkspaceIds),
-           let str = String(data: data, encoding: .utf8)
-        {
+           let str = String(data: data, encoding: .utf8) {
             self.attachedWorkspaceIds = str
         } else {
             self.attachedWorkspaceIds = "[]"

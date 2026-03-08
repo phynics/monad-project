@@ -27,7 +27,7 @@ public actor ContextManager: @unchecked Sendable {
         let limit: Int
         let tagGenerator: (@Sendable (String) async throws -> [String])?
         let continuation: AsyncThrowingStream<ContextGatheringEvent, Error>.Continuation
-        
+
         var startTime: CFAbsoluteTime = 0
         var augmentedQuery: String = ""
         var notes: [ContextFile] = []
@@ -36,7 +36,7 @@ public actor ContextManager: @unchecked Sendable {
         var queryVector: [Double] = []
         var semanticResults: [SemanticSearchResult] = []
         var tagResults: [Memory] = []
-        
+
         var contextData: ContextData?
     }
 
@@ -142,7 +142,7 @@ public actor ContextManager: @unchecked Sendable {
 
                 do {
                     try await pipeline.execute(&context)
-                    
+
                     if let data = context.contextData {
                         continuation.yield(.progress(.complete))
                         continuation.yield(.complete(data))

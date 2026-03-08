@@ -36,11 +36,11 @@ public actor TimelineManager {
     @Dependency(\.memoryStore) var memoryStore
     @Dependency(\.toolPersistence) var toolPersistence
     @Dependency(\.backgroundJobStore) var backgroundJobStore
-    @Dependency(\.msAgentStore) var msAgentStore
+    @Dependency(\.agentTemplateStore) var agentTemplateStore
     @Dependency(\.clientStore) var clientStore
     @Dependency(\.agentInstanceStore) var agentInstanceStore
 
-    @Dependency(\.msAgentRegistry) var msAgentRegistry
+    @Dependency(\.agentTemplateRegistry) var agentTemplateRegistry
 
     let vectorStore: (any VectorStoreProtocol)?
     let workspaceRoot: URL
@@ -141,8 +141,7 @@ public actor TimelineManager {
     /// - Returns: The newly created `Timeline`.
     public func createTimeline(title: String = "New Conversation")
         async throws
-        -> Timeline
-    {
+        -> Timeline {
         let timelineId = UUID()
 
         let timelineWorkspaceURL = workspaceRoot.appendingPathComponent(
@@ -300,8 +299,6 @@ public actor TimelineManager {
         let conversationMessages = try await messageStore.fetchMessages(for: timelineId)
         return conversationMessages.map { $0.toMessage() }
     }
-
-
 
     // MARK: - Agent Support
 

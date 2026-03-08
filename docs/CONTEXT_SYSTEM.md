@@ -172,14 +172,14 @@ Keep notes organized and up-to-date.
 
 ## 4. The Agent Model
 
-The system distinguishes between **MSAgent** (a static template) and **AgentInstance** (a live runtime entity).
+The system distinguishes between **AgentTemplate** (a static template) and **AgentInstance** (a live runtime entity).
 
-### MSAgent — Template
+### AgentTemplate — Template
 
-**Location:** `Sources/MonadShared/SharedTypes/MSAgent.swift`
+**Location:** `Sources/MonadShared/SharedTypes/AgentTemplate.swift`
 
 ```swift
-public struct MSAgent: Codable, Sendable, Identifiable {
+public struct AgentTemplate: Codable, Sendable, Identifiable {
     public let id: UUID
     public let name: String
     public let description: String
@@ -191,7 +191,7 @@ public struct MSAgent: Codable, Sendable, Identifiable {
 }
 ```
 
-MSAgents are managed by `MSAgentRegistry` and served via `/api/msAgents`. They are used as seeds when creating `AgentInstance` objects.
+AgentTemplates are managed by `AgentTemplateRegistry` and served via `/api/agentTemplates`. They are used as seeds when creating `AgentInstance` objects.
 
 ### AgentInstance — Runtime Entity
 
@@ -210,7 +210,7 @@ public struct AgentInstance: Codable, Sendable, Identifiable {
 ```
 
 **Key behaviors:**
-- Created from an `MSAgent` template (which seeds `Notes/system.md` and other files), but is self-contained after creation.
+- Created from an `AgentTemplate` (which seeds `Notes/system.md` and other files), but is self-contained after creation.
 - Instructions loaded at runtime from `Notes/system.md` via `TimelineManager.getAgentSystemInstructions(for:)`.
 - Can be attached to multiple timelines simultaneously. Each timeline holds at most one agent at a time.
 - The **private timeline** (`isPrivate: true`) is the agent's internal monologue — attachment/detachment events are logged there, and it can be used for cross-agent communication.

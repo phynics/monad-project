@@ -4,8 +4,8 @@ import MonadShared
 
 // MARK: - Dependency Keys
 
-public enum MSAgentRegistryKey: DependencyKey {
-    public static let liveValue = MSAgentRegistry()
+public enum AgentTemplateRegistryKey: DependencyKey {
+    public static let liveValue = AgentTemplateRegistry()
 }
 
 public enum WorkspaceManagerKey: DependencyKey {
@@ -29,8 +29,8 @@ public enum ChatEngineKey: DependencyKey {
     public static let liveValue = ChatEngine()
 }
 
-public enum MSAgentExecutorKey: DependencyKey {
-    public static let liveValue = MSAgentExecutor(
+public enum AgentTemplateExecutorKey: DependencyKey {
+    public static let liveValue = AgentTemplateExecutor(
         backgroundJobStore: UnconfiguredBackgroundJobStore(),
         messageStore: UnconfiguredMessageStore(),
         chatEngine: ChatEngine()
@@ -46,9 +46,9 @@ public enum AgentInstanceManagerKey: DependencyKey {
 // MARK: - Dependency Values
 
 public extension DependencyValues {
-    var msAgentRegistry: MSAgentRegistry {
-        get { self[MSAgentRegistryKey.self] }
-        set { self[MSAgentRegistryKey.self] = newValue }
+    var agentTemplateRegistry: AgentTemplateRegistry {
+        get { self[AgentTemplateRegistryKey.self] }
+        set { self[AgentTemplateRegistryKey.self] = newValue }
     }
 
     var workspaceManager: WorkspaceManager {
@@ -71,9 +71,9 @@ public extension DependencyValues {
         set { self[ChatEngineKey.self] = newValue }
     }
 
-    var msAgentExecutor: MSAgentExecutor {
-        get { self[MSAgentExecutorKey.self] }
-        set { self[MSAgentExecutorKey.self] = newValue }
+    var agentTemplateExecutor: AgentTemplateExecutor {
+        get { self[AgentTemplateExecutorKey.self] }
+        set { self[AgentTemplateExecutorKey.self] = newValue }
     }
 
     var agentInstanceManager: AgentInstanceManager {

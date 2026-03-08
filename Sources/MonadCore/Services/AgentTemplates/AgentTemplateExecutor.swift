@@ -3,8 +3,8 @@ import Foundation
 import Logging
 import Dependencies
 
-/// Service responsible for executing autonomous msAgents and managing their reasoning loops.
-public struct MSAgentExecutor: Sendable {
+/// Service responsible for executing autonomous agentTemplates and managing their reasoning loops.
+public struct AgentTemplateExecutor: Sendable {
     private let backgroundJobStore: any BackgroundJobStoreProtocol
     private let messageStore: any MessageStoreProtocol
     private let chatEngine: ChatEngine
@@ -20,7 +20,7 @@ public struct MSAgentExecutor: Sendable {
     /// Execute an agent for a specific job
     public func execute(
         job: BackgroundJob,
-        agent: MSAgent,
+        agent: AgentTemplate,
         timeline: Timeline,
         toolExecutor: ToolExecutor,
         contextManager: ContextManager?
@@ -32,7 +32,7 @@ public struct MSAgentExecutor: Sendable {
         if currentJob.status != .inProgress {
             currentJob.status = .inProgress
             currentJob.updatedAt = Date()
-            currentJob.logs.append("MSAgent \(agent.id) started execution at \(Date())")
+            currentJob.logs.append("AgentTemplate \(agent.id) started execution at \(Date())")
             try? await backgroundJobStore.saveJob(currentJob)
         }
 

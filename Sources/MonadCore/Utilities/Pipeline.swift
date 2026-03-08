@@ -5,10 +5,10 @@ import MonadShared
 /// Protocol defining a single stage in a pipeline.
 public protocol PipelineStage<Context>: Sendable {
     associatedtype Context
-    
+
     /// Unique identifier for the stage.
     var id: String { get }
-    
+
     /// Processes the given context.
     /// - Parameter context: The context to be processed and potentially modified.
     /// - Throws: An error if processing fails.
@@ -27,7 +27,7 @@ public final class Pipeline<Context>: Sendable {
     private let stages: [any PipelineStage<Context>]
     private let cleanupStages: [any PipelineStage<Context>]
     private let logger: Logger?
-    
+
     public init(
         stages: [any PipelineStage<Context>] = [],
         cleanupStages: [any PipelineStage<Context>] = [],
@@ -37,7 +37,7 @@ public final class Pipeline<Context>: Sendable {
         self.cleanupStages = cleanupStages
         self.logger = logger
     }
-    
+
     /// Adds a stage to the pipeline and returns a new pipeline instance.
     /// - Parameter stage: The stage to add.
     /// - Returns: A new pipeline instance with the added stage.
@@ -52,7 +52,7 @@ public final class Pipeline<Context>: Sendable {
     public func cleanup(_ stage: any PipelineStage<Context>) -> Pipeline<Context> {
         return Pipeline(stages: self.stages, cleanupStages: self.cleanupStages + [stage], logger: self.logger)
     }
-    
+
     /// Sets the logger for the pipeline and returns a new pipeline instance.
     /// - Parameter logger: The logger to use.
     /// - Returns: A new pipeline instance with the logger set.
@@ -65,11 +65,11 @@ public final class Pipeline<Context>: Sendable {
     /// - Throws: A `PipelineError` if any stage fails.
     public func execute(_ context: inout Context) async throws {
         var executionError: Error?
-        
+
         for stage in stages {
             let startTime = CFAbsoluteTimeGetCurrent()
             logger?.debug("Starting pipeline stage: \(stage.id)")
-            
+
             do {
                 try await stage.process(&context)
                 let duration = CFAbsoluteTimeGetCurrent() - startTime
@@ -81,12 +81,12 @@ public final class Pipeline<Context>: Sendable {
                 break
             }
         }
-        
+
         // Execute cleanup stages regardless of success/failure
         for stage in cleanupStages {
             let startTime = CFAbsoluteTimeGetCurrent()
             logger?.debug("Starting pipeline cleanup stage: \(stage.id)")
-            
+
             do {
                 try await stage.process(&context)
                 let duration = CFAbsoluteTimeGetCurrent() - startTime
@@ -101,7 +101,7 @@ public final class Pipeline<Context>: Sendable {
                 }
             }
         }
-        
+
         if let error = executionError {
             throw error
         }
@@ -112,7 +112,7 @@ public final class Pipeline<Context>: Sendable {
 public enum PipelineError: LocalizedError {
     case stageFailed(id: String, error: Error)
     case cleanupFailed(id: String, error: Error)
-    
+
     public var errorDescription: String? {
         switch self {
         case .stageFailed(let id, let error):
