@@ -3,6 +3,21 @@ import Logging
 import MonadShared
 import OpenAI
 
+/// Input parameters for building the LLM prompt in a chat turn.
+struct BuildPromptParams {
+    let timeline: Timeline?
+    let agentInstance: AgentInstance?
+    let message: String
+    let contextData: ContextData
+    let history: [Message]
+    let availableTools: [AnyTool]
+    let workspaces: [WorkspaceReference]
+    let primaryWorkspace: WorkspaceReference?
+    let clientName: String?
+    let connectedClients: Set<UUID>
+    let systemInstructions: String?
+}
+
 extension ChatEngine {
     func saveConversationSteps(
         timelineId: UUID,
@@ -54,35 +69,71 @@ extension ChatEngine {
         return ContextData()
     }
 
+    func buildLoopConfig(
+        timelineId: UUID,
+        input: LoopConfigInput
+    ) async throws -> ([ChatQuery.ChatCompletionMessageParam], ChatLoopConfig) {
+        let timeline = await timelineManager.getTimeline(id: timelineId)
+        let workspaces = await timelineManager.getWorkspaces(for: timelineId)
+        let attachedWorkspaces = workspaces?.attached ?? []
+
+        let agentInstance: AgentInstance? = input.agentInstanceId != nil
+            ? try? await agentInstanceStore.fetchAgentInstance(id: input.agentInstanceId!)
+            : nil
+
+        var clientName: String?
+        if let ownerId = workspaces?.primary?.ownerId,
+           let client = try? await clientStore.fetchClient(id: ownerId) {
+            clientName = client.displayName
+        }
+
+        let params = BuildPromptParams(
+            timeline: timeline,
+            agentInstance: agentInstance,
+            message: input.message,
+            contextData: input.contextData,
+            history: input.history,
+            availableTools: input.tools,
+            workspaces: attachedWorkspaces,
+            primaryWorkspace: workspaces?.primary,
+            clientName: clientName,
+            connectedClients: Set<UUID>(),
+            systemInstructions: input.systemInstructions
+        )
+        let (initialMessages, structuredContext) = await buildPrompt(params)
+
+        let modelName = await llmService.configuration.modelName
+        let config = ChatLoopConfig(
+            timelineId: timelineId,
+            toolParams: input.tools.map { $0.toToolParam() },
+            availableTools: input.tools,
+            contextData: input.contextData,
+            structuredContext: structuredContext,
+            modelName: modelName,
+            agentInstanceId: input.agentInstanceId,
+            maxTurns: input.maxTurns
+        )
+        return (initialMessages, config)
+    }
+
     func buildPrompt(
-        timeline: Timeline?,
-        agentInstance: AgentInstance?,
-        message: String,
-        contextData: ContextData,
-        history: [Message],
-        availableTools: [AnyTool],
-        workspaces: [WorkspaceReference],
-        primaryWorkspace: WorkspaceReference?,
-        clientName: String?,
-        connectedClients: Set<UUID>,
-        systemInstructions: String?
+        _ params: BuildPromptParams
     ) async -> (messages: [ChatQuery.ChatCompletionMessageParam], structuredContext: [String: String]) {
         let prompt = await llmService.buildContext(
-            userQuery: message,
-            contextNotes: contextData.notes,
-            memories: contextData.memories.map { $0.memory },
-            chatHistory: history,
-            tools: availableTools,
-            workspaces: workspaces,
-            primaryWorkspace: primaryWorkspace,
-            clientName: clientName,
-            connectedClients: connectedClients,
-            systemInstructions: systemInstructions,
-            agentInstance: agentInstance,
-            timeline: timeline
+            userQuery: params.message,
+            contextNotes: params.contextData.notes,
+            memories: params.contextData.memories.map { $0.memory },
+            chatHistory: params.history,
+            tools: params.availableTools,
+            workspaces: params.workspaces,
+            primaryWorkspace: params.primaryWorkspace,
+            clientName: params.clientName,
+            connectedClients: params.connectedClients,
+            systemInstructions: params.systemInstructions,
+            agentInstance: params.agentInstance,
+            timeline: params.timeline
         )
 
-        // Convert to OpenAI format
         let messages = await prompt.toMessages()
         let structuredContext = await prompt.structuredContext()
 

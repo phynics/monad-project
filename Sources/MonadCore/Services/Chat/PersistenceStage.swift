@@ -17,35 +17,9 @@ struct PersistenceStage: PipelineStage {
     let logger: Logger
 
     func process(_ context: inout ChatTurnContext) async throws {
-        let authorId = context.agentInstanceId
         let hasPendingToolCalls = !context.toolCallAccumulators.isEmpty
-
-        // Build tool calls JSON for the DB when the LLM requested tools.
-        let toolCallsJSON: String
-        if hasPendingToolCalls {
-            let sortedCalls = context.toolCallAccumulators.sorted(by: { $0.key < $1.key })
-            let callsForDB = sortedCalls.compactMap { _, value -> ToolCall? in
-                let argsData = value.args.data(using: .utf8) ?? Data()
-                let args = (try? JSONDecoder().decode([String: AnyCodable].self, from: argsData)) ?? [:]
-                return ToolCall(name: value.name, arguments: args)
-            }
-            toolCallsJSON =
-                (try? SerializationUtils.jsonEncoder.encode(callsForDB))
-                    .flatMap { String(decoding: $0, as: UTF8.self) } ?? "[]"
-        } else {
-            toolCallsJSON = "[]"
-        }
-
-        // Recalled memories are only relevant on final (non-tool-call) responses.
-        let recalledMemories: String
-        if hasPendingToolCalls {
-            recalledMemories = "[]"
-        } else {
-            recalledMemories = String(
-                decoding: (try? SerializationUtils.jsonEncoder.encode(context.contextData.memories.map { $0.memory })) ?? Data(),
-                as: UTF8.self
-            )
-        }
+        let toolCallsJSON = buildToolCallsJSON(from: context, hasPendingToolCalls: hasPendingToolCalls)
+        let recalledMemories = buildRecalledMemories(from: context, hasPendingToolCalls: hasPendingToolCalls)
 
         let assistantMsg = ConversationMessage(
             timelineId: context.timelineId,
@@ -54,20 +28,11 @@ struct PersistenceStage: PipelineStage {
             recalledMemories: recalledMemories,
             think: context.fullThinking.isEmpty ? nil : context.fullThinking,
             toolCalls: toolCallsJSON,
-            agentInstanceId: authorId
+            agentInstanceId: context.agentInstanceId
         )
         try await messageStore.saveMessage(assistantMsg)
 
-        // Debug snapshot — include rendered prompt/raw output only on final responses.
-        let snapshot = DebugSnapshot(
-            structuredContext: context.structuredContext,
-            toolCalls: context.debugToolCalls,
-            toolResults: context.debugToolResults,
-            renderedPrompt: hasPendingToolCalls ? nil : ChatEngine.renderMessagesStatic(context.currentMessages),
-            rawOutput: hasPendingToolCalls ? nil : context.accumulatedRawOutput,
-            model: context.modelName,
-            turnCount: context.turnCount
-        )
+        let snapshot = buildDebugSnapshot(from: context, hasPendingToolCalls: hasPendingToolCalls)
         await timelineManager.setDebugSnapshot(snapshot, for: context.timelineId)
 
         let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
@@ -85,5 +50,36 @@ struct PersistenceStage: PipelineStage {
         ))
 
         context.turnResult = .finish
+    }
+
+    private func buildToolCallsJSON(from context: ChatTurnContext, hasPendingToolCalls: Bool) -> String {
+        guard hasPendingToolCalls else { return "[]" }
+        let sortedCalls = context.toolCallAccumulators.sorted(by: { $0.key < $1.key })
+        let callsForDB = sortedCalls.compactMap { _, value -> ToolCall? in
+            let argsData = value.args.data(using: .utf8) ?? Data()
+            let args = (try? JSONDecoder().decode([String: AnyCodable].self, from: argsData)) ?? [:]
+            return ToolCall(name: value.name, arguments: args)
+        }
+        return (try? SerializationUtils.jsonEncoder.encode(callsForDB))
+            .flatMap { String(bytes: $0, encoding: .utf8) } ?? "[]"
+    }
+
+    private func buildRecalledMemories(from context: ChatTurnContext, hasPendingToolCalls: Bool) -> String {
+        guard !hasPendingToolCalls else { return "[]" }
+        let memories = context.contextData.memories.map { $0.memory }
+        return (try? SerializationUtils.jsonEncoder.encode(memories))
+            .flatMap { String(bytes: $0, encoding: .utf8) } ?? "[]"
+    }
+
+    private func buildDebugSnapshot(from context: ChatTurnContext, hasPendingToolCalls: Bool) -> DebugSnapshot {
+        DebugSnapshot(
+            structuredContext: context.structuredContext,
+            toolCalls: context.debugToolCalls,
+            toolResults: context.debugToolResults,
+            renderedPrompt: hasPendingToolCalls ? nil : ChatEngine.renderMessagesStatic(context.currentMessages),
+            rawOutput: hasPendingToolCalls ? nil : context.accumulatedRawOutput,
+            model: context.modelName,
+            turnCount: context.turnCount
+        )
     }
 }

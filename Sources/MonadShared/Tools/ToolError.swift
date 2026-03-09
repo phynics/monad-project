@@ -45,7 +45,8 @@ public enum ToolError: Error, LocalizedError, Sendable {
         case .clientNotConnected:
             return "Ensure the target client is online and registered with the server."
         case .clientToolsDisallowedOnPrivateTimeline:
-            return "Only server-side tools are permitted on private timelines. Remove client workspace tools from the agent's configuration."
+            return "Only server-side tools are permitted on private timelines. " +
+                "Remove client workspace tools from the agent's configuration."
         }
     }
 }

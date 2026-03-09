@@ -22,7 +22,7 @@ struct ToolExecutionStage: PipelineStage {
             let fallbackCalls = ToolOutputParser.parse(from: context.fullResponse)
             if !fallbackCalls.isEmpty {
                 logger.warning(
-                    "Structured tool calls empty — falling back to text parsing. Parsed \(fallbackCalls.count) call(s) from response text."
+                    "Structured tool calls empty — falling back to text parsing (\(fallbackCalls.count) call(s))."
                 )
                 for (index, call) in fallbackCalls.enumerated() {
                     let argsJson =

@@ -5,7 +5,9 @@ import Foundation
 public struct RequestWriteAccessTool: Tool {
     public let id = "request_write_access"
     public let name = "Request Write Access"
-    public let description = "Request permission from the user to modify files in the active workspace. Call this tool when you need to create, write, edit, or delete files but the workspace is currently in read-only mode."
+    public let description =
+        "Request permission from the user to modify files in the active workspace. " +
+        "Call this tool when you need to create, write, edit, or delete files but the workspace is currently in read-only mode."
     public let requiresPermission = false
 
     public init() {}
@@ -16,7 +18,11 @@ public struct RequestWriteAccessTool: Tool {
 
     public var parametersSchema: [String: AnyCodable] {
         return ToolParameterSchema.object { builder in
-            builder.string("reason", description: "The reason why write access is needed. This will be shown to the user.", required: true)
+            builder.string(
+                "reason",
+                description: "The reason why write access is needed. This will be shown to the user.",
+                required: true
+            )
         }.schema
     }
 
