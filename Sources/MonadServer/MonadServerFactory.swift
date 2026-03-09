@@ -216,7 +216,7 @@ public struct MonadServerFactory {
                         .init(service: app),
                         .init(service: jobRunner),
                         .init(service: orphanCleanup),
-                        .init(service: bonjourAdvertiser),
+                        .init(service: bonjourAdvertiser)
                     ],
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                     logger: logger

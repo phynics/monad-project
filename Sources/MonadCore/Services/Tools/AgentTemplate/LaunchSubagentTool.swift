@@ -62,8 +62,7 @@ public struct LaunchSubagentTool: MonadShared.Tool, Sendable {
 
         var resolvedParentId = parentId
         if let explicitParentIdString = params.optional("parent_id", as: String.self),
-           let explicitParentId = UUID(uuidString: explicitParentIdString)
-        {
+           let explicitParentId = UUID(uuidString: explicitParentIdString) {
             resolvedParentId = explicitParentId
         }
 
