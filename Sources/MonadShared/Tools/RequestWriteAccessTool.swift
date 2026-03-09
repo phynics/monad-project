@@ -20,9 +20,9 @@ public struct RequestWriteAccessTool: Tool {
         }.schema
     }
 
-    public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        // This tool is strictly a client-side execution tool. 
-        // We throw .clientExecutionRequired so the server passes it to the client.
-        throw ToolError.clientExecutionRequired
+    public func execute(parameters _: [String: Any]) async throws -> ToolResult {
+        // This tool is client-side only. ToolRouter defers it automatically based on the
+        // workspace hostType. This execute() path is only reached as a fallback.
+        .failure("This tool requires client-side execution")
     }
 }

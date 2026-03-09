@@ -13,20 +13,14 @@ final class ChatEngineStageTests: XCTestCase {
         var context = createTestContext()
         context.fullResponse = #"<tool_call>{"name": "test_tool", "arguments": {"foo": "bar"}}</tool_call>"#
 
-        let expectation = XCTestExpectation(description: "Tool execution closure called")
-
-        let stage = ToolExecutionStage(executeTools: { calls, _, _, _ in
-            XCTAssertEqual(calls.count, 1)
-            XCTAssertEqual(calls[0].function.name, "test_tool")
-            expectation.fulfill()
-            return ([], false, [])
-        }, logger: logger)
+        let stage = ToolExecutionStage(logger: logger)
 
         // When
         try await stage.process(&context)
 
         // Then
-        await fulfillment(of: [expectation], timeout: 1.0)
+        XCTAssertEqual(context.toolCallAccumulators.count, 1)
+        XCTAssertEqual(context.toolCallAccumulators[0]?.name, "test_tool")
         XCTAssertEqual(context.debugToolCalls.count, 1)
         XCTAssertEqual(context.debugToolCalls[0].name, "test_tool")
     }

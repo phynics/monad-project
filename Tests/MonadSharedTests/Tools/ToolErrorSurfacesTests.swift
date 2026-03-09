@@ -10,8 +10,8 @@ final class ToolErrorSurfacesTests: XCTestCase {
         let notFound = ToolError.toolNotFound("missing_tool")
         XCTAssertEqual(notFound.errorDescription, "Tool not found: missing_tool")
         
-        let clientReq = ToolError.clientExecutionRequired
-        XCTAssertEqual(clientReq.errorDescription, "Execution on client required")
+        let clientReq = ToolError.clientToolsDisallowedOnPrivateTimeline
+        XCTAssertEqual(clientReq.errorDescription, "Client-side tools cannot be used on private (agent-owned) timelines")
         
         let wNotFound = ToolError.workspaceNotFound(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
         XCTAssertEqual(wNotFound.errorDescription, "Workspace not found: 00000000-0000-0000-0000-000000000001")

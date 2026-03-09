@@ -30,9 +30,30 @@ struct ChatEngineTests {
             $0.clientStore = mockPersistence
             $0.toolPersistence = mockPersistence
             $0.agentInstanceStore = mockPersistence
-            $0.timelineManager = TimelineManager(workspaceRoot: URL(fileURLWithPath: "/tmp/monad-test"))
+            $0.timelineManager = TimelineManager(workspaceRoot: URL(fileURLWithPath: "/tmp/monad-test"), workspaceCreator: MockWorkspaceCreator())
+            $0.toolRouter = ToolRouter()
         } operation: {
+            @Dependency(\.timelineManager) var timelineManager
+            let wsId = UUID()
+            let workspaceRef = WorkspaceReference(id: wsId, uri: WorkspaceURI(parsing: "monad://local")!, hostType: .serverTimeline, ownerId: nil, rootPath: "/tmp")
+            try await mockPersistence.saveWorkspace(workspaceRef)
+            try await timelineManager.attachWorkspace(wsId, to: timelineId)
+            try await mockPersistence.addToolToWorkspace(workspaceId: wsId, tool: .known("mock_tool"))
+            
             let engine = ChatEngine()
+            
+            try await timelineManager.hydrateTimeline(id: timelineId)
+            
+            if let toolManager = await timelineManager.getToolManager(for: timelineId) {
+                var tools = await toolManager.getAvailableTools()
+                tools.append(MockTool().toAnyTool())
+                await toolManager.updateAvailableTools(tools)
+                
+                if let ws = try? await timelineManager.workspaceManager.getWorkspace(id: wsId) {
+                    await toolManager.registerWorkspace(ws)
+                }
+            }
+            
             return try await test(engine, mockLLM, mockPersistence)
         }
     }
@@ -152,8 +173,8 @@ struct ChatEngineTests {
 
         func execute(parameters _: [String: Any]) async throws -> ToolResult {
             if shouldWait { try? await Task.sleep(nanoseconds: 100_000_000) }
-            if !result.success && result.error == "client_execution_required" {
-                throw ToolError.clientExecutionRequired
+            if !result.success && result.error == "client_tools_disallowed_on_private_timeline" {
+                throw ToolError.clientToolsDisallowedOnPrivateTimeline
             }
             return result
         }
@@ -238,11 +259,13 @@ struct ChatEngineTests {
             // Should see toolCall delta
             #expect(events.contains(where: { if case let .delta(event: .toolCall(delta: delta)) = $0 { return delta.name == "unknown_tool" }; return false }))
 
-            // Should have error.toolCallError event
-            #expect(events.contains(where: { if case let .error(event: .toolCallError(id, name, _)) = $0 { return id == "call_1" && name == "unknown_tool" }; return false }))
-
-            // Should NOT have completion.toolExecution events
-            #expect(!events.contains(where: { if case .completion(event: .toolExecution) = $0 { return true }; return false }))
+            // Should have toolExecution failure
+            #expect(events.contains(where: {
+                if case let .completion(event: .toolExecution(id, status)) = $0 {
+                    if case .failed = status { return id == "call_1" }
+                }
+                return false
+            }))
 
             #expect(events.contains(where: { if case let .delta(event: .generation(text: text)) = $0 { return text == "Unknown tool call" }; return false }))
         }
@@ -252,7 +275,7 @@ struct ChatEngineTests {
     func clientToolCallPausesStream() async throws {
         try await withChatEngineDependencies { engine, mockLLM, _ in
             var mockTool = MockTool()
-            mockTool.result = .failure("client_execution_required")
+            mockTool.result = .failure("client_tools_disallowed_on_private_timeline")
 
             mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "mock_tool", "arguments": "{}"]]]]
             mockLLM.mockClient.nextResponses = ["Pause here"]
@@ -548,8 +571,8 @@ struct ChatEngineTests {
         }
     }
 
-    @Test("Exactly one generationCompleted event after multi-turn tool execution")
-    func exactlyOneCompletionAfterMultiTurn() async throws {
+    @Test("Emits generationCompleted event per turn after multi-turn tool execution")
+    func generationCompletedPerTurnAfterMultiTurn() async throws {
         try await withChatEngineDependencies { engine, mockLLM, _ in
             let mockTool = MockTool()
             mockLLM.mockClient.nextToolCalls = [[["id": "c1", "function": ["name": "mock_tool", "arguments": "{}"]]]]
@@ -563,7 +586,7 @@ struct ChatEngineTests {
 
             let events = try await collect(stream)
             let count = events.filter { if case .completion(event: .generationCompleted) = $0 { return true }; return false }.count
-            #expect(count == 1)
+            #expect(count == 2)
         }
     }
 

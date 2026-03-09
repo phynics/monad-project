@@ -25,6 +25,7 @@ public final class ChatEngine: @unchecked Sendable {
     @Dependency(\.clientStore) var clientStore
     @Dependency(\.messageStore) var messageStore
     @Dependency(\.llmService) var llmService
+    @Dependency(\.toolRouter) var toolRouter
 
     let logger = Logger.module(named: "com.monad.chat-engine")
 
@@ -37,7 +38,7 @@ public final class ChatEngine: @unchecked Sendable {
     ///   - timelineId: The unique identifier for the chat session.
     ///   - message: The user's input message.
     ///   - tools: Pre-resolved tools available for this turn.
-    ///   - toolOutputs: Optional list of tool outputs to be processed from a previous turn.
+    ///   - toolOutputs: Optional list of tool outputs submitted by the client from a previous turn.
     ///   - contextManager: Optional context manager for RAG. If nil, no context is gathered.
     ///   - systemInstructions: Optional system instructions to override the default.
     ///   - agentInstanceId: Optional identifier for the agent instance.
@@ -57,7 +58,7 @@ public final class ChatEngine: @unchecked Sendable {
         let sid = ANSIColors.colorize(timelineId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
         logger.info("Starting chat stream for timeline \(sid)")
 
-        // Save conversation steps (user message + any tool outputs from previous turn)
+        // Save conversation steps (user message + any tool outputs submitted by client)
         try await saveConversationSteps(timelineId: timelineId, message: message, toolOutputs: toolOutputs)
 
         // Fetch history
@@ -86,7 +87,6 @@ public final class ChatEngine: @unchecked Sendable {
         // Find which workspaces are connected
         if let primaryWorkspace = workspaces?.primary {
             if let ownerId = primaryWorkspace.ownerId {
-                // Try to get client
                 if let client = try? await clientStore.fetchClient(id: ownerId) {
                     clientName = client.displayName
                 }
@@ -168,8 +168,9 @@ public final class ChatEngine: @unchecked Sendable {
                 return
             }
 
+            let context: ChatTurnContext
             do {
-                let result = try await processTurn(
+                context = try await processTurn(
                     currentMessages: currentMessages,
                     toolParams: toolParams,
                     availableTools: availableTools,
@@ -182,14 +183,6 @@ public final class ChatEngine: @unchecked Sendable {
                     continuation: continuation,
                     accumulatedRawOutput: &accumulatedRawOutput
                 )
-
-                switch result {
-                case let .continue(newMessages):
-                    currentMessages.append(contentsOf: newMessages)
-                case .finish:
-                    continuation.finish()
-                    return
-                }
             } catch {
                 if error is CancellationError {
                     continuation.finish(throwing: error)
@@ -199,15 +192,61 @@ public final class ChatEngine: @unchecked Sendable {
                 }
                 return
             }
+
+            // No tool calls → generation is complete for this turn.
+            guard !context.toolCallAccumulators.isEmpty else {
+                continuation.finish()
+                return
+            }
+
+            // Build ParsedToolCall list from the validated accumulators.
+            let sortedCalls = context.toolCallAccumulators.sorted(by: { $0.key < $1.key })
+            let parsedCalls = sortedCalls.map { _, value in
+                ParsedToolCall(callId: value.id, name: value.name, argumentsJSON: value.args)
+            }
+
+            // Build the assistant LLM message for in-memory context continuation.
+            let toolCallsParam = sortedCalls.map { _, value in
+                ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam(
+                    id: value.id,
+                    function: .init(arguments: value.args, name: value.name)
+                )
+            }
+            let assistantParam = ChatQuery.ChatCompletionMessageParam.assistant(
+                .init(content: .textContent(.init(context.fullResponse)), toolCalls: toolCallsParam)
+            )
+
+            do {
+                let result = try await toolRouter.handlePendingToolCalls(
+                    timelineId: timelineId,
+                    calls: parsedCalls,
+                    availableTools: availableTools,
+                    continuation: continuation
+                )
+
+                if result.hasDeferred {
+                    // Client tools are pending. Stream ends; client will loop back with results.
+                    continuation.finish()
+                    return
+                }
+
+                // All tools resolved server-side — continue the loop with updated message history.
+                var newMessages: [ChatQuery.ChatCompletionMessageParam] = [assistantParam]
+                newMessages.append(contentsOf: result.resolvedToolParams)
+                currentMessages.append(contentsOf: newMessages)
+
+            } catch {
+                logger.error("Tool execution error on turn \(turnCount): \(error)")
+                continuation.finish(throwing: error)
+                return
+            }
         }
 
-        // If we hit maxTurns, we still yield a completion event for the last turn's state
-        // but without a new message (since we didn't get a final text response).
+        // Max turns reached.
         continuation.yield(.generationCompleted(
             message: Message(timestamp: Date(), content: "", role: .assistant, isSummary: true),
             metadata: APIResponseMetadata(model: modelName, duration: 0, tokensPerSecond: 0)
         ))
-
         continuation.finish()
     }
 
@@ -223,7 +262,7 @@ public final class ChatEngine: @unchecked Sendable {
         agentInstanceId: UUID?,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation,
         accumulatedRawOutput: inout String
-    ) async throws -> TurnResult {
+    ) async throws -> ChatTurnContext {
         var context = ChatTurnContext(
             timelineId: timelineId,
             agentInstanceId: agentInstanceId,
@@ -240,16 +279,13 @@ public final class ChatEngine: @unchecked Sendable {
 
         let pipeline = Pipeline<ChatTurnContext>()
             .add(LLMStreamingStage(llmService: llmService, logger: logger))
-            .add(ToolExecutionStage(executeTools: { [weak self] calls, tools, turn, cont in
-                guard let self = self else { return ([], false, []) }
-                return await self.executeTools(calls: calls, availableTools: tools, turnCount: turn, continuation: cont)
-            }, logger: logger))
+            .add(ToolExecutionStage(logger: logger))
             .add(PersistenceStage(messageStore: messageStore, timelineManager: timelineManager, logger: logger))
 
         try await pipeline.execute(&context)
 
         accumulatedRawOutput = context.accumulatedRawOutput
-        return context.turnResult
+        return context
     }
 
     // MARK: - Utilities

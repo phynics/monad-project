@@ -143,18 +143,18 @@ import Testing
         }
     }
 
-    @Test("ToolError.clientExecutionRequired maps to 500 client_execution_required")
-    func toolError_clientExecutionRequired_maps500() async throws {
+    @Test("ToolError.clientToolsDisallowedOnPrivateTimeline maps to 403 client_tools_disallowed_on_private_timeline")
+    func toolError_clientToolsDisallowedOnPrivateTimeline_maps403() async throws {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
-        router.get("/err") { _, _ -> String in throw ToolError.clientExecutionRequired }
+        router.get("/err") { _, _ -> String in throw ToolError.clientToolsDisallowedOnPrivateTimeline }
         let app = Application(router: router)
 
         try await app.test(.router) { client in
             try await client.execute(uri: "/err", method: .get) { response in
-                #expect(response.status == .internalServerError)
+                #expect(response.status == .forbidden)
                 let apiError = try JSONDecoder().decode(APIErrorResponse.self, from: response.body)
-                #expect(apiError.error.code == "client_execution_required")
+                #expect(apiError.error.code == "client_tools_disallowed_on_private_timeline")
             }
         }
     }

@@ -47,7 +47,7 @@ public struct DelegatingTool: Tool, ToolReferenceProviding {
     }
 
     public func canExecute() async -> Bool {
-        true  // Assume available if routed
+        true // Assume available if routed
     }
 
     public var parametersSchema: [String: AnyCodable] {
@@ -58,12 +58,14 @@ public struct DelegatingTool: Tool, ToolReferenceProviding {
         let args = parameters.mapValues { AnyCodable($0) }
 
         do {
-            let output = try await router.execute(tool: ref, arguments: args, timelineId: timelineId)
-            return .success(output)
-        } catch let error as ToolError {
-            if case .clientExecutionRequired = error {
-                throw error
+            let outcome = try await router.execute(tool: ref, arguments: args, timelineId: timelineId)
+            switch outcome {
+            case let .completed(output):
+                return .success(output)
+            case .deferredToClient:
+                return .failure("Tool requires client execution — use ToolRouter.handlePendingToolCalls")
             }
+        } catch let error as ToolError {
             return .failure(error.localizedDescription)
         } catch {
             return .failure(error.localizedDescription)

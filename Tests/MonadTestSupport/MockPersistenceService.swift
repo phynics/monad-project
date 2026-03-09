@@ -228,7 +228,13 @@ public final class MockPersistenceService: MemoryStoreProtocol, MessageStoreProt
     }
 
     public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? {
-        try await workspacesMock.fetchWorkspace(id: id, includeTools: includeTools)
+        var ws = try await workspacesMock.fetchWorkspace(id: id, includeTools: includeTools)
+        if includeTools, ws != nil {
+            if let toolsWs = toolsMock.workspaces.first(where: { $0.id == id }) {
+                ws?.tools = toolsWs.tools
+            }
+        }
+        return ws
     }
 
     public func fetchAllWorkspaces() async throws -> [WorkspaceReference] {

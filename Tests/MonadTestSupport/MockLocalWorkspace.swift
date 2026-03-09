@@ -71,3 +71,10 @@ public actor MockLocalWorkspace: WorkspaceProtocol {
         return FileManager.default.fileExists(atPath: rootURL.path)
     }
 }
+
+public struct MockWorkspaceCreator: WorkspaceCreating {
+    public init() {}
+    public func create(from reference: WorkspaceReference, connectionManager: (any ClientConnectionManagerProtocol)?) throws -> any WorkspaceProtocol {
+        return try MockLocalWorkspace(reference: reference)
+    }
+}

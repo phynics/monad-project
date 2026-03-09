@@ -1,47 +1,172 @@
 import Dependencies
 import Foundation
-import MonadShared
 import Logging
+import MonadShared
+import OpenAI
 
-/// Routes tool execution requests to the appropriate handler (local or remote)
+// MARK: - Supporting Types
+
+/// The outcome of routing a single tool execution attempt.
+public enum ToolExecutionOutcome: Sendable {
+    case completed(String)
+    case deferredToClient
+}
+
+/// A fully parsed tool call from the LLM response, ready for routing.
+public struct ParsedToolCall: Sendable {
+    public let callId: String
+    public let name: String
+    public let argumentsJSON: String
+
+    public var arguments: [String: AnyCodable] {
+        let data = argumentsJSON.data(using: .utf8) ?? Data()
+        return (try? JSONDecoder().decode([String: AnyCodable].self, from: data)) ?? [:]
+    }
+}
+
+/// Result of handling all pending tool calls in a turn.
+public struct ToolHandlingResult: Sendable {
+    /// Whether any tool calls were deferred to the client for execution.
+    public let hasDeferred: Bool
+    /// OpenAI-format tool result messages for server-resolved calls (for LLM context continuation).
+    public let resolvedToolParams: [ChatQuery.ChatCompletionMessageParam]
+}
+
+// MARK: - ToolRouter
+
+/// Routes tool execution requests to the appropriate handler (local or remote).
+///
+/// The primary entry point is `handlePendingToolCalls()`, which executes server-side tools
+/// immediately (persisting results to the message store) and defers client-side tools for
+/// async handling. `ChatEngine` calls this after each LLM turn that produces tool calls.
 public actor ToolRouter {
     private let logger = Logger.module(named: "com.monad.core.tools")
 
     @Dependency(\.timelineManager) private var timelineManager
+    @Dependency(\.messageStore) private var messageStore
 
     public init() {}
 
-    /// Execute a tool in the context of a session
+    // MARK: - Batch Handling (Primary API)
+
+    /// Handles all tool calls produced in an LLM turn.
+    ///
+    /// - Server-side tools are executed immediately; results are persisted and returned.
+    /// - Client-side tools are skipped; the client executes and submits results asynchronously.
+    /// - Private timelines may not defer to client — an error is thrown instead.
+    public func handlePendingToolCalls(
+        timelineId: UUID,
+        calls: [ParsedToolCall],
+        availableTools: [AnyTool],
+        continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
+    ) async throws -> ToolHandlingResult {
+        var hasDeferred = false
+        var resolvedToolParams: [ChatQuery.ChatCompletionMessageParam] = []
+
+        for call in calls {
+            let toolRef = availableTools.first(where: { $0.id == call.name })?.toolReference
+                ?? ToolReference.known(id: call.name)
+            let toolDisplayName = ANSIColors.colorize(call.name, color: ANSIColors.brightCyan)
+
+            continuation.yield(.toolProgress(
+                toolCallId: call.callId,
+                status: .attempting(name: call.name, reference: toolRef)
+            ))
+
+            do {
+                let outcome = try await execute(
+                    tool: toolRef,
+                    arguments: call.arguments,
+                    timelineId: timelineId,
+                    availableTools: availableTools
+                )
+                switch outcome {
+                case let .completed(output):
+                    let result = ToolResult.success(output)
+                    logger.info("Tool \(toolDisplayName) succeeded")
+                    continuation.yield(.toolCompleted(toolCallId: call.callId, status: .success(result)))
+                    try await messageStore.saveMessage(
+                        ConversationMessage(
+                            timelineId: timelineId,
+                            role: .tool,
+                            content: output,
+                            toolCallId: call.callId
+                        )
+                    )
+                    resolvedToolParams.append(
+                        .tool(.init(content: .textContent(.init(output)), toolCallId: call.callId))
+                    )
+
+                case .deferredToClient:
+                    logger.info("Tool \(toolDisplayName) deferred to client")
+                    hasDeferred = true
+                }
+            } catch {
+                logger.error("Tool \(toolDisplayName) error: \(error.localizedDescription)")
+                let errorOutput = "Error: \(error.localizedDescription)"
+                continuation.yield(.toolCompleted(
+                    toolCallId: call.callId,
+                    status: .failed(reference: toolRef, error: error.localizedDescription)
+                ))
+                try await messageStore.saveMessage(
+                    ConversationMessage(
+                        timelineId: timelineId,
+                        role: .tool,
+                        content: errorOutput,
+                        toolCallId: call.callId
+                    )
+                )
+                resolvedToolParams.append(
+                    .tool(.init(content: .textContent(.init(errorOutput)), toolCallId: call.callId))
+                )
+            }
+        }
+
+        return ToolHandlingResult(hasDeferred: hasDeferred, resolvedToolParams: resolvedToolParams)
+    }
+
+    // MARK: - Core Routing
+
+    /// Routes a single tool call to local or remote execution.
     public func execute(
         tool: ToolReference,
         arguments: [String: AnyCodable],
-        timelineId: UUID
-    ) async throws -> String {
+        timelineId: UUID,
+        availableTools: [AnyTool]? = nil
+    ) async throws -> ToolExecutionOutcome {
         let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
         let sid = ANSIColors.colorize(timelineId.uuidString.prefix(8).lowercased(), color: ANSIColors.dim)
 
         logger.info("Routing 🛠️ \(toolName) in timeline \(sid)")
 
-        // 1. Resolve Tool Location
         guard let workspaceId = try await resolveWorkspace(for: tool, in: timelineId) else {
             throw ToolError.toolNotFound(tool.displayName)
         }
 
-        // 2. Get Workspace Details
         guard let workspace = try await timelineManager.getWorkspace(workspaceId) else {
             throw ToolError.workspaceNotFound(workspaceId)
         }
 
         switch workspace.hostType {
         case .server, .serverTimeline:
-            // 3a. Execute Locally
-            return try await executeLocally(tool: tool, arguments: arguments, workspace: workspace, timelineId: timelineId)
+            let output = try await executeLocally(
+                tool: tool,
+                arguments: arguments,
+                workspace: workspace,
+                timelineId: timelineId,
+                availableTools: availableTools
+            )
+            return .completed(output)
 
         case .client:
-            // 3b. Execute Remotely
-            return try await executeRemotely(tool: tool, arguments: arguments, workspace: workspace)
+            guard !(await timelineManager.getTimeline(id: timelineId)?.isPrivate ?? false) else {
+                throw ToolError.clientToolsDisallowedOnPrivateTimeline
+            }
+            return .deferredToClient
         }
     }
+
+    // MARK: - Private Helpers
 
     private func resolveWorkspace(for tool: ToolReference, in timelineId: UUID) async throws -> UUID? {
         let workspaces = await timelineManager.getWorkspaces(for: timelineId)
@@ -58,7 +183,8 @@ public actor ToolRouter {
         tool: ToolReference,
         arguments: [String: AnyCodable],
         workspace _: WorkspaceReference,
-        timelineId: UUID
+        timelineId: UUID,
+        availableTools: [AnyTool]? = nil
     ) async throws -> String {
         let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
         logger.info("Executing locally: \(toolName)")
@@ -67,17 +193,23 @@ public actor ToolRouter {
             throw ToolError.toolNotFound(tool.displayName)
         }
 
-        guard let realTool = await toolManager.getTool(id: tool.toolId) else {
+        var toolList = await toolManager.getAvailableTools()
+        if let dynamicTools = availableTools {
+            toolList = dynamicTools + toolList
+        }
+
+        guard let resolvedTool = toolList.first(where: {
+            $0.toolReference == tool || $0.id == tool.toolId
+        }) else {
             throw ToolError.toolNotFound(tool.displayName)
         }
 
-        // Convert arguments to [String: Any] for the tool
         var params: [String: Any] = [:]
         for (key, val) in arguments {
             params[key] = val.value
         }
 
-        let result = try await realTool.execute(parameters: params)
+        let result = try await resolvedTool.execute(parameters: params)
         if result.success {
             logger.info("Success: \(toolName)")
             return result.output
@@ -86,24 +218,5 @@ public actor ToolRouter {
             logger.error("Failed: \(toolName) - \(errorMsg)")
             throw ToolError.executionFailed(errorMsg)
         }
-    }
-
-    private func executeRemotely(
-        tool: ToolReference,
-        arguments _: [String: AnyCodable],
-        workspace: WorkspaceReference
-    ) async throws -> String {
-        let toolName = ANSIColors.colorize(tool.displayName, color: ANSIColors.brightCyan)
-        let client = ANSIColors.colorize(workspace.ownerId?.uuidString.prefix(8).lowercased() ?? "unknown", color: ANSIColors.brightMagenta)
-
-        logger.info("Executing remotely: \(toolName) on client \(client)")
-
-        guard workspace.ownerId != nil else {
-            throw ToolError.clientNotConnected
-        }
-
-        // In the core framework, we throw this special error to tell the
-        // transport layer (Server/CLI) that client intervention is needed.
-        throw ToolError.clientExecutionRequired
     }
 }

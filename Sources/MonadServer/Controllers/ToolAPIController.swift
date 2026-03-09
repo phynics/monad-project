@@ -122,11 +122,17 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         let execReq = try await request.decode(as: ExecuteToolRequest.self, context: context)
 
         do {
-            return try await toolRouter.execute(
+            let outcome = try await toolRouter.execute(
                 tool: .known(id: execReq.name),
                 arguments: execReq.arguments,
                 timelineId: execReq.timelineId
             )
+            switch outcome {
+            case let .completed(result):
+                return result
+            case .deferredToClient:
+                throw HTTPError(.badRequest, message: "Server API cannot execute client-deferred tools currently")
+            }
         } catch let error as ToolError {
             if case .toolNotFound = error {
                 throw HTTPError(.notFound)

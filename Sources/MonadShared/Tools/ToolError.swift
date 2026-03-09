@@ -8,44 +8,44 @@ public enum ToolError: Error, LocalizedError, Sendable {
     case toolNotFound(String)
     case workspaceNotFound(UUID)
     case clientNotConnected
-    case clientExecutionRequired
+    case clientToolsDisallowedOnPrivateTimeline
 
     public var errorDescription: String? {
         switch self {
-        case .missingArgument(let arg):
+        case let .missingArgument(arg):
             return "Missing required argument: \(arg)"
-        case .invalidArgument(let arg, let expected, let got):
+        case let .invalidArgument(arg, expected, got):
             return "Invalid argument '\(arg)': expected \(expected), got \(got)"
-        case .executionFailed(let message):
+        case let .executionFailed(message):
             return "Tool execution failed: \(message)"
-        case .toolNotFound(let name):
+        case let .toolNotFound(name):
             return "Tool not found: \(name)"
-        case .workspaceNotFound(let id):
+        case let .workspaceNotFound(id):
             return "Workspace not found: \(id)"
         case .clientNotConnected:
             return "Client is not connected"
-        case .clientExecutionRequired:
-            return "Execution on client required"
+        case .clientToolsDisallowedOnPrivateTimeline:
+            return "Client-side tools cannot be used on private (agent-owned) timelines"
         }
     }
 
     /// Provides a suggested action to resolve the error.
     public var remediation: String? {
         switch self {
-        case .missingArgument(let arg):
+        case let .missingArgument(arg):
             return "Check the tool definition and ensure '\(arg)' is provided in the arguments dictionary."
-        case .invalidArgument(let arg, let expected, let got):
+        case let .invalidArgument(arg, expected, got):
             return "Convert the value for '\(arg)' to the expected type (\(expected)). Currently it is \(got)."
-        case .executionFailed(let message):
+        case let .executionFailed(message):
             return "Review the tool logs or debug the tool implementation. Error: \(message)"
-        case .toolNotFound(let name):
+        case let .toolNotFound(name):
             return "Ensure the tool '\(name)' is registered in the TimelineToolManager."
-        case .workspaceNotFound(let id):
+        case let .workspaceNotFound(id):
             return "Verify that workspace \(id) exists and is currently attached."
         case .clientNotConnected:
             return "Ensure the target client is online and registered with the server."
-        case .clientExecutionRequired:
-            return "This tool must be executed on the client side. Ensure the CLI/Client is handling .toolExecution events."
+        case .clientToolsDisallowedOnPrivateTimeline:
+            return "Only server-side tools are permitted on private timelines. Remove client workspace tools from the agent's configuration."
         }
     }
 }

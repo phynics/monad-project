@@ -42,9 +42,9 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
             case .executionFailed:
                 status = .internalServerError
                 code = "execution_failed"
-            case .clientExecutionRequired:
-                status = .internalServerError
-                code = "client_execution_required"
+            case .clientToolsDisallowedOnPrivateTimeline:
+                status = .forbidden
+                code = "client_tools_disallowed_on_private_timeline"
             }
 
             let apiError = APIErrorResponse(error: .init(

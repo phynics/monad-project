@@ -28,7 +28,6 @@ struct ChatTurnContext {
     var debugToolResults: [ToolResultRecord] = []
 
     var turnResult: TurnResult = .finish
-    var requiresClientExecution: Bool = false
 }
 
 enum TurnResult {

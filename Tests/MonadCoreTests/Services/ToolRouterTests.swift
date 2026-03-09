@@ -18,8 +18,8 @@ final class ToolRouterTests: XCTestCase {
         func canExecute() async -> Bool { true }
         
         func execute(parameters: [String: Any]) async throws -> ToolResult {
-            if !result.success, result.error == "client_execution_required" {
-                throw ToolError.clientExecutionRequired
+            if !result.success, result.error == "client_tools_disallowed_on_private_timeline" {
+                throw ToolError.clientToolsDisallowedOnPrivateTimeline
             }
             return result
         }
@@ -78,7 +78,11 @@ final class ToolRouterTests: XCTestCase {
         let arguments: [String: AnyCodable] = ["param": AnyCodable("value")]
         
         let result = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
-        XCTAssertEqual(result, "Local success")
+        guard case .completed(let output) = result else {
+            XCTFail("Expected .completed outcome")
+            return
+        }
+        XCTAssertEqual(output, "Local success")
     }
     
     func testExecuteRemotelyThrowsClientExecutionRequired() async throws {
@@ -104,12 +108,13 @@ final class ToolRouterTests: XCTestCase {
         let arguments: [String: AnyCodable] = [:]
         
         do {
-            _ = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
-            XCTFail("Should have thrown clientExecutionRequired")
-        } catch ToolError.clientExecutionRequired {
-            // Expected
+            let result = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
+            guard case .deferredToClient = result else {
+                XCTFail("Expected .deferredToClient")
+                return
+            }
         } catch {
-            XCTFail("Unexpected error thrown: \(error)")
+            XCTFail("Unexpected error: \(error)")
         }
     }
     
@@ -136,12 +141,13 @@ final class ToolRouterTests: XCTestCase {
         let arguments: [String: AnyCodable] = [:]
         
         do {
-            _ = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
-            XCTFail("Should have thrown clientNotConnected")
-        } catch ToolError.clientNotConnected {
-            // Expected
+            let result = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
+            guard case .deferredToClient = result else {
+                XCTFail("Expected .deferredToClient")
+                return
+            }
         } catch {
-            XCTFail("Unexpected error thrown: \(error)")
+            XCTFail("Unexpected error: \(error)")
         }
     }
     
