@@ -181,7 +181,7 @@ Swift library for cross-platform integration, abstracting server communication.
 - HTTP client for MonadServer REST API
 - Bonjour/mDNS client-side discovery
 - RPC support for client-hosted workspaces
-- Client tool execution (e.g., `AskAttachPWDTool`)
+- Secure elevation of workspace trust levels
 
 **Dependencies:**
 - MonadCore (for core types)
@@ -192,7 +192,7 @@ Swift library for cross-platform integration, abstracting server communication.
 - HTTP client wrapping URLSession
 - Bonjour browser for server discovery
 - Client-side workspace implementation
-- Tool execution delegation to server
+- User-approval flow for write access
 
 ---
 
@@ -214,7 +214,7 @@ A powerful REPL and command-line tool.
 - **Chat**: `/help`, `/quit`, `/new`, `/clear`
 - **Session**: `/session` (info, list, switch, delete, rename, log)
 - **Memory**: `/memory` (all, search, view)
-- **Workspace**: `/workspace` (list, attach, attach-pwd, detach)
+- **Workspace**: `/workspace` (list, attach, detach)
 - **Jobs**: `/job` (list, add, delete)
 - **Files**: `/ls`, `/cat`, `/rm`, `/write`, `/edit`
 - **System**: `/debug`, `/config`, `/status`, `/tool`, `/client`
@@ -420,12 +420,14 @@ The `/sessions/{id}/chat` endpoint emits Server-Sent Events with the following t
 ### Workspace Lifecycle
 
 1. **Creation**: Primary workspace created automatically with session
-2. **Attachment**: Shared workspaces attached via `/workspace attach` or `attach-pwd`
-3. **Discovery**: `WorkspaceFactory` creates appropriate `WorkspaceProtocol` implementation
-4. **Tool Registration**: `TimelineToolManager` aggregates tools from all workspaces
-5. **Execution**: `ToolRouter` routes tool calls to correct workspace
-6. **Health Checking**: `WorkspaceManager` monitors workspace availability
-7. **Detachment**: Workspaces can be detached, removing their tools from session
+2. **Auto-Attachment**: Current directory attached as `.readOnly` on startup
+3. **Manual Attachment**: Shared workspaces attached via `/workspace attach`
+4. **Discovery**: `WorkspaceFactory` creates appropriate `WorkspaceProtocol` implementation
+5. **Tool Registration**: `TimelineToolManager` aggregates tools from all workspaces
+6. **Execution**: `ToolRouter` routes tool calls to correct workspace
+7. **Elevation**: Assistant requests write access via `request_write_access` tool
+8. **Health Checking**: `WorkspaceManager` monitors workspace availability
+9. **Detachment**: Workspaces can be detached, removing their tools from session
 
 ---
 

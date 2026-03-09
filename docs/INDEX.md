@@ -27,6 +27,11 @@ Comprehensive guide to Monad documentation.
 - Data flow: user input → context assembly → LLM → tool execution → response
 - SSE streaming protocol, concurrency model
 
+**[ERROR_HANDLING.md](ERROR_HANDLING.md)** — Structured error handling
+- `Throwable` protocol and `ErrorKit` integration
+- Module-specific error tiers (Client, Core, Server)
+- User-friendly messaging and technical tracing
+
 **[CONTEXT_SYSTEM.md](CONTEXT_SYSTEM.md)** — Context assembly pipeline
 - Context gathering process (RAG)
 - Context Notes and the `Notes/` directory
@@ -59,8 +64,8 @@ Comprehensive guide to Monad documentation.
 
 **[CLIENT.md](CLIENT.md)** — MonadClient library & MonadCLI
 - `MonadClient` configuration and facades (`chat`, `workspace`)
-- Client registration and `AskAttachPWDTool`
-- CLI startup sequence
+- Client registration and identity management
+- CLI startup sequence and auto-attachment
 - Full slash command reference
 - `LocalConfigManager` (persists timeline/agent across sessions)
 
@@ -196,7 +201,7 @@ Sources/MonadCore/Services/
 └── Workspace/                    — WorkspaceManager, WorkspaceRepository
 ```
 
-## System Tools (18 Implemented)
+## System Tools (17 Implemented)
 
 | Category | Tools |
 |:---------|:------|
@@ -205,8 +210,8 @@ Sources/MonadCore/Services/
 | Timeline (3) | `timeline_list`, `timeline_peek`, `timeline_send` |
 | System (2) | `system_memory_search`, `system_web_search` |
 | Job Queue (1) | `BackgroundJobQueueGatewayTool` |
-| Client (1) | `AskAttachPWDTool` |
 | Context (1) | `ContextTool` (marker protocol) |
+| Permission (1) | `request_write_access` |
 
 ## Prompt Sections (Priority Order)
 

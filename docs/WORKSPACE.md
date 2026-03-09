@@ -64,7 +64,8 @@ public enum WorkspaceURI {
 
 **Attached Workspaces:**
 - Shared project directories attached to a specific timeline
-- Attached via `/workspace attach`, `/workspace attach-pwd`, or API
+- The CLI **automatically attaches** the current working directory on startup as a read-only workspace.
+- Additional workspaces can be attached via `/workspace attach` or API.
 - Can be server-side (`hostType: .server`) or client-side (`hostType: .client`)
 - Detaching removes their tools from the timeline
 
@@ -104,13 +105,15 @@ ToolRouter.route()
 - **Server tools** (`.server` host type): Executed directly by `ToolExecutor` on the server.
 - **Client tools** (`.client` host type): `ToolRouter` throws `ToolError.clientExecutionRequired`. `ChatEngine` pauses generation and emits a `toolExecution` event. The client executes locally and resumes the stream by posting `toolOutputs`.
 
-### 4. Request/Response Loop
+### Write Access Elevation
 
-1. LLM generates a tool call
-2. Server pauses and routes the call
-3. Workspace executes the tool (sandboxed to `rootPath`)
-4. Result is fed back as a `Message` with role `.tool`
-5. LLM continues generation with the new context
+Client-side workspaces are attached with `trustLevel: .readOnly` by default. If the LLM needs to modify files (e.g. `write_file`, `edit_file`), it must first call the `request_write_access(reason:)` tool.
+
+1. LLM calls `request_write_access`
+2. Server routes to client
+3. CLI prompts user: "Grant full write access? [y/N]"
+4. If granted, CLI updates workspace to `trustLevel: .full` and returns success
+5. LLM can now call write tools on that workspace
 
 ---
 
@@ -120,20 +123,22 @@ ToolRouter.route()
 
 **State isolation:** Each timeline has its own `ContextManager` and `ToolExecutor`, preventing cross-talk between concurrent conversations.
 
-**Trust levels:** `.full` executes immediately. `.restricted` is reserved for future per-action approval UI.
+**Trust levels:**
+- `.readOnly`: Only read tools (ls, cat, grep, etc) are available.
+- `.full`: All tools including write/delete are available.
 
 ---
 
 ## Workflows
 
-### Attaching a Project Directory (`attach-pwd`)
+### Auto-Attaching Project Directory
 
-The `/workspace attach-pwd` CLI command integrates a local development environment:
+When you start `monad chat`, the CLI:
 
-1. CLI reads the current working directory
-2. Requests the server to register it as a `.server` workspace
-3. Server attaches it to the current timeline
-4. `WorkspaceFactory` creates a `LocalWorkspace` and registers its tools with `TimelineToolManager`
+1. Resolves the absolute path of the current directory.
+2. Registers/Finds a client-side workspace for this path on the server.
+3. Attaches it to the current timeline with `.readOnly` trust.
+4. Syncs the standard read-only toolset.
 
 ### Client-Managed Workspaces (IDE/Remote)
 
@@ -169,6 +174,7 @@ For IDE integrations or remote environments:
 | `GET` | `/workspaces` | List all workspaces |
 | `POST` | `/workspaces` | Register a new workspace |
 | `GET` | `/workspaces/:id` | Get workspace details and tool list |
+| `PATCH` | `/workspaces/:id` | Update workspace (e.g. elevation to `.full`) |
 | `GET` | `/workspaces/:id/files` | List files |
 | `GET` | `/workspaces/:id/files/:path` | Read a file |
 | `PUT` | `/workspaces/:id/files/:path` | Write a file |
@@ -184,7 +190,6 @@ For IDE integrations or remote environments:
 ```
 /workspace list              List attached workspaces
 /workspace attach <id>       Attach a workspace to the current timeline
-/workspace attach-pwd        Attach current working directory
 /workspace detach <id>       Detach a workspace
 /ls [path]                   List files in workspace
 /cat <path>                  Read a file

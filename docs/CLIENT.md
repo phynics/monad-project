@@ -55,7 +55,7 @@ try await client.workspace.attachWorkspace(id: wsId, to: timelineId)
 
 ### Client Registration
 
-The CLI registers itself with the server so client-side tools (like `ask_attach_pwd`) can be routed back:
+The CLI registers itself with the server so client-side tools (like `request_write_access`) can be routed back:
 
 ```swift
 let identity = try await RegistrationManager.shared.ensureRegistered(client: client)
@@ -63,19 +63,6 @@ let identity = try await RegistrationManager.shared.ensureRegistered(client: cli
 ```
 
 **API:** `POST /api/clients` (register), `DELETE /api/clients/:id` (unregister)
-
-### AskAttachPWDTool
-
-A client-side tool that requests the CLI to attach its current working directory:
-
-```swift
-// Server-side: registered when client connects with a valid clientId
-AskAttachPWDTool(clientId: clientId, server: client)
-```
-
-When the LLM calls `ask_attach_pwd`, the server sends a `toolExecution` event back to the CLI, which then calls `/workspace attach-pwd` automatically.
-
-**Location:** `Sources/MonadClient/Tools/AskAttachPWDTool.swift`
 
 ---
 
@@ -105,8 +92,9 @@ swift run MonadCLI status                  # Check server health
 5. Check/show configuration screen if LLM not configured
 6. Resolve timeline (explicit ID → last session → new)
 7. Handle workspace re-attachment
-8. Restore last attached agent instance (from local config)
-9. Start REPL
+8. **Auto-attach current directory** as a read-only client workspace
+9. Restore last attached agent instance (from local config)
+10. Start REPL
 
 ### Slash Command Reference
 
@@ -147,7 +135,6 @@ swift run MonadCLI status                  # Check server health
 |:--------|:------------|
 | `/workspace list` | List attached workspaces |
 | `/workspace attach <id>` | Attach a workspace |
-| `/workspace attach-pwd` | Attach current working directory |
 | `/workspace detach <id>` | Detach a workspace |
 
 **Files:**
