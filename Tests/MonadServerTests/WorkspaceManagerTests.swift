@@ -25,7 +25,7 @@ import MonadTestSupport
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository()
+            WorkspaceRepository(workspaceRoot: URL(fileURLWithPath: NSTemporaryDirectory()))
         }
 
         manager = WorkspaceManager(repository: repository, workspaceCreator: WorkspaceFactory())

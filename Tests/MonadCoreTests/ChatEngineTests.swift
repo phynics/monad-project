@@ -39,21 +39,21 @@ struct ChatEngineTests {
             try await mockPersistence.saveWorkspace(workspaceRef)
             try await timelineManager.attachWorkspace(wsId, to: timelineId)
             try await mockPersistence.addToolToWorkspace(workspaceId: wsId, tool: .known("mock_tool"))
-            
+
             let engine = ChatEngine()
-            
+
             try await timelineManager.hydrateTimeline(id: timelineId)
-            
+
             if let toolManager = await timelineManager.getToolManager(for: timelineId) {
                 var tools = await toolManager.getAvailableTools()
                 tools.append(MockTool().toAnyTool())
                 await toolManager.updateAvailableTools(tools)
-                
+
                 if let ws = try? await timelineManager.workspaceManager.getWorkspace(id: wsId) {
                     await toolManager.registerWorkspace(ws)
                 }
             }
-            
+
             return try await test(engine, mockLLM, mockPersistence)
         }
     }
@@ -74,7 +74,7 @@ struct ChatEngineTests {
         try await withChatEngineDependencies { engine, mockLLM, _ in
             mockLLM.mockClient.nextResponse = "Hello, world!"
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Hi",
                 tools: []
@@ -94,7 +94,7 @@ struct ChatEngineTests {
         try await withChatEngineDependencies { engine, mockLLM, mockPersistence in
             mockLLM.mockClient.nextResponse = "Persisted reply."
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Persistence test",
                 tools: []
@@ -114,8 +114,8 @@ struct ChatEngineTests {
     @Test("Empty message and no tool outputs throws error")
     func emptyMessageThrows() async throws {
         _ = try await withChatEngineDependencies { engine, _, _ in
-            await #expect(throws: ToolError.self) {
-                _ = try await engine.chatStream(
+            await #expect(throws: ChatEngineError.self) {
+                _ = try await engine.execute(
                     timelineId: timelineId,
                     message: "",
                     tools: []
@@ -131,7 +131,7 @@ struct ChatEngineTests {
         try await withChatEngineDependencies { engine, mockLLM, _ in
             mockLLM.mockClient.nextChunks = [["<think>", "Reasoning...", "</think>", "Answer"]]
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Why?",
                 tools: []
@@ -189,7 +189,7 @@ struct ChatEngineTests {
             mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "mock_tool", "arguments": "{}"]]]]
             mockLLM.mockClient.nextResponses = ["", "Processed result"]
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Run tool",
                 tools: [mockTool.toAnyTool()]
@@ -227,7 +227,7 @@ struct ChatEngineTests {
             mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "tool_call", "arguments": "{}"]]]]
             mockLLM.mockClient.nextResponses = ["Ignored tool name"]
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Run sentinel",
                 tools: [MockTool().toAnyTool()]
@@ -248,7 +248,7 @@ struct ChatEngineTests {
             mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "unknown_tool", "arguments": "{}"]]]]
             mockLLM.mockClient.nextResponses = ["", "Unknown tool call"]
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Run unknown",
                 tools: [MockTool().toAnyTool()]
@@ -280,7 +280,7 @@ struct ChatEngineTests {
             mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "mock_tool", "arguments": "{}"]]]]
             mockLLM.mockClient.nextResponses = ["Pause here"]
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Run client tool",
                 tools: [mockTool.toAnyTool()]
@@ -322,7 +322,7 @@ struct ChatEngineTests {
             mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "mock_tool", "arguments": "{}"]]]]
             mockLLM.mockClient.nextResponses = ["", "It failed."]
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Fail tool",
                 tools: [mockTool.toAnyTool()]
@@ -354,7 +354,7 @@ struct ChatEngineTests {
                 "Fallback worked",
             ]
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Run XML tool",
                 tools: [mockTool.toAnyTool()]
@@ -391,7 +391,7 @@ struct ChatEngineTests {
             ]
             mockLLM.mockClient.nextResponses = ["", "", ""]
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Infinite tools",
                 tools: [mockTool.toAnyTool()],
@@ -417,7 +417,7 @@ struct ChatEngineTests {
         try await withChatEngineDependencies { engine, mockLLM, _ in
             mockLLM.mockClient.shouldThrowError = true
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Trigger error",
                 tools: []
@@ -436,7 +436,7 @@ struct ChatEngineTests {
         try await withChatEngineDependencies { engine, mockLLM, _ in
             mockLLM.mockClient.nextResponse = "Hello"
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Hi",
                 tools: []
@@ -467,7 +467,7 @@ struct ChatEngineTests {
         try await withChatEngineDependencies { engine, mockLLM, mockPersistence in
             mockLLM.mockClient.nextResponse = "Continuing."
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Next question",
                 tools: [],
@@ -490,7 +490,7 @@ struct ChatEngineTests {
         try await withChatEngineDependencies { engine, mockLLM, mockPersistence in
             mockLLM.mockClient.nextResponse = "Reply."
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "",
                 tools: [],
@@ -511,8 +511,8 @@ struct ChatEngineTests {
     func llmNotConfiguredThrows() async throws {
         _ = try await withChatEngineDependencies { engine, mockLLM, _ in
             mockLLM.mockIsConfigured = false
-            await #expect(throws: ToolError.self) {
-                _ = try await engine.chatStream(
+            await #expect(throws: ChatEngineError.self) {
+                _ = try await engine.execute(
                     timelineId: timelineId,
                     message: "Hello",
                     tools: []
@@ -533,7 +533,7 @@ struct ChatEngineTests {
             ]]
             mockLLM.mockClient.nextResponses = ["", "Both done"]
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Run two tools",
                 tools: [mockTool.toAnyTool()]
@@ -559,7 +559,7 @@ struct ChatEngineTests {
         try await withChatEngineDependencies { engine, mockLLM, _ in
             mockLLM.mockClient.nextResponse = "Done"
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Hi",
                 tools: []
@@ -578,7 +578,7 @@ struct ChatEngineTests {
             mockLLM.mockClient.nextToolCalls = [[["id": "c1", "function": ["name": "mock_tool", "arguments": "{}"]]]]
             mockLLM.mockClient.nextResponses = ["", "Final answer"]
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Use tool",
                 tools: [mockTool.toAnyTool()]
@@ -605,7 +605,7 @@ struct ChatEngineTests {
             try await mockPersistence.saveAgentInstance(agentInstance)
             mockLLM.mockClient.nextResponse = "Agent reply"
 
-            let stream = try await engine.chatStream(
+            let stream = try await engine.execute(
                 timelineId: timelineId,
                 message: "Hi agent",
                 tools: [],

@@ -88,7 +88,7 @@ struct Query: AsyncParsableCommand {
         }
 
         // Stream the response
-        let stream = try await client.chat.chatStream(timelineId: targetTimeline.id, message: questionText)
+        let stream = try await client.chat.execute(timelineId: targetTimeline.id, message: questionText)
 
         for try await delta in stream {
             if let content = delta.textContent {

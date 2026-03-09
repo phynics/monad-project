@@ -84,6 +84,9 @@ public struct MonadServerFactory {
         // Initialize WebSocket Manager
         let connectionManager = WebSocketConnectionManager()
 
+        // Initialize Workspace Repository
+        let workspaceRepository = WorkspaceRepository(workspaceRoot: workspaceRoot)
+
         // Initialize Core Services
         let timelineManager = TimelineManager(
             workspaceRoot: workspaceRoot,
@@ -91,7 +94,7 @@ public struct MonadServerFactory {
             workspaceCreator: WorkspaceFactory()
         )
 
-        let agentInstanceManager = AgentInstanceManager(workspaceRoot: workspaceRoot)
+        let agentInstanceManager = AgentInstanceManager(repository: workspaceRepository)
         let toolRouter = ToolRouter()
         let chatEngine = ChatEngine()
 
@@ -104,7 +107,7 @@ public struct MonadServerFactory {
         )
 
         let workspaceManager = WorkspaceManager(
-            repository: WorkspaceRepository(),
+            repository: workspaceRepository,
             connectionManager: connectionManager,
             workspaceCreator: WorkspaceFactory()
         )

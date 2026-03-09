@@ -3,7 +3,7 @@ import MonadShared
 import OpenAI
 
 /// Internal state container for a single chat turn as it moves through the pipeline.
-struct ChatTurnContext {
+final class ChatTurnContext: @unchecked Sendable {
     let timelineId: UUID
     let agentInstanceId: UUID?
     let modelName: String
@@ -13,7 +13,6 @@ struct ChatTurnContext {
     let availableTools: [AnyTool]
     let contextData: ContextData
     let structuredContext: [String: String]
-    let continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
 
     // Output from stages
     var fullResponse: String = ""
@@ -27,10 +26,27 @@ struct ChatTurnContext {
     var debugToolCalls: [ToolCallRecord] = []
     var debugToolResults: [ToolResultRecord] = []
 
-    var turnResult: TurnResult = .finish
-}
-
-enum TurnResult {
-    case `continue`(newMessages: [ChatQuery.ChatCompletionMessageParam])
-    case finish
+    init(
+        timelineId: UUID,
+        agentInstanceId: UUID?,
+        modelName: String,
+        turnCount: Int,
+        currentMessages: [ChatQuery.ChatCompletionMessageParam],
+        toolParams: [ChatQuery.ChatCompletionToolParam],
+        availableTools: [AnyTool],
+        contextData: ContextData,
+        structuredContext: [String: String],
+        accumulatedRawOutput: String
+    ) {
+        self.timelineId = timelineId
+        self.agentInstanceId = agentInstanceId
+        self.modelName = modelName
+        self.turnCount = turnCount
+        self.currentMessages = currentMessages
+        self.toolParams = toolParams
+        self.availableTools = availableTools
+        self.contextData = contextData
+        self.structuredContext = structuredContext
+        self.accumulatedRawOutput = accumulatedRawOutput
+    }
 }

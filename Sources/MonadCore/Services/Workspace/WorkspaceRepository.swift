@@ -5,8 +5,11 @@ import Dependencies
 /// Repository for managing Workspace data persistence and business logic.
 public actor WorkspaceRepository {
     @Dependency(\.workspacePersistence) private var persistenceService
+    private let workspaceRoot: URL
 
-    public init() {}
+    public init(workspaceRoot: URL) {
+        self.workspaceRoot = workspaceRoot
+    }
 
     /// Creates a new workspace and saves it to persistence.
     public func createWorkspace(
@@ -27,6 +30,44 @@ public actor WorkspaceRepository {
         return workspace
     }
 
+    /// Creates a new agent workspace and seeds it with template files.
+    public func createAgentWorkspace(
+        instanceId: UUID,
+        template: AgentTemplate? = nil
+    ) async throws -> WorkspaceReference {
+        // 1. Create workspace directory
+        let agentWorkspaceURL = workspaceRoot
+            .appendingPathComponent("agents", isDirectory: true)
+            .appendingPathComponent(instanceId.uuidString, isDirectory: true)
+        let notesDir = agentWorkspaceURL.appendingPathComponent("Notes", isDirectory: true)
+        try FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true)
+
+        // 2. Seed workspace files
+        if let seed = template?.workspaceFilesSeed, !seed.isEmpty {
+            for (filename, content) in seed {
+                try content.write(
+                    to: notesDir.appendingPathComponent(filename),
+                    atomically: true,
+                    encoding: .utf8
+                )
+            }
+        } else if let template = template {
+            // Default: write composed instructions as system.md
+            try template.composedInstructions.write(
+                to: notesDir.appendingPathComponent("system.md"),
+                atomically: true,
+                encoding: .utf8
+            )
+        }
+
+        // 3. Persist and return reference
+        return try await createWorkspace(
+            uri: .agentWorkspace(instanceId),
+            hostType: .server,
+            rootPath: agentWorkspaceURL.path
+        )
+    }
+
     /// Fetches a workspace by its unique identifier.
     public func getWorkspace(id: UUID, includeTools: Bool = true) async throws -> WorkspaceReference? {
         return try await persistenceService.fetchWorkspace(id: id, includeTools: includeTools)
@@ -38,7 +79,13 @@ public actor WorkspaceRepository {
     }
 
     /// Deletes a workspace.
-    public func deleteWorkspace(id: UUID) async throws {
+    public func deleteWorkspace(id: UUID, deleteDirectory: Bool = false) async throws {
+        if deleteDirectory, let workspace = try await getWorkspace(id: id, includeTools: false), let rootPath = workspace.rootPath {
+            let url = URL(fileURLWithPath: rootPath)
+            if FileManager.default.fileExists(atPath: url.path) {
+                try FileManager.default.removeItem(at: url)
+            }
+        }
         try await persistenceService.deleteWorkspace(id: id)
     }
 

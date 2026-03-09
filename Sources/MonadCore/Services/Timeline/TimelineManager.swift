@@ -61,7 +61,7 @@ public actor TimelineManager {
         // Use withDependencies to ensure repository picks up current context if needed,
         // although Dependencies usually works via property wrappers.
         workspaceManager = WorkspaceManager(
-            repository: WorkspaceRepository(),
+            repository: WorkspaceRepository(workspaceRoot: workspaceRoot),
             connectionManager: connectionManager,
             workspaceCreator: workspaceCreator
         )

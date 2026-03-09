@@ -1,7 +1,34 @@
+import ErrorKit
 import Foundation
 import Logging
 import MonadShared
 import OpenAI
+
+/// Errors thrown by `ChatEngine` during setup and execution.
+public enum ChatEngineError: Throwable {
+    case llmServiceNotConfigured
+    case missingInput
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case .llmServiceNotConfigured:
+            return "The LLM service is not configured. Please set up your API endpoint and key."
+        case .missingInput:
+            return "A message or tool outputs must be provided to start a chat turn."
+        }
+    }
+}
+
+/// Input for `buildTurnInitialState`, grouping the per-turn setup parameters.
+struct TurnInitInput {
+    let timelineId: UUID
+    let message: String
+    let tools: [AnyTool]
+    let contextData: ContextData
+    let history: [Message]
+    let agentInstanceId: UUID?
+    let systemInstructions: String?
+}
 
 /// Input parameters for building the LLM prompt in a chat turn.
 struct BuildPromptParams {
@@ -40,7 +67,7 @@ extension ChatEngine {
             let userMsg = ConversationMessage(timelineId: timelineId, role: .user, content: message)
             try await messageStore.saveMessage(userMsg)
         } else if toolOutputs?.isEmpty ?? true {
-            throw ToolError.invalidArgument("input", expected: "message or toolOutputs", got: "empty")
+            throw ChatEngineError.missingInput
         }
     }
 
@@ -69,12 +96,11 @@ extension ChatEngine {
         return ContextData()
     }
 
-    func buildLoopConfig(
-        timelineId: UUID,
-        input: LoopConfigInput
-    ) async throws -> ([ChatQuery.ChatCompletionMessageParam], ChatLoopConfig) {
-        let timeline = await timelineManager.getTimeline(id: timelineId)
-        let workspaces = await timelineManager.getWorkspaces(for: timelineId)
+    func buildTurnInitialState(
+        input: TurnInitInput
+    ) async throws -> (messages: [ChatQuery.ChatCompletionMessageParam], structuredContext: [String: String]) {
+        let timeline = await timelineManager.getTimeline(id: input.timelineId)
+        let workspaces = await timelineManager.getWorkspaces(for: input.timelineId)
         let attachedWorkspaces = workspaces?.attached ?? []
 
         let agentInstance: AgentInstance? = input.agentInstanceId != nil
@@ -83,7 +109,8 @@ extension ChatEngine {
 
         var clientName: String?
         if let ownerId = workspaces?.primary?.ownerId,
-           let client = try? await clientStore.fetchClient(id: ownerId) {
+           let client = try? await clientStore.fetchClient(id: ownerId)
+        {
             clientName = client.displayName
         }
 
@@ -100,20 +127,7 @@ extension ChatEngine {
             connectedClients: Set<UUID>(),
             systemInstructions: input.systemInstructions
         )
-        let (initialMessages, structuredContext) = await buildPrompt(params)
-
-        let modelName = await llmService.configuration.modelName
-        let config = ChatLoopConfig(
-            timelineId: timelineId,
-            toolParams: input.tools.map { $0.toToolParam() },
-            availableTools: input.tools,
-            contextData: input.contextData,
-            structuredContext: structuredContext,
-            modelName: modelName,
-            agentInstanceId: input.agentInstanceId,
-            maxTurns: input.maxTurns
-        )
-        return (initialMessages, config)
+        return await buildPrompt(params)
     }
 
     func buildPrompt(

@@ -17,11 +17,11 @@ public actor AgentInstanceManager {
     @Dependency(\.messageStore) private var messageStore
     @Dependency(\.workspacePersistence) private var workspaceStore
 
-    private let workspaceRoot: URL
+    private let repository: WorkspaceRepository
     private let logger = Logger.module(named: "agent-instance-manager")
 
-    public init(workspaceRoot: URL) {
-        self.workspaceRoot = workspaceRoot
+    public init(repository: WorkspaceRepository) {
+        self.repository = repository
     }
 
     // MARK: - Create
@@ -40,41 +40,13 @@ public actor AgentInstanceManager {
         let instanceId = UUID()
         let privateTimelineId = UUID()
 
-        // 1. Create workspace directory
-        let agentWorkspaceURL = workspaceRoot
-            .appendingPathComponent("agents", isDirectory: true)
-            .appendingPathComponent(instanceId.uuidString, isDirectory: true)
-        let notesDir = agentWorkspaceURL.appendingPathComponent("Notes", isDirectory: true)
-        try FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true)
-
-        // 2. Seed workspace files
-        if let seed = template?.workspaceFilesSeed, !seed.isEmpty {
-            for (filename, content) in seed {
-                try content.write(
-                    to: notesDir.appendingPathComponent(filename),
-                    atomically: true,
-                    encoding: .utf8
-                )
-            }
-        } else if let template = template {
-            // Default: write composed instructions as system.md
-            try template.composedInstructions.write(
-                to: notesDir.appendingPathComponent("system.md"),
-                atomically: true,
-                encoding: .utf8
-            )
-        }
-
-        // 3. Persist workspace reference
-        let workspace = WorkspaceReference(
-            uri: .agentWorkspace(instanceId),
-            hostType: .server,
-            rootPath: agentWorkspaceURL.path,
-            trustLevel: .full
+        // 1. Create workspace via repository
+        let workspace = try await repository.createAgentWorkspace(
+            instanceId: instanceId,
+            template: template
         )
-        try await workspaceStore.saveWorkspace(workspace)
 
-        // 4. Persist private timeline
+        // 2. Persist private timeline
         let privateTimeline = Timeline(
             id: privateTimelineId,
             title: "[\(name)] Private",
@@ -84,7 +56,7 @@ public actor AgentInstanceManager {
         )
         try await timelineStore.saveTimeline(privateTimeline)
 
-        // 5. Persist agent instance
+        // 3. Persist agent instance
         let instance = AgentInstance(
             id: instanceId,
             name: name,
@@ -94,7 +66,7 @@ public actor AgentInstanceManager {
         )
         try await instanceStore.saveAgentInstance(instance)
 
-        // 6. Log creation to private timeline
+        // 4. Log creation to private timeline
         let creationMsg = ConversationMessage(
             timelineId: privateTimelineId,
             role: .system,
@@ -217,6 +189,10 @@ public actor AgentInstanceManager {
     /// Deletes an agent instance and optionally force-detaches it from all timelines.
     /// - Parameter force: If false, throws if the agent is still attached to any timelines.
     public func deleteInstance(id: UUID, force: Bool = false) async throws {
+        guard let instance = try await instanceStore.fetchAgentInstance(id: id) else {
+            throw AgentInstanceError.instanceNotFound(id)
+        }
+
         let attachedTimelines = try await instanceStore.fetchTimelines(attachedToAgent: id)
 
         if !attachedTimelines.isEmpty, !force {
@@ -228,6 +204,11 @@ public actor AgentInstanceManager {
             timeline.attachedAgentInstanceId = nil
             timeline.updatedAt = Date()
             try await timelineStore.saveTimeline(timeline)
+        }
+
+        // Delete primary workspace
+        if let workspaceId = instance.primaryWorkspaceId {
+            try await repository.deleteWorkspace(id: workspaceId, deleteDirectory: true)
         }
 
         try await instanceStore.deleteAgentInstance(id: id)

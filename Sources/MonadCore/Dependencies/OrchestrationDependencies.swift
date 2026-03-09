@@ -4,11 +4,20 @@ import MonadShared
 
 // MARK: - Dependency Keys
 
-public enum WorkspaceManagerKey: DependencyKey {
-    public static let liveValue = WorkspaceManager(
-        repository: WorkspaceRepository(),
-        workspaceCreator: NullWorkspaceCreator()
+public enum WorkspaceRepositoryKey: DependencyKey {
+    public static let liveValue = WorkspaceRepository(
+        workspaceRoot: FileManager.default.temporaryDirectory
     )
+}
+
+public enum WorkspaceManagerKey: DependencyKey {
+    public static var liveValue: WorkspaceManager {
+        @Dependency(\.workspaceRepository) var repository
+        return WorkspaceManager(
+            repository: repository,
+            workspaceCreator: NullWorkspaceCreator()
+        )
+    }
 }
 
 public enum TimelineManagerKey: DependencyKey {
@@ -26,14 +35,20 @@ public enum ChatEngineKey: DependencyKey {
 }
 
 public enum AgentInstanceManagerKey: DependencyKey {
-    public static let liveValue = AgentInstanceManager(
-        workspaceRoot: FileManager.default.temporaryDirectory // Default for unconfigured
-    )
+    public static var liveValue: AgentInstanceManager {
+        @Dependency(\.workspaceRepository) var repository
+        return AgentInstanceManager(repository: repository)
+    }
 }
 
 // MARK: - Dependency Values
 
 public extension DependencyValues {
+    var workspaceRepository: WorkspaceRepository {
+        get { self[WorkspaceRepositoryKey.self] }
+        set { self[WorkspaceRepositoryKey.self] = newValue }
+    }
+
     var workspaceManager: WorkspaceManager {
         get { self[WorkspaceManagerKey.self] }
         set { self[WorkspaceManagerKey.self] = newValue }

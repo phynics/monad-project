@@ -23,7 +23,7 @@ struct WorkspaceRepositoryTests {
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository()
+            WorkspaceRepository(workspaceRoot: FileManager.default.temporaryDirectory)
         }
 
         let uri = WorkspaceURI(host: "monad-server", path: "/test")
@@ -60,7 +60,7 @@ struct WorkspaceRepositoryTests {
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository()
+            WorkspaceRepository(workspaceRoot: FileManager.default.temporaryDirectory)
         }
 
         let ws = WorkspaceReference(
@@ -91,7 +91,7 @@ struct WorkspaceRepositoryTests {
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository()
+            WorkspaceRepository(workspaceRoot: FileManager.default.temporaryDirectory)
         }
 
         let ws1 = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
@@ -119,7 +119,7 @@ struct WorkspaceRepositoryTests {
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository()
+            WorkspaceRepository(workspaceRoot: FileManager.default.temporaryDirectory)
         }
 
         let ws = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
@@ -144,7 +144,7 @@ struct WorkspaceRepositoryTests {
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository()
+            WorkspaceRepository(workspaceRoot: FileManager.default.temporaryDirectory)
         }
 
         var ws = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)

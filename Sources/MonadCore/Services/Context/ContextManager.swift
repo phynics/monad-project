@@ -21,12 +21,11 @@ public actor ContextManager: @unchecked Sendable {
 
     // MARK: - Pipeline Types
 
-    private struct ContextGatheringContext {
+    private final class ContextGatheringContext: @unchecked Sendable {
         let query: String
         let history: [Message]
         let limit: Int
         let tagGenerator: (@Sendable (String) async throws -> [String])?
-        let continuation: AsyncThrowingStream<ContextGatheringEvent, Error>.Continuation
 
         var startTime: CFAbsoluteTime = 0
         var augmentedQuery: String = ""
@@ -38,51 +37,72 @@ public actor ContextManager: @unchecked Sendable {
         var tagResults: [Memory] = []
 
         var contextData: ContextData?
+
+        init(query: String, history: [Message], limit: Int, tagGenerator: (@Sendable (String) async throws -> [String])?, startTime: CFAbsoluteTime) {
+            self.query = query
+            self.history = history
+            self.limit = limit
+            self.tagGenerator = tagGenerator
+            self.startTime = startTime
+        }
     }
 
     private struct QueryAugmentationStage: PipelineStage {
         let manager: ContextManager
 
-        func process(_ context: inout ContextGatheringContext) async throws {
-            context.continuation.yield(.progress(.augmenting))
-            context.augmentedQuery = manager.buildAugmentedContext(query: context.query, history: context.history)
+        func process(_ context: ContextGatheringContext) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
+            return AsyncThrowingStream { continuation in
+                continuation.yield(.progress(.augmenting))
+                context.augmentedQuery = manager.buildAugmentedContext(query: context.query, history: context.history)
+                continuation.finish()
+            }
         }
     }
 
     private struct MemoryRetrievalStage: PipelineStage {
         let manager: ContextManager
 
-        func process(_ context: inout ContextGatheringContext) async throws {
-            let continuation = context.continuation
-            let memoriesData = try await manager.fetchRelevantMemories(
-                for: context.query,
-                tagContext: context.augmentedQuery,
-                limit: context.limit,
-                tagGenerator: context.tagGenerator,
-                onProgress: { progress in
-                    continuation.yield(.progress(progress))
+        func process(_ context: ContextGatheringContext) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
+            return AsyncThrowingStream { continuation in
+                let task = Task {
+                    do {
+                        let memoriesData = try await manager.fetchRelevantMemories(
+                            for: context.query,
+                            tagContext: context.augmentedQuery,
+                            limit: context.limit,
+                            tagGenerator: context.tagGenerator,
+                            onProgress: { progress in
+                                continuation.yield(.progress(progress))
+                            }
+                        )
+                        context.memories = memoriesData.memories
+                        context.generatedTags = memoriesData.tags
+                        context.queryVector = memoriesData.vector
+                        context.semanticResults = memoriesData.semanticResults
+                        context.tagResults = memoriesData.tagResults
+                        continuation.finish()
+                    } catch {
+                        continuation.finish(throwing: error)
+                    }
                 }
-            )
-            context.memories = memoriesData.memories
-            context.generatedTags = memoriesData.tags
-            context.queryVector = memoriesData.vector
-            context.semanticResults = memoriesData.semanticResults
-            context.tagResults = memoriesData.tagResults
+                continuation.onTermination = { @Sendable _ in task.cancel() }
+            }
         }
     }
 
     private struct NoteDiscoveryStage: PipelineStage {
         let manager: ContextManager
 
-        func process(_ context: inout ContextGatheringContext) async throws {
+        func process(_ context: ContextGatheringContext) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
             context.notes = try await manager.fetchAllNotes()
+            return AsyncThrowingStream { $0.finish() }
         }
     }
 
     private struct ContextAssemblyStage: PipelineStage {
         let logger: Logger
 
-        func process(_ context: inout ContextGatheringContext) async throws {
+        func process(_ context: ContextGatheringContext) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
             let duration = CFAbsoluteTimeGetCurrent() - context.startTime
             logger.info("Context gathered in \(String(format: "%.3f", duration))s")
 
@@ -96,6 +116,7 @@ public actor ContextManager: @unchecked Sendable {
                 tagResults: context.tagResults,
                 executionTime: duration
             )
+            return AsyncThrowingStream { $0.finish() }
         }
     }
 
@@ -130,18 +151,20 @@ public actor ContextManager: @unchecked Sendable {
                     history: history,
                     limit: limit,
                     tagGenerator: tagGenerator,
-                    continuation: continuation,
                     startTime: startTime
                 )
 
-                let pipeline = Pipeline<ContextGatheringContext>()
+                let pipeline = Pipeline<ContextGatheringContext, ContextGatheringEvent>()
                     .add(QueryAugmentationStage(manager: self))
                     .add(MemoryRetrievalStage(manager: self))
                     .add(NoteDiscoveryStage(manager: self))
                     .add(ContextAssemblyStage(logger: logger))
 
                 do {
-                    try await pipeline.execute(&context)
+                    let stream = pipeline.execute(context)
+                    for try await event in stream {
+                        continuation.yield(event)
+                    }
 
                     if let data = context.contextData {
                         continuation.yield(.progress(.complete))

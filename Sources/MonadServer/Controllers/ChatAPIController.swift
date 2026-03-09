@@ -42,7 +42,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         let systemInstructions = await timelineManager.getAgentSystemInstructions(for: id)
         let availableTools = await resolveTools(timelineId: id, clientTools: chatRequest.clientTools)
 
-        let stream = try await chatEngine.chatStream(
+        let stream = try await chatEngine.execute(
             timelineId: id,
             message: chatRequest.message,
             tools: availableTools,
@@ -86,7 +86,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         Logger.module(named: "chat").info("Resolved \(ANSIColors.colorize("\(availableTools.count)", color: ANSIColors.green)) tools for timeline \(sid)")
 
-        let chatEngineStream = try await chatEngine.chatStream(
+        let chatEngineStream = try await chatEngine.execute(
             timelineId: id,
             message: chatRequest.message,
             tools: availableTools,

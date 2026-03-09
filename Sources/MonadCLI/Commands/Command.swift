@@ -97,7 +97,7 @@ struct Command: AsyncParsableCommand {
         print("")
 
         var fullResponse = ""
-        let stream = try await client.chat.chatStream(timelineId: targetTimeline.id, message: prompt)
+        let stream = try await client.chat.execute(timelineId: targetTimeline.id, message: prompt)
 
         for try await delta in stream {
             if let content = delta.textContent {
@@ -165,7 +165,7 @@ struct Command: AsyncParsableCommand {
                 print("")
 
                 var editResponse = ""
-                let stream = try await client.chat.chatStream(timelineId: timeline.id, message: editPrompt)
+                let stream = try await client.chat.execute(timelineId: timeline.id, message: editPrompt)
                 for try await delta in stream {
                     if let content = delta.textContent {
                         editResponse += content

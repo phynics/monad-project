@@ -11,11 +11,11 @@ import OpenAI
 ///
 /// After this stage, `ChatEngine.runChatLoop` inspects `context.toolCallAccumulators` to decide
 /// whether to invoke `ToolRouter.handlePendingToolCalls` and continue the loop.
-struct PersistenceStage: PipelineStage {
+struct MessagePersistenceStage: PipelineStage {
     let messageStore: any MessageStoreProtocol
     let logger: Logger
 
-    func process(_ context: inout ChatTurnContext) async throws {
+    func process(_ context: ChatTurnContext) async throws -> AsyncThrowingStream<ChatEvent, Error> {
         let hasPendingToolCalls = !context.toolCallAccumulators.isEmpty
         let toolCallsJSON = buildToolCallsJSON(from: context, hasPendingToolCalls: hasPendingToolCalls)
         let recalledMemories = buildRecalledMemories(from: context, hasPendingToolCalls: hasPendingToolCalls)
@@ -33,20 +33,22 @@ struct PersistenceStage: PipelineStage {
 
         let snapshot = buildDebugSnapshot(from: context, hasPendingToolCalls: hasPendingToolCalls)
         let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
-        context.continuation.yield(.generationCompleted(
-            message: assistantMsg.toMessage(),
-            metadata: APIResponseMetadata(
-                model: context.modelName,
-                promptTokens: context.streamUsage?.promptTokens,
-                completionTokens: context.streamUsage?.completionTokens,
-                totalTokens: context.streamUsage?.totalTokens,
-                duration: context.turnDuration,
-                tokensPerSecond: context.tokensPerSecond,
-                debugSnapshotData: snapshotData
-            )
-        ))
 
-        context.turnResult = .finish
+        return AsyncThrowingStream { continuation in
+            continuation.yield(.generationCompleted(
+                message: assistantMsg.toMessage(),
+                metadata: APIResponseMetadata(
+                    model: context.modelName,
+                    promptTokens: context.streamUsage?.promptTokens,
+                    completionTokens: context.streamUsage?.completionTokens,
+                    totalTokens: context.streamUsage?.totalTokens,
+                    duration: context.turnDuration,
+                    tokensPerSecond: context.tokensPerSecond,
+                    debugSnapshotData: snapshotData
+                )
+            ))
+            continuation.finish()
+        }
     }
 
     private func buildToolCallsJSON(from context: ChatTurnContext, hasPendingToolCalls: Bool) -> String {

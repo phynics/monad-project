@@ -30,7 +30,7 @@ extension ChatREPL {
                         print("") // Only print new line if it's the start of a turn
                     }
 
-                    let stream = try await client.chat.chatStream(
+                    let stream = try await client.chat.execute(
                         timelineId: timelineId,
                         message: currentMessage,
                         toolOutputs: currentToolOutputs

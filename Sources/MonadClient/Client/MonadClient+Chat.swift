@@ -24,10 +24,10 @@ public extension MonadChatClient {
     }
 
     /// Send a chat message with streaming response
-    func chatStream(timelineId: UUID, message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientTools: [ToolReference]? = nil) async throws -> AsyncThrowingStream<
+    func execute(timelineId: UUID, message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientTools: [ToolReference]? = nil) async throws -> AsyncThrowingStream<
         ChatEvent, Error
     > {
-        client.configuration.logger.debug("chatStream called for timeline \(timelineId)")
+        client.configuration.logger.debug("execute called for timeline \(timelineId)")
         var request = try await client.buildRequest(
             path: "/api/sessions/\(timelineId.uuidString)/chat/stream", method: "POST"
         )

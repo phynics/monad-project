@@ -160,7 +160,7 @@ public final class BackgroundJobRunnerService: Service, @unchecked Sendable {
 
         do {
             let availableTools = await toolExecutor.getAvailableTools()
-            let stream = try await chatEngine.chatStream(
+            let stream = try await chatEngine.execute(
                 timelineId: timeline.id,
                 message: "Continue execution",
                 tools: availableTools,

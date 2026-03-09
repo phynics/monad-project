@@ -10,16 +10,16 @@ import Testing
     private let logger = Logger(label: "test")
 
     @Test
-
     func toolExecutionStage_TextFallback() async throws {
         // Given
-        var context = createTestContext()
+        let context = createTestContext()
         context.fullResponse = #"<tool_call>{"name": "test_tool", "arguments": {"foo": "bar"}}</tool_call>"#
 
-        let stage = ToolExecutionStage(logger: logger)
+        let stage = ToolCallExtractionStage(logger: logger)
 
         // When
-        try await stage.process(&context)
+        let stream = try await stage.process(context)
+        for try await _ in stream {}
 
         // Then
         #expect(context.toolCallAccumulators.count == 1)
@@ -29,19 +29,18 @@ import Testing
     }
 
     @Test
-
     func persistenceStage_SavesMessage() async throws {
         // Given
         let persistence = MockPersistenceService()
-        let timelineManager = TimelineManager(workspaceRoot: URL(fileURLWithPath: "/tmp"))
-        let stage = PersistenceStage(messageStore: persistence, logger: logger)
+        _ = TimelineManager(workspaceRoot: URL(fileURLWithPath: "/tmp"))
+        let stage = MessagePersistenceStage(messageStore: persistence, logger: logger)
 
-        var context = createTestContext()
+        let context = createTestContext()
         context.fullResponse = "Hello world"
-        context.turnResult = .finish
 
         // When
-        try await stage.process(&context)
+        let stream = try await stage.process(context)
+        for try await _ in stream {}
 
         // Then
         #expect(persistence.messages.count == 1)
@@ -51,7 +50,7 @@ import Testing
     // MARK: - Helpers
 
     private func createTestContext() -> ChatTurnContext {
-        let (_, continuation) = AsyncThrowingStream<ChatEvent, Error>.makeStream()
+        let _ = AsyncThrowingStream<ChatEvent, Error>.makeStream()
         return ChatTurnContext(
             timelineId: UUID(),
             agentInstanceId: nil,
@@ -60,9 +59,9 @@ import Testing
             currentMessages: [],
             toolParams: [],
             availableTools: [],
-            contextData: ContextData(notes: [], memories: [], generatedTags: [], queryVector: [], augmentedQuery: "", semanticResults: [], tagResults: [], executionTime: 0),
+            contextData: ContextData(),
             structuredContext: [:],
-            continuation: continuation
+            accumulatedRawOutput: ""
         )
     }
 }
