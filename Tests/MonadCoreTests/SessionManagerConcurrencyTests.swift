@@ -25,7 +25,6 @@ import Testing
             $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
-            $0.agentTemplateRegistry = AgentTemplateRegistry()
         } operation: {
             TimelineManager(workspaceRoot: workspaceRoot)
         }

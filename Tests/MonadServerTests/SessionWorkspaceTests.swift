@@ -40,7 +40,6 @@ final class SessionWorkspaceTests: XCTestCase {
             $0.agentInstanceStore = persistenceService.agentInstanceStore
             $0.embeddingService = embeddingService
             $0.llmService = llmService
-            $0.agentTemplateRegistry = AgentTemplateRegistry()
         } operation: {
             let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot

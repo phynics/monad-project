@@ -1,6 +1,6 @@
 import Foundation
-import MonadShared
 import Logging
+import MonadShared
 import OpenAI
 
 /// Tool that allows an agent to launch a sub-task using another agent
@@ -12,22 +12,22 @@ public struct LaunchSubagentTool: MonadShared.Tool, Sendable {
 
     private let backgroundJobStore: any BackgroundJobStoreProtocol
     private let messageStore: any MessageStoreProtocol
+    private let agentTemplateStore: any AgentTemplateStoreProtocol
     private let timelineId: UUID
     private let parentId: UUID?
-    private let agentTemplateRegistry: AgentTemplateRegistry
 
     public init(
         backgroundJobStore: any BackgroundJobStoreProtocol,
         messageStore: any MessageStoreProtocol,
+        agentTemplateStore: any AgentTemplateStoreProtocol,
         timelineId: UUID,
-        parentId: UUID? = nil,
-        agentTemplateRegistry: AgentTemplateRegistry
+        parentId: UUID? = nil
     ) {
         self.backgroundJobStore = backgroundJobStore
         self.messageStore = messageStore
+        self.agentTemplateStore = agentTemplateStore
         self.timelineId = timelineId
         self.parentId = parentId
-        self.agentTemplateRegistry = agentTemplateRegistry
     }
 
     public var parametersSchema: [String: AnyCodable] {
@@ -62,13 +62,14 @@ public struct LaunchSubagentTool: MonadShared.Tool, Sendable {
 
         var resolvedParentId = parentId
         if let explicitParentIdString = params.optional("parent_id", as: String.self),
-           let explicitParentId = UUID(uuidString: explicitParentIdString) {
+           let explicitParentId = UUID(uuidString: explicitParentIdString)
+        {
             resolvedParentId = explicitParentId
         }
 
         // Verify agent exists
-        guard await agentTemplateRegistry.hasAgentTemplate(id: agentId) else {
-            let available = await agentTemplateRegistry.listAgentTemplates().map { "\($0.id) (\($0.name))" }.joined(separator: ", ")
+        guard await agentTemplateStore.hasAgentTemplate(id: agentId) else {
+            let available = (try? await agentTemplateStore.fetchAllAgentTemplates())?.map { "\($0.id) (\($0.name))" }.joined(separator: ", ") ?? ""
             return .failure("AgentTemplate '\(agentId)' not found. Available agentTemplates: \(available)")
         }
 

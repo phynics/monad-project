@@ -18,7 +18,6 @@ import Testing
 
         try await withDependencies {
             $0.agentTemplateStore = mockPersistence
-            $0.agentTemplateRegistry = AgentTemplateRegistry()
         } operation: {
             let router = Router()
             let controller = AgentTemplateAPIController<BasicRequestContext>()

@@ -8,7 +8,7 @@ import NIOCore
 
 /// Controller for discovering available agentTemplates in the framework
 public struct AgentTemplateAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.agentTemplateRegistry) var agentTemplateRegistry
+    @Dependency(\.agentTemplateStore) var agentTemplateStore
 
     public init() {}
 
@@ -18,7 +18,7 @@ public struct AgentTemplateAPIController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func list(_: Request, context _: Context) async throws -> Response {
-        let agentTemplates = await agentTemplateRegistry.listAgentTemplates()
+        let agentTemplates = try await agentTemplateStore.fetchAllAgentTemplates()
 
         let data = try SerializationUtils.jsonEncoder.encode(agentTemplates)
         var headers = HTTPFields()
@@ -29,7 +29,7 @@ public struct AgentTemplateAPIController<Context: RequestContext>: Sendable {
     @Sendable func get(_: Request, context: Context) async throws -> Response {
         let id = try context.parameters.require("id")
 
-        guard let agent = await agentTemplateRegistry.getAgentTemplate(id: id) else {
+        guard let agent = try await agentTemplateStore.fetchAgentTemplate(key: id) else {
             throw HTTPError(.notFound)
         }
 

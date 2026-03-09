@@ -40,8 +40,6 @@ public actor TimelineManager {
     @Dependency(\.clientStore) var clientStore
     @Dependency(\.agentInstanceStore) var agentInstanceStore
 
-    @Dependency(\.agentTemplateRegistry) var agentTemplateRegistry
-
     let vectorStore: (any VectorStoreProtocol)?
     let workspaceRoot: URL
     let connectionManager: (any ClientConnectionManagerProtocol)?
@@ -141,7 +139,8 @@ public actor TimelineManager {
     /// - Returns: The newly created `Timeline`.
     public func createTimeline(title: String = "New Conversation")
         async throws
-        -> Timeline {
+        -> Timeline
+    {
         let timelineId = UUID()
 
         let timelineWorkspaceURL = workspaceRoot.appendingPathComponent(

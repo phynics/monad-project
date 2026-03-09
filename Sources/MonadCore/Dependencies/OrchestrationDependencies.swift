@@ -4,10 +4,6 @@ import MonadShared
 
 // MARK: - Dependency Keys
 
-public enum AgentTemplateRegistryKey: DependencyKey {
-    public static let liveValue = AgentTemplateRegistry()
-}
-
 public enum WorkspaceManagerKey: DependencyKey {
     public static let liveValue = WorkspaceManager(
         repository: WorkspaceRepository(),
@@ -29,14 +25,6 @@ public enum ChatEngineKey: DependencyKey {
     public static let liveValue = ChatEngine()
 }
 
-public enum AgentTemplateExecutorKey: DependencyKey {
-    public static let liveValue = AgentTemplateExecutor(
-        backgroundJobStore: UnconfiguredBackgroundJobStore(),
-        messageStore: UnconfiguredMessageStore(),
-        chatEngine: ChatEngine()
-    )
-}
-
 public enum AgentInstanceManagerKey: DependencyKey {
     public static let liveValue = AgentInstanceManager(
         workspaceRoot: FileManager.default.temporaryDirectory // Default for unconfigured
@@ -46,11 +34,6 @@ public enum AgentInstanceManagerKey: DependencyKey {
 // MARK: - Dependency Values
 
 public extension DependencyValues {
-    var agentTemplateRegistry: AgentTemplateRegistry {
-        get { self[AgentTemplateRegistryKey.self] }
-        set { self[AgentTemplateRegistryKey.self] = newValue }
-    }
-
     var workspaceManager: WorkspaceManager {
         get { self[WorkspaceManagerKey.self] }
         set { self[WorkspaceManagerKey.self] = newValue }
@@ -69,11 +52,6 @@ public extension DependencyValues {
     var chatEngine: ChatEngine {
         get { self[ChatEngineKey.self] }
         set { self[ChatEngineKey.self] = newValue }
-    }
-
-    var agentTemplateExecutor: AgentTemplateExecutor {
-        get { self[AgentTemplateExecutorKey.self] }
-        set { self[AgentTemplateExecutorKey.self] = newValue }
     }
 
     var agentInstanceManager: AgentInstanceManager {

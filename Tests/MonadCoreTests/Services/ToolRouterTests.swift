@@ -39,7 +39,6 @@ final class ToolRouterTests: XCTestCase {
             $0.agentInstanceStore = mockPersistence
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()
-            $0.agentTemplateRegistry = AgentTemplateRegistry()
         } operation: {
             TimelineManager(workspaceRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         }

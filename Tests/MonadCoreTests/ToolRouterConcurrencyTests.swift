@@ -26,7 +26,6 @@ import Testing
             $0.agentInstanceStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llm
-            $0.agentTemplateRegistry = AgentTemplateRegistry()
             $0.timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
         } operation: {
             TimelineManager(workspaceRoot: workspaceRoot)
@@ -50,7 +49,6 @@ import Testing
             $0.agentInstanceStore = MockPersistenceService()
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()
-            $0.agentTemplateRegistry = AgentTemplateRegistry()
             $0.timelineManager = manager
         } operation: {
             try await manager.createTimeline().id

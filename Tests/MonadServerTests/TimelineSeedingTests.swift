@@ -28,7 +28,6 @@ final class SessionSeedingTests: XCTestCase {
             $0.agentInstanceStore = persistence
             $0.embeddingService = MockEmbeddingService()
             $0.llmService = MockLLMService()
-            $0.agentTemplateRegistry = AgentTemplateRegistry()
         } operation: {
             let timelineManager = TimelineManager(
                 workspaceRoot: workspaceRoot

@@ -28,7 +28,6 @@ import Testing
             $0.agentTemplateStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
-            $0.agentTemplateRegistry = AgentTemplateRegistry()
         } operation: {
             let timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
 
@@ -86,7 +85,6 @@ import Testing
             $0.agentTemplateStore = persistence
             $0.embeddingService = embedding
             $0.llmService = llmService
-            $0.agentTemplateRegistry = AgentTemplateRegistry()
         } operation: {
             let timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
 

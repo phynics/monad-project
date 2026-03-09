@@ -85,7 +85,6 @@ public struct MonadServerFactory {
         let connectionManager = WebSocketConnectionManager()
 
         // Initialize Core Services
-        let agentTemplateRegistry = AgentTemplateRegistry()
         let timelineManager = TimelineManager(
             workspaceRoot: workspaceRoot,
             connectionManager: connectionManager,
@@ -96,16 +95,9 @@ public struct MonadServerFactory {
         let toolRouter = ToolRouter()
         let chatEngine = ChatEngine()
 
-        let agentTemplateExecutor = AgentTemplateExecutor(
-            backgroundJobStore: backgroundJobStore,
-            messageStore: messageStore,
-            chatEngine: chatEngine
-        )
-
         let jobRunner = BackgroundJobRunnerService(
             timelineManager: timelineManager,
-            agentTemplateRegistry: agentTemplateRegistry,
-            agentTemplateExecutor: agentTemplateExecutor
+            chatEngine: chatEngine
         )
         let orphanCleanup = OrphanCleanupService(
             workspaceRoot: workspaceRoot
@@ -132,11 +124,9 @@ public struct MonadServerFactory {
             $0.llmService = llmService
             $0.embeddingService = embeddingService
             $0.vectorStore = vectorStore
-            $0.agentTemplateRegistry = agentTemplateRegistry
             $0.timelineManager = timelineManager
             $0.toolRouter = toolRouter
             $0.chatEngine = chatEngine
-            $0.agentTemplateExecutor = agentTemplateExecutor
             $0.agentInstanceManager = agentInstanceManager
             $0.workspaceManager = workspaceManager
         } operation: {
@@ -226,7 +216,7 @@ public struct MonadServerFactory {
                         .init(service: app),
                         .init(service: jobRunner),
                         .init(service: orphanCleanup),
-                        .init(service: bonjourAdvertiser)
+                        .init(service: bonjourAdvertiser),
                     ],
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                     logger: logger
