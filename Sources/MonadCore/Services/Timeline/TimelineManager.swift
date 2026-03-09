@@ -24,9 +24,6 @@ public actor TimelineManager {
     /// State management for tool execution context within a timeline.
     var toolContextTimelines: [UUID: ToolTimelineContext] = [:]
 
-    /// Snapshots of tool and context state used for debugging chat turns.
-    var debugSnapshots: [UUID: DebugSnapshot] = [:]
-
     /// Ongoing generation tasks for each timeline.
     var activeTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -139,7 +136,8 @@ public actor TimelineManager {
     /// - Returns: The newly created `Timeline`.
     public func createTimeline(title: String = "New Conversation")
         async throws
-        -> Timeline {
+        -> Timeline
+    {
         let timelineId = UUID()
 
         let timelineWorkspaceURL = workspaceRoot.appendingPathComponent(

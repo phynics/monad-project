@@ -262,7 +262,7 @@ public final class ChatEngine: @unchecked Sendable {
         let pipeline = Pipeline<ChatTurnContext>()
             .add(LLMStreamingStage(llmService: llmService, logger: logger))
             .add(ToolExecutionStage(logger: logger))
-            .add(PersistenceStage(messageStore: messageStore, timelineManager: timelineManager, logger: logger))
+            .add(PersistenceStage(messageStore: messageStore, logger: logger))
 
         try await pipeline.execute(&context)
 

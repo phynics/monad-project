@@ -50,12 +50,4 @@ public extension MonadChatClient {
         let response: PaginatedResponse<Message> = try await client.perform(request)
         return response.items
     }
-
-    /// Get the debug snapshot for the most recent chat exchange
-    func getDebugSnapshot(timelineId: UUID) async throws -> DebugSnapshot {
-        let request = try await client.buildRequest(
-            path: "/api/sessions/\(timelineId.uuidString)/chat/debug", method: "GET"
-        )
-        return try await client.perform(request)
-    }
 }

@@ -1,18 +1,17 @@
+import Foundation
 import Logging
 @testable import MonadCore
 import MonadShared
 import MonadTestSupport
 import OpenAI
 import Testing
-import Foundation
 
 @Suite final class ChatEngineStageTests {
     private let logger = Logger(label: "test")
 
     @Test
 
-
-    func testToolExecutionStage_TextFallback() async throws {
+    func toolExecutionStage_TextFallback() async throws {
         // Given
         var context = createTestContext()
         context.fullResponse = #"<tool_call>{"name": "test_tool", "arguments": {"foo": "bar"}}</tool_call>"#
@@ -31,12 +30,11 @@ import Foundation
 
     @Test
 
-
-    func testPersistenceStage_SavesMessage() async throws {
+    func persistenceStage_SavesMessage() async throws {
         // Given
         let persistence = MockPersistenceService()
         let timelineManager = TimelineManager(workspaceRoot: URL(fileURLWithPath: "/tmp"))
-        let stage = PersistenceStage(messageStore: persistence, timelineManager: timelineManager, logger: logger)
+        let stage = PersistenceStage(messageStore: persistence, logger: logger)
 
         var context = createTestContext()
         context.fullResponse = "Hello world"

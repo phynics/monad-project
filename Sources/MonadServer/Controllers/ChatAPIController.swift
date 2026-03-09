@@ -1,5 +1,5 @@
-import Foundation
 import Dependencies
+import Foundation
 import HTTPTypes
 import Hummingbird
 import Logging
@@ -22,7 +22,6 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         group.post("/{id}/chat", use: chat)
         group.post("/{id}/chat/stream", use: chatStream)
         group.post("/{id}/chat/cancel", use: cancel)
-        group.get("/{id}/chat/debug", use: getDebug)
     }
 
     @Sendable func chat(_ request: Request, context: Context) async throws -> ChatResponse {
@@ -165,22 +164,6 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         }
         await timelineManager.cancelGeneration(for: id)
         return Response(status: .ok)
-    }
-
-    @Sendable func getDebug(_: Request, context: Context) async throws -> Response {
-        let idString = try context.parameters.require("id")
-        guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
-
-        guard let snapshot = await timelineManager.getDebugSnapshot(for: id) else {
-            throw HTTPError(.notFound)
-        }
-
-        let data = try SerializationUtils.jsonEncoder.encode(snapshot)
-        var headers = HTTPFields()
-        headers[.contentType] = "application/json"
-        return Response(
-            status: .ok, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data))
-        )
     }
 
     // MARK: - Tool Resolution (Server-Layer Concern)

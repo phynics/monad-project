@@ -13,7 +13,6 @@ import OpenAI
 /// whether to invoke `ToolRouter.handlePendingToolCalls` and continue the loop.
 struct PersistenceStage: PipelineStage {
     let messageStore: any MessageStoreProtocol
-    let timelineManager: TimelineManager
     let logger: Logger
 
     func process(_ context: inout ChatTurnContext) async throws {
@@ -33,8 +32,6 @@ struct PersistenceStage: PipelineStage {
         try await messageStore.saveMessage(assistantMsg)
 
         let snapshot = buildDebugSnapshot(from: context, hasPendingToolCalls: hasPendingToolCalls)
-        await timelineManager.setDebugSnapshot(snapshot, for: context.timelineId)
-
         let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
         context.continuation.yield(.generationCompleted(
             message: assistantMsg.toMessage(),
