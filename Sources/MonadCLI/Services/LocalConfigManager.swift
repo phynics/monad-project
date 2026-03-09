@@ -1,4 +1,6 @@
 import Foundation
+import Logging
+import MonadShared
 
 struct LocalConfig: Codable {
     var serverURL: String?
@@ -10,6 +12,7 @@ struct LocalConfig: Codable {
 
 struct LocalConfigManager {
     static let shared = LocalConfigManager()
+    private let logger = Logger.module(named: "local-config")
 
     private let customStorageURL: URL?
 
@@ -30,7 +33,11 @@ struct LocalConfigManager {
                 for: .applicationSupportDirectory, in: .userDomainMask
             ).first {
                 let dir = appSupport.appendingPathComponent(appName)
-                try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+                do {
+                    try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+                } catch {
+                    logger.error("Failed to create application support directory: \(error)")
+                }
                 return dir.appendingPathComponent(filename)
             }
         #elseif os(Linux)
@@ -46,32 +53,44 @@ struct LocalConfigManager {
             }
 
             let dir = configHome.appendingPathComponent(appName.lowercased())
-            try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+            do {
+                try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+            } catch {
+                logger.error("Failed to create config directory: \(error)")
+            }
             return dir.appendingPathComponent(filename)
         #endif
 
         // Fallback to old path if OS mapping fails or other OS
         let dir = fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".monad")
-        try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+        do {
+            try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+        } catch {
+            logger.error("Failed to create .monad directory: \(error)")
+        }
         return dir.appendingPathComponent(filename)
     }
 
     func getConfig() -> LocalConfig {
-        guard let data = try? Data(contentsOf: storageURL),
-              let config = try? JSONDecoder().decode(LocalConfig.self, from: data)
-        else {
+        guard let data = try? Data(contentsOf: storageURL) else {
             return LocalConfig()
         }
-        return config
+        do {
+            return try JSONDecoder().decode(LocalConfig.self, from: data)
+        } catch {
+            logger.error("Failed to decode local config: \(error)")
+            return LocalConfig()
+        }
     }
 
     func saveConfig(_ config: LocalConfig) {
         do {
             let data = try JSONEncoder().encode(config)
             try data.write(to: storageURL)
+            logger.debug("Successfully saved local config to \(storageURL.path)")
         } catch {
-            // Silently fail or log if we had a logger here
-            print("Warning: Failed to save local config: \(error.localizedDescription)")
+            logger.error("Failed to save local config to \(storageURL.path): \(error)")
+            print(ANSIColors.colorize("Warning: Failed to save local config: \(error.localizedDescription)", color: ANSIColors.yellow))
         }
     }
 

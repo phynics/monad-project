@@ -1,4 +1,5 @@
 import Foundation
+import ErrorKit
 
 /// Configuration for LLM service
 public struct LLMConfiguration: Codable, Sendable, Equatable {
@@ -186,7 +187,7 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
 
 // MARK: - Errors
 
-public enum ConfigurationError: LocalizedError {
+public enum ConfigurationError: Throwable {
     case invalidConfiguration(reason: String)
     case missingAPIKey(LLMProvider)
     case invalidEndpoint(String)
@@ -205,6 +206,21 @@ public enum ConfigurationError: LocalizedError {
             return "No backup configuration found"
         case .importFailed:
             return "Failed to import configuration: Invalid format"
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case let .invalidConfiguration(reason):
+            return "Your configuration is invalid: \(reason)"
+        case let .missingAPIKey(provider):
+            return "Your API key for \(provider.rawValue) is missing. Please set it in your configuration."
+        case .invalidEndpoint:
+            return "The LLM endpoint URL is invalid."
+        case .noBackupFound:
+            return "No backup configuration found."
+        case .importFailed:
+            return "The imported configuration is in an invalid format."
         }
     }
 }

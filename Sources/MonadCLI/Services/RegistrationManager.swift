@@ -1,6 +1,7 @@
 import Foundation
 import MonadClient
 import MonadShared
+import Logging
 
 struct StoredIdentity: Codable {
     let clientId: UUID
@@ -12,6 +13,7 @@ struct StoredIdentity: Codable {
 
 struct RegistrationManager {
     static let shared = RegistrationManager()
+    private let logger = Logger.module(named: "registration")
 
     private var storageURL: URL {
         let fileManager = FileManager.default
@@ -52,12 +54,23 @@ struct RegistrationManager {
 
     func getIdentity() -> StoredIdentity? {
         guard let data = try? Data(contentsOf: storageURL) else { return nil }
-        return try? JSONDecoder().decode(StoredIdentity.self, from: data)
+        do {
+            return try JSONDecoder().decode(StoredIdentity.self, from: data)
+        } catch {
+            logger.error("Failed to decode stored identity: \(error)")
+            return nil
+        }
     }
 
     func saveIdentity(_ identity: StoredIdentity) throws {
-        let data = try JSONEncoder().encode(identity)
-        try data.write(to: storageURL)
+        do {
+            let data = try JSONEncoder().encode(identity)
+            try data.write(to: storageURL)
+            logger.debug("Successfully saved identity to \(storageURL.path)")
+        } catch {
+            logger.error("Failed to save identity to \(storageURL.path): \(error)")
+            throw error
+        }
     }
 
     @discardableResult
@@ -66,11 +79,13 @@ struct RegistrationManager {
 
         if let existing = getIdentity() {
             do {
+                logger.debug("Existing identity found for client \(existing.clientId). Syncing tools...")
                 // Always sync tools on connect to keep the server's DB current
                 // (tool set may have changed since last registration)
                 try await client.workspace.syncWorkspaceTools(tools, workspaceId: existing.shellWorkspaceId)
                 return existing
             } catch {
+                logger.warning("Sync failed for existing workspace \(existing.shellWorkspaceId): \(error). Clearing identity for re-registration.")
                 // Workspace no longer exists (e.g. database was reset). Clear the cached identity
                 // so we fall through and register fresh below.
                 try? FileManager.default.removeItem(at: storageURL)
@@ -78,6 +93,7 @@ struct RegistrationManager {
         }
 
         // First-time registration
+        logger.info("Registering new client with server...")
         let hostname = ProcessInfo.processInfo.hostName
         let displayName = NSUserName()
         let platform = "macos" // Detect dynamically if needed
@@ -98,6 +114,7 @@ struct RegistrationManager {
         )
 
         try saveIdentity(identity)
+        logger.info("Client successfully registered: \(identity.clientId)")
         return identity
     }
 }

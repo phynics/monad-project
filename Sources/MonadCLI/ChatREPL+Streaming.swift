@@ -138,18 +138,38 @@ extension ChatREPL {
                     if !pendingToolCalls.isEmpty && !Task.isCancelled {
                         print("") // Spacing for local tools
 
-                        let timelineWS = try? await client.workspace.listTimelineWorkspaces(timelineId: timelineId)
-                        let targetWsId = selectedWorkspaceId ?? timelineWS?.primary?.id ?? timelineWS?.attached.first?.id
+                        var targetWsId: UUID?
+                        do {
+                            let timelineWS = try await client.workspace.listTimelineWorkspaces(timelineId: timelineId)
+                            targetWsId = selectedWorkspaceId ?? timelineWS.primary?.id ?? timelineWS.attached.first?.id
+                        } catch {
+                            logger.error("Failed to list timeline workspaces: \(error)")
+                        }
 
-                        guard let wsId = targetWsId,
-                              let workspace = try? await client.workspace.getWorkspace(wsId) else {
+                        guard let wsId = targetWsId else {
+                            logger.error("No active workspace found to execute local tools.")
                             print(TerminalUI.red("  ✗ Cannot execute local tools: no active workspace found."))
                             break
                         }
 
+                        let workspace: WorkspaceReference
+                        do {
+                            workspace = try await client.workspace.getWorkspace(wsId)
+                        } catch {
+                            logger.error("Failed to get workspace \(wsId): \(error)")
+                            print(TerminalUI.red("  ✗ Cannot execute local tools: could not fetch workspace details."))
+                            break
+                        }
+
                         for call in pendingToolCalls {
-                            let arguments = (try? SerializationUtils.jsonEncoder.encode(call.arguments))
-                                .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+                            let arguments: String
+                            do {
+                                let data = try SerializationUtils.jsonEncoder.encode(call.arguments)
+                                arguments = String(data: data, encoding: .utf8) ?? "{}"
+                            } catch {
+                                logger.error("Failed to encode tool call arguments: \(error)")
+                                arguments = "{}"
+                            }
                             printToolAttempt(name: call.name, argsJSON: arguments, reference: nil)
                         }
 

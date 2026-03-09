@@ -1,15 +1,23 @@
 import Foundation
 import MonadShared
 import Logging
+import ErrorKit
 
 /// Error types for ToolExecutor
-public enum ToolExecutorError: LocalizedError, Equatable {
+public enum ToolExecutorError: Throwable, Equatable {
     case toolNotFound(String)
 
     public var errorDescription: String? {
         switch self {
         case let .toolNotFound(name):
             return "Tool '\(name)' not found"
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case let .toolNotFound(name):
+            return "The assistant tried to use a tool named '\(name)', but it is not available in the current context."
         }
     }
 }

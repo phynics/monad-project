@@ -1,7 +1,5 @@
-import MonadShared
 import Foundation
 import Logging
-import MonadCore
 
 /// A colorful log handler for Monad Server
 public struct MonadLogHandler: LogHandler {

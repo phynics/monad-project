@@ -1,10 +1,31 @@
+import ErrorKit
 import MonadShared
 import Foundation
 
-public enum VectorStoreError: Error {
+public enum VectorStoreError: Throwable {
     case countMismatch
     case dimensionMismatch
     case initializationFailed(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .countMismatch:
+            return "Count mismatch."
+        case .dimensionMismatch:
+            return "Dimension mismatch."
+        case let .initializationFailed(reason):
+            return "Initialization failed: \(reason)"
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case .countMismatch, .dimensionMismatch:
+            return "A data inconsistency was detected in the vector store."
+        case let .initializationFailed(reason):
+            return "Failed to initialize the vector store: \(reason)"
+        }
+    }
 }
 
 public protocol VectorStoreProtocol: Actor, Sendable {

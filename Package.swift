@@ -32,6 +32,7 @@ let package = Package(
             dependencies: [
                 .product(name: "OpenAI", package: "OpenAI"),
                 .product(name: "ErrorKit", package: "ErrorKit"),
+                .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MonadShared"
         ),
@@ -84,6 +85,7 @@ let package = Package(
                 "MonadClient",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "ErrorKit", package: "ErrorKit"),
+                .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MonadCLI"
         ),

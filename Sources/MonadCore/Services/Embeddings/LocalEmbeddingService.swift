@@ -1,3 +1,4 @@
+import ErrorKit
 import MonadShared
 import Foundation
 #if canImport(NaturalLanguage)
@@ -33,7 +34,7 @@ public final class LocalEmbeddingService: EmbeddingServiceProtocol {
     }
 }
 
-public enum EmbeddingError: LocalizedError {
+public enum EmbeddingError: Throwable {
     case modelUnavailable
     case generationFailed
     case platformNotSupported
@@ -46,6 +47,17 @@ public enum EmbeddingError: LocalizedError {
             return "Failed to generate embedding vector."
         case .platformNotSupported:
             return "Local embeddings are only supported on Apple platforms (macOS, iOS, etc)."
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case .modelUnavailable:
+            return "Local embedding capabilities are not available on this device."
+        case .generationFailed:
+            return "Failed to process the text for embedding. Please try again."
+        case .platformNotSupported:
+            return "Local text analysis is only supported on Apple devices."
         }
     }
 }

@@ -1,4 +1,5 @@
 import Dependencies
+import ErrorKit
 import Foundation
 import Logging
 import MonadShared
@@ -369,6 +370,20 @@ public actor TimelineManager {
     }
 }
 
-public enum TimelineError: Error {
+public enum TimelineError: Throwable {
     case timelineNotFound
+
+    public var errorDescription: String? {
+        switch self {
+        case .timelineNotFound:
+            return "Timeline not found."
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case .timelineNotFound:
+            return "The requested chat timeline could not be found."
+        }
+    }
 }

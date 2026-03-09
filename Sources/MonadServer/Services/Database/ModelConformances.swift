@@ -2,16 +2,24 @@ import MonadShared
 import Foundation
 import GRDB
 import MonadCore
+import ErrorKit
 
 // MARK: - Persistence Error
 
-public enum PersistenceError: LocalizedError {
+public enum PersistenceError: Throwable {
     case invalidUUIDFormat(String)
 
     public var errorDescription: String? {
         switch self {
         case .invalidUUIDFormat(let value):
             return "Invalid UUID format: \(value)"
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case .invalidUUIDFormat:
+            return "A record in the database has an invalid identifier format."
         }
     }
 }

@@ -1,5 +1,6 @@
 import MonadShared
 import MonadCore
+import ErrorKit
 
 import Foundation
 
@@ -92,7 +93,7 @@ public struct RPCResponse: Codable, Sendable {
 }
 
 /// Error type for RPC failures
-public enum RPCError: Error, LocalizedError {
+public enum RPCError: Throwable {
     case timeout
     case connectionLost
     case invalidResponse
@@ -104,6 +105,19 @@ public enum RPCError: Error, LocalizedError {
         case .connectionLost: return "Connection to client lost"
         case .invalidResponse: return "Received invalid response from client"
         case .remoteError(let msg): return "Remote error: \(msg)"
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case .timeout:
+            return "The request to the client machine timed out. It might be overloaded or offline."
+        case .connectionLost:
+            return "The connection to the client machine was lost."
+        case .invalidResponse:
+            return "The client machine returned an invalid response."
+        case .remoteError(let msg):
+            return "An error occurred on the client machine: \(msg)"
         }
     }
 }

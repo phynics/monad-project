@@ -1,3 +1,4 @@
+import ErrorKit
 import Foundation
 import MonadShared
 
@@ -31,12 +32,42 @@ public protocol WorkspaceProtocol: Sendable {
     func healthCheck() async -> Bool
 }
 
-public enum WorkspaceError: Error, Sendable {
+public enum WorkspaceError: Throwable, Sendable {
     case invalidWorkspaceType
     case accessDenied
     case toolExecutionNotSupported
     case workspaceNotFound
     case connectionFailed
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalidWorkspaceType:
+            return "Invalid workspace type."
+        case .accessDenied:
+            return "Access denied."
+        case .toolExecutionNotSupported:
+            return "Tool execution not supported."
+        case .workspaceNotFound:
+            return "Workspace not found."
+        case .connectionFailed:
+            return "Connection failed."
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case .invalidWorkspaceType:
+            return "The workspace configuration is invalid."
+        case .accessDenied:
+            return "You do not have permission to access this workspace."
+        case .toolExecutionNotSupported:
+            return "This workspace does not support tool execution."
+        case .workspaceNotFound:
+            return "The requested workspace could not be found."
+        case .connectionFailed:
+            return "Failed to connect to the workspace. Please check the network connection."
+        }
+    }
 }
 
 /// Abstracts workspace instantiation to allow MonadCore to be decoupled from concrete implementations

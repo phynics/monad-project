@@ -2,6 +2,7 @@ import MonadCore
 import MonadShared
 import Foundation
 import GRDB
+import ErrorKit
 import Logging
 
 /// Core Database Manager that owns the SQLite connection and handles migrations.
@@ -151,13 +152,20 @@ public actor DatabaseManager: HealthCheckable {
     }
 }
 
-public enum DatabaseManagerError: LocalizedError {
+public enum DatabaseManagerError: Throwable {
     case applicationSupportNotFound
 
     public var errorDescription: String? {
         switch self {
         case .applicationSupportNotFound:
             return "Could not find Application Support directory"
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case .applicationSupportNotFound:
+            return "The Monad server could not find a suitable location on your system to store its database."
         }
     }
 }

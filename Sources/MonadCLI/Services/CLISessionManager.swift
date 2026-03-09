@@ -2,9 +2,11 @@ import ArgumentParser
 import Foundation
 import MonadClient
 import MonadShared
+import Logging
 
 struct CLITimelineManager {
     let client: MonadClient
+    private let logger = Logger.module(named: "timeline-manager")
 
     /// Resolves which timeline to use (Resume or New)
     func resolveTimeline(
@@ -31,6 +33,7 @@ struct CLITimelineManager {
                 return Timeline(id: uuid, title: nil)
             } catch {
                 // Stale config, ignore and proceed to menu
+                logger.debug("Stale session in local config: \(uuid.uuidString). Proceeding to menu.")
             }
         }
 
@@ -100,7 +103,14 @@ struct CLITimelineManager {
         let response = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? "y"
         guard response == "y" || response == "" else { return }
 
-        let allWorkspaces = (try? await client.workspace.listWorkspaces()) ?? []
+        let allWorkspacesResult: [WorkspaceReference]
+        do {
+            allWorkspacesResult = try await client.workspace.listWorkspaces()
+        } catch {
+            logger.error("Failed to list workspaces during re-attachment: \(error)")
+            allWorkspacesResult = []
+        }
+        let allWorkspaces = allWorkspacesResult
         var updatedWorkspaces = workspaces
 
         for (uri, _) in workspaces {
@@ -110,7 +120,10 @@ struct CLITimelineManager {
                 if let existing = allWorkspaces.first(where: { $0.uri.description == uri }) {
                     wsId = existing.id
                 } else {
-                    guard let workspaceURI = WorkspaceURI(parsing: uri) else { continue }
+                    guard let workspaceURI = WorkspaceURI(parsing: uri) else {
+                        logger.error("Failed to parse URI for re-attachment: \(uri)")
+                        continue
+                    }
                     let rootPath = workspaceURI.path
                     let newWs = try await client.workspace.createWorkspace(
                         uri: workspaceURI,
@@ -129,6 +142,7 @@ struct CLITimelineManager {
                 updatedWorkspaces[uri] = wsId.uuidString
                 TerminalUI.printSuccess("Attached \(uri)")
             } catch {
+                logger.error("Failed to re-attach workspace \(uri): \(error)")
                 TerminalUI.printError("Failed to re-attach \(uri): \(error.localizedDescription)")
                 updatedWorkspaces.removeValue(forKey: uri)
             }

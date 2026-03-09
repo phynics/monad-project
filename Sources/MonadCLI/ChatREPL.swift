@@ -1,6 +1,7 @@
 import Foundation
 import MonadClient
 import MonadShared
+import Logging
 
 // Needed for fflush
 #if canImport(Glibc)
@@ -12,6 +13,7 @@ import MonadShared
 /// The main Request-Eval-Print Loop for the Chat Interface
 actor ChatREPL: ChatREPLController {
     let client: MonadClient
+    let logger = Logger.module(named: "ChatREPL")
     var timeline: Timeline
     var running = true
     var selectedWorkspaceId: UUID?

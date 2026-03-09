@@ -2,6 +2,7 @@ import ArgumentParser
 import Foundation
 import MonadClient
 import MonadShared
+import Logging
 
 @main
 struct MonadCLI: AsyncParsableCommand {
@@ -58,6 +59,13 @@ struct Chat: AsyncParsableCommand {
     var timeline: String?
 
     func run() async throws {
+        // Initialize Logging
+        LoggingSystem.bootstrap { label in
+            var handler = MonadLogHandler(label: label)
+            handler.logLevel = verbose ? .debug : .info
+            return handler
+        }
+
         // Load local config
         let localConfig = LocalConfigManager.shared.getConfig()
 
@@ -106,7 +114,8 @@ struct Chat: AsyncParsableCommand {
         // Register this client (idempotent — reuses stored identity on re-runs) and recreate the
         // client with the resolved clientId so it's included in every chat request, allowing the
         // server to look up and include client-side tools (e.g. ask_attach_pwd).
-        if let identity = try? await RegistrationManager.shared.ensureRegistered(client: client) {
+        do {
+            let identity = try await RegistrationManager.shared.ensureRegistered(client: client)
             let configWithId = ClientConfiguration(
                 baseURL: config.baseURL,
                 apiKey: config.apiKey,
@@ -115,6 +124,9 @@ struct Chat: AsyncParsableCommand {
                 verbose: config.verbose
             )
             client = MonadClient(configuration: configWithId)
+        } catch {
+            Logger.module(named: "registration").warning("Client registration failed: \(error.localizedDescription)")
+            TerminalUI.printWarning("Client registration failed. Some client-side tools may not be available.")
         }
 
         // Save successful configuration
@@ -150,13 +162,25 @@ struct Chat: AsyncParsableCommand {
         // Restore last agent instance if available; fall back to auto-creating a default one
         // so there is always an agent attached before entering the REPL.
         var restoredAgent: AgentInstance?
+        let logger = Logger.module(named: "startup")
+
         if let agentIdStr = localConfig.lastAgentInstanceId,
            let agentId = UUID(uuidString: agentIdStr)
         {
-            restoredAgent = try? await client.chat.getAgentInstance(id: agentId)
+            do {
+                restoredAgent = try await client.chat.getAgentInstance(id: agentId)
+            } catch {
+                logger.warning("Failed to restore last agent (\(agentId)): \(error.localizedDescription)")
+            }
         }
+
         if restoredAgent == nil {
-            restoredAgent = try? await ensureDefaultAgent(client: client, timelineId: finalTimeline.id)
+            do {
+                restoredAgent = try await ensureDefaultAgent(client: client, timelineId: finalTimeline.id)
+            } catch {
+                logger.error("Failed to ensure default agent: \(error.localizedDescription)")
+                TerminalUI.printWarning("Could not attach an agent to the timeline. AI responses may fail until an agent is attached.")
+            }
         }
 
         // Start REPL

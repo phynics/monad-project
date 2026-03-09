@@ -3,6 +3,8 @@ import MonadClient
 
 extension ChatREPL {
     func handleError(_ error: Error) async {
+        logger.error("ChatREPL error: \(error)")
+
         if let clientError = error as? MonadClientError {
             switch clientError {
             case .unauthorized:

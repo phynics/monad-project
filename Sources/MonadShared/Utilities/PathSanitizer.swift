@@ -1,9 +1,10 @@
 import Foundation
+import ErrorKit
 
 /// Utility to safely resolve paths within a jail directory
 public enum PathSanitizer {
     /// Errors related to path sanitization
-    public enum PathError: Error, LocalizedError {
+    public enum PathError: Throwable {
         case accessDenied(String)
         case invalidPath(String)
 
@@ -13,6 +14,15 @@ public enum PathSanitizer {
                 return "Access denied: Path '\(path)' is outside the allowed root directory."
             case .invalidPath(let path):
                 return "Invalid path: '\(path)'"
+            }
+        }
+
+        public var userFriendlyMessage: String {
+            switch self {
+            case .accessDenied:
+                return "Access denied. The requested path is outside the allowed directory."
+            case .invalidPath(let path):
+                return "The path '\(path)' is invalid."
             }
         }
     }

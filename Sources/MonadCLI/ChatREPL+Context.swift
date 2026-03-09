@@ -33,28 +33,48 @@ extension ChatREPL {
             let displayId = selectedWorkspaceId ?? timelineWS.primary?.id
 
             if let targetId = displayId {
-                let ws = try await client.workspace.getWorkspace(targetId)
-                let icon = selectedWorkspaceId == nil ? "📂" : "🎯"
-                wsSummary = "\(icon) \(ws.uri.description)"
+                do {
+                    let ws = try await client.workspace.getWorkspace(targetId)
+                    let icon = selectedWorkspaceId == nil ? "📂" : "🎯"
+                    wsSummary = "\(icon) \(ws.uri.description)"
 
-                if selectedWorkspaceId == nil && !timelineWS.attached.isEmpty {
-                    wsSummary += " (+\(timelineWS.attached.count) attached)"
+                    if selectedWorkspaceId == nil && !timelineWS.attached.isEmpty {
+                        wsSummary += " (+\(timelineWS.attached.count) attached)"
+                    }
+                } catch {
+                    logger.warning("Could not fetch workspace details for \(targetId): \(error)")
+                    wsSummary = "📂 [Workspace error]"
                 }
             }
 
-            let config = try await client.getConfiguration()
-            let memories = try await client.chat.listMemories()
-            let activeCount = min(memories.count, config.memoryContextLimit)
+            var activeCountString = ""
+            do {
+                let config = try await client.getConfiguration()
+                let memories = try await client.chat.listMemories()
+                let activeCount = min(memories.count, config.memoryContextLimit)
+                activeCountString = " | 🧠 \(activeCount) active memories"
+            } catch {
+                logger.warning("Could not fetch memory context: \(error)")
+                activeCountString = " | 🧠 [Memory error]"
+            }
 
-            return "\(wsSummary) | 🧠 \(activeCount) active memories"
+            return "\(wsSummary)\(activeCountString)"
         } catch {
+            logger.error("Context summary failed: \(error)")
             return TerminalUI.yellow("⚠️ Context unavailable")
         }
     }
 
     func showContext() async {
         do {
-            let memories = try await client.chat.listMemories()
+            let memories: [Memory]
+            do {
+                memories = try await client.chat.listMemories()
+            } catch {
+                logger.warning("Could not fetch memories: \(error)")
+                memories = []
+            }
+
             let config = try await client.getConfiguration()
 
             print(TerminalUI.dim("─────────────────────────────────────────"))
@@ -82,6 +102,7 @@ extension ChatREPL {
             print(TerminalUI.dim("─────────────────────────────────────────"))
             print("")
         } catch {
+            logger.error("Could not load context configuration: \(error)")
             TerminalUI.printWarning("Could not load context: \(error.localizedDescription)")
         }
     }
@@ -127,16 +148,21 @@ extension ChatREPL {
                 .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y"
             {
                 for ws in workspacesToRestore {
-                    if ws.hostType == .server {
-                        try await client.workspace.restoreWorkspace(timelineId: timeline.id, workspaceId: ws.id)
-                        TerminalUI.printSuccess("Restored server workspace: \(ws.uri.description)")
-                    } else {
-                        if let url = URL(string: ws.uri.description) {
-                            try FileManager.default.createDirectory(
-                                at: url, withIntermediateDirectories: true
-                            )
-                            TerminalUI.printSuccess("Created local directory: \(url.path)")
+                    do {
+                        if ws.hostType == .server {
+                            try await client.workspace.restoreWorkspace(timelineId: timeline.id, workspaceId: ws.id)
+                            TerminalUI.printSuccess("Restored server workspace: \(ws.uri.description)")
+                        } else {
+                            if let url = URL(string: ws.uri.description) {
+                                try FileManager.default.createDirectory(
+                                    at: url, withIntermediateDirectories: true
+                                )
+                                TerminalUI.printSuccess("Created local directory: \(url.path)")
+                            }
                         }
+                    } catch {
+                        logger.error("Failed to restore workspace \(ws.uri.description): \(error)")
+                        TerminalUI.printError("Could not restore \(ws.uri.description): \(error.localizedDescription)")
                     }
                 }
             } else {
@@ -146,7 +172,8 @@ extension ChatREPL {
             print("")
 
         } catch {
-            // Ignore errors here to not block startup
+            // Ignore errors here to not block startup, but log them
+            logger.error("Workspace restoration check failed: \(error)")
         }
     }
 
@@ -190,7 +217,8 @@ extension ChatREPL {
                 LocalConfigManager.shared.saveClientWorkspace(uri: uriString, id: wsId.uuidString)
             }
         } catch {
-            // Silently ignore auto-attach errors so we don't break startup
+            // Silently ignore auto-attach errors so we don't break startup, but log them
+            logger.error("Auto-attach current directory failed: \(error)")
         }
     }
 

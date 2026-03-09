@@ -1,4 +1,5 @@
 import Dependencies
+import ErrorKit
 import Foundation
 import Logging
 import MonadShared
@@ -218,7 +219,7 @@ public actor AgentInstanceManager {
 
 // MARK: - Errors
 
-public enum AgentInstanceError: LocalizedError, Sendable {
+public enum AgentInstanceError: Throwable, Sendable {
     case instanceNotFound(UUID)
     case timelineNotFound(UUID)
     case differentAgentAlreadyAttached(UUID)
@@ -234,6 +235,19 @@ public enum AgentInstanceError: LocalizedError, Sendable {
             return "A different agent (\(id)) is already attached. Detach it first."
         case let .hasAttachedTimelines(count):
             return "Cannot delete: \(count) timeline(s) still attached. Use force=true to override."
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case let .instanceNotFound(id):
+            return "The requested agent instance \(id.uuidString.prefix(8)) could not be found."
+        case let .timelineNotFound(id):
+            return "The requested timeline \(id.uuidString.prefix(8)) could not be found."
+        case let .differentAgentAlreadyAttached(id):
+            return "Timeline already has agent \(id.uuidString.prefix(8)) attached. Please detach it before attaching a new one."
+        case let .hasAttachedTimelines(count):
+            return "This agent is currently active on \(count) timeline(s) and cannot be deleted."
         }
     }
 }

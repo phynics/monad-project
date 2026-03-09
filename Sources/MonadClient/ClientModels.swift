@@ -1,3 +1,4 @@
+import ErrorKit
 import Foundation
 import MonadShared
 
@@ -54,7 +55,7 @@ public typealias AnyCodable = MonadShared.AnyCodable
 // MARK: - Error Models
 
 /// Errors that can occur when communicating with the server
-public enum MonadClientError: Error, LocalizedError {
+public enum MonadClientError: Throwable {
     case invalidURL
     case networkError(Error)
     case httpError(statusCode: Int, message: String?)
@@ -80,6 +81,32 @@ public enum MonadClientError: Error, LocalizedError {
             return "Unauthorized - check your API key"
         case .notFound:
             return "Resource not found"
+        case let .unknown(message):
+            return message
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case .invalidURL:
+            return "The server URL is configured incorrectly."
+        case .networkError:
+            return "Could not connect to the server. Please check your internet connection."
+        case let .httpError(statusCode, _):
+            if statusCode == 401 || statusCode == 403 {
+                return "Your API key is invalid or has expired."
+            } else if statusCode >= 500 {
+                return "The Monad server is experiencing an internal issue."
+            }
+            return "The server returned an unexpected error (HTTP \(statusCode))."
+        case .decodingError:
+            return "The server returned data in an unexpected format."
+        case .serverNotReachable:
+            return "The Monad server is not reachable. Please ensure it is running."
+        case .unauthorized:
+            return "You are not authorized to perform this action. Please check your API key."
+        case .notFound:
+            return "The requested resource was not found on the server."
         case let .unknown(message):
             return message
         }

@@ -1,7 +1,8 @@
+import ErrorKit
 import Foundation
 
 /// Errors related to tool execution and routing
-public enum ToolError: Error, LocalizedError, Sendable {
+public enum ToolError: Throwable, Sendable {
     case missingArgument(String)
     case invalidArgument(String, expected: String, got: String)
     case executionFailed(String)
@@ -26,6 +27,25 @@ public enum ToolError: Error, LocalizedError, Sendable {
             return "Client is not connected"
         case .clientToolsDisallowedOnPrivateTimeline:
             return "Client-side tools cannot be used on private (agent-owned) timelines"
+        }
+    }
+
+    public var userFriendlyMessage: String {
+        switch self {
+        case let .missingArgument(arg):
+            return "A required argument '\(arg)' is missing from the tool call."
+        case let .invalidArgument(arg, expected, got):
+            return "The argument '\(arg)' has the wrong type. Expected \(expected) but got \(got)."
+        case let .executionFailed(message):
+            return "Failed to execute the tool: \(message)"
+        case let .toolNotFound(name):
+            return "The requested tool '\(name)' could not be found."
+        case .workspaceNotFound:
+            return "The target workspace for this tool could not be found."
+        case .clientNotConnected:
+            return "The client machine providing this tool is not connected."
+        case .clientToolsDisallowedOnPrivateTimeline:
+            return "Private agent timelines do not support client-side tools."
         }
     }
 
