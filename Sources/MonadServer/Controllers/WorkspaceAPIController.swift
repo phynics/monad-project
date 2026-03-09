@@ -1,3 +1,4 @@
+import Dependencies
 import Foundation
 import GRDB
 import HTTPTypes
@@ -6,7 +7,6 @@ import Logging
 import MonadCore
 import MonadShared
 import NIOCore
-import Dependencies
 
 /// Controller for managing workspaces
 public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
@@ -47,6 +47,8 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
             trustLevel: input.trustLevel ?? .full,
             createdAt: now
         )
+
+        try await workspaceStore.saveWorkspace(workspace)
 
         // Persist any tools declared at creation time
         for tool in input.tools {

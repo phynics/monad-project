@@ -124,7 +124,8 @@ extension ChatREPL {
             fflush(stdout)
 
             if let input = lineReader.readLine(prompt: "", completion: nil)?
-                .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y" {
+                .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y"
+            {
                 for ws in workspacesToRestore {
                     if ws.hostType == .server {
                         try await client.workspace.restoreWorkspace(timelineId: timeline.id, workspaceId: ws.id)
@@ -148,11 +149,12 @@ extension ChatREPL {
             // Ignore errors here to not block startup
         }
     }
+
     func autoAttachCurrentDirectory() async {
         do {
             let pwd = FileManager.default.currentDirectoryPath
             let hostname = ProcessInfo.processInfo.hostName
-            let uriString = "file://\(hostname)\(pwd)"
+            let uriString = WorkspaceURI.clientProject(hostname: hostname, path: pwd).description
 
             guard let myId = RegistrationManager.shared.getIdentity()?.clientId else { return }
 

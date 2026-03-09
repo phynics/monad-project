@@ -180,7 +180,7 @@ struct WorkspaceSlashCommand: SlashCommand {
     private func attachCurrentDirectory(context: ChatContext) async throws {
         let pwd = FileManager.default.currentDirectoryPath
         let hostname = ProcessInfo.processInfo.hostName
-        let uriString = "file://\(hostname)\(pwd)"
+        let uriString = WorkspaceURI.clientProject(hostname: hostname, path: pwd).description
 
         guard let myId = RegistrationManager.shared.getIdentity()?.clientId else {
             TerminalUI.printError("Could not determine local client identity.")

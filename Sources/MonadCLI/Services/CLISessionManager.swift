@@ -111,7 +111,7 @@ struct CLITimelineManager {
                     wsId = existing.id
                 } else {
                     guard let workspaceURI = WorkspaceURI(parsing: uri) else { continue }
-                    let rootPath = URL(string: uri).map { $0.path }
+                    let rootPath = workspaceURI.path
                     let newWs = try await client.workspace.createWorkspace(
                         uri: workspaceURI,
                         hostType: .client,
