@@ -65,10 +65,16 @@ struct RegistrationManager {
         let tools = ClientConstants.readOnlyToolReferences
 
         if let existing = getIdentity() {
-            // Always sync tools on connect to keep the server's DB current
-            // (tool set may have changed since last registration)
-            try await client.workspace.syncWorkspaceTools(tools, workspaceId: existing.shellWorkspaceId)
-            return existing
+            do {
+                // Always sync tools on connect to keep the server's DB current
+                // (tool set may have changed since last registration)
+                try await client.workspace.syncWorkspaceTools(tools, workspaceId: existing.shellWorkspaceId)
+                return existing
+            } catch {
+                // Workspace no longer exists (e.g. database was reset). Clear the cached identity
+                // so we fall through and register fresh below.
+                try? FileManager.default.removeItem(at: storageURL)
+            }
         }
 
         // First-time registration

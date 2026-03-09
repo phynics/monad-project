@@ -147,15 +147,36 @@ struct Chat: AsyncParsableCommand {
 
         TerminalUI.printWelcome()
 
-        // Restore last agent instance if available
+        // Restore last agent instance if available; fall back to auto-creating a default one
+        // so there is always an agent attached before entering the REPL.
         var restoredAgent: AgentInstance?
         if let agentIdStr = localConfig.lastAgentInstanceId,
-           let agentId = UUID(uuidString: agentIdStr) {
+           let agentId = UUID(uuidString: agentIdStr)
+        {
             restoredAgent = try? await client.chat.getAgentInstance(id: agentId)
+        }
+        if restoredAgent == nil {
+            restoredAgent = try? await ensureDefaultAgent(client: client, timelineId: finalTimeline.id)
         }
 
         // Start REPL
         let repl = ChatREPL(client: client, timeline: finalTimeline, agent: restoredAgent)
         try await repl.run()
     }
+}
+
+// MARK: - Helpers
+
+/// Returns an agent instance suitable for the given timeline, creating one if none exist.
+/// The agent is attached to the timeline before returning.
+private func ensureDefaultAgent(client: MonadClient, timelineId: UUID) async throws -> AgentInstance {
+    let agents = try await client.chat.listAgentInstances()
+    let agent: AgentInstance
+    if let existing = agents.first {
+        agent = existing
+    } else {
+        agent = try await client.chat.createAgentInstance(name: "Assistant", description: "")
+    }
+    try await client.chat.attachAgent(agentId: agent.id, to: timelineId)
+    return agent
 }

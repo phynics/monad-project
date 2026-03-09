@@ -10,7 +10,7 @@ struct HelpCommand: SlashCommand {
     let category: String? = "Chat Commands"
     let registry: SlashCommandRegistry
 
-    func run(args: [String], context: ChatContext) async throws {
+    func run(args _: [String], context _: ChatContext) async throws {
         let commands = await registry.allCommands
 
         // Group by category
@@ -39,7 +39,8 @@ struct HelpCommand: SlashCommand {
                 let aliasesStr =
                     cmd.aliases.isEmpty ? "" : " (\(cmd.aliases.joined(separator: ", ")))"
                 let namePart = "/\(cmd.name)\(aliasesStr)".padding(
-                    toLength: 30, withPad: " ", startingAt: 0)
+                    toLength: 30, withPad: " ", startingAt: 0
+                )
                 print("  \(TerminalUI.cyan(namePart)) \(cmd.description)")
             }
             print("")
@@ -53,7 +54,7 @@ struct QuitCommand: SlashCommand {
     let description = "Exit the chat"
     let category: String? = "Chat Commands"
 
-    func run(args: [String], context: ChatContext) async throws {
+    func run(args _: [String], context: ChatContext) async throws {
         await context.repl.stop()
         TerminalUI.printInfo("Goodbye!")
     }
@@ -64,10 +65,17 @@ struct NewTimelineCommand: SlashCommand {
     let description = "Start a new chat timeline"
     let category: String? = "Timeline Management"
 
-    func run(args: [String], context: ChatContext) async throws {
+    func run(args _: [String], context: ChatContext) async throws {
         do {
+            let currentAgent = await context.repl.getCurrentAgent()
             let timeline = try await context.client.chat.createTimeline()
+            if let agent = currentAgent {
+                try? await context.client.chat.attachAgent(agentId: agent.id, to: timeline.id)
+            }
             await context.repl.switchTimeline(timeline)
+            if let agent = currentAgent {
+                await context.repl.setAgent(agent)
+            }
             TerminalUI.printSuccess("Started new timeline \(timeline.id.uuidString.prefix(8))")
         } catch {
             TerminalUI.printError("Failed to create timeline: \(error.localizedDescription)")
@@ -253,7 +261,8 @@ struct TimelineCommand: SlashCommand {
             let idStr = timeline.id.uuidString.prefix(8)
 
             print(
-                "  \(TerminalUI.dim(String(idStr)))  \(title)  \(TerminalUI.dim(dateStr))\(marker)")
+                "  \(TerminalUI.dim(String(idStr)))  \(title)  \(TerminalUI.dim(dateStr))\(marker)"
+            )
         }
         print("")
     }

@@ -1,5 +1,5 @@
-import Foundation
 import ArgumentParser
+import Foundation
 import MonadClient
 import MonadShared
 
@@ -11,7 +11,6 @@ struct CLITimelineManager {
         explicitId: String?,
         localConfig: LocalConfig
     ) async throws -> Timeline {
-
         // 1. Try to resume from flag
         if let timelineId = explicitId, let uuid = UUID(uuidString: timelineId) {
             do {
@@ -60,7 +59,7 @@ struct CLITimelineManager {
             for (idx, timeline) in timelines.enumerated() {
                 let title = timeline.title ?? "Untitled"
                 let date = TerminalUI.formatDate(timeline.updatedAt)
-                print("  [\(idx+1)] \(title) (\(timeline.id.uuidString.prefix(8))) - \(date)")
+                print("  [\(idx + 1)] \(title) (\(timeline.id.uuidString.prefix(8))) - \(date)")
             }
             print("")
             print("Select a timeline [1]: ", terminator: "")
@@ -88,10 +87,10 @@ struct CLITimelineManager {
     /// Handles re-attachment of client-side workspaces
     func handleWorkspaceReattachment(timeline: Timeline, localConfig: LocalConfig) async {
         guard let workspaces = localConfig.clientWorkspaces, !workspaces.isEmpty else { return }
+        guard let clientId = RegistrationManager.shared.getIdentity()?.clientId else { return }
 
         print("")
         TerminalUI.printInfo("Found previously attached client-side workspaces:")
-
         for (uri, _) in workspaces {
             print("  - \(uri)")
         }
@@ -99,20 +98,42 @@ struct CLITimelineManager {
         print("")
         print("Re-attach these workspaces? (y/n) [y]: ", terminator: "")
         let response = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? "y"
+        guard response == "y" || response == "" else { return }
 
-        if response == "y" || response == "" {
-            for (uri, wsIdStr) in workspaces {
-                guard let wsId = UUID(uuidString: wsIdStr) else { continue }
+        let allWorkspaces = (try? await client.workspace.listWorkspaces()) ?? []
+        var updatedWorkspaces = workspaces
 
-                do {
-                    // Verify workspace exists on server and is linked to this client
-                    // Actually, we can just attempt to attach. If it fails, it might be gone.
-                    try await client.workspace.attachWorkspace(wsId, to: timeline.id, isPrimary: false)
-                    TerminalUI.printSuccess("Attached \(uri)")
-                } catch {
-                    TerminalUI.printError("Failed to re-attach \(uri): \(error.localizedDescription)")
+        for (uri, _) in workspaces {
+            do {
+                // Find workspace by URI or recreate it — never attach by stale ID
+                let wsId: UUID
+                if let existing = allWorkspaces.first(where: { $0.uri.description == uri }) {
+                    wsId = existing.id
+                } else {
+                    guard let workspaceURI = WorkspaceURI(parsing: uri) else { continue }
+                    let rootPath = URL(string: uri).map { $0.path }
+                    let newWs = try await client.workspace.createWorkspace(
+                        uri: workspaceURI,
+                        hostType: .client,
+                        ownerId: clientId,
+                        rootPath: rootPath,
+                        trustLevel: .readOnly
+                    )
+                    wsId = newWs.id
                 }
+
+                try await client.workspace.attachWorkspace(wsId, to: timeline.id, isPrimary: false)
+                try await client.workspace.syncWorkspaceTools(
+                    ClientConstants.readOnlyToolReferences, workspaceId: wsId
+                )
+                updatedWorkspaces[uri] = wsId.uuidString
+                TerminalUI.printSuccess("Attached \(uri)")
+            } catch {
+                TerminalUI.printError("Failed to re-attach \(uri): \(error.localizedDescription)")
+                updatedWorkspaces.removeValue(forKey: uri)
             }
         }
+
+        LocalConfigManager.shared.updateClientWorkspaces(updatedWorkspaces)
     }
 }

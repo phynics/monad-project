@@ -93,9 +93,17 @@ extension DatabaseSchema {
             t.column("remoteDepth", .integer).notNull().defaults(to: 0)
         }
 
-        // Indexes for conversations
+        // Indexes for timeline
         try db.create(
-            index: "idx_message_session",
+            index: "idx_timeline_agentInstance",
+            on: "timeline",
+            columns: ["attachedAgentInstanceId"],
+            ifNotExists: true
+        )
+
+        // Indexes for messages
+        try db.create(
+            index: "idx_message_timeline",
             on: "conversationMessage",
             columns: ["timelineId"]
         )
@@ -103,6 +111,12 @@ extension DatabaseSchema {
             index: "idx_message_timestamp",
             on: "conversationMessage",
             columns: ["timestamp"]
+        )
+        try db.create(
+            index: "idx_msg_agentInstance",
+            on: "conversationMessage",
+            columns: ["agentInstanceId"],
+            ifNotExists: true
         )
     }
 
@@ -119,6 +133,54 @@ extension DatabaseSchema {
             t.column("metadata", .text).notNull().defaults(to: "{}")
             t.column("embedding", .text).notNull().defaults(to: "[]")
         }
+    }
+
+    // MARK: - Job Table
+
+    static func createJobTable(in db: Database) throws {
+        try db.create(table: "job") { t in
+            t.column("id", .blob).primaryKey()
+            t.column("timelineId", .blob).notNull()
+                .references("timeline", onDelete: .cascade)
+            t.column("title", .text).notNull()
+            t.column("description", .text)
+            t.column("priority", .integer).notNull().defaults(to: 0)
+            t.column("agentId", .text).notNull().defaults(to: "default")
+            t.column("status", .text).notNull().defaults(to: "pending")
+            t.column("createdAt", .datetime).notNull()
+            t.column("updatedAt", .datetime).notNull()
+            t.column("logs", .text).notNull().defaults(to: "[]")
+            t.column("retryCount", .integer).notNull().defaults(to: 0)
+            t.column("lastRetryAt", .datetime)
+            t.column("nextRunAt", .datetime)
+            t.column("parentId", .blob).references("job", onDelete: .cascade)
+        }
+        try db.create(index: "idx_job_status", on: "job", columns: ["status"])
+        try db.create(index: "idx_job_priority", on: "job", columns: ["priority"])
+        try db.create(index: "idx_job_timeline", on: "job", columns: ["timelineId"])
+        try db.create(index: "idx_job_agent", on: "job", columns: ["agentId"])
+        try db.create(index: "idx_job_parent", on: "job", columns: ["parentId"])
+    }
+
+    // MARK: - Compactification Node Table
+
+    static func createCompactificationNodeTable(in db: Database) throws {
+        try db.create(table: "compactificationNode") { t in
+            t.column("id", .blob).primaryKey()
+            t.column("timelineId", .blob).notNull()
+                .references("timeline", onDelete: .cascade)
+            t.column("type", .text).notNull()
+            t.column("summary", .text).notNull()
+            t.column("displayHint", .text).notNull()
+            t.column("childIds", .text).notNull()
+            t.column("metadata", .text).notNull().defaults(to: "{}")
+            t.column("createdAt", .datetime).notNull()
+        }
+        try db.create(
+            index: "idx_compactificationNode_session",
+            on: "compactificationNode",
+            columns: ["timelineId"]
+        )
     }
 
     // MARK: - AgentInstance Table
@@ -158,5 +220,80 @@ extension DatabaseSchema {
             t.column("updatedAt", .datetime).notNull()
             t.column("workspaceFilesSeed", .text)
         }
+    }
+
+    // MARK: - Immutability Triggers
+
+    static func createImmutabilityTriggers(in db: Database) throws {
+        try db.execute(
+            sql: """
+                CREATE TRIGGER IF NOT EXISTS prevent_session_deletion
+                BEFORE DELETE ON timeline
+                FOR EACH ROW
+                WHEN OLD.isArchived = 1
+                BEGIN
+                    SELECT RAISE(ABORT, 'Archived timelines cannot be deleted');
+                END;
+            """
+        )
+        try db.execute(
+            sql: """
+                CREATE TRIGGER IF NOT EXISTS prevent_session_modification
+                BEFORE UPDATE ON timeline
+                FOR EACH ROW
+                WHEN OLD.isArchived = 1
+                BEGIN
+                    SELECT RAISE(ABORT, 'Archived timelines cannot be modified');
+                END;
+            """
+        )
+        try db.execute(
+            sql: """
+                CREATE TRIGGER IF NOT EXISTS prevent_message_deletion
+                BEFORE DELETE ON conversationMessage
+                FOR EACH ROW
+                WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
+                BEGIN
+                    SELECT RAISE(ABORT, 'Archived messages cannot be deleted');
+                END;
+            """
+        )
+        try db.execute(
+            sql: """
+                CREATE TRIGGER IF NOT EXISTS prevent_message_modification
+                BEFORE UPDATE ON conversationMessage
+                FOR EACH ROW
+                WHEN (SELECT isArchived FROM timeline WHERE id = OLD.timelineId) = 1
+                BEGIN
+                    SELECT RAISE(ABORT, 'Archived messages cannot be modified');
+                END;
+            """
+        )
+    }
+
+    // MARK: - Seed Data
+
+    static func seedDefaultAgentTemplates(in db: Database) throws {
+        let defaultAgent = AgentTemplate(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+            name: "Default Assistant",
+            description: "A general purpose assistant focused on helpfulness and accuracy.",
+            systemPrompt: """
+            You are a helpful, intelligent, and efficient AI assistant named Monad.
+            Your goal is to assist the user with their tasks while being concise and professional.
+            """
+        )
+        try defaultAgent.insert(db)
+
+        let coordinatorAgent = AgentTemplate(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
+            name: "AgentTemplate Coordinator",
+            description: "Coordinates multiple agentTemplates and complex workflows.",
+            systemPrompt: """
+            You are the Monad Coordinator. Your role is to break down complex tasks into smaller sub-tasks
+            and delegate them to specialized agentTemplates.
+            """
+        )
+        try coordinatorAgent.insert(db)
     }
 }
