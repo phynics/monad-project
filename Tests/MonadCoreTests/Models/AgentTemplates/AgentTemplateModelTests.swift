@@ -1,17 +1,20 @@
-import XCTest
+import Testing
 @testable import MonadCore
 @testable import MonadShared
 import Foundation
 
-final class AgentTemplateModelTests: XCTestCase {
+@Suite final class AgentTemplateModelTests {
     private func assertCodable<T: Codable & Equatable>(_ value: T) throws {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
         
         let data = try encoder.encode(value)
         let decoded = try decoder.decode(T.self, from: data)
-        XCTAssertEqual(value, decoded)
+        #expect(value == decoded)
     }
+    
+    @Test
+
     
     func testAgentTemplateCodable() throws {
         // AgentTemplate initialization
@@ -27,10 +30,10 @@ final class AgentTemplateModelTests: XCTestCase {
         try assertCodable(agent)
         
         // Test composedInstructions
-        XCTAssertTrue(agent.composedInstructions.contains("You follow instructions."))
-        XCTAssertTrue(agent.composedInstructions.contains("## Persona"))
-        XCTAssertTrue(agent.composedInstructions.contains("Be professional."))
-        XCTAssertTrue(agent.composedInstructions.contains("## Guardrails"))
-        XCTAssertTrue(agent.composedInstructions.contains("Don't break things."))
+        #expect(agent.composedInstructions.contains("You follow instructions."))
+        #expect(agent.composedInstructions.contains("## Persona"))
+        #expect(agent.composedInstructions.contains("Be professional."))
+        #expect(agent.composedInstructions.contains("## Guardrails"))
+        #expect(agent.composedInstructions.contains("Don't break things."))
     }
 }

@@ -1,9 +1,9 @@
-import XCTest
+import Testing
 @testable import MonadCore
 @testable import MonadShared
 import Foundation
 
-final class WorkspaceReferenceTests: XCTestCase {
+@Suite final class WorkspaceReferenceTests {
     private func assertCodable<T: Codable>(_ value: T) throws {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
@@ -11,6 +11,9 @@ final class WorkspaceReferenceTests: XCTestCase {
         let data = try encoder.encode(value)
         _ = try decoder.decode(T.self, from: data)
     }
+    
+    @Test
+
     
     func testWorkspaceReferenceCodable() throws {
         let ref = WorkspaceReference(
@@ -20,6 +23,9 @@ final class WorkspaceReferenceTests: XCTestCase {
         )
         try assertCodable(ref)
     }
+    
+    @Test
+
     
     func testWorkspaceReferenceWithClientHost() throws {
         let ownerId = UUID()
@@ -31,7 +37,7 @@ final class WorkspaceReferenceTests: XCTestCase {
             status: .missing
         )
         try assertCodable(ref)
-        XCTAssertEqual(ref.ownerId, ownerId)
-        XCTAssertEqual(ref.status, .missing)
+        #expect(ref.ownerId == ownerId)
+        #expect(ref.status == .missing)
     }
 }

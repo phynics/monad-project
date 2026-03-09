@@ -1,9 +1,9 @@
-import XCTest
+import Testing
 @testable import MonadCore
 @testable import MonadShared
 import Foundation
 
-final class TimelineTests: XCTestCase {
+@Suite final class TimelineTests {
     private func assertCodable<T: Codable>(_ value: T) throws {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -15,12 +15,18 @@ final class TimelineTests: XCTestCase {
         _ = try decoder.decode(T.self, from: data)
     }
     
+    @Test
+
+    
     func testTimelineCodable() throws {
         let timeline = Timeline(
             title: "Test Session"
         )
         try assertCodable(timeline)
     }
+    
+    @Test
+
     
     func testTimelineWithWorkspacesCodable() throws {
         let primaryId = UUID()
@@ -32,7 +38,7 @@ final class TimelineTests: XCTestCase {
         )
         
         try assertCodable(timeline)
-        XCTAssertEqual(timeline.primaryWorkspaceId, primaryId)
-        XCTAssertEqual(timeline.attachedWorkspaces.first, attachedId)
+        #expect(timeline.primaryWorkspaceId == primaryId)
+        #expect(timeline.attachedWorkspaces.first == attachedId)
     }
 }

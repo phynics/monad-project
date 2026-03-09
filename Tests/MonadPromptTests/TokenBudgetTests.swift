@@ -1,4 +1,5 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadPrompt
 
 struct MockContextSection: ContextSection {
@@ -32,7 +33,10 @@ struct MockContextSection: ContextSection {
     }
 }
 
-final class TokenBudgetTests: XCTestCase {
+@Suite final class TokenBudgetTests {
+    
+    @Test
+
     
     func testApplyUnderBudget() async {
         let budget = TokenBudget(maxTokens: 1000, reserveForResponse: 200) // available = 800
@@ -42,10 +46,13 @@ final class TokenBudgetTests: XCTestCase {
         ] // total = 700
         
         let result = await budget.apply(to: sections)
-        XCTAssertEqual(result.count, 2)
-        XCTAssertEqual(result[0].id, "s1")
-        XCTAssertEqual(result[1].id, "s2")
+        #expect(result.count == 2)
+        #expect(result[0].id == "s1")
+        #expect(result[1].id == "s2")
     }
+    
+    @Test
+
     
     func testApplyOverBudgetPrioritizesHighPriority() async {
         let budget = TokenBudget(maxTokens: 1000, reserveForResponse: 0) // available = 1000
@@ -56,9 +63,12 @@ final class TokenBudgetTests: XCTestCase {
         
         // Only "high" should be kept because it takes 800 tokens, leaving 200, so "low" is dropped.
         let result = await budget.apply(to: sections)
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result[0].id, "high")
+        #expect(result.count == 1)
+        #expect(result[0].id == "high")
     }
+    
+    @Test
+
     
     func testApplyKeepExceedsBudget() async {
         let budget = TokenBudget(maxTokens: 1000, reserveForResponse: 0) // available = 1000
@@ -69,10 +79,13 @@ final class TokenBudgetTests: XCTestCase {
         
         // .keep sections are unconditionally kept even if they exceed budget
         let result = await budget.apply(to: sections)
-        XCTAssertEqual(result.count, 2)
-        XCTAssertEqual(result[0].id, "keep1")
-        XCTAssertEqual(result[1].id, "keep2")
+        #expect(result.count == 2)
+        #expect(result[0].id == "keep1")
+        #expect(result[1].id == "keep2")
     }
+    
+    @Test
+
     
     func testApplyTruncateSqueezesToRemaining() async {
         let budget = TokenBudget(maxTokens: 1000, reserveForResponse: 0) // available = 1000
@@ -83,15 +96,18 @@ final class TokenBudgetTests: XCTestCase {
         
         // "truncate" should be constrained to 200 tokens
         let result = await budget.apply(to: sections)
-        XCTAssertEqual(result.count, 2)
-        XCTAssertEqual(result[0].id, "keep")
-        XCTAssertEqual(result[1].id, "truncate")
-        XCTAssertEqual(result[1].estimatedTokens, 200) // constrained token estimation should reflect the limit
+        #expect(result.count == 2)
+        #expect(result[0].id == "keep")
+        #expect(result[1].id == "truncate")
+        #expect(result[1].estimatedTokens == 200) // constrained token estimation should reflect the limit
         
         let rendered = await result[1].render()
         // Wait, the rendered string length is the text length, not necessarily tokens. Our mock just does prefix lengths.
-        XCTAssertEqual(rendered?.count, 7) // "content" has 7 characters, min(7, 200) = 7
+        #expect(rendered?.count == 7) // "content" has 7 characters, min(7, 200) = 7
     }
+    
+    @Test
+
     
     func testApplyDropWithoutBudget() async {
         let budget = TokenBudget(maxTokens: 1000, reserveForResponse: 0) // available = 1000
@@ -105,9 +121,12 @@ final class TokenBudgetTests: XCTestCase {
         // "drop" fails to fit and is dropped.
         // "truncate_dropped" fails to fit and has 0 remaining budget, so it is also dropped.
         let result = await budget.apply(to: sections)
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result[0].id, "s1")
+        #expect(result.count == 1)
+        #expect(result[0].id == "s1")
     }
+    
+    @Test
+
     
     func testApplySummarizeFallsBackToDrop() async {
         let budget = TokenBudget(maxTokens: 1000, reserveForResponse: 0) // available = 1000
@@ -118,7 +137,7 @@ final class TokenBudgetTests: XCTestCase {
         
         // .summarize drops entirely because there is not enough space.
         let result = await budget.apply(to: sections)
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result[0].id, "s1")
+        #expect(result.count == 1)
+        #expect(result[0].id == "s1")
     }
 }

@@ -1,57 +1,73 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadCore
 @testable import MonadShared
 
-final class StreamingParserTests: XCTestCase {
+@Suite final class StreamingParserTests {
     
     // MARK: - Thinking Tag Parsing
+    
+    @Test
+
     
     func testStreamingParserNormalText() {
         var parser = StreamingParser()
         parser.process("Hello")
         parser.process(" World")
         
-        XCTAssertEqual(parser.content, "Hello World")
-        XCTAssertEqual(parser.thinking, "")
-        XCTAssertFalse(parser.isThinking)
+        #expect(parser.content == "Hello World")
+        #expect(parser.thinking == "")
+        #expect(!(parser.isThinking))
     }
+    
+    @Test
+
     
     func testStreamingParserWithThinkingTags() {
         var parser = StreamingParser()
         parser.process("Here is my reasoning: <th")
-        XCTAssertEqual(parser.content, "Here is my reasoning: ") // "<th" buffered
-        XCTAssertFalse(parser.isThinking) // Still resolving tag
+        #expect(parser.content == "Here is my reasoning: ") // "<th" buffered
+        #expect(!(parser.isThinking)) // Still resolving tag
         
         parser.process("ink>This is deep thought.</thi")
-        XCTAssertTrue(parser.isThinking) // Inside thought, "</thi" buffered
+        #expect(parser.isThinking) // Inside thought, "</thi" buffered
         
         parser.process("nk>And now the answer.")
         
-        XCTAssertEqual(parser.thinking, "This is deep thought.")
-        XCTAssertEqual(parser.content, "Here is my reasoning: And now the answer.")
-        XCTAssertFalse(parser.isThinking)
+        #expect(parser.thinking == "This is deep thought.")
+        #expect(parser.content == "Here is my reasoning: And now the answer.")
+        #expect(!(parser.isThinking))
     }
+    
+    @Test
+
     
     func testStreamingParserOrphanedClosingTag() {
         var parser = StreamingParser()
         // DeepSeek and other models sometimes start sending </think> without opening it
         parser.process("Wait, let me think about this...\n</think>\nYes, the answer is 42.")
         
-        XCTAssertTrue(parser.hasReclassified)
-        XCTAssertEqual(parser.thinking, "Wait, let me think about this...\n")
-        XCTAssertEqual(parser.content, "\nYes, the answer is 42.")
+        #expect(parser.hasReclassified)
+        #expect(parser.thinking == "Wait, let me think about this...\n")
+        #expect(parser.content == "\nYes, the answer is 42.")
     }
+    
+    @Test
+
     
     func testStreamingParserCodeBlockAvoidance() {
         var parser = StreamingParser()
         parser.process("```xml\n<think>This should NOT be parsed as thinking</think>\n```")
         
-        XCTAssertEqual(parser.thinking, "")
-        XCTAssertTrue(parser.content.contains("<think>This should NOT be parsed"))
-        XCTAssertFalse(parser.isThinking)
+        #expect(parser.thinking == "")
+        #expect(parser.content.contains("<think>This should NOT be parsed"))
+        #expect(!(parser.isThinking))
     }
     
     // MARK: - Tool Extraction
+    
+    @Test
+
     
     func testToolExtraction() throws {
         let parser = StreamingParser()
@@ -74,16 +90,19 @@ final class StreamingParserTests: XCTestCase {
         let (cleanText, tools) = parser.extractToolCalls(from: response)
         
         // Ensure XML was stripped from text
-        XCTAssertFalse(cleanText.contains("<tool_call>"))
-        XCTAssertTrue(cleanText.contains("I will use the tool now."))
-        XCTAssertTrue(cleanText.contains("And that's it."))
+        #expect(!(cleanText.contains("<tool_call>")))
+        #expect(cleanText.contains("I will use the tool now."))
+        #expect(cleanText.contains("And that's it."))
         
         // Ensure tool was extracted
-        XCTAssertEqual(tools.count, 1)
-        XCTAssertEqual(tools[0].name, "get_weather")
-        XCTAssertEqual(tools[0].arguments["location"]?.value as? String, "SF")
-        XCTAssertEqual(tools[0].id, UUID(uuidString: "11111111-1111-1111-1111-111111111111")!)
+        #expect(tools.count == 1)
+        #expect(tools[0].name == "get_weather")
+        #expect(tools[0].arguments["location"]?.value as? String == "SF")
+        #expect(tools[0].id == UUID(uuidString: "11111111-1111-1111-1111-111111111111")!)
     }
+    
+    @Test
+
     
     func testMultipleToolExtractionsWithoutCodeFences() throws {
         let parser = StreamingParser()
@@ -105,13 +124,16 @@ final class StreamingParserTests: XCTestCase {
         """
         
         let (cleanText, tools) = parser.extractToolCalls(from: response)
-        XCTAssertEqual(cleanText.trimmingCharacters(in: .whitespacesAndNewlines), "")
-        XCTAssertEqual(tools.count, 2)
-        XCTAssertEqual(tools[0].name, "toolA")
-        XCTAssertEqual(tools[1].name, "toolB")
+        #expect(cleanText.trimmingCharacters(in: .whitespacesAndNewlines) == "")
+        #expect(tools.count == 2)
+        #expect(tools[0].name == "toolA")
+        #expect(tools[1].name == "toolB")
     }
 
     // MARK: - Pipe-Delimited Marker Stripping
+
+    @Test
+
 
     func testStreamingParserStripsPipeDelimitedMarkers() {
         var parser = StreamingParser()
@@ -119,16 +141,19 @@ final class StreamingParserTests: XCTestCase {
         parser.process("A: I'll help you. <|tool_calls_section_begin|> <|tool_call_begin|> functions.list_workspaces:0 <|tool_call_argument_begin|> {} <|tool_call_end|> <|tool_calls_section_end|>")
 
         // The pipe-delimited markers should be stripped; only visible text remains
-        XCTAssertFalse(parser.content.contains("<|"))
-        XCTAssertFalse(parser.content.contains("|>"))
-        XCTAssertTrue(parser.content.contains("I'll help you"))
+        #expect(!(parser.content.contains("<|")))
+        #expect(!(parser.content.contains("|>")))
+        #expect(parser.content.contains("I'll help you"))
     }
+
+    @Test
+
 
     func testStreamingParserPreservesNormalAngleBrackets() {
         var parser = StreamingParser()
         parser.process("Use <div> tags in HTML")
 
         // Regular angle brackets should remain
-        XCTAssertTrue(parser.content.contains("<div>"))
+        #expect(parser.content.contains("<div>"))
     }
 }

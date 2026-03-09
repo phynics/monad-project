@@ -1,7 +1,11 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadPrompt
 
-final class GenericHelperSectionsTests: XCTestCase {
+@Suite final class GenericHelperSectionsTests {
+    
+    @Test
+
     
     func testTextSectionInitialization() {
         let section = TextSection(
@@ -12,48 +16,60 @@ final class GenericHelperSectionsTests: XCTestCase {
             estimatedTokens: 5
         )
         
-        XCTAssertEqual(section.id, "system")
-        XCTAssertEqual(section.text, "You are an AI.")
-        XCTAssertEqual(section.priority, 100)
+        #expect(section.id == "system")
+        #expect(section.text == "You are an AI.")
+        #expect(section.priority == 100)
         
         if case .drop = section.strategy { /* expected */ } else {
-            XCTFail("Wrong strategy")
+            Issue.record("Wrong strategy")
         }
         
         if case .text = section.type { /* expected */ } else {
-            XCTFail("Wrong type")
+            Issue.record("Wrong type")
         }
         
-        XCTAssertEqual(section.estimatedTokens, 5)
+        #expect(section.estimatedTokens == 5)
     }
+    
+    @Test
+
     
     func testTextSectionDefaultEstimatedTokens() {
         // Fallback uses string count / 4
         let text = String(repeating: "char", count: 100) // 400 characters
         let section = TextSection(id: "t1", text: text)
-        XCTAssertEqual(section.estimatedTokens, 100)
+        #expect(section.estimatedTokens == 100)
     }
+    
+    @Test
+
     
     func testTextSectionRender() async {
         let section = TextSection(id: "t1", text: "Hello")
         let rendered = await section.render()
-        XCTAssertEqual(rendered, "Hello")
+        #expect(rendered == "Hello")
     }
+    
+    @Test
+
     
     func testTextSectionRenderEmptyReturnsNil() async {
         let section = TextSection(id: "t1", text: "")
         let rendered = await section.render()
-        XCTAssertNil(rendered)
+        #expect(rendered == nil)
     }
+    
+    @Test
+
     
     func testEmptySection() async {
         let section = EmptySection()
         
-        XCTAssertEqual(section.id, "empty")
-        XCTAssertEqual(section.priority, 0)
-        XCTAssertEqual(section.estimatedTokens, 0)
+        #expect(section.id == "empty")
+        #expect(section.priority == 0)
+        #expect(section.estimatedTokens == 0)
         
         let rendered = await section.render()
-        XCTAssertNil(rendered)
+        #expect(rendered == nil)
     }
 }

@@ -1,17 +1,20 @@
-import XCTest
+import Testing
 @testable import MonadCore
 @testable import MonadShared
 import Foundation
 
-final class APIResponseMetadataTests: XCTestCase {
+@Suite final class APIResponseMetadataTests {
     private func assertCodable<T: Codable & Equatable>(_ value: T) throws {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
         
         let data = try encoder.encode(value)
         let decoded = try decoder.decode(T.self, from: data)
-        XCTAssertEqual(value, decoded)
+        #expect(value == decoded)
     }
+    
+    @Test
+
     
     func testAPIResponseMetadataCodable() throws {
         let metadata = APIResponseMetadata(
@@ -25,6 +28,9 @@ final class APIResponseMetadataTests: XCTestCase {
         try assertCodable(metadata)
     }
     
+    @Test
+
+    
     func testAPIResponseMetadataWithNilTokens() throws {
         let metadata = APIResponseMetadata(
             model: "gpt-4",
@@ -37,9 +43,12 @@ final class APIResponseMetadataTests: XCTestCase {
         try assertCodable(metadata)
     }
     
+    @Test
+
+    
     func testAPIResponseMetadataPerformanceCalc() {
         let metadata = APIResponseMetadata(model: "test", duration: 1.5, tokensPerSecond: 100)
-        XCTAssertEqual(metadata.duration, 1.5)
-        XCTAssertEqual(metadata.tokensPerSecond, 100)
+        #expect(metadata.duration == 1.5)
+        #expect(metadata.tokensPerSecond == 100)
     }
 }

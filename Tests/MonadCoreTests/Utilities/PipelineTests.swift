@@ -1,8 +1,9 @@
-import XCTest
+import Testing
+import Foundation
 import Logging
 @testable import MonadCore
 
-final class PipelineTests: XCTestCase {
+@Suite final class PipelineTests {
     
     struct TestContext {
         var values: [String] = []
@@ -38,10 +39,16 @@ final class PipelineTests: XCTestCase {
         }
     }
     
+    @Test
+
+    
     func testDefaultID() {
         let stage = DefaultIDStage()
-        XCTAssertEqual(stage.id, "DefaultIDStage")
+        #expect(stage.id == "DefaultIDStage")
     }
+    
+    @Test
+
     
     func testPipelineExecutionWithLogger() async throws {
         // Given
@@ -55,8 +62,11 @@ final class PipelineTests: XCTestCase {
         try await pipeline.execute(&context)
         
         // Then
-        XCTAssertEqual(context.values, ["one"])
+        #expect(context.values == ["one"])
     }
+    
+    @Test
+
     
     func testPipelineExecution() async throws {
         // Given
@@ -70,8 +80,11 @@ final class PipelineTests: XCTestCase {
         try await pipeline.execute(&context)
         
         // Then
-        XCTAssertEqual(context.values, ["one", "two"])
+        #expect(context.values == ["one", "two"])
     }
+    
+    @Test
+
     
     func testPipelineErrorHandling() async throws {
         // Given
@@ -85,15 +98,18 @@ final class PipelineTests: XCTestCase {
         // When / Then
         do {
             try await pipeline.execute(&context)
-            XCTFail("Pipeline should have thrown an error")
+            Issue.record("Pipeline should have thrown an error")
         } catch let PipelineError.stageFailed(id, error) {
-            XCTAssertEqual(id, "errorStage")
-            XCTAssertEqual(error as? MockError, .someError)
-            XCTAssertEqual(context.values, ["one"])
+            #expect(id == "errorStage")
+            #expect(error as? MockError == .someError)
+            #expect(context.values == ["one"])
         } catch {
-            XCTFail("Unexpected error: \(error)")
+            Issue.record("Unexpected error: \(error)")
         }
     }
+    
+    @Test
+
     
     func testPipelineCleanup() async throws {
         // Given
@@ -107,8 +123,11 @@ final class PipelineTests: XCTestCase {
         try await pipeline.execute(&context)
         
         // Then
-        XCTAssertEqual(context.values, ["one", "clean"])
+        #expect(context.values == ["one", "clean"])
     }
+    
+    @Test
+
     
     func testPipelineCleanupAfterFailure() async throws {
         // Given
@@ -121,11 +140,14 @@ final class PipelineTests: XCTestCase {
         // When / Then
         do {
             try await pipeline.execute(&context)
-            XCTFail("Should have thrown error")
+            Issue.record("Should have thrown error")
         } catch {
-            XCTAssertEqual(context.values, ["clean"])
+            #expect(context.values == ["clean"])
         }
     }
+    
+    @Test
+
     
     func testPipelineCleanupFailure() async throws {
         // Given
@@ -137,13 +159,16 @@ final class PipelineTests: XCTestCase {
         // When / Then
         do {
             try await pipeline.execute(&context)
-            XCTFail("Should have thrown error")
+            Issue.record("Should have thrown error")
         } catch let PipelineError.cleanupFailed(id, _) {
-            XCTAssertEqual(id, "cleanupError")
+            #expect(id == "cleanupError")
         } catch {
-            XCTFail("Unexpected error type: \(error)")
+            Issue.record("Unexpected error type: \(error)")
         }
     }
+    
+    @Test
+
     
     func testPipelineCleanupFailureDoesNotOverridePrimaryError() async throws {
         // Given
@@ -156,13 +181,16 @@ final class PipelineTests: XCTestCase {
         // When / Then
         do {
             try await pipeline.execute(&context)
-            XCTFail("Should have thrown error")
+            Issue.record("Should have thrown error")
         } catch let PipelineError.stageFailed(id, _) {
-            XCTAssertEqual(id, "primaryError")
+            #expect(id == "primaryError")
         } catch {
-            XCTFail("Unexpected error type: \(error)")
+            Issue.record("Unexpected error type: \(error)")
         }
     }
+    
+    @Test
+
     
     func testEmptyPipeline() async throws {
         // Given
@@ -173,6 +201,6 @@ final class PipelineTests: XCTestCase {
         try await pipeline.execute(&context)
         
         // Then
-        XCTAssertTrue(context.values.isEmpty)
+        #expect(context.values.isEmpty)
     }
 }

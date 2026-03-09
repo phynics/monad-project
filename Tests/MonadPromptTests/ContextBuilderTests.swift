@@ -1,7 +1,8 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadPrompt
 
-final class ContextBuilderTests: XCTestCase {
+@Suite final class ContextBuilderTests {
 
     struct MockSection: ContextSection {
         let id: String
@@ -17,6 +18,9 @@ final class ContextBuilderTests: XCTestCase {
         }
     }
 
+    @Test
+
+
     func testExampleBuilder() async {
         let prompt = Prompt {
             MockSection(id: "1", priority: 10, content: "Low Priority")
@@ -24,14 +28,17 @@ final class ContextBuilderTests: XCTestCase {
         }
 
         // Should be sorted by priority
-        XCTAssertEqual(prompt.sections.count, 2)
-        XCTAssertEqual(prompt.sections[0].id, "2")
-        XCTAssertEqual(prompt.sections[1].id, "1")
+        #expect(prompt.sections.count == 2)
+        #expect(prompt.sections[0].id == "2")
+        #expect(prompt.sections[1].id == "1")
 
         let rendered = await prompt.render()
-        XCTAssertTrue(rendered.contains("High Priority"))
-        XCTAssertTrue(rendered.contains("Low Priority"))
+        #expect(rendered.contains("High Priority"))
+        #expect(rendered.contains("Low Priority"))
     }
+
+    @Test
+
 
     func testConditionals() async {
         let includeSecret = false
@@ -47,9 +54,12 @@ final class ContextBuilderTests: XCTestCase {
             }
         }
 
-        XCTAssertEqual(prompt.sections.count, 1)
-        XCTAssertEqual(prompt.sections[0].id, "public")
+        #expect(prompt.sections.count == 1)
+        #expect(prompt.sections[0].id == "public")
     }
+
+    @Test
+
 
     func testLoop() async {
         let items = ["A", "B", "C"]
@@ -60,6 +70,6 @@ final class ContextBuilderTests: XCTestCase {
             }
         }
 
-        XCTAssertEqual(prompt.sections.count, 3)
+        #expect(prompt.sections.count == 3)
     }
 }

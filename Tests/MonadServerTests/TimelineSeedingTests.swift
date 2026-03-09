@@ -1,19 +1,23 @@
 import MonadShared
 import MonadCore
-import XCTest
+import Testing
+import Foundation
 import Dependencies
 import MonadTestSupport
 @testable import MonadServer
 
-final class SessionSeedingTests: XCTestCase {
+@Suite final class SessionSeedingTests {
     var persistence: MockPersistenceService!
     var workspaceRoot: URL!
 
-    override func setUp() async throws {
+    init() async throws {
         persistence = MockPersistenceService()
         workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
     }
+
+    @Test
+
 
     func testSessionSeeding() async throws {
         try await withDependencies {
@@ -37,8 +41,8 @@ final class SessionSeedingTests: XCTestCase {
 
             let sessionDir = workspaceRoot.appendingPathComponent("timelines").appendingPathComponent(session.id.uuidString)
             let notesDir = sessionDir.appendingPathComponent("Notes")
-            XCTAssertTrue(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Welcome.md").path))
-            XCTAssertTrue(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Project.md").path))
+            #expect(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Welcome.md").path))
+            #expect(FileManager.default.fileExists(atPath: notesDir.appendingPathComponent("Project.md").path))
         }
     }
 }

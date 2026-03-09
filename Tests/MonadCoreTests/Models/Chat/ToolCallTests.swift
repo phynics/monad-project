@@ -1,9 +1,9 @@
-import XCTest
+import Testing
 @testable import MonadCore
 @testable import MonadShared
 import Foundation
 
-final class ToolCallTests: XCTestCase {
+@Suite final class ToolCallTests {
     private func assertCodable<T: Codable & Equatable>(_ value: T) throws {
         let encoder = JSONEncoder()
         
@@ -11,8 +11,11 @@ final class ToolCallTests: XCTestCase {
         
         let data = try encoder.encode(value)
         let decoded = try decoder.decode(T.self, from: data)
-        XCTAssertEqual(value, decoded)
+        #expect(value == decoded)
     }
+    
+    @Test
+
     
     func testToolCallRecordCodable() throws {
         let record = ToolCallRecord(
@@ -21,8 +24,11 @@ final class ToolCallTests: XCTestCase {
             turn: 1
         )
         try assertCodable(record)
-        XCTAssertEqual(record.name, "calculate_sum")
+        #expect(record.name == "calculate_sum")
     }
+    
+    @Test
+
     
     func testToolResultRecordCodable() throws {
         let result = ToolResultRecord(

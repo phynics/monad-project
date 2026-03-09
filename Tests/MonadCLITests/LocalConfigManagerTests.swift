@@ -1,25 +1,29 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadCLI
 
-final class LocalConfigManagerTests: XCTestCase {
+@Suite final class LocalConfigManagerTests {
     var tempFileURL: URL!
     var manager: LocalConfigManager!
 
-    override func setUp() {
-        super.setUp()
+    init() {
+        // super.setUp()
         tempFileURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         manager = LocalConfigManager(storageURL: tempFileURL)
     }
 
-    override func tearDown() {
+    deinit {
         try? FileManager.default.removeItem(at: tempFileURL)
-        super.tearDown()
+        // super.tearDown()
     }
+
+    @Test
+
 
     func testPersistence() {
         let config = manager.getConfig()
-        XCTAssertNil(config.lastSessionId)
-        XCTAssertNil(config.clientWorkspaces)
+        #expect(config.lastSessionId == nil)
+        #expect(config.clientWorkspaces == nil)
 
         let timelineId = UUID().uuidString
         let workspaces = ["file:///tmp/test": UUID().uuidString]
@@ -28,7 +32,7 @@ final class LocalConfigManagerTests: XCTestCase {
         manager.updateClientWorkspaces(workspaces)
 
         let savedConfig = manager.getConfig()
-        XCTAssertEqual(savedConfig.lastSessionId, timelineId)
-        XCTAssertEqual(savedConfig.clientWorkspaces, workspaces)
+        #expect(savedConfig.lastSessionId == timelineId)
+        #expect(savedConfig.clientWorkspaces == workspaces)
     }
 }

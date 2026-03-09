@@ -1,17 +1,18 @@
 import MonadShared
 import MonadCore
-import XCTest
+import Testing
+import Foundation
 import Dependencies
 import MonadTestSupport
 @testable import MonadServer
 
-final class WorkspaceManagerTests: XCTestCase {
+@Suite final class WorkspaceManagerTests {
     var persistence: MockPersistenceService!
     var repository: WorkspaceRepository!
     var manager: WorkspaceManager!
     var testDir: URL!
 
-    override func setUp() async throws {
+    init() async throws {
         persistence = MockPersistenceService()
         repository = try await withDependencies {
             $0.timelinePersistence = persistence
@@ -32,11 +33,14 @@ final class WorkspaceManagerTests: XCTestCase {
         try FileManager.default.createDirectory(at: testDir, withIntermediateDirectories: true)
     }
 
-    override func tearDown() async throws {
+    deinit {
         if let dir = testDir {
             try? FileManager.default.removeItem(at: dir)
         }
     }
+
+    @Test
+
 
     func testGetWorkspaceCreatesAndCaches() async throws {
         let wsId = UUID()
@@ -53,18 +57,24 @@ final class WorkspaceManagerTests: XCTestCase {
 
         // 1. Get workspace (should create via Factory and cache)
         let ws = try await manager.getWorkspace(id: wsId)
-        XCTAssertNotNil(ws)
-        XCTAssertEqual(ws?.id, wsId)
+        try #require(ws != nil)
+        #expect(ws?.id == wsId)
 
         // 2. Get again (should be from cache)
         let ws2 = try await manager.getWorkspace(id: wsId)
-        XCTAssertEqual(ws?.id, ws2?.id, "Should return cached instance or identical id")
+        #expect(ws?.id == ws2?.id)
     }
+
+    @Test
+
 
     func testGetNonExistentWorkspace() async throws {
         let ws = try await manager.getWorkspace(id: UUID())
-        XCTAssertNil(ws)
+        #expect(ws == nil)
     }
+
+    @Test
+
 
     func testCloseWorkspace() async throws {
         let wsId = UUID()
@@ -81,12 +91,15 @@ final class WorkspaceManagerTests: XCTestCase {
 
         _ = try await manager.getWorkspace(id: wsId)
         let count1 = await manager.activeWorkspaceCount
-        XCTAssertEqual(count1, 1)
+        #expect(count1 == 1)
 
         await manager.closeWorkspace(id: wsId)
         let count2 = await manager.activeWorkspaceCount
-        XCTAssertEqual(count2, 0)
+        #expect(count2 == 0)
     }
+
+    @Test
+
 
     func testHealthCheckAll() async throws {
         let wsId1 = UUID()
@@ -99,11 +112,11 @@ final class WorkspaceManagerTests: XCTestCase {
         _ = try await manager.getWorkspace(id: wsId1)
 
         let healthResults = await manager.healthCheckAll()
-        XCTAssertTrue(healthResults[wsId1] ?? false)
+        #expect(healthResults[wsId1] ?? false)
 
         // Delete directory to simulate failure
         try FileManager.default.removeItem(at: wsDir)
         let healthResults2 = await manager.healthCheckAll()
-        XCTAssertFalse(healthResults2[wsId1] ?? true)
+        #expect(!(healthResults2[wsId1] ?? true))
     }
 }

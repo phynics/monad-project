@@ -1,9 +1,9 @@
-import XCTest
+import Testing
 @testable import MonadCore
 @testable import MonadShared
 import Foundation
 
-final class ConversationMessageTests: XCTestCase {
+@Suite final class ConversationMessageTests {
     private func assertCodable<T: Codable>(_ value: T) throws {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -14,6 +14,9 @@ final class ConversationMessageTests: XCTestCase {
         let data = try encoder.encode(value)
         _ = try decoder.decode(T.self, from: data)
     }
+    
+    @Test
+
     
     func testConversationMessageCodable() throws {
         // Need to provide a realistic `Session` ID for foreign key in DB context
@@ -28,6 +31,9 @@ final class ConversationMessageTests: XCTestCase {
         try assertCodable(msg)
     }
     
+    @Test
+
+    
     func testToMessageConversion() throws {
         let uuid = UUID()
         let date = Date()
@@ -40,9 +46,9 @@ final class ConversationMessageTests: XCTestCase {
         )
         
         let msg = dbMsg.toMessage()
-        XCTAssertEqual(msg.id, uuid)
-        XCTAssertEqual(msg.role, Message.MessageRole.assistant)
-        XCTAssertEqual(msg.content, "Pong")
-        XCTAssertEqual(msg.timestamp, date)
+        #expect(msg.id == uuid)
+        #expect(msg.role == Message.MessageRole.assistant)
+        #expect(msg.content == "Pong")
+        #expect(msg.timestamp == date)
     }
 }

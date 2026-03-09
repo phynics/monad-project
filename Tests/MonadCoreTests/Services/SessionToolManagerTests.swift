@@ -1,9 +1,9 @@
-import XCTest
+import Testing
 import Foundation
 @testable import MonadCore
 @testable import MonadShared
 
-final class TimelineToolManagerTests: XCTestCase {
+@Suite final class TimelineToolManagerTests {
     
     struct MockTool: MonadShared.Tool, @unchecked Sendable {
         let id: String
@@ -32,6 +32,9 @@ final class TimelineToolManagerTests: XCTestCase {
         func healthCheck() async -> Bool { true }
     }
     
+    @Test
+
+    
     func testInitEnablesAllAvailableTools() async throws {
         let systemTool1 = AnyTool(MockTool(id: "sys1", name: "System 1"))
         let systemTool2 = AnyTool(MockTool(id: "sys2", name: "System 2"))
@@ -39,13 +42,16 @@ final class TimelineToolManagerTests: XCTestCase {
         let manager = TimelineToolManager(availableTools: [systemTool1, systemTool2])
         
         let enabled = await manager.enabledTools
-        XCTAssertEqual(enabled.count, 2)
-        XCTAssertTrue(enabled.contains("sys1"))
-        XCTAssertTrue(enabled.contains("sys2"))
+        #expect(enabled.count == 2)
+        #expect(enabled.contains("sys1"))
+        #expect(enabled.contains("sys2"))
         
         let fetchedEnabled = await manager.getEnabledTools()
-        XCTAssertEqual(fetchedEnabled.count, 2)
+        #expect(fetchedEnabled.count == 2)
     }
+    
+    @Test
+
     
     func testUpdateAvailableToolsAutoEnablesNewTools() async throws {
         let systemTool1 = AnyTool(MockTool(id: "sys1", name: "System 1"))
@@ -56,30 +62,36 @@ final class TimelineToolManagerTests: XCTestCase {
         await manager.updateAvailableTools([systemTool2])
         
         let enabled = await manager.enabledTools
-        XCTAssertEqual(enabled.count, 1) // Only sys2
-        XCTAssertTrue(enabled.contains("sys2"))
-        XCTAssertFalse(enabled.contains("sys1"))
+        #expect(enabled.count == 1) // Only sys2
+        #expect(enabled.contains("sys2"))
+        #expect(!(enabled.contains("sys1")))
     }
+    
+    @Test
+
     
     func testToggleEnableDisableTools() async throws {
         let systemTool1 = AnyTool(MockTool(id: "sys1", name: "System 1"))
         let manager = TimelineToolManager(availableTools: [systemTool1])
         
         var enabled = await manager.enabledTools
-        XCTAssertTrue(enabled.contains("sys1"))
+        #expect(enabled.contains("sys1"))
         
         await manager.disableTool(id: "sys1")
         enabled = await manager.enabledTools
-        XCTAssertFalse(enabled.contains("sys1"))
+        #expect(!(enabled.contains("sys1")))
         
         await manager.enableTool(id: "sys1")
         enabled = await manager.enabledTools
-        XCTAssertTrue(enabled.contains("sys1"))
+        #expect(enabled.contains("sys1"))
         
         await manager.toggleTool("sys1")
         enabled = await manager.enabledTools
-        XCTAssertFalse(enabled.contains("sys1"))
+        #expect(!(enabled.contains("sys1")))
     }
+    
+    @Test
+
     
     func testWorkspaceToolRegistration() async throws {
         let manager = TimelineToolManager(availableTools: [])
@@ -103,22 +115,25 @@ final class TimelineToolManagerTests: XCTestCase {
         await manager.registerWorkspace(mockWS)
         
         let available = await manager.getAvailableTools()
-        XCTAssertEqual(available.count, 1)
-        XCTAssertEqual(available.first?.name, "wsTool1")
+        #expect(available.count == 1)
+        #expect(available.first?.name == "wsTool1")
         
         // Unregister
         await manager.unregisterWorkspace(workspaceId)
         let availableAfter = await manager.getAvailableTools()
-        XCTAssertTrue(availableAfter.isEmpty)
+        #expect(availableAfter.isEmpty)
     }
+    
+    @Test
+
     
     func testGetToolResolvesCorrectly() async throws {
         let systemTool = AnyTool(MockTool(id: "sys1", name: "System 1"))
         let manager = TimelineToolManager(availableTools: [systemTool])
         
         let sysResult = await manager.getTool(id: "sys1")
-        XCTAssertNotNil(sysResult)
-        XCTAssertEqual(sysResult?.name, "System 1")
+        try #require(sysResult != nil)
+        #expect(sysResult?.name == "System 1")
         
         // Workspace tool resolution
         let workspaceId = UUID()
@@ -134,14 +149,17 @@ final class TimelineToolManagerTests: XCTestCase {
         // Since we don't know the exact ID format in the test, we can just check getAvailableTools
         let available = await manager.getAvailableTools()
         let wsToolWrapper = available.first(where: { $0.name == "wsTool" })
-        XCTAssertNotNil(wsToolWrapper)
+        try #require(wsToolWrapper != nil)
         
         if let wsToolId = wsToolWrapper?.id {
             let fetched = await manager.getTool(id: wsToolId)
-            XCTAssertNotNil(fetched)
-            XCTAssertEqual(fetched?.name, "wsTool")
+            try #require(fetched != nil)
+            #expect(fetched?.name == "wsTool")
         }
     }
+
+    @Test
+
 
     func testWorkspaceToolsHaveProvenance() async throws {
         let manager = TimelineToolManager(availableTools: [])
@@ -157,12 +175,15 @@ final class TimelineToolManagerTests: XCTestCase {
         // Verify the tool has the expected provenance injected
         let available = await manager.getAvailableTools()
         let tool = available.first(where: { $0.name == "provTool" })
-        XCTAssertNotNil(tool)
-        XCTAssertEqual(tool?.provenance, "Workspace: monad://test-workspace-prov")
+        try #require(tool != nil)
+        #expect(tool?.provenance == "Workspace: monad://test-workspace-prov")
         
         let fetched = await manager.getTool(id: tool!.id)
-        XCTAssertEqual(fetched?.provenance, "Workspace: monad://test-workspace-prov")
+        #expect(fetched?.provenance == "Workspace: monad://test-workspace-prov")
     }
+
+    @Test
+
 
     func testKnownToolRefsResolved() async throws {
         let systemTool = AnyTool(MockTool(id: "cat", name: "cat"))
@@ -180,10 +201,10 @@ final class TimelineToolManagerTests: XCTestCase {
         // The system tool should now have provenance indicating it is tied to the workspace
         let available = await manager.getAvailableTools()
         let tool = available.first(where: { $0.id == "cat" })
-        XCTAssertNotNil(tool)
-        XCTAssertEqual(tool?.provenance, "Workspace: monad://test-known-tool")
+        try #require(tool != nil)
+        #expect(tool?.provenance == "Workspace: monad://test-known-tool")
 
         let fetched = await manager.getTool(id: "cat")
-        XCTAssertEqual(fetched?.provenance, "Workspace: monad://test-known-tool")
+        #expect(fetched?.provenance == "Workspace: monad://test-known-tool")
     }
 }

@@ -1,84 +1,108 @@
-import XCTest
+import Testing
 import MonadShared
 import Foundation
 
-final class ChatEventTests: XCTestCase {
+@Suite final class ChatEventTests {
+
+    @Test
+
 
     func testChatEventDelta() {
         let event = ChatEvent.delta(event: .generation(text: "Hello"))
         if case .delta(event: .generation(text: let text)) = event {
-            XCTAssertEqual(text, "Hello")
+            #expect(text == "Hello")
         } else {
-            XCTFail("Expected delta.generation")
+            Issue.record("Expected delta.generation")
         }
     }
+
+    @Test
+
 
     func testChatEventThinking() {
         let event = ChatEvent.delta(event: .thinking(text: "Thinking..."))
         if case .delta(event: .thinking(text: let text)) = event {
-            XCTAssertEqual(text, "Thinking...")
+            #expect(text == "Thinking...")
         } else {
-            XCTFail("Expected delta.thinking")
+            Issue.record("Expected delta.thinking")
         }
     }
+
+    @Test
+
 
     func testChatEventToolCall() {
         let delta = ToolCallDelta(index: 0, id: "call1", name: "test", arguments: "{}")
         let event = ChatEvent.delta(event: .toolCall(delta: delta))
         if case .delta(event: .toolCall(delta: let tc)) = event {
-            XCTAssertEqual(tc.id, "call1")
+            #expect(tc.id == "call1")
         } else {
-            XCTFail("Expected delta.toolCall")
+            Issue.record("Expected delta.toolCall")
         }
     }
+
+    @Test
+
 
     func testChatEventToolCallError() {
         let event = ChatEvent.error(event: .toolCallError(toolCallId: "call1", name: "test", error: "Not found"))
         if case .error(event: .toolCallError(let id, _, let error)) = event {
-            XCTAssertEqual(id, "call1")
-            XCTAssertEqual(error, "Not found")
+            #expect(id == "call1")
+            #expect(error == "Not found")
         } else {
-            XCTFail("Expected error.toolCallError")
+            Issue.record("Expected error.toolCallError")
         }
     }
+
+    @Test
+
 
     func testChatEventToolExecution() {
         let ref = ToolReference.known("tool-1")
         let event = ChatEvent.delta(event: .toolExecution(toolCallId: "123", status: .attempting(name: "test", reference: ref)))
         if case .delta(event: .toolExecution(let id, _)) = event {
-            XCTAssertEqual(id, "123")
+            #expect(id == "123")
         } else {
-            XCTFail("Expected delta.toolExecution")
+            Issue.record("Expected delta.toolExecution")
         }
     }
+
+    @Test
+
 
     func testChatEventGenerationContext() {
         let metadata = ChatMetadata(memories: [UUID()], files: ["README.md"])
         let event = ChatEvent.meta(event: .generationContext(metadata: metadata))
         if case .meta(event: .generationContext(let meta)) = event {
-            XCTAssertEqual(meta.files.count, 1)
+            #expect(meta.files.count == 1)
         } else {
-            XCTFail("Expected meta.generationContext")
+            Issue.record("Expected meta.generationContext")
         }
     }
+
+    @Test
+
 
     func testChatEventGenerationCompleted() {
         let message = Message(content: "Done", role: .assistant)
         let metadata = APIResponseMetadata(model: "test-model", duration: 1.5, tokensPerSecond: 50.0)
         let event = ChatEvent.completion(event: .generationCompleted(message: message, metadata: metadata))
         if case .completion(event: .generationCompleted(let msg, _)) = event {
-            XCTAssertEqual(msg.content, "Done")
+            #expect(msg.content == "Done")
         } else {
-            XCTFail("Expected completion.generationCompleted")
+            Issue.record("Expected completion.generationCompleted")
         }
     }
+
+    @Test
+
 
     func testChatEventError() {
         let event = ChatEvent.error(event: .error(message: "Test error"))
         if case .error(event: .error(let msg)) = event {
-            XCTAssertEqual(msg, "Test error")
+            #expect(msg == "Test error")
         } else {
-            XCTFail("Expected error.error")
+            Issue.record("Expected error.error")
         }
     }
 }

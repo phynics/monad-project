@@ -1,60 +1,82 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadCore
 @testable import MonadShared
 
-final class VectorMathTests: XCTestCase {
+@Suite final class VectorMathTests {
     
     // MARK: - Cosine Similarity
+    
+    @Test
+
     
     func testCosineSimilarityIdenticalVectors() {
         let v1 = [1.0, 2.0, 3.0]
         let v2 = [1.0, 2.0, 3.0]
         
         let sim = VectorMath.cosineSimilarity(v1, v2)
-        XCTAssertEqual(sim, 1.0, accuracy: 0.0001)
+        #expect(sim == 1.0)
     }
+    
+    @Test
+
     
     func testCosineSimilarityOrthogonalVectors() {
         let v1 = [1.0, 0.0]
         let v2 = [0.0, 1.0]
         
         let sim = VectorMath.cosineSimilarity(v1, v2)
-        XCTAssertEqual(sim, 0.0, accuracy: 0.0001)
+        #expect(sim == 0.0)
     }
+    
+    @Test
+
     
     func testCosineSimilarityOppositeVectors() {
         let v1 = [1.0, 2.0, 3.0]
         let v2 = [-1.0, -2.0, -3.0]
         
         let sim = VectorMath.cosineSimilarity(v1, v2)
-        XCTAssertEqual(sim, -1.0, accuracy: 0.0001)
+        #expect(sim == -1.0)
     }
+    
+    @Test
+
     
     func testCosineSimilarityDifferentLengths() {
         let v1 = [1.0, 2.0]
         let v2 = [1.0, 2.0, 3.0]
         
         let sim = VectorMath.cosineSimilarity(v1, v2)
-        XCTAssertEqual(sim, 0.0) // Should safeguard against mismatched lengths
+        #expect(sim == 0.0) // Should safeguard against mismatched lengths
     }
+    
+    @Test
+
     
     func testCosineSimilarityEmptyVectors() {
         let v1: [Double] = []
         let v2: [Double] = []
         
         let sim = VectorMath.cosineSimilarity(v1, v2)
-        XCTAssertEqual(sim, 0.0)
+        #expect(sim == 0.0)
     }
+    
+    @Test
+
     
     func testCosineSimilarityZeroMagnitude() {
         let v1 = [0.0, 0.0]
         let v2 = [0.0, 0.0]
         
         let sim = VectorMath.cosineSimilarity(v1, v2)
-        XCTAssertEqual(sim, 0.0)
+        #expect(sim == 0.0)
     }
     
     // MARK: - Normalization
+    
+    @Test
+
     
     func testNormalizeVector() {
         let v = [3.0, 4.0] // Magnitude = 5.0
@@ -62,21 +84,27 @@ final class VectorMathTests: XCTestCase {
         
         let normalized = VectorMath.normalize(v)
         
-        XCTAssertEqual(normalized.count, expected.count)
+        #expect(normalized.count == expected.count)
         for (a, b) in zip(normalized, expected) {
-            XCTAssertEqual(a, b, accuracy: 0.0001)
+            #expect(abs(a - b) < 0.000001)
         }
     }
+    
+    @Test
+
     
     func testNormalizeEmptyVector() {
         let v: [Double] = []
         let normalized = VectorMath.normalize(v)
-        XCTAssertTrue(normalized.isEmpty)
+        #expect(normalized.isEmpty)
     }
+    
+    @Test
+
     
     func testNormalizeZeroVector() {
         let v = [0.0, 0.0, 0.0]
         let normalized = VectorMath.normalize(v)
-        XCTAssertEqual(normalized, [0.0, 0.0, 0.0])
+        #expect(normalized == [0.0, 0.0, 0.0])
     }
 }

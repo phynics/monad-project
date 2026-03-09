@@ -1,12 +1,13 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadCore
 @testable import MonadShared
 
-final class ContextRankerTests: XCTestCase {
+@Suite final class ContextRankerTests {
     var ranker: ContextRanker!
     
-    override func setUp() {
-        super.setUp()
+    init() {
+        // super.setUp()
         ranker = ContextRanker()
     }
     
@@ -22,6 +23,9 @@ final class ContextRankerTests: XCTestCase {
             embedding: embedding
         )
     }
+    
+    @Test
+
     
     func testContextRankerTimeDecay() {
         let id1 = UUID()
@@ -59,13 +63,14 @@ final class ContextRankerTests: XCTestCase {
             queryEmbedding: queryEmbedding
         )
         
-        XCTAssertEqual(ranked.count, 2)
-        XCTAssertEqual(ranked[0].memory.id, id1) // Newest memory should win due to higher score
-        XCTAssertEqual(ranked[0].similarity ?? 0.0, 1.0, accuracy: 0.001)
-        XCTAssertEqual(ranked[1].memory.id, id2)
-        XCTAssertEqual(ranked[1].similarity ?? 0.0, 0.5, accuracy: 0.001) // Decayed by 50%
+        #expect(ranked.count == 2)
+        #expect(ranked[0].memory.id == id1) // Newest memory should win due to higher score
+        #expect(abs((ranked[0].similarity ?? 0.0) - 1.0) < 0.0001)
+        #expect(ranked[1].memory.id == id2)
+        #expect(abs((ranked[1].similarity ?? 0.0) - 0.5) < 0.0001) // Decayed by 50%
     }
     
+    @Test
     func testContextRankerTagBoosts() {
         let idSemantic = UUID()
         let idTag = UUID()
@@ -104,13 +109,14 @@ final class ContextRankerTests: XCTestCase {
         )
         
         // The newly tagged memory with the tag boost (1.5) now ranks above the semantic one (0.9)
-        XCTAssertEqual(ranked.count, 2)
-        XCTAssertEqual(ranked[0].memory.id, idTag)
-        XCTAssertEqual(ranked[0].similarity ?? 0, 1.5, accuracy: 0.001)
-        XCTAssertEqual(ranked[1].memory.id, idSemantic)
-        XCTAssertEqual(ranked[1].similarity ?? 0, 0.9, accuracy: 0.001)
+        #expect(ranked.count == 2)
+        #expect(ranked[0].memory.id == idTag)
+        #expect(abs((ranked[0].similarity ?? 0) - 1.5) < 0.0001)
+        #expect(ranked[1].memory.id == idSemantic)
+        #expect(abs((ranked[1].similarity ?? 0) - 0.9) < 0.0001)
     }
     
+    @Test
     func testContextRankerTagBoostsOnExistingSemanticResult() {
         let idMerged = UUID()
         let queryEmbedding = [1.0, 0.0]
@@ -135,8 +141,8 @@ final class ContextRankerTests: XCTestCase {
             queryEmbedding: queryEmbedding
         )
         
-        XCTAssertEqual(ranked.count, 1)
+        #expect(ranked.count == 1)
         // Score should be 0.8 + 0.5 (tag boost) = 1.3
-        XCTAssertEqual(ranked[0].similarity ?? 0, 1.3, accuracy: 0.001)
+        #expect(abs((ranked[0].similarity ?? 0) - 1.3) < 0.0001)
     }
 }

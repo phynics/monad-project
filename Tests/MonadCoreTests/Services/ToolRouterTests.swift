@@ -1,11 +1,11 @@
-import XCTest
+import Testing
 import Foundation
 import MonadTestSupport
 @testable import MonadCore
 @testable import MonadShared
 import Dependencies
 
-final class ToolRouterTests: XCTestCase {
+@Suite final class ToolRouterTests {
     
     struct MockTool: MonadShared.Tool, @unchecked Sendable {
         let id: String
@@ -45,6 +45,9 @@ final class ToolRouterTests: XCTestCase {
         return (timelineManager, mockPersistence)
     }
     
+    @Test
+
+    
     func testExecuteLocally() async throws {
         let (timelineManager, mockPersistence) = try await setupTimelineManager()
         let toolRouter = try await withDependencies {
@@ -64,7 +67,7 @@ final class ToolRouterTests: XCTestCase {
         
         // Setup internal tools by extracting the ToolManager
         let toolManager = await timelineManager.getToolManager(for: session.id)
-        XCTAssertNotNil(toolManager)
+        try #require(toolManager != nil)
         
         let toolId = "local_tool"
         let mockTool = MockTool(id: toolId, name: toolId, result: .success("Local success"))
@@ -79,11 +82,14 @@ final class ToolRouterTests: XCTestCase {
         
         let result = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
         guard case .completed(let output) = result else {
-            XCTFail("Expected .completed outcome")
+            Issue.record("Expected .completed outcome")
             return
         }
-        XCTAssertEqual(output, "Local success")
+        #expect(output == "Local success")
     }
+    
+    @Test
+
     
     func testExecuteRemotelyThrowsClientExecutionRequired() async throws {
         let (timelineManager, mockPersistence) = try await setupTimelineManager()
@@ -110,13 +116,16 @@ final class ToolRouterTests: XCTestCase {
         do {
             let result = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
             guard case .deferredToClient = result else {
-                XCTFail("Expected .deferredToClient")
+                Issue.record("Expected .deferredToClient")
                 return
             }
         } catch {
-            XCTFail("Unexpected error: \(error)")
+            Issue.record("Unexpected error: \(error)")
         }
     }
+    
+    @Test
+
     
     func testExecuteRemotelyWithoutClientThrowsClientNotConnected() async throws {
         let (timelineManager, mockPersistence) = try await setupTimelineManager()
@@ -143,13 +152,16 @@ final class ToolRouterTests: XCTestCase {
         do {
             let result = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
             guard case .deferredToClient = result else {
-                XCTFail("Expected .deferredToClient")
+                Issue.record("Expected .deferredToClient")
                 return
             }
         } catch {
-            XCTFail("Unexpected error: \(error)")
+            Issue.record("Unexpected error: \(error)")
         }
     }
+    
+    @Test
+
     
     func testExecuteToolNotFound() async throws {
         let (timelineManager, _) = try await setupTimelineManager()
@@ -165,11 +177,11 @@ final class ToolRouterTests: XCTestCase {
         
         do {
             _ = try await toolRouter.execute(tool: toolRef, arguments: arguments, timelineId: session.id)
-            XCTFail("Should have thrown toolNotFound")
+            Issue.record("Should have thrown toolNotFound")
         } catch ToolError.toolNotFound {
             // Expected
         } catch {
-            XCTFail("Unexpected error thrown: \(error)")
+            Issue.record("Unexpected error thrown: \(error)")
         }
     }
 }

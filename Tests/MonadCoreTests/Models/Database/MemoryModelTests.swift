@@ -1,9 +1,9 @@
-import XCTest
+import Testing
 @testable import MonadCore
 @testable import MonadShared
 import Foundation
 
-final class MemoryModelTests: XCTestCase {
+@Suite final class MemoryModelTests {
     private func assertCodable<T: Codable & Equatable>(_ value: T) throws {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -13,8 +13,11 @@ final class MemoryModelTests: XCTestCase {
         
         let data = try encoder.encode(value)
         let decoded = try decoder.decode(T.self, from: data)
-        XCTAssertEqual(value, decoded)
+        #expect(value == decoded)
     }
+    
+    @Test
+
     
     func testMemoryCodable() throws {
         let memory = Memory(
@@ -27,9 +30,12 @@ final class MemoryModelTests: XCTestCase {
             embedding: [0.1, 0.2, 0.3]
         )
         try assertCodable(memory)
-        XCTAssertEqual(memory.tagArray.count, 3)
-        XCTAssertEqual(memory.embedding, "[0.1,0.2,0.3]")
+        #expect(memory.tagArray.count == 3)
+        #expect(memory.embedding == "[0.1,0.2,0.3]")
     }
+    
+    @Test
+
     
     func testMemoryUpdate() {
         var memory = Memory(
@@ -45,6 +51,6 @@ final class MemoryModelTests: XCTestCase {
         memory.content = "New Content"
         // In the model, `updatedAt` is a mutable field but updating `content` doesn't automatically touch it
         // A consumer updates it manually. For the test, we'll just verify the initial creation time.
-        XCTAssertEqual(oldDate, memory.updatedAt)
+        #expect(oldDate == memory.updatedAt)
     }
 }

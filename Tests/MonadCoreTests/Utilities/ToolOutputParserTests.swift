@@ -1,10 +1,14 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadCore
 @testable import MonadShared
 
-final class ToolOutputParserTests: XCTestCase {
+@Suite final class ToolOutputParserTests {
 
     // MARK: - Pipe-Delimited Format (Qwen-style)
+
+    @Test
+
 
     func testParsePipeDelimitedSingleCall() {
         let content = """
@@ -18,11 +22,12 @@ final class ToolOutputParserTests: XCTestCase {
         """
 
         let calls = ToolOutputParser.parse(from: content)
-        XCTAssertEqual(calls.count, 1)
-        XCTAssertEqual(calls.first?.name, "list_workspaces")
+        #expect(calls.count == 1)
+        #expect(calls.first?.name == "list_workspaces")
     }
 
-    func testParsePipeDelimitedWithArguments() {
+    @Test
+    func testParsePipeDelimitedWithArguments() throws {
         let content = """
         <|tool_call_begin|>
         functions.read_file:0
@@ -32,12 +37,15 @@ final class ToolOutputParserTests: XCTestCase {
         """
 
         let calls = ToolOutputParser.parse(from: content)
-        XCTAssertEqual(calls.count, 1)
-        XCTAssertEqual(calls.first?.name, "read_file")
-        XCTAssertNotNil(calls.first?.arguments["path"])
+        #expect(calls.count == 1)
+        #expect(calls.first?.name == "read_file")
+        try #require(calls.first?.arguments["path"] != nil)
     }
 
     // MARK: - XML Format (existing)
+
+    @Test
+
 
     func testParseXMLToolCall() {
         let content = """
@@ -47,15 +55,18 @@ final class ToolOutputParserTests: XCTestCase {
         """
 
         let calls = ToolOutputParser.parse(from: content)
-        XCTAssertEqual(calls.count, 1)
-        XCTAssertEqual(calls.first?.name, "list_files")
+        #expect(calls.count == 1)
+        #expect(calls.first?.name == "list_files")
     }
 
     // MARK: - No Matches
 
+    @Test
+
+
     func testParseNoToolCalls() {
         let content = "Just a regular response with no tool calls."
         let calls = ToolOutputParser.parse(from: content)
-        XCTAssertTrue(calls.isEmpty)
+        #expect(calls.isEmpty)
     }
 }

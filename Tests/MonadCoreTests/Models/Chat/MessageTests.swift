@@ -1,9 +1,9 @@
-import XCTest
+import Testing
 @testable import MonadCore
 @testable import MonadShared
 import Foundation
 
-final class MessageTests: XCTestCase {
+@Suite final class MessageTests {
     
     // MARK: - Test Helpers
     
@@ -25,10 +25,13 @@ final class MessageTests: XCTestCase {
         
         let data = try encoder.encode(value)
         let decoded = try decoder.decode(T.self, from: data)
-        XCTAssertEqual(value, decoded)
+        #expect(value == decoded)
     }
     
     // MARK: - Message Tests
+    
+    @Test
+
     
     func testMessageUserRole() throws {
         let date = Date(timeIntervalSince1970: 1000)
@@ -42,9 +45,12 @@ final class MessageTests: XCTestCase {
         
         try assertCodable(message)
         let jsonString = try encodeToString(message)
-        XCTAssertTrue(jsonString.contains("\"role\":\"user\""))
-        XCTAssertTrue(jsonString.contains("\"content\":\"Hello\""))
+        #expect(jsonString.contains("\"role\":\"user\""))
+        #expect(jsonString.contains("\"content\":\"Hello\""))
     }
+    
+    @Test
+
     
     func testMessageAssistantRole() throws {
         let date = Date(timeIntervalSince1970: 1000)
@@ -56,9 +62,12 @@ final class MessageTests: XCTestCase {
         )
         try assertCodable(msg)
         let jsonString = try encodeToString(msg)
-        XCTAssertTrue(jsonString.contains("\"role\":\"assistant\""))
-        XCTAssertTrue(jsonString.contains("\"isSummary\":true"))
+        #expect(jsonString.contains("\"role\":\"assistant\""))
+        #expect(jsonString.contains("\"isSummary\":true"))
     }
+    
+    @Test
+
     
     func testMessageSystemRole() throws {
         let date = Date(timeIntervalSince1970: 1000)
@@ -69,6 +78,6 @@ final class MessageTests: XCTestCase {
         )
         try assertCodable(msg)
         let jsonString = try encodeToString(msg)
-        XCTAssertTrue(jsonString.contains("\"role\":\"system\""))
+        #expect(jsonString.contains("\"role\":\"system\""))
     }
 }

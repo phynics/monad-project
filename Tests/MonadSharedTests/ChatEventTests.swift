@@ -1,8 +1,10 @@
-import XCTest
+import Testing
 @testable import MonadShared
 import Foundation
 
-final class ChatEventTests: XCTestCase {
+@Suite final class ChatEventTests {
+    @Test
+
     func testGenerationCancelledEvent() throws {
         // This should fail to compile after the rename or if I use the new name now
         // But for TDD, I should write something that expects 'generationCancelled'
@@ -18,10 +20,10 @@ final class ChatEventTests: XCTestCase {
             if case .generationCancelled = errorEvent {
                 // Success
             } else {
-                XCTFail("Expected .generationCancelled, got \(errorEvent)")
+                Issue.record("Expected .generationCancelled, got \(errorEvent)")
             }
         } else {
-            XCTFail("Expected .error, got \(decoded)")
+            Issue.record("Expected .error, got \(decoded)")
         }
     }
 }

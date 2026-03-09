@@ -3,10 +3,14 @@ import Logging
 import MonadShared
 import MonadTestSupport
 import OpenAI
-import XCTest
+import Testing
+import Foundation
 
-final class ChatEngineStageTests: XCTestCase {
+@Suite final class ChatEngineStageTests {
     private let logger = Logger(label: "test")
+
+    @Test
+
 
     func testToolExecutionStage_TextFallback() async throws {
         // Given
@@ -19,11 +23,14 @@ final class ChatEngineStageTests: XCTestCase {
         try await stage.process(&context)
 
         // Then
-        XCTAssertEqual(context.toolCallAccumulators.count, 1)
-        XCTAssertEqual(context.toolCallAccumulators[0]?.name, "test_tool")
-        XCTAssertEqual(context.debugToolCalls.count, 1)
-        XCTAssertEqual(context.debugToolCalls[0].name, "test_tool")
+        #expect(context.toolCallAccumulators.count == 1)
+        #expect(context.toolCallAccumulators[0]?.name == "test_tool")
+        #expect(context.debugToolCalls.count == 1)
+        #expect(context.debugToolCalls[0].name == "test_tool")
     }
+
+    @Test
+
 
     func testPersistenceStage_SavesMessage() async throws {
         // Given
@@ -39,8 +46,8 @@ final class ChatEngineStageTests: XCTestCase {
         try await stage.process(&context)
 
         // Then
-        XCTAssertEqual(persistence.messages.count, 1)
-        XCTAssertEqual(persistence.messages[0].content, "Hello world")
+        #expect(persistence.messages.count == 1)
+        #expect(persistence.messages[0].content == "Hello world")
     }
 
     // MARK: - Helpers

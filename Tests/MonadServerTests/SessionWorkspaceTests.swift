@@ -4,15 +4,16 @@ import MonadCore
 @testable import MonadServer
 import MonadShared
 import MonadTestSupport
-import XCTest
+import Testing
+import Foundation
 
-final class SessionWorkspaceTests: XCTestCase {
+@Suite final class SessionWorkspaceTests {
     var persistenceService: PersistenceService!
     var embeddingService: MockEmbeddingService!
     var llmService: MockLLMService!
     var workspaceRoot: URL!
 
-    override func setUp() async throws {
+    init() async throws {
         // Setup in-memory database with full schema for realistic integration testing
         let dbQueue = try DatabaseQueue()
         var migrator = DatabaseMigrator()
@@ -26,6 +27,9 @@ final class SessionWorkspaceTests: XCTestCase {
         workspaceRoot = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
     }
+
+    @Test
+
 
     func testCreateSessionCreatesDedicatedWorkspace() async throws {
         try await withDependencies {
@@ -49,16 +53,16 @@ final class SessionWorkspaceTests: XCTestCase {
             let session = try await timelineManager.createTimeline(title: "Workspace Test Session")
 
             // Assert
-            XCTAssertNotNil(session.primaryWorkspaceId, "Session should have a primary workspace ID")
+            try #require(session.primaryWorkspaceId != nil)
 
             // Verify workspace exists in DB
             let workspace = try await persistenceService.dbQueue.read { db in
                 try WorkspaceReference.fetchOne(db, key: session.primaryWorkspaceId)
             }
 
-            XCTAssertNotNil(workspace, "Primary workspace record should exist in database")
-            XCTAssertEqual(workspace?.hostType, WorkspaceReference.WorkspaceHostType.server, "Primary workspace should be hosted on server")
-            XCTAssertEqual(workspace?.uri.path, "/sessions/\(session.id.uuidString)", "Workspace URI path should match session ID convention")
+            try #require(workspace != nil)
+            #expect(workspace?.hostType == WorkspaceReference.WorkspaceHostType.server)
+            #expect(workspace?.uri.path == "/sessions/\(session.id.uuidString)")
         }
     }
 }

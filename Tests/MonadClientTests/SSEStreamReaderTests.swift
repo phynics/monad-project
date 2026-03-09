@@ -1,4 +1,5 @@
-import XCTest
+import Testing
+import Foundation
 import Logging
 @testable import MonadClient
 import MonadCore
@@ -50,28 +51,27 @@ class MockURLProtocol: URLProtocol, @unchecked Sendable {
     override func stopLoading() {}
 }
 
-final class SSEStreamReaderTests: XCTestCase {
+@Suite(.serialized) final class SSEStreamReaderTests {
     
     var session: URLSession!
     var logger: Logger!
     
-    override func setUp() {
-        super.setUp()
+    init() {
+        // super.setUp()
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockURLProtocol.self]
         session = URLSession(configuration: config)
         logger = Logger(label: "test.sse")
     }
     
-    override func tearDown() {
+    deinit {
         MockURLProtocol.mockEvents = []
         session = nil
-        super.tearDown()
+        // super.tearDown()
     }
     
+    @Test
     func testSSEStreamReader_SingleMessage() async throws {
-        let expectation = XCTestExpectation(description: "Stream completes")
-        
         MockURLProtocol.mockEvents = [
             (0, "data: {\"delta\":{\"event\":{\"generation\":{\"text\":\"Hello\"}}}}\n\n"),
             (0, "data: {\"completion\":{\"event\":\"streamCompleted\"}}\n\n"),
@@ -89,16 +89,12 @@ final class SSEStreamReaderTests: XCTestCase {
             receivedEvents.append(event)
         }
         
-        XCTAssertEqual(receivedEvents.count, 1)
-        XCTAssertEqual(receivedEvents.first?.textContent, "Hello")
-        expectation.fulfill()
-        
-        await fulfillment(of: [expectation], timeout: 2.0)
+        #expect(receivedEvents.count == 1)
+        #expect(receivedEvents.first?.textContent == "Hello")
     }
     
+    @Test
     func testSSEStreamReader_MultipleChunks() async throws {
-        let expectation = XCTestExpectation(description: "Stream completes")
-        
         MockURLProtocol.mockEvents = [
             (0, "data: {\"delta\":{\"event\":{\"generation\":{\"text\":\"Hel\"}}}}\n"),
             (0.01, "\n"),
@@ -118,9 +114,6 @@ final class SSEStreamReaderTests: XCTestCase {
             if let c = event.textContent { contents.append(c) }
         }
         
-        XCTAssertEqual(contents, ["Hel", "lo"])
-        expectation.fulfill()
-        
-        await fulfillment(of: [expectation], timeout: 2.0)
+        #expect(contents == ["Hel", "lo"])
     }
 }

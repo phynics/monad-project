@@ -1,23 +1,27 @@
 import MonadShared
 import MonadCore
-import XCTest
+import Testing
+import Foundation
 import MonadTestSupport
 @testable import MonadServer
 import Dependencies
 
-final class OrphanCleanupServiceTests: XCTestCase {
+@Suite final class OrphanCleanupServiceTests {
     var workspaceRoot: URL!
     var mockPersistence: MockPersistenceService!
 
-    override func setUp() async throws {
+    init() async throws {
         workspaceRoot = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
         mockPersistence = MockPersistenceService()
     }
 
-    override func tearDown() async throws {
+    deinit {
         try? FileManager.default.removeItem(at: workspaceRoot)
     }
+
+    @Test
+
 
     func testCleanupOrphanedWorkspace() async throws {
         // Setup
@@ -62,11 +66,14 @@ final class OrphanCleanupServiceTests: XCTestCase {
         }
 
         // Assert
-        XCTAssertFalse(FileManager.default.fileExists(atPath: orphanPath), "Orphaned workspace directory should be deleted")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: activePath), "Active workspace directory should be preserved")
-        XCTAssertNil(mockPersistence.workspaces.first { $0.id == orphanId }, "Orphaned workspace should be removed from database")
-        XCTAssertNotNil(mockPersistence.workspaces.first { $0.id == activeId }, "Active workspace should be preserved in database")
+        #expect(!(FileManager.default.fileExists(atPath: orphanPath)))
+        #expect(FileManager.default.fileExists(atPath: activePath))
+        #expect(mockPersistence.workspaces.first { $0.id == orphanId } == nil)
+        try #require(mockPersistence.workspaces.first { $0.id == activeId } != nil)
     }
+
+    @Test
+
 
     func testDoNotCleanupUserManagedWorkspace() async throws {
         // Setup
@@ -101,7 +108,7 @@ final class OrphanCleanupServiceTests: XCTestCase {
         }
 
         // Assert
-        XCTAssertTrue(FileManager.default.fileExists(atPath: userWsPath), "User-managed workspace should NOT be deleted from filesystem")
-        XCTAssertNotNil(mockPersistence.workspaces.first { $0.id == userWsId }, "User-managed workspace should NOT be removed from database")
+        #expect(FileManager.default.fileExists(atPath: userWsPath))
+        try #require(mockPersistence.workspaces.first { $0.id == userWsId } != nil)
     }
 }

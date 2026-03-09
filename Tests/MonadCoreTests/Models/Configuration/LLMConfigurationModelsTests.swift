@@ -1,9 +1,9 @@
-import XCTest
+import Testing
 @testable import MonadCore
 @testable import MonadShared
 import Foundation
 
-final class LLMConfigurationModelsTests: XCTestCase {
+@Suite final class LLMConfigurationModelsTests {
     
     // MARK: - Test Helpers
     
@@ -13,8 +13,11 @@ final class LLMConfigurationModelsTests: XCTestCase {
         
         let data = try encoder.encode(value)
         let decoded = try decoder.decode(T.self, from: data)
-        XCTAssertEqual(value, decoded)
+        #expect(value == decoded)
     }
+    
+    @Test
+
     
     func testLLMConfigurationCodable() throws {
         let config = LLMConfiguration(
@@ -33,26 +36,35 @@ final class LLMConfigurationModelsTests: XCTestCase {
         try assertCodable(config)
     }
     
+    @Test
+
+    
     func testLLMConfigurationDefault() {
         let config = LLMConfiguration.default
-        XCTAssertEqual(config.activeProvider, .openAI)
+        #expect(config.activeProvider == .openAI)
     }
     
     // MARK: - LLMProvider
     
+    @Test
+
+    
     func testLLMProviderCodableAndStr() throws {
         let p1 = LLMProvider.openAI
         try assertCodable(p1)
-        XCTAssertEqual(p1.rawValue, "OpenAI")
+        #expect(p1.rawValue == "OpenAI")
         
         let p2 = LLMProvider.openRouter
-        XCTAssertEqual(p2.rawValue, "OpenRouter")
+        #expect(p2.rawValue == "OpenRouter")
         
         let p3 = LLMProvider.ollama
-        XCTAssertEqual(p3.rawValue, "Ollama")
+        #expect(p3.rawValue == "Ollama")
     }
     
     // MARK: - ProviderConfiguration
+    
+    @Test
+
     
     func testProviderConfigurationCodable() throws {
         let config = ProviderConfiguration(
@@ -64,10 +76,13 @@ final class LLMConfigurationModelsTests: XCTestCase {
             toolFormat: .json
         )
         try assertCodable(config)
-        XCTAssertEqual(config.toolFormat, .json)
+        #expect(config.toolFormat == .json)
     }
     
     // MARK: - ToolCallFormat
+    
+    @Test
+
     
     func testToolCallFormatCodable() throws {
         let f1 = ToolCallFormat.openAI

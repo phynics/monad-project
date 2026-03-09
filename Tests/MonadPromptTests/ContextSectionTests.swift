@@ -1,4 +1,5 @@
-import XCTest
+import Testing
+import Foundation
 @testable import MonadPrompt
 
 struct MinimalSection: ContextSection {
@@ -11,45 +12,51 @@ struct MinimalSection: ContextSection {
     }
 }
 
-final class ContextSectionTests: XCTestCase {
+@Suite final class ContextSectionTests {
+    
+    @Test
+
     
     func testDefaultImplementations() async {
         let section = MinimalSection()
         
         // Default strategy should be .keep
         if case .keep = section.strategy { /* expected */ } else {
-            XCTFail("Default strategy should be .keep")
+            Issue.record("Default strategy should be .keep")
         }
         
         // Default type should be .text
         if case .text = section.type { /* expected */ } else {
-            XCTFail("Default type should be .text")
+            Issue.record("Default type should be .text")
         }
         
         // Default render(constrainedTo:) just calls render()
         let constrainedRender = await section.render(constrainedTo: 50)
-        XCTAssertEqual(constrainedRender, "minimal text")
+        #expect(constrainedRender == "minimal text")
     }
+    
+    @Test
+
     
     func testConstrainedSection() async {
         let base = MinimalSection() // size 100
         let constrained = ConstrainedSection(wrapped: base, limit: 50)
         
-        XCTAssertEqual(constrained.id, "min")
-        XCTAssertEqual(constrained.priority, 1)
-        XCTAssertEqual(constrained.estimatedTokens, 50) // capped by limit
+        #expect(constrained.id == "min")
+        #expect(constrained.priority == 1)
+        #expect(constrained.estimatedTokens == 50) // capped by limit
         
         if case .keep = constrained.strategy { /* expected */ } else {
-            XCTFail("Strategy must pass through")
+            Issue.record("Strategy must pass through")
         }
         
         // Nesting constraints
         let doublyConstrained = constrained.constrained(to: 30) as! ConstrainedSection
-        XCTAssertEqual(doublyConstrained.limit, 30)
-        XCTAssertEqual(doublyConstrained.estimatedTokens, 30)
+        #expect(doublyConstrained.limit == 30)
+        #expect(doublyConstrained.estimatedTokens == 30)
         
         // If we constrain to a larger amount, limit should reflect the min
         let largerConstrained = doublyConstrained.constrained(to: 100) as! ConstrainedSection
-        XCTAssertEqual(largerConstrained.limit, 30)
+        #expect(largerConstrained.limit == 30)
     }
 }
