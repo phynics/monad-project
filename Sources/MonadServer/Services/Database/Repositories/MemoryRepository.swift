@@ -88,7 +88,7 @@ public actor MemoryRepository: MemoryStoreProtocol {
     public func updateMemoryEmbedding(id: UUID, newEmbedding: [Double]) async throws {
         try await dbQueue.write { db in
             if var memory = try Memory.fetchOne(db, key: id) {
-                let data = try JSONEncoder().encode(newEmbedding)
+                let data = try JSONSerialization.data(withJSONObject: newEmbedding)
                 if let jsonString = String(data: data, encoding: .utf8) {
                     memory.embedding = jsonString
                     try memory.update(db)
