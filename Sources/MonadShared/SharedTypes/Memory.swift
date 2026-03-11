@@ -27,19 +27,19 @@ public struct Memory: Codable, Identifiable, Sendable, Equatable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
 
-        if let data = try? JSONEncoder().encode(tags), let str = String(data: data, encoding: .utf8) {
+        if let data = try? JSONSerialization.data(withJSONObject: tags), let str = String(data: data, encoding: .utf8) {
             self.tags = str
         } else {
             self.tags = "[]"
         }
 
-        if let data = try? JSONEncoder().encode(metadata), let str = String(data: data, encoding: .utf8) {
+        if let data = try? JSONSerialization.data(withJSONObject: metadata), let str = String(data: data, encoding: .utf8) {
             self.metadata = str
         } else {
             self.metadata = "{}"
         }
 
-        if let data = try? JSONEncoder().encode(embedding), let str = String(data: data, encoding: .utf8) {
+        if let data = try? JSONSerialization.data(withJSONObject: embedding), let str = String(data: data, encoding: .utf8) {
             self.embedding = str
         } else {
             self.embedding = "[]"
@@ -68,7 +68,7 @@ public struct Memory: Codable, Identifiable, Sendable, Equatable {
 
     public var tagArray: [String] {
         guard let data = tags.data(using: .utf8),
-              let array = try? JSONDecoder().decode([String].self, from: data)
+              let array = try? JSONSerialization.jsonObject(with: data) as? [String]
         else {
             return []
         }
@@ -77,7 +77,7 @@ public struct Memory: Codable, Identifiable, Sendable, Equatable {
 
     public var embeddingVector: [Double] {
         guard let data = embedding.data(using: .utf8),
-              let vector = try? JSONDecoder().decode([Double].self, from: data)
+              let vector = try? JSONSerialization.jsonObject(with: data) as? [Double]
         else {
             return []
         }
@@ -86,7 +86,7 @@ public struct Memory: Codable, Identifiable, Sendable, Equatable {
 
     public var metadataDict: [String: String] {
         guard let data = metadata.data(using: .utf8),
-              let dict = try? JSONDecoder().decode([String: String].self, from: data)
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String]
         else {
             return [:]
         }
