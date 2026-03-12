@@ -1,0 +1,3 @@
+## 2024-05-18 - [Optimize JSON collection parsing in Memory struct]
+**Learning:** Swift's `Codable` and `JSONEncoder`/`JSONDecoder` introduce significant overhead when encoding/decoding primitive collections like `[String]`, `[Double]`, and `[String: String]`. In high-frequency O(n) loop structures (like semantic search vector calculations or memory graph expansions) this becomes a bottleneck.
+**Action:** Always favor `JSONSerialization.jsonObject(with:)` and `JSONSerialization.data(withJSONObject:)` over native `Codable` paths when dealing with purely primitive lists and dictionaries in frequently accessed properties or initializers.
