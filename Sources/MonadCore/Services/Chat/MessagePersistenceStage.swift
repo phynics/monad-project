@@ -35,18 +35,20 @@ struct MessagePersistenceStage: PipelineStage {
         let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
 
         return AsyncThrowingStream { continuation in
-            continuation.yield(.generationCompleted(
-                message: assistantMsg.toMessage(),
-                metadata: APIResponseMetadata(
-                    model: context.modelName,
-                    promptTokens: context.streamUsage?.promptTokens,
-                    completionTokens: context.streamUsage?.completionTokens,
-                    totalTokens: context.streamUsage?.totalTokens,
-                    duration: context.turnDuration,
-                    tokensPerSecond: context.tokensPerSecond,
-                    debugSnapshotData: snapshotData
-                )
-            ))
+            if !hasPendingToolCalls {
+                continuation.yield(.generationCompleted(
+                    message: assistantMsg.toMessage(),
+                    metadata: APIResponseMetadata(
+                        model: context.modelName,
+                        promptTokens: context.streamUsage?.promptTokens,
+                        completionTokens: context.streamUsage?.completionTokens,
+                        totalTokens: context.streamUsage?.totalTokens,
+                        duration: context.turnDuration,
+                        tokensPerSecond: context.tokensPerSecond,
+                        debugSnapshotData: snapshotData
+                    )
+                ))
+            }
             continuation.finish()
         }
     }
@@ -70,13 +72,13 @@ struct MessagePersistenceStage: PipelineStage {
             .flatMap { String(bytes: $0, encoding: .utf8) } ?? "[]"
     }
 
-    private func buildDebugSnapshot(from context: ChatTurnContext, hasPendingToolCalls: Bool) -> DebugSnapshot {
+    private func buildDebugSnapshot(from context: ChatTurnContext, hasPendingToolCalls _: Bool) -> DebugSnapshot {
         DebugSnapshot(
             structuredContext: context.structuredContext,
             toolCalls: context.debugToolCalls,
             toolResults: context.debugToolResults,
-            renderedPrompt: hasPendingToolCalls ? nil : ChatEngine.renderMessagesStatic(context.currentMessages),
-            rawOutput: hasPendingToolCalls ? nil : context.accumulatedRawOutput,
+            renderedPrompt: ChatEngine.renderMessagesStatic(context.currentMessages),
+            rawOutput: context.accumulatedRawOutput,
             model: context.modelName,
             turnCount: context.turnCount
         )

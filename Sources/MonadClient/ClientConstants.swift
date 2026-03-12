@@ -10,8 +10,24 @@ public enum ClientConstants {
         .known(id: "grep"),
         .known(id: "search_files"),
         .known(id: "find"),
-        .known(id: "inspect_file"),
-        .known(id: "request_write_access"),
+        .custom(
+            WorkspaceToolDefinition(
+                id: "inspect_file",
+                name: "Inspect File",
+                description: "Determine file type and basic metadata using the unix 'file' command.",
+                parametersSchema: InspectFileTool().parametersSchema
+            )
+        ),
+        .custom(
+            WorkspaceToolDefinition(
+                id: "request_write_access",
+                name: "Request Write Access",
+                description: "Request permission from the user to modify files in the active workspace. "
+                    + "Call this tool when you need to create, write, edit, or delete files "
+                    + "but the workspace is currently in read-only mode.",
+                parametersSchema: RequestWriteAccessTool().parametersSchema
+            )
+        ),
         .custom(
             WorkspaceToolDefinition(
                 id: "dummy_tool",

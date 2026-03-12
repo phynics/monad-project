@@ -63,7 +63,12 @@ public struct DelegatingTool: Tool, ToolReferenceProviding {
             case let .completed(output):
                 return .success(output)
             case .deferredToClient:
-                return .failure("Tool requires client execution — use ToolRouter.handlePendingToolCalls")
+                // This path should never be reached: client tools are dispatched by
+                // handlePendingToolCalls() before DelegatingTool.execute() is called.
+                assertionFailure("DelegatingTool.execute() reached .deferredToClient — this is a logic error")
+                throw ToolError.executionFailed(
+                    "Tool '\(ref.toolId)' must be executed client-side via handlePendingToolCalls"
+                )
             }
         } catch let error as ToolError {
             return .failure(error.localizedDescription)

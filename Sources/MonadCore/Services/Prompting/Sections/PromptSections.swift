@@ -251,8 +251,6 @@ public struct WorkspacesContext: ContextSection {
 
         for ws in allWorkspaces {
             let isPrimary = ws.id == primaryWorkspace?.id
-            let isConnected = isPrimary || connectedClients.contains(ws.ownerId ?? UUID())
-            let statusStr = isConnected ? "🟢 Connected" : "🔴 Disconnected"
 
             output.append("- Workspace ID: `")
             output.append(ws.id.uuidString)
@@ -263,7 +261,7 @@ public struct WorkspacesContext: ContextSection {
             if isPrimary {
                 output.append("Server (Primary)\n")
             } else {
-                output.append("Client (\(statusStr))\n")
+                output.append("Client\n")
             }
 
             if !ws.tools.isEmpty {
@@ -277,11 +275,7 @@ public struct WorkspacesContext: ContextSection {
                     }
                 }
             } else {
-                if !isConnected {
-                    output.append("  Available Tools: Offline. Cannot execute tools on this workspace until client reconnects.\n")
-                } else {
-                    output.append("  Available Tools: None specific to this workspace\n")
-                }
+                output.append("  Available Tools: None specific to this workspace\n")
             }
             if let wsInjection = ws.contextInjection, !wsInjection.isEmpty {
                 output.append("  Workspace Instructions: \(wsInjection)\n")

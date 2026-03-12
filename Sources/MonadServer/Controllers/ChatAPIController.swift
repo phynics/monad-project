@@ -170,16 +170,42 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
     private func resolveTools(timelineId: UUID, clientTools: [ToolReference]?) async -> [AnyTool] {
         var availableTools: [AnyTool] = []
+
+        // Build a fallback lookup from in-memory system tools so .known refs for workspace-registered
+        // filesystem tools (cat, ls, grep, etc.) can be resolved even though SystemToolRegistry only
+        // contains always-on system tools (memory_search, web_search).
+        let inMemoryLookup: [String: WorkspaceToolDefinition]
+        if let toolManager = await timelineManager.getToolManager(for: timelineId) {
+            let systemTools = await toolManager.getAvailableTools()
+            inMemoryLookup = systemTools.reduce(into: [:]) { dict, tool in
+                dict[tool.id] = WorkspaceToolDefinition(
+                    id: tool.id,
+                    name: tool.name,
+                    description: tool.description,
+                    parametersSchema: tool.parametersSchema,
+                    usageExample: tool.usageExample,
+                    requiresPermission: tool.requiresPermission
+                )
+            }
+        } else {
+            inMemoryLookup = [:]
+        }
+
         do {
             let references = try await timelineManager.getAllToolReferences(timelineId: timelineId, clientTools: clientTools)
 
             for ref in references {
                 var def: WorkspaceToolDefinition?
                 switch ref {
-                case let .known(id): def = SystemToolRegistry.shared.getDefinition(for: id)
-                case let .custom(definition): def = definition
+                case let .known(id):
+                    def = SystemToolRegistry.shared.getDefinition(for: id) ?? inMemoryLookup[id]
+                case let .custom(definition):
+                    def = definition
                 }
-                guard let definition = def else { continue }
+                guard let definition = def else {
+                    Logger.module(named: "chat").debug("Skipping tool with no resolvable definition: \(ref.toolId)")
+                    continue
+                }
                 var toolWrapper = AnyTool(DelegatingTool(
                     ref: ref,
                     router: toolRouter,

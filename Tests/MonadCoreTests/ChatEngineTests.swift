@@ -83,9 +83,9 @@ struct ChatEngineTests {
             let events = try await collect(stream)
 
             // Should have meta.generationContext, delta.generation, and completion.generationCompleted
-            #expect(events.contains(where: { if case .meta(event: .generationContext(metadata: _)) = $0 { return true }; return false }))
+            #expect(events.contains(where: { if case .meta(event: .generationContext) = $0 { return true }; return false }))
             #expect(events.contains(where: { if case let .delta(event: .generation(text: text)) = $0 { return text == "Hello, world!" }; return false }))
-            #expect(events.contains(where: { if case .completion(event: .generationCompleted(message: _, metadata: _)) = $0 { return true }; return false }))
+            #expect(events.contains(where: { if case .completion(event: .generationCompleted) = $0 { return true }; return false }))
         }
     }
 
@@ -351,7 +351,7 @@ struct ChatEngineTests {
             // Set up responses for both turns
             mockLLM.mockClient.nextResponses = [
                 "<tool_call>{\"name\":\"mock_tool\",\"arguments\":{}}</tool_call>",
-                "Fallback worked",
+                "Fallback worked"
             ]
 
             let stream = try await engine.execute(
@@ -387,7 +387,7 @@ struct ChatEngineTests {
             mockLLM.mockClient.nextToolCalls = [
                 [["id": "c1", "function": ["name": "mock_tool", "arguments": "{}"]]],
                 [["id": "c2", "function": ["name": "mock_tool", "arguments": "{}"]]],
-                [["id": "c3", "function": ["name": "mock_tool", "arguments": "{}"]]],
+                [["id": "c3", "function": ["name": "mock_tool", "arguments": "{}"]]]
             ]
             mockLLM.mockClient.nextResponses = ["", "", ""]
 
@@ -407,8 +407,13 @@ struct ChatEngineTests {
             }
             #expect(successEvents.count == 2)
 
-            // Should finish cleanly without error
-            #expect(events.contains(where: { if case .completion(event: .generationCompleted) = $0 { return true }; return false }))
+            // maxTurns exhausted while tool calls were pending — no generationCompleted is emitted.
+            // Verify the stream finished cleanly (no thrown error — collect would throw if it did).
+            let completionCount = events.filter {
+                if case .completion(event: .generationCompleted) = $0 { return true }
+                return false
+            }.count
+            #expect(completionCount == 0)
         }
     }
 
@@ -529,7 +534,7 @@ struct ChatEngineTests {
             let mockTool = MockTool()
             mockLLM.mockClient.nextToolCalls = [[
                 ["id": "c1", "function": ["name": "mock_tool", "arguments": "{}"]],
-                ["id": "c2", "function": ["name": "mock_tool", "arguments": "{}"]],
+                ["id": "c2", "function": ["name": "mock_tool", "arguments": "{}"]]
             ]]
             mockLLM.mockClient.nextResponses = ["", "Both done"]
 
@@ -585,8 +590,10 @@ struct ChatEngineTests {
             )
 
             let events = try await collect(stream)
+            // Turn 1 had pending tool calls — no generationCompleted emitted.
+            // Turn 2 was a clean text response — exactly one generationCompleted emitted.
             let count = events.filter { if case .completion(event: .generationCompleted) = $0 { return true }; return false }.count
-            #expect(count == 2)
+            #expect(count == 1)
         }
     }
 

@@ -109,8 +109,7 @@ extension ChatEngine {
 
         var clientName: String?
         if let ownerId = workspaces?.primary?.ownerId,
-           let client = try? await clientStore.fetchClient(id: ownerId)
-        {
+           let client = try? await clientStore.fetchClient(id: ownerId) {
             clientName = client.displayName
         }
 

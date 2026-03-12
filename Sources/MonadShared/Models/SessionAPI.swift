@@ -38,6 +38,7 @@ public struct TimelineResponse: Codable, Sendable, Identifiable {
     public let workingDirectory: String?
     public let primaryWorkspaceId: UUID?
     public let attachedWorkspaceIds: [UUID]
+    public let attachedAgentInstanceId: UUID?
 
     public init(
         id: UUID,
@@ -48,7 +49,8 @@ public struct TimelineResponse: Codable, Sendable, Identifiable {
         tags: [String],
         workingDirectory: String?,
         primaryWorkspaceId: UUID?,
-        attachedWorkspaceIds: [UUID]
+        attachedWorkspaceIds: [UUID],
+        attachedAgentInstanceId: UUID?
     ) {
         self.id = id
         self.title = title
@@ -59,6 +61,7 @@ public struct TimelineResponse: Codable, Sendable, Identifiable {
         self.workingDirectory = workingDirectory
         self.primaryWorkspaceId = primaryWorkspaceId
         self.attachedWorkspaceIds = attachedWorkspaceIds
+        self.attachedAgentInstanceId = attachedAgentInstanceId
     }
 
     public init(id: UUID, title: String?) {
@@ -71,6 +74,7 @@ public struct TimelineResponse: Codable, Sendable, Identifiable {
         workingDirectory = nil
         primaryWorkspaceId = nil
         attachedWorkspaceIds = []
+        attachedAgentInstanceId = nil
     }
 }
 

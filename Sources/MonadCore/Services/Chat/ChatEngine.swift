@@ -84,12 +84,12 @@ public final class ChatEngine: @unchecked Sendable {
         let sid = ANSIColors.colorize(timelineId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
         logger.info("Starting chat stream for timeline \(sid)")
 
+        guard await llmService.isConfigured else { throw ChatEngineError.llmServiceNotConfigured }
+
         try await saveConversationSteps(timelineId: timelineId, message: message, toolOutputs: toolOutputs)
 
         let history = try await timelineManager.getHistory(for: timelineId)
         let contextData = await fetchContext(contextManager: contextManager, message: message, history: history)
-
-        guard await llmService.isConfigured else { throw ChatEngineError.llmServiceNotConfigured }
 
         let turnInput = TurnInitInput(
             timelineId: timelineId, message: message, tools: tools,
@@ -156,10 +156,7 @@ public final class ChatEngine: @unchecked Sendable {
             if signal == .stop { return }
         }
 
-        continuation.yield(.generationCompleted(
-            message: Message(timestamp: Date(), content: "", role: .assistant, isSummary: true),
-            metadata: APIResponseMetadata(model: session.modelName, duration: 0, tokensPerSecond: 0)
-        ))
+        logger.warning("Max turns (\(session.maxTurns)) reached for timeline \(session.timelineId)")
         continuation.finish()
     }
 
@@ -187,10 +184,12 @@ public final class ChatEngine: @unchecked Sendable {
                 state: state,
                 continuation: continuation
             )
+        } catch is CancellationError {
+            continuation.yield(.generationCancelled())
+            continuation.finish()
+            return .stop
         } catch {
-            if !(error is CancellationError) {
-                logger.error("Error in chat loop turn \(state.turnCount): \(error)")
-            }
+            logger.error("Error in chat loop turn \(state.turnCount): \(error)")
             continuation.finish(throwing: error)
             return .stop
         }

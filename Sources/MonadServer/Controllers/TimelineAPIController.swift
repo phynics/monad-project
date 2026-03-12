@@ -44,7 +44,8 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
             tags: timeline.tagArray,
             workingDirectory: timeline.workingDirectory,
             primaryWorkspaceId: timeline.primaryWorkspaceId,
-            attachedWorkspaceIds: timeline.attachedWorkspaces
+            attachedWorkspaceIds: timeline.attachedWorkspaces,
+            attachedAgentInstanceId: timeline.attachedAgentInstanceId
         )
         return try response.response(status: .created, from: request, context: context)
     }
@@ -77,7 +78,8 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
                 tags: timeline.tagArray,
                 workingDirectory: timeline.workingDirectory,
                 primaryWorkspaceId: timeline.primaryWorkspaceId,
-                attachedWorkspaceIds: timeline.attachedWorkspaces
+                attachedWorkspaceIds: timeline.attachedWorkspaces,
+                attachedAgentInstanceId: timeline.attachedAgentInstanceId
             )
         }
 
@@ -101,7 +103,8 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
                      tags: dbTimeline.tagArray,
                      workingDirectory: dbTimeline.workingDirectory,
                      primaryWorkspaceId: dbTimeline.primaryWorkspaceId,
-                     attachedWorkspaceIds: dbTimeline.attachedWorkspaces
+                     attachedWorkspaceIds: dbTimeline.attachedWorkspaces,
+                     attachedAgentInstanceId: dbTimeline.attachedAgentInstanceId
                  )
              }
              throw HTTPError(.notFound)
@@ -116,7 +119,8 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
             tags: timeline.tagArray,
             workingDirectory: timeline.workingDirectory,
             primaryWorkspaceId: timeline.primaryWorkspaceId,
-            attachedWorkspaceIds: timeline.attachedWorkspaces
+            attachedWorkspaceIds: timeline.attachedWorkspaces,
+            attachedAgentInstanceId: timeline.attachedAgentInstanceId
         )
     }
 

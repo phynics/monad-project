@@ -4,6 +4,8 @@ import OpenAI
 
 /// Internal state container for a single chat turn as it moves through the pipeline.
 final class ChatTurnContext: @unchecked Sendable {
+    // SAFETY: Pipeline stages execute sequentially (each stage completes before the next begins).
+    // No concurrent mutation of var fields occurs, making @unchecked Sendable correct here.
     let timelineId: UUID
     let agentInstanceId: UUID?
     let modelName: String

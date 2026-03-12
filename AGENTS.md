@@ -20,6 +20,13 @@ swift run MonadServer                # Start server
 swift run MonadCLI chat              # Interactive CLI
 ```
 
+**WebApp:**
+```bash
+cd webapp
+npm install                          # Install dependencies
+npm run dev                          # Start dev server
+```
+
 ## Code Quality & Linting
 
 SwiftLint enforces code style and quality. Common violations and fixes:
@@ -90,6 +97,7 @@ Six targets with strict dependency hierarchy:
 4. **MonadServer** — Hummingbird REST API, SSE streaming, GRDB persistence, WebSocket, service lifecycle.
 5. **MonadClient** — Core HTTP/SSE networking layer and base client. Exposes `chat` and `workspace` facades for domain-specific operations.
 6. **MonadCLI** — Command-line interface with slash commands.
+7. **WebApp** — React (TypeScript) PoC client for the Monad server, located in `webapp/`. Built with Vite.
 
 > For detailed model layout and service organization, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** and **[docs/INDEX.md](docs/INDEX.md)**.
 
@@ -102,13 +110,11 @@ Six targets with strict dependency hierarchy:
 
 ## Critical Conventions
 
-### Error Handling (Gradual Rollout)
-- We are adopting [ErrorKit](https://github.com/FlineDev/ErrorKit) for structured error handling across the codebase.
-- **New errors** should conform to `Throwable` (from ErrorKit) instead of plain `Error`.
-- **Existing errors** are being migrated incrementally — do not refactor error types en masse, only convert them when already touching the file.
-- Use ErrorKit's built-in types (`NetworkError`, `DatabaseError`, `FileError`, `ValidationError`, `GenericError`, etc.) where they fit.
+### Error Handling
+- We use [ErrorKit](https://github.com/FlineDev/ErrorKit) for structured error handling across the codebase.
+- Major error enums conform to `Throwable` (from ErrorKit).
 - Prefer `userFriendlyMessage` over `localizedDescription` when surfacing errors to users or logs.
-- The `Catching` protocol (for wrapping nested errors) should be used in types that propagate errors from sub-layers.
+- Technical details should still be available via `errorDescription`.
 
 ### Concurrency
 - Use `AsyncThrowingStream` for streaming/progress (not callbacks)
@@ -138,7 +144,7 @@ Six targets with strict dependency hierarchy:
 - Timelines can have **attached workspaces** (shared project directories)
 - Workspace types: `WorkspaceReference` (metadata), `WorkspaceProtocol` (interface), `WorkspaceURI` (identifier)
 - Host types: `.server`, `.client`
-- Trust levels: `.full`, `.restricted`
+- Trust levels: `.full`, `.readOnly`
 - Tool provenance labels: `[System]`, `[Workspace: Name]`, `[Session]`
 
 ### Logging
@@ -155,7 +161,7 @@ Six targets with strict dependency hierarchy:
 - `MONAD_API_KEY` — API key for LLM access
 - `MONAD_VERBOSE=true` — Enable verbose logging
 
-## System Tools (18 implemented)
+## System Tools (17 implemented)
 
 **Filesystem (7):**
 - `cd`, `find`, `inspect_file`, `ls`, `cat`, `grep`, `search_files`
@@ -172,8 +178,8 @@ Six targets with strict dependency hierarchy:
 **Job Queue (1):**
 - `BackgroundJobQueueGatewayTool`
 
-**Client (1):**
-- `AskAttachPWDTool`
+**Permission (1):**
+- `request_write_access`
 
 **Context (1):**
 - `ContextTool` (marker protocol)

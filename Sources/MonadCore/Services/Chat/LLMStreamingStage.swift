@@ -92,7 +92,7 @@ struct LLMStreamingStage: PipelineStage {
                     context.tokensPerSecond = context.turnDuration > 0
                         ? Double(completionTokens) / context.turnDuration : nil
 
-                    if Task.isCancelled { throw CancellationError() }
+                    // Task cancellation after natural stream completion is not an error.
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
