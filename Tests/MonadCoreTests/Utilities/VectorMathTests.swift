@@ -5,6 +5,20 @@ import Foundation
 
 @Suite final class VectorMathTests {
     
+    // MARK: - Magnitude
+
+    @Test
+    func testMagnitude() {
+        let v1 = [3.0, 4.0]
+        #expect(abs(VectorMath.magnitude(v1) - 5.0) < 0.000001)
+
+        let v2 = [0.0, 0.0]
+        #expect(VectorMath.magnitude(v2) == 0.0)
+
+        let v3: [Double] = []
+        #expect(VectorMath.magnitude(v3) == 0.0)
+    }
+
     // MARK: - Cosine Similarity
     
     @Test
@@ -71,6 +85,22 @@ import Foundation
         
         let sim = VectorMath.cosineSimilarity(v1, v2)
         #expect(sim == 0.0)
+    }
+
+    @Test
+    func testCosineSimilarityWithPrecalculatedMagnitude() {
+        let v1 = [1.0, 2.0, 3.0]
+        let v2 = [1.0, 2.0, 3.0]
+
+        let magA = VectorMath.magnitude(v1)
+        let sim = VectorMath.cosineSimilarity(v1, v2, magnitudeA: magA)
+        #expect(abs(sim - 1.0) < 0.000001)
+
+        let v3 = [1.0, 0.0]
+        let v4 = [0.0, 1.0]
+        let magA2 = VectorMath.magnitude(v3)
+        let sim2 = VectorMath.cosineSimilarity(v3, v4, magnitudeA: magA2)
+        #expect(sim2 == 0.0)
     }
     
     // MARK: - Normalization

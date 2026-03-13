@@ -1,0 +1,3 @@
+## 2024-05-19 - Vector Math Loop Hoisting
+**Learning:** In applications doing repeated cosine similarity calculations against a fixed query vector (like semantic search), recalculating the magnitude of the query vector every iteration inside the `cosineSimilarity` function introduces significant redundant computation. Apple's Accelerate framework (`vDSP_svesqD`) is fast, but avoiding the O(N) magnitude calculation per vector is faster.
+**Action:** When performing 1-to-many similarity searches, pre-calculate the magnitude of the query vector *once* outside the loop, and pass it to an overloaded `cosineSimilarity` function.
