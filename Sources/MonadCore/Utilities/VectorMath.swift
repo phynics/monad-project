@@ -4,6 +4,16 @@ import Accelerate
 
 /// Shared math utilities for vector operations using Apple's Accelerate framework
 public enum VectorMath {
+    /// Calculate the Euclidean norm (magnitude) of a vector
+    /// - Parameter vector: The vector to calculate the magnitude for
+    /// - Returns: The magnitude of the vector
+    public static func magnitude(_ vector: [Double]) -> Double {
+        guard !vector.isEmpty else { return 0.0 }
+        var sumSq: Double = 0.0
+        vDSP_svesqD(vector, 1, &sumSq, vDSP_Length(vector.count))
+        return sqrt(sumSq)
+    }
+
     /// Calculate cosine similarity between two vectors
     /// - Parameters:
     ///   - vectorA: First vector
@@ -11,20 +21,27 @@ public enum VectorMath {
     /// - Returns: Similarity score from -1.0 to 1.0 (0.0 if invalid)
     public static func cosineSimilarity(_ vectorA: [Double], _ vectorB: [Double]) -> Double {
         guard vectorA.count == vectorB.count, !vectorA.isEmpty else { return 0.0 }
+        let magA = magnitude(vectorA)
+        return cosineSimilarity(vectorA, vectorB, magnitudeA: magA)
+    }
+
+    /// Calculate cosine similarity with a pre-calculated magnitude for the first vector
+    /// Useful for optimizing loops where vectorA remains constant
+    /// - Parameters:
+    ///   - vectorA: First vector
+    ///   - vectorB: Second vector
+    ///   - magnitudeA: Pre-calculated magnitude of vectorA
+    /// - Returns: Similarity score from -1.0 to 1.0 (0.0 if invalid)
+    public static func cosineSimilarity(_ vectorA: [Double], _ vectorB: [Double], magnitudeA: Double) -> Double {
+        guard vectorA.count == vectorB.count, !vectorA.isEmpty, magnitudeA > 0 else { return 0.0 }
 
         var dotProduct: Double = 0.0
         vDSP_dotprD(vectorA, 1, vectorB, 1, &dotProduct, vDSP_Length(vectorA.count))
 
-        var sumSqA: Double = 0.0
-        vDSP_svesqD(vectorA, 1, &sumSqA, vDSP_Length(vectorA.count))
+        let magnitudeB = magnitude(vectorB)
+        guard magnitudeB > 0 else { return 0.0 }
 
-        var sumSqB: Double = 0.0
-        vDSP_svesqD(vectorB, 1, &sumSqB, vDSP_Length(vectorB.count))
-
-        let magnitudes = sqrt(sumSqA) * sqrt(sumSqB)
-        guard magnitudes > 0 else { return 0.0 }
-
-        return dotProduct / magnitudes
+        return dotProduct / (magnitudeA * magnitudeB)
     }
 
     /// Normalize a vector to unit length
