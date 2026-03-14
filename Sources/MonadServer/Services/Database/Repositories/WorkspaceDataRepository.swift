@@ -1,7 +1,7 @@
+import Foundation
 import GRDB
 import MonadCore
 import MonadShared
-import Foundation
 
 public actor WorkspaceDataRepository: WorkspacePersistenceProtocol {
     private let dbQueue: DatabaseQueue
@@ -16,12 +16,6 @@ public actor WorkspaceDataRepository: WorkspacePersistenceProtocol {
         }
     }
 
-    public func fetchWorkspace(id: UUID) async throws -> WorkspaceReference? {
-        try await dbQueue.read { db in
-            try WorkspaceReference.fetchOne(db, key: id)
-        }
-    }
-
     public func fetchAllWorkspaces() async throws -> [WorkspaceReference] {
         try await dbQueue.read { db in
             try WorkspaceReference.fetchAll(db)
@@ -30,43 +24,7 @@ public actor WorkspaceDataRepository: WorkspacePersistenceProtocol {
 
     public func deleteWorkspace(id: UUID) async throws {
         _ = try await dbQueue.write { db in
-             try WorkspaceReference.deleteOne(db, key: id)
-        }
-    }
-
-    public func addToolToWorkspace(workspaceId: UUID, tool: ToolReference) async throws {
-        try await dbQueue.write { db in
-            guard try WorkspaceReference.exists(db, key: workspaceId) else {
-                throw ToolError.workspaceNotFound(workspaceId)
-            }
-            let workspaceTool = try WorkspaceTool(workspaceId: workspaceId, toolReference: tool)
-            try workspaceTool.insert(db)
-        }
-    }
-
-    public func syncTools(workspaceId: UUID, tools: [ToolReference]) async throws {
-        try await dbQueue.write { db in
-            guard try WorkspaceReference.exists(db, key: workspaceId) else {
-                throw ToolError.workspaceNotFound(workspaceId)
-            }
-
-            let incomingIds = Set(tools.map { $0.toolId })
-
-            let existing = try WorkspaceTool
-                .filter(Column("workspaceId") == workspaceId)
-                .fetchAll(db)
-
-            for record in existing where !incomingIds.contains(record.toolId) {
-                try record.delete(db)
-            }
-
-            let existingIds = Set(existing.map { $0.toolId })
-            for tool in tools {
-                if !existingIds.contains(tool.toolId) {
-                    let workspaceTool = try WorkspaceTool(workspaceId: workspaceId, toolReference: tool)
-                    try workspaceTool.insert(db)
-                }
-            }
+            try WorkspaceReference.deleteOne(db, key: id)
         }
     }
 
@@ -81,20 +39,8 @@ public actor WorkspaceDataRepository: WorkspacePersistenceProtocol {
                     .filter(Column("workspaceId") == id)
                     .fetchAll(db)
 
-                let toolRefs = workspaceTools.compactMap { try? $0.toToolReference() }
-
-                return WorkspaceReference(
-                    id: workspace.id,
-                    uri: workspace.uri,
-                    hostType: workspace.hostType,
-                    ownerId: workspace.ownerId,
-                    tools: toolRefs,
-                    rootPath: workspace.rootPath,
-                    trustLevel: workspace.trustLevel,
-                    lastModifiedBy: workspace.lastModifiedBy,
-                    status: workspace.status,
-                    createdAt: workspace.createdAt
-                )
+                let toolRefs = try workspaceTools.map { try $0.toToolReference() }
+                return workspace.withTools(toolRefs)
             }
             return workspace
         }

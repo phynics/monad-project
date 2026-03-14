@@ -135,7 +135,8 @@ public actor TimelineManager {
     /// - Returns: The newly created `Timeline`.
     public func createTimeline(title: String = "New Conversation")
         async throws
-        -> Timeline {
+        -> Timeline
+    {
         let timelineId = UUID()
 
         let timelineWorkspaceURL = workspaceRoot.appendingPathComponent(
@@ -327,7 +328,7 @@ public actor TimelineManager {
     public func getAgentSystemInstructions(for timelineId: UUID) async -> String? {
         guard let agent = await getAttachedAgentInstance(for: timelineId),
               let workspaceId = agent.primaryWorkspaceId,
-              let workspace = try? await workspaceStore.fetchWorkspace(id: workspaceId),
+              let workspace = try? await workspaceStore.fetchWorkspace(id: workspaceId, includeTools: false),
               let rootPath = workspace.rootPath
         else { return nil }
 

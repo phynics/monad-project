@@ -1,6 +1,6 @@
-import MonadShared
-import Foundation
 import Dependencies
+import Foundation
+import MonadShared
 
 /// Repository for managing Workspace data persistence and business logic.
 public actor WorkspaceRepository {
@@ -33,7 +33,8 @@ public actor WorkspaceRepository {
     /// Creates a new agent workspace and seeds it with template files.
     public func createAgentWorkspace(
         instanceId: UUID,
-        template: AgentTemplate? = nil
+        template: AgentTemplate? = nil,
+        metadata: [String: AnyCodable] = [:]
     ) async throws -> WorkspaceReference {
         // 1. Create workspace directory
         let agentWorkspaceURL = workspaceRoot
@@ -64,7 +65,8 @@ public actor WorkspaceRepository {
         return try await createWorkspace(
             uri: .agentWorkspace(instanceId),
             hostType: .server,
-            rootPath: agentWorkspaceURL.path
+            rootPath: agentWorkspaceURL.path,
+            metadata: metadata
         )
     }
 
@@ -80,7 +82,10 @@ public actor WorkspaceRepository {
 
     /// Deletes a workspace.
     public func deleteWorkspace(id: UUID, deleteDirectory: Bool = false) async throws {
-        if deleteDirectory, let workspace = try await getWorkspace(id: id, includeTools: false), let rootPath = workspace.rootPath {
+        if deleteDirectory,
+           let workspace = try await getWorkspace(id: id, includeTools: false),
+           let rootPath = workspace.rootPath
+        {
             let url = URL(fileURLWithPath: rootPath)
             if FileManager.default.fileExists(atPath: url.path) {
                 try FileManager.default.removeItem(at: url)

@@ -121,107 +121,294 @@ public extension DependencyValues {
 
 public struct UnconfiguredDatabaseManager: HealthCheckable {
     public init() {}
-    private func fail() -> Never { fatalError("DatabaseManager not configured.") }
-    public func getHealthStatus() async -> HealthStatus { .down }
-    public func getHealthDetails() async -> [String: String]? { ["error": "Unconfigured"] }
-    public func checkHealth() async -> HealthStatus { .down }
+    private func fail() -> Never {
+        fatalError("DatabaseManager not configured.")
+    }
+
+    public func getHealthStatus() async -> HealthStatus {
+        .down
+    }
+
+    public func getHealthDetails() async -> [String: String]? {
+        ["error": "Unconfigured"]
+    }
+
+    public func checkHealth() async -> HealthStatus {
+        .down
+    }
 }
 
 public struct UnconfiguredAgentInstanceStore: AgentInstanceStoreProtocol {
     public init() {}
-    private func fail() -> Never { fatalError("AgentInstanceStore not configured.") }
-    public func saveAgentInstance(_: AgentInstance) async throws { fail() }
-    public func fetchAgentInstance(id _: UUID) async throws -> AgentInstance? { fail() }
-    public func fetchAllAgentInstances() async throws -> [AgentInstance] { fail() }
-    public func deleteAgentInstance(id _: UUID) async throws { fail() }
-    public func fetchTimelines(attachedToAgent _: UUID) async throws -> [Timeline] { fail() }
+    private func fail() -> Never {
+        fatalError("AgentInstanceStore not configured.")
+    }
+
+    public func saveAgentInstance(_: AgentInstance) async throws {
+        fail()
+    }
+
+    public func fetchAgentInstance(id _: UUID) async throws -> AgentInstance? {
+        fail()
+    }
+
+    public func fetchAllAgentInstances() async throws -> [AgentInstance] {
+        fail()
+    }
+
+    public func deleteAgentInstance(id _: UUID) async throws {
+        fail()
+    }
+
+    public func fetchTimelines(attachedToAgent _: UUID) async throws -> [Timeline] {
+        fail()
+    }
 }
 
 public struct UnconfiguredBackgroundJobStore: BackgroundJobStoreProtocol {
     public init() {}
-    private func fail() -> Never { fatalError("BackgroundJobStore not configured.") }
-    public func saveJob(_: BackgroundJob) async throws { fail() }
-    public func fetchJob(id _: UUID) async throws -> BackgroundJob? { fail() }
-    public func fetchAllJobs() async throws -> [BackgroundJob] { fail() }
-    public func fetchJobs(for _: UUID) async throws -> [BackgroundJob] { fail() }
-    public func fetchPendingJobs(limit _: Int) async throws -> [BackgroundJob] { fail() }
-    public func deleteJob(id _: UUID) async throws { fail() }
-    public func monitorJobs() async -> AsyncStream<BackgroundJobEvent> { fail() }
+    private func fail() -> Never {
+        fatalError("BackgroundJobStore not configured.")
+    }
+
+    public func saveJob(_: BackgroundJob) async throws {
+        fail()
+    }
+
+    public func fetchJob(id _: UUID) async throws -> BackgroundJob? {
+        fail()
+    }
+
+    public func fetchAllJobs() async throws -> [BackgroundJob] {
+        fail()
+    }
+
+    public func fetchJobs(for _: UUID) async throws -> [BackgroundJob] {
+        fail()
+    }
+
+    public func fetchPendingJobs(limit _: Int) async throws -> [BackgroundJob] {
+        fail()
+    }
+
+    public func deleteJob(id _: UUID) async throws {
+        fail()
+    }
+
+    public func monitorJobs() async -> AsyncStream<BackgroundJobEvent> {
+        fail()
+    }
 }
 
 public struct UnconfiguredClientStore: ClientStoreProtocol {
     public init() {}
-    private func fail() -> Never { fatalError("ClientStore not configured.") }
-    public func saveClient(_: ClientIdentity) async throws { fail() }
-    public func fetchClient(id _: UUID) async throws -> ClientIdentity? { fail() }
-    public func fetchAllClients() async throws -> [ClientIdentity] { fail() }
-    public func deleteClient(id _: UUID) async throws -> Bool { fail() }
-    public func fetchClientTools(clientId _: UUID) async throws -> [ToolReference] { fail() }
+    private func fail() -> Never {
+        fatalError("ClientStore not configured.")
+    }
+
+    public func saveClient(_: ClientIdentity) async throws {
+        fail()
+    }
+
+    public func fetchClient(id _: UUID) async throws -> ClientIdentity? {
+        fail()
+    }
+
+    public func fetchAllClients() async throws -> [ClientIdentity] {
+        fail()
+    }
+
+    public func deleteClient(id _: UUID) async throws -> Bool {
+        fail()
+    }
+
+    public func fetchClientTools(clientId _: UUID) async throws -> [ToolReference] {
+        fail()
+    }
 }
 
 public struct UnconfiguredAgentTemplateStore: AgentTemplateStoreProtocol {
     public init() {}
-    private func fail() -> Never { fatalError("AgentTemplateStore not configured.") }
-    public func saveAgentTemplate(_: AgentTemplate) async throws { fail() }
-    public func fetchAgentTemplate(id _: UUID) async throws -> AgentTemplate? { fail() }
-    public func fetchAgentTemplate(key _: String) async throws -> AgentTemplate? { fail() }
-    public func fetchAllAgentTemplates() async throws -> [AgentTemplate] { fail() }
-    public func hasAgentTemplate(id _: String) async -> Bool { fail() }
+    private func fail() -> Never {
+        fatalError("AgentTemplateStore not configured.")
+    }
+
+    public func saveAgentTemplate(_: AgentTemplate) async throws {
+        fail()
+    }
+
+    public func fetchAgentTemplate(id _: UUID) async throws -> AgentTemplate? {
+        fail()
+    }
+
+    public func fetchAgentTemplate(key _: String) async throws -> AgentTemplate? {
+        fail()
+    }
+
+    public func fetchAllAgentTemplates() async throws -> [AgentTemplate] {
+        fail()
+    }
+
+    public func hasAgentTemplate(id _: String) async -> Bool {
+        fail()
+    }
 }
 
 public struct UnconfiguredMemoryStore: MemoryStoreProtocol {
     public init() {}
-    private func fail() -> Never { fatalError("MemoryStore not configured.") }
-    public func saveMemory(_: Memory, policy _: MemorySavePolicy) async throws -> UUID { fail() }
-    public func fetchMemory(id _: UUID) async throws -> Memory? { fail() }
-    public func fetchAllMemories() async throws -> [Memory] { fail() }
-    public func searchMemories(query _: String) async throws -> [Memory] { fail() }
-    public func searchMemories(embedding _: [Double], limit _: Int, minSimilarity _: Double) async throws -> [(memory: Memory, similarity: Double)] { fail() }
-    public func searchMemories(matchingAnyTag _: [String]) async throws -> [Memory] { fail() }
-    public func deleteMemory(id _: UUID) async throws { fail() }
-    public func updateMemory(_: Memory) async throws { fail() }
-    public func updateMemoryEmbedding(id _: UUID, newEmbedding _: [Double]) async throws { fail() }
-    public func vacuumMemories(threshold _: Double) async throws -> Int { fail() }
-    public func pruneMemories(matching _: String, dryRun _: Bool) async throws -> Int { fail() }
-    public func pruneMemories(olderThan _: TimeInterval, dryRun _: Bool) async throws -> Int { fail() }
+    private func fail() -> Never {
+        fatalError("MemoryStore not configured.")
+    }
+
+    public func saveMemory(_: Memory, policy _: MemorySavePolicy) async throws -> UUID {
+        fail()
+    }
+
+    public func fetchMemory(id _: UUID) async throws -> Memory? {
+        fail()
+    }
+
+    public func fetchAllMemories() async throws -> [Memory] {
+        fail()
+    }
+
+    public func searchMemories(query _: String) async throws -> [Memory] {
+        fail()
+    }
+
+    public func searchMemories(embedding _: [Double], limit _: Int, minSimilarity _: Double) async throws -> [(memory: Memory, similarity: Double)] {
+        fail()
+    }
+
+    public func searchMemories(matchingAnyTag _: [String]) async throws -> [Memory] {
+        fail()
+    }
+
+    public func deleteMemory(id _: UUID) async throws {
+        fail()
+    }
+
+    public func updateMemory(_: Memory) async throws {
+        fail()
+    }
+
+    public func updateMemoryEmbedding(id _: UUID, newEmbedding _: [Double]) async throws {
+        fail()
+    }
+
+    public func vacuumMemories(threshold _: Double) async throws -> Int {
+        fail()
+    }
+
+    public func pruneMemories(matching _: String, dryRun _: Bool) async throws -> Int {
+        fail()
+    }
+
+    public func pruneMemories(olderThan _: TimeInterval, dryRun _: Bool) async throws -> Int {
+        fail()
+    }
 }
 
 public struct UnconfiguredMessageStore: MessageStoreProtocol {
     public init() {}
-    private func fail() -> Never { fatalError("MessageStore not configured.") }
-    public func saveMessage(_: ConversationMessage) async throws { fail() }
-    public func fetchMessages(for _: UUID) async throws -> [ConversationMessage] { fail() }
-    public func deleteMessages(for _: UUID) async throws { fail() }
-    public func pruneMessages(olderThan _: TimeInterval, dryRun _: Bool) async throws -> Int { fail() }
+    private func fail() -> Never {
+        fatalError("MessageStore not configured.")
+    }
+
+    public func saveMessage(_: ConversationMessage) async throws {
+        fail()
+    }
+
+    public func fetchMessages(for _: UUID) async throws -> [ConversationMessage] {
+        fail()
+    }
+
+    public func deleteMessages(for _: UUID) async throws {
+        fail()
+    }
+
+    public func pruneMessages(olderThan _: TimeInterval, dryRun _: Bool) async throws -> Int {
+        fail()
+    }
 }
 
 public struct UnconfiguredTimelinePersistence: TimelinePersistenceProtocol {
     public init() {}
-    private func fail() -> Never { fatalError("TimelinePersistence not configured.") }
-    public func saveTimeline(_: Timeline) async throws { fail() }
-    public func fetchTimeline(id _: UUID) async throws -> Timeline? { fail() }
-    public func fetchAllTimelines(includeArchived _: Bool) async throws -> [Timeline] { fail() }
-    public func deleteTimeline(id _: UUID) async throws { fail() }
-    public func pruneTimelines(olderThan _: TimeInterval, excluding _: [UUID], dryRun _: Bool) async throws -> Int { fail() }
+    private func fail() -> Never {
+        fatalError("TimelinePersistence not configured.")
+    }
+
+    public func saveTimeline(_: Timeline) async throws {
+        fail()
+    }
+
+    public func fetchTimeline(id _: UUID) async throws -> Timeline? {
+        fail()
+    }
+
+    public func fetchAllTimelines(includeArchived _: Bool) async throws -> [Timeline] {
+        fail()
+    }
+
+    public func deleteTimeline(id _: UUID) async throws {
+        fail()
+    }
+
+    public func pruneTimelines(olderThan _: TimeInterval, excluding _: [UUID], dryRun _: Bool) async throws -> Int {
+        fail()
+    }
 }
 
 public struct UnconfiguredToolPersistence: ToolPersistenceProtocol {
     public init() {}
-    private func fail() -> Never { fatalError("ToolPersistence not configured.") }
-    public func addToolToWorkspace(workspaceId _: UUID, tool _: ToolReference) async throws { fail() }
-    public func syncTools(workspaceId _: UUID, tools _: [ToolReference]) async throws { fail() }
-    public func fetchTools(forWorkspaces _: [UUID]) async throws -> [ToolReference] { fail() }
-    public func fetchClientTools(clientId _: UUID) async throws -> [ToolReference] { fail() }
-    public func findWorkspaceId(forToolId _: String, in _: [UUID]) async throws -> UUID? { fail() }
-    public func fetchToolSource(toolId _: String, workspaceIds _: [UUID], primaryWorkspaceId _: UUID?) async throws -> String? { fail() }
+    private func fail() -> Never {
+        fatalError("ToolPersistence not configured.")
+    }
+
+    public func addToolToWorkspace(workspaceId _: UUID, tool _: ToolReference) async throws {
+        fail()
+    }
+
+    public func syncTools(workspaceId _: UUID, tools _: [ToolReference]) async throws {
+        fail()
+    }
+
+    public func fetchTools(forWorkspaces _: [UUID]) async throws -> [ToolReference] {
+        fail()
+    }
+
+    public func fetchClientTools(clientId _: UUID) async throws -> [ToolReference] {
+        fail()
+    }
+
+    public func findWorkspaceId(forToolId _: String, in _: [UUID]) async throws -> UUID? {
+        fail()
+    }
+
+    public func fetchToolSource(toolId _: String, workspaceIds _: [UUID], primaryWorkspaceId _: UUID?) async throws -> String? {
+        fail()
+    }
 }
 
 public struct UnconfiguredWorkspacePersistence: WorkspacePersistenceProtocol {
     public init() {}
-    private func fail() -> Never { fatalError("WorkspacePersistence not configured.") }
-    public func saveWorkspace(_: WorkspaceReference) async throws { fail() }
-    public func fetchWorkspace(id _: UUID) async throws -> WorkspaceReference? { fail() }
-    public func fetchWorkspace(id _: UUID, includeTools _: Bool) async throws -> WorkspaceReference? { fail() }
-    public func fetchAllWorkspaces() async throws -> [WorkspaceReference] { fail() }
-    public func deleteWorkspace(id _: UUID) async throws { fail() }
+    private func fail() -> Never {
+        fatalError("WorkspacePersistence not configured.")
+    }
+
+    public func saveWorkspace(_: WorkspaceReference) async throws {
+        fail()
+    }
+
+    public func fetchWorkspace(id _: UUID, includeTools _: Bool) async throws -> WorkspaceReference? {
+        fail()
+    }
+
+    public func fetchAllWorkspaces() async throws -> [WorkspaceReference] {
+        fail()
+    }
+
+    public func deleteWorkspace(id _: UUID) async throws {
+        fail()
+    }
 }

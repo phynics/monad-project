@@ -1,6 +1,6 @@
-import MonadShared
 import Foundation
 import Logging
+import MonadShared
 
 /// Manages the lifecycle of active Workspace instances.
 ///
@@ -58,11 +58,15 @@ public actor WorkspaceManager {
         activeWorkspaces.removeValue(forKey: id)
     }
 
-    /// Performs a health check on all active workspaces.
+    /// Performs a health check on all active workspaces, evicting any that are unhealthy.
     public func healthCheckAll() async -> [UUID: Bool] {
         var results: [UUID: Bool] = [:]
         for (id, workspace) in activeWorkspaces {
-            results[id] = await workspace.healthCheck()
+            let healthy = await workspace.healthCheck()
+            results[id] = healthy
+            if !healthy {
+                activeWorkspaces.removeValue(forKey: id)
+            }
         }
         return results
     }

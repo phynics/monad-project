@@ -82,7 +82,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
     }
 
     public func getWorkspace(id: UUID) async throws -> WorkspaceReference? {
-        return try await workspaceStore.fetchWorkspace(id: id)
+        return try await workspaceStore.fetchWorkspace(id: id, includeTools: true)
     }
 
     /// GET /workspaces/:id
@@ -102,7 +102,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         let id = try context.parameters.require("workspaceId", as: UUID.self)
         let input = try await request.decode(as: UpdateWorkspaceRequest.self, context: context)
 
-        guard var workspace = try await workspaceStore.fetchWorkspace(id: id) else {
+        guard var workspace = try await workspaceStore.fetchWorkspace(id: id, includeTools: false) else {
             throw HTTPError(.notFound)
         }
 
