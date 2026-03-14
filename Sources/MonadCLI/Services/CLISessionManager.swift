@@ -1,8 +1,8 @@
 import ArgumentParser
 import Foundation
+import Logging
 import MonadClient
 import MonadShared
-import Logging
 
 struct CLITimelineManager {
     let client: MonadClient
@@ -135,7 +135,7 @@ struct CLITimelineManager {
                     wsId = newWs.id
                 }
 
-                try await client.workspace.attachWorkspace(wsId, to: timeline.id, isPrimary: false)
+                try await client.workspace.attachWorkspace(wsId, to: timeline.id)
                 try await client.workspace.syncWorkspaceTools(
                     ClientConstants.readOnlyToolReferences, workspaceId: wsId
                 )

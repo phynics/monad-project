@@ -1,10 +1,10 @@
+import Dependencies
 import Foundation
 import HTTPTypes
 import Hummingbird
 import MonadCore
 import MonadShared
 import NIOCore
-import Dependencies
 
 public struct TimelineAPIController<Context: RequestContext>: Sendable {
     @Dependency(\.timelineManager) var timelineManager
@@ -41,16 +41,14 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
             createdAt: timeline.createdAt,
             updatedAt: timeline.updatedAt,
             isArchived: timeline.isArchived,
-            tags: timeline.tagArray,
             workingDirectory: timeline.workingDirectory,
-            primaryWorkspaceId: timeline.primaryWorkspaceId,
-            attachedWorkspaceIds: timeline.attachedWorkspaces,
+            attachedWorkspaceIds: timeline.attachedWorkspaceIds,
             attachedAgentInstanceId: timeline.attachedAgentInstanceId
         )
         return try response.response(status: .created, from: request, context: context)
     }
 
-    @Sendable func list(_ request: Request, context: Context) async throws -> some ResponseGenerator {
+    @Sendable func list(_ request: Request, context _: Context) async throws -> some ResponseGenerator {
         let pagination = request.getPagination()
         let page = pagination.page
         let perPage = pagination.perPage
@@ -63,7 +61,7 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         let paginatedTimelines: [Timeline]
         if start < total {
             let end = min(start + perPage, total)
-            paginatedTimelines = Array(timelines[start..<end])
+            paginatedTimelines = Array(timelines[start ..< end])
         } else {
             paginatedTimelines = []
         }
@@ -75,10 +73,8 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
                 createdAt: timeline.createdAt,
                 updatedAt: timeline.updatedAt,
                 isArchived: timeline.isArchived,
-                tags: timeline.tagArray,
                 workingDirectory: timeline.workingDirectory,
-                primaryWorkspaceId: timeline.primaryWorkspaceId,
-                attachedWorkspaceIds: timeline.attachedWorkspaces,
+                attachedWorkspaceIds: timeline.attachedWorkspaceIds,
                 attachedAgentInstanceId: timeline.attachedAgentInstanceId
             )
         }
@@ -87,27 +83,25 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         return PaginatedResponse(items: timelineResponses, metadata: metadata)
     }
 
-    @Sendable func get(_ request: Request, context: Context) async throws -> TimelineResponse {
+    @Sendable func get(_: Request, context: Context) async throws -> TimelineResponse {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
         guard let timeline = await timelineManager.getTimeline(id: id) else {
-             // Fallback to DB if not in memory
-             if let dbTimeline = try? await timelineStore.fetchTimeline(id: id) {
-                 return TimelineResponse(
-                     id: dbTimeline.id,
-                     title: dbTimeline.title,
-                     createdAt: dbTimeline.createdAt,
-                     updatedAt: dbTimeline.updatedAt,
-                     isArchived: dbTimeline.isArchived,
-                     tags: dbTimeline.tagArray,
-                     workingDirectory: dbTimeline.workingDirectory,
-                     primaryWorkspaceId: dbTimeline.primaryWorkspaceId,
-                     attachedWorkspaceIds: dbTimeline.attachedWorkspaces,
-                     attachedAgentInstanceId: dbTimeline.attachedAgentInstanceId
-                 )
-             }
-             throw HTTPError(.notFound)
+            // Fallback to DB if not in memory
+            if let dbTimeline = try? await timelineStore.fetchTimeline(id: id) {
+                return TimelineResponse(
+                    id: dbTimeline.id,
+                    title: dbTimeline.title,
+                    createdAt: dbTimeline.createdAt,
+                    updatedAt: dbTimeline.updatedAt,
+                    isArchived: dbTimeline.isArchived,
+                    workingDirectory: dbTimeline.workingDirectory,
+                    attachedWorkspaceIds: dbTimeline.attachedWorkspaceIds,
+                    attachedAgentInstanceId: dbTimeline.attachedAgentInstanceId
+                )
+            }
+            throw HTTPError(.notFound)
         }
 
         return TimelineResponse(
@@ -116,10 +110,8 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
             createdAt: timeline.createdAt,
             updatedAt: timeline.updatedAt,
             isArchived: timeline.isArchived,
-            tags: timeline.tagArray,
             workingDirectory: timeline.workingDirectory,
-            primaryWorkspaceId: timeline.primaryWorkspaceId,
-            attachedWorkspaceIds: timeline.attachedWorkspaces,
+            attachedWorkspaceIds: timeline.attachedWorkspaceIds,
             attachedAgentInstanceId: timeline.attachedAgentInstanceId
         )
     }
@@ -137,7 +129,7 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         return try await get(request, context: context)
     }
 
-    @Sendable func delete(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
+    @Sendable func delete(_: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
@@ -166,7 +158,7 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         let paginatedMessages: [Message]
         if start < total {
             let end = min(start + perPage, total)
-            paginatedMessages = Array(messages[start..<end])
+            paginatedMessages = Array(messages[start ..< end])
         } else {
             paginatedMessages = []
         }
@@ -181,16 +173,14 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
-        // Decode request body
         let input = try await request.decode(as: AttachWorkspaceRequest.self, context: context)
 
-        try await timelineManager.attachWorkspace(
-            input.workspaceId, to: id, isPrimary: input.isPrimary)
+        try await timelineManager.attachWorkspace(input.workspaceId, to: id)
 
         return .ok
     }
 
-    @Sendable func detachWorkspace(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
+    @Sendable func detachWorkspace(_: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         let wsIdString = try context.parameters.require("wsId")
 
@@ -202,7 +192,7 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         return .noContent
     }
 
-    @Sendable func listWorkspaces(_ request: Request, context: Context) async throws -> TimelineWorkspacesResponse {
+    @Sendable func listWorkspaces(_: Request, context: Context) async throws -> TimelineWorkspacesResponse {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
@@ -216,7 +206,7 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         )
     }
 
-    @Sendable func restoreWorkspace(_ request: Request, context: Context) async throws -> HTTPResponse.Status {
+    @Sendable func restoreWorkspace(_: Request, context: Context) async throws -> HTTPResponse.Status {
         let idString = try context.parameters.require("id")
         let wsIdString = try context.parameters.require("wsId")
 

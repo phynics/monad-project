@@ -5,13 +5,9 @@ public extension MonadChatClient {
     // MARK: - Timeline API
 
     /// Create a new chat timeline
-    func createTimeline(
-        title: String? = nil, workspaceId: UUID? = nil
-    ) async throws -> Timeline {
+    func createTimeline(title: String? = nil) async throws -> Timeline {
         var request = try await client.buildRequest(path: "/api/sessions", method: "POST")
-        request.httpBody = try await client.encode(
-            CreateTimelineRequest(title: title, primaryWorkspaceId: workspaceId)
-        )
+        request.httpBody = try await client.encode(CreateTimelineRequest(title: title))
         return try await client.perform(request)
     }
 

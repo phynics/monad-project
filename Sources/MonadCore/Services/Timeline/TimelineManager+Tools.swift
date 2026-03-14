@@ -84,11 +84,7 @@ public extension TimelineManager {
     func getAggregatedTools(for timelineId: UUID) async throws -> [ToolReference] {
         guard let timeline = timelines[timelineId] else { return [] }
 
-        var ids: [UUID] = []
-        if let primaryId = timeline.primaryWorkspaceId { ids.append(primaryId) }
-        ids.append(contentsOf: timeline.attachedWorkspaces)
-
-        let workspaceIds = ids
+        let workspaceIds = timeline.attachedWorkspaceIds
         guard !workspaceIds.isEmpty else { return [] }
 
         return try await toolPersistence.fetchTools(forWorkspaces: workspaceIds)
@@ -125,14 +121,10 @@ public extension TimelineManager {
             }
         }
 
-        var ids: [UUID] = []
-        if let primaryId = timeline.primaryWorkspaceId { ids.append(primaryId) }
-        ids.append(contentsOf: timeline.attachedWorkspaces)
-
         return try? await toolPersistence.fetchToolSource(
             toolId: toolId,
-            workspaceIds: ids,
-            primaryWorkspaceId: timeline.primaryWorkspaceId
+            workspaceIds: timeline.attachedWorkspaceIds,
+            primaryWorkspaceId: nil
         )
     }
 }

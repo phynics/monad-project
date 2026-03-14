@@ -145,8 +145,7 @@ extension ChatREPL {
             fflush(stdout)
 
             if let input = lineReader.readLine(prompt: "", completion: nil)?
-                .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y"
-            {
+                .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y" {
                 for ws in workspacesToRestore {
                     do {
                         if ws.hostType == .server {
@@ -207,7 +206,7 @@ extension ChatREPL {
                 let isAttached = timelineWS.attached.contains { $0.id == wsId }
 
                 if !isAttached {
-                    try await client.workspace.attachWorkspace(wsId, to: timeline.id, isPrimary: false)
+                    try await client.workspace.attachWorkspace(wsId, to: timeline.id)
                 }
 
                 try await client.workspace.syncWorkspaceTools(

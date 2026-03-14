@@ -26,7 +26,7 @@ struct WorkspaceSlashCommand: SlashCommand {
             if args.count > 1 {
                 if let uuid = UUID(uuidString: args[1]) {
                     try await context.client.workspace.attachWorkspace(
-                        uuid, to: context.timeline.id, isPrimary: false
+                        uuid, to: context.timeline.id
                     )
                     TerminalUI.printSuccess("Attached workspace \(uuid.uuidString).")
                 } else {
@@ -169,7 +169,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         if let input = readLine(), let index = Int(input), index > 0, index <= workspaces.count {
             let selected = workspaces[index - 1]
             try await context.client.workspace.attachWorkspace(
-                selected.id, to: context.timeline.id, isPrimary: false
+                selected.id, to: context.timeline.id
             )
             TerminalUI.printSuccess("Attached \(selected.uri.description)")
         } else {
@@ -211,7 +211,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         }
 
         if let wsId = targetWorkspaceId {
-            try await context.client.workspace.attachWorkspace(wsId, to: context.timeline.id, isPrimary: false)
+            try await context.client.workspace.attachWorkspace(wsId, to: context.timeline.id)
 
             // Push read only tools
             try await context.client.workspace.syncWorkspaceTools(

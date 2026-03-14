@@ -38,6 +38,8 @@ public actor AgentInstanceManager {
         name: String,
         description: String
     ) async throws -> AgentInstance {
+        try validate(name: name, description: description)
+
         let instanceId = UUID()
         let privateTimelineId = UUID()
 
@@ -51,9 +53,9 @@ public actor AgentInstanceManager {
         let privateTimeline = Timeline(
             id: privateTimelineId,
             title: "[\(name)] Private",
-            primaryWorkspaceId: workspace.id,
-            isPrivate: true,
-            ownerAgentInstanceId: instanceId
+            attachedWorkspaceIds: [workspace.id],
+            attachedAgentInstanceId: instanceId,
+            isPrivate: true
         )
         try await timelineStore.saveTimeline(privateTimeline)
 
@@ -97,6 +99,13 @@ public actor AgentInstanceManager {
         // Idempotent
         if timeline.attachedAgentInstanceId == agentId { return }
 
+        // Prevent attaching an agent to a private timeline owned by another agent
+        if timeline.isPrivate {
+            if let currentOwner = timeline.attachedAgentInstanceId, currentOwner != agentId {
+                throw AgentInstanceError.cannotAttachToPrivateTimeline(timelineId)
+            }
+        }
+
         // Check for existing attachment
         if let existingId = timeline.attachedAgentInstanceId {
             if try await instanceStore.fetchAgentInstance(id: existingId) != nil {
@@ -114,7 +123,7 @@ public actor AgentInstanceManager {
         let logMsg = ConversationMessage(
             timelineId: agent.privateTimelineId,
             role: .system,
-            content: "[ATTACH] timeline \"\(timeline.title)\" (\(timelineId.uuidString))"
+            content: "[ATTACH] Agent '\(agent.name)' (\(agentId.uuidString.prefix(8))) attached to timeline \"\(timeline.title)\" (\(timelineId.uuidString.prefix(8)))"
         )
         try? await messageStore.saveMessage(logMsg)
 
@@ -130,6 +139,11 @@ public actor AgentInstanceManager {
 
         guard timeline.attachedAgentInstanceId == agentId else { return }
 
+        // Prevent detaching an agent from its own private timeline
+        if timeline.isPrivate, timeline.attachedAgentInstanceId == agentId {
+            throw AgentInstanceError.cannotDetachFromOwnPrivateTimeline(timelineId)
+        }
+
         timeline.attachedAgentInstanceId = nil
         timeline.updatedAt = Date()
         try await timelineStore.saveTimeline(timeline)
@@ -139,7 +153,7 @@ public actor AgentInstanceManager {
             let logMsg = ConversationMessage(
                 timelineId: agent.privateTimelineId,
                 role: .system,
-                content: "[DETACH] timeline \"\(timeline.title)\" (\(timelineId.uuidString))"
+                content: "[DETACH] Agent '\(agent.name)' detached from timeline \"\(timeline.title)\" (\(timelineId.uuidString.prefix(8)))"
             )
             try? await messageStore.saveMessage(logMsg)
             logger.info("Agent '\(agent.name)' detached from timeline '\(timeline.title)'")
@@ -147,25 +161,6 @@ public actor AgentInstanceManager {
     }
 
     // MARK: - Queries
-
-    /// Returns the agent instance attached to a timeline, or nil.
-    /// Clears dangling references if the referenced agent no longer exists.
-    public func getAttachedAgent(for timelineId: UUID) async -> AgentInstance? {
-        guard let timeline = try? await timelineStore.fetchTimeline(id: timelineId),
-              let agentId = timeline.attachedAgentInstanceId else { return nil }
-
-        if let agent = try? await instanceStore.fetchAgentInstance(id: agentId) {
-            return agent
-        }
-
-        // Dangling reference — clear it
-        if var stale = try? await timelineStore.fetchTimeline(id: timelineId) {
-            stale.attachedAgentInstanceId = nil
-            try? await timelineStore.saveTimeline(stale)
-            logger.warning("Cleared dangling agent \(agentId) reference on timeline \(timelineId)")
-        }
-        return nil
-    }
 
     public func getInstance(id: UUID) async throws -> AgentInstance? {
         try await instanceStore.fetchAgentInstance(id: id)
@@ -180,9 +175,33 @@ public actor AgentInstanceManager {
     }
 
     public func updateInstance(_ instance: AgentInstance) async throws {
+        try validate(name: instance.name, description: instance.description)
         var updated = instance
         updated.updatedAt = Date()
         try await instanceStore.saveAgentInstance(updated)
+    }
+
+    public func searchInstances(query: String) async throws -> [AgentInstance] {
+        let all = try await listInstances()
+        if query.isEmpty { return all }
+        let lowerQuery = query.lowercased()
+        return all.filter {
+            $0.name.lowercased().contains(lowerQuery) ||
+                $0.description.lowercased().contains(lowerQuery) ||
+                $0.id.uuidString.lowercased().contains(lowerQuery)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func validate(name: String, description: String) throws {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedName.count < 3 {
+            throw AgentInstanceError.nameTooShort(trimmedName)
+        }
+        if description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            throw AgentInstanceError.descriptionEmpty
+        }
     }
 
     // MARK: - Delete
@@ -194,24 +213,34 @@ public actor AgentInstanceManager {
             throw AgentInstanceError.instanceNotFound(id)
         }
 
-        let attachedTimelines = try await instanceStore.fetchTimelines(attachedToAgent: id)
+        let allAttached = try await instanceStore.fetchTimelines(attachedToAgent: id)
+        // Exclude the agent's own private timeline from the "still attached" check
+        let nonPrivateAttached = allAttached.filter { $0.id != instance.privateTimelineId }
 
-        if !attachedTimelines.isEmpty, !force {
-            throw AgentInstanceError.hasAttachedTimelines(count: attachedTimelines.count)
+        if !nonPrivateAttached.isEmpty, !force {
+            throw AgentInstanceError.hasAttachedTimelines(count: nonPrivateAttached.count)
         }
 
-        // Force-detach all timelines
-        for var timeline in attachedTimelines {
+        // Force-detach from non-private timelines
+        for var timeline in nonPrivateAttached {
             timeline.attachedAgentInstanceId = nil
             timeline.updatedAt = Date()
             try await timelineStore.saveTimeline(timeline)
         }
 
-        // Delete primary workspace
+        // 1. Delete primary workspace directory (high risk IO)
         if let workspaceId = instance.primaryWorkspaceId {
-            try await repository.deleteWorkspace(id: workspaceId, deleteDirectory: true)
+            do {
+                try await repository.deleteWorkspace(id: workspaceId, deleteDirectory: true)
+            } catch {
+                logger.error("Failed to delete workspace directory for agent \(id): \(error)")
+            }
         }
 
+        // 2. Delete private timeline
+        try? await timelineStore.deleteTimeline(id: instance.privateTimelineId)
+
+        // 3. Delete database record
         try await instanceStore.deleteAgentInstance(id: id)
         logger.info("Deleted agent instance \(id)")
     }
@@ -224,6 +253,10 @@ public enum AgentInstanceError: Throwable, Sendable {
     case timelineNotFound(UUID)
     case differentAgentAlreadyAttached(UUID)
     case hasAttachedTimelines(count: Int)
+    case nameTooShort(String)
+    case descriptionEmpty
+    case cannotAttachToPrivateTimeline(UUID)
+    case cannotDetachFromOwnPrivateTimeline(UUID)
 
     public var errorDescription: String? {
         switch self {
@@ -235,6 +268,14 @@ public enum AgentInstanceError: Throwable, Sendable {
             return "A different agent (\(id)) is already attached. Detach it first."
         case let .hasAttachedTimelines(count):
             return "Cannot delete: \(count) timeline(s) still attached. Use force=true to override."
+        case let .nameTooShort(name):
+            return "Agent name '\(name)' is too short (min 3 chars)."
+        case .descriptionEmpty:
+            return "Agent description cannot be empty."
+        case let .cannotAttachToPrivateTimeline(id):
+            return "Cannot attach an agent to a private timeline it doesn't own (\(id))."
+        case let .cannotDetachFromOwnPrivateTimeline(id):
+            return "Cannot detach an agent from its own private timeline (\(id))."
         }
     }
 
@@ -248,6 +289,14 @@ public enum AgentInstanceError: Throwable, Sendable {
             return "Timeline already has agent \(id.uuidString.prefix(8)) attached. Please detach it before attaching a new one."
         case let .hasAttachedTimelines(count):
             return "This agent is currently active on \(count) timeline(s) and cannot be deleted."
+        case .nameTooShort:
+            return "Please provide a name with at least 3 characters."
+        case .descriptionEmpty:
+            return "Please provide a description for the agent."
+        case .cannotAttachToPrivateTimeline:
+            return "Agents can only be attached to their own private timelines."
+        case .cannotDetachFromOwnPrivateTimeline:
+            return "An agent must remain attached to its own private timeline."
         }
     }
 }

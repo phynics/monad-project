@@ -1,11 +1,11 @@
 import Dependencies
+import Foundation
 import GRDB
 import MonadCore
 @testable import MonadServer
 import MonadShared
 import MonadTestSupport
 import Testing
-import Foundation
 
 @Suite final class SessionWorkspaceTests {
     var persistenceService: PersistenceService!
@@ -30,8 +30,7 @@ import Foundation
 
     @Test
 
-
-    func testCreateSessionCreatesDedicatedWorkspace() async throws {
+    func createSessionCreatesDedicatedWorkspace() async throws {
         try await withDependencies {
             $0.workspacePersistence = persistenceService.workspaceStore
             $0.timelinePersistence = persistenceService.timelineStore
@@ -53,11 +52,11 @@ import Foundation
             let session = try await timelineManager.createTimeline(title: "Workspace Test Session")
 
             // Assert
-            try #require(session.primaryWorkspaceId != nil)
+            try #require(!session.attachedWorkspaceIds.isEmpty)
 
             // Verify workspace exists in DB
             let workspace = try await persistenceService.dbQueue.read { db in
-                try WorkspaceReference.fetchOne(db, key: session.primaryWorkspaceId)
+                try WorkspaceReference.fetchOne(db, key: session.attachedWorkspaceIds.first)
             }
 
             try #require(workspace != nil)

@@ -1,9 +1,9 @@
-import MonadShared
-import MonadCore
+import Dependencies
 import Foundation
 import Logging
+import MonadCore
+import MonadShared
 import ServiceLifecycle
-import Dependencies
 
 /// Service that cleans up orphaned workspaces
 public final class OrphanCleanupService: Service, @unchecked Sendable {
@@ -50,11 +50,8 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
 
             // Collect all referenced IDs
             for timeline in timelines {
-                if let pid = timeline.primaryWorkspaceId {
-                    referencedIds.insert(pid)
-                }
-                for aid in timeline.attachedWorkspaces {
-                    referencedIds.insert(aid)
+                for wsId in timeline.attachedWorkspaceIds {
+                    referencedIds.insert(wsId)
                 }
             }
 
@@ -64,7 +61,6 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
                     // Check if it's safe to delete (is it in the Monad Workspaces dir?)
                     if let rootPath = ws.rootPath,
                        rootPath.hasPrefix(workspaceRoot.path) || rootPath.contains("/.monad/workspaces/") || rootPath.contains("/Monad/Workspaces/") {
-
                         // Delete DB Record
                         try await workspaceStore.deleteWorkspace(id: ws.id)
 

@@ -72,35 +72,28 @@ private func withFixture(
     }
 }
 
-// MARK: - Timeline.attachedWorkspaces (model)
+// MARK: - Timeline.attachedWorkspaceIds (model)
 
-@Suite("Timeline.attachedWorkspaces")
+@Suite("Timeline.attachedWorkspaceIds")
 struct TimelineAttachedWorkspacesTests {
     @Test("defaults to empty array")
     func defaultsEmpty() {
         let timeline = Timeline()
-        #expect(timeline.attachedWorkspaces.isEmpty)
+        #expect(timeline.attachedWorkspaceIds.isEmpty)
     }
 
-    @Test("round-trips single UUID through JSON encoding")
+    @Test("stores single UUID")
     func singleUUID() {
         let id = UUID()
         let timeline = Timeline(attachedWorkspaceIds: [id])
-        #expect(timeline.attachedWorkspaces == [id])
+        #expect(timeline.attachedWorkspaceIds == [id])
     }
 
-    @Test("round-trips multiple UUIDs preserving order")
+    @Test("stores multiple UUIDs preserving order")
     func multipleUUIDs() {
         let ids = [UUID(), UUID(), UUID()]
         let timeline = Timeline(attachedWorkspaceIds: ids)
-        #expect(timeline.attachedWorkspaces == ids)
-    }
-
-    @Test("malformed JSON falls back to empty array")
-    func malformedJSON() {
-        var timeline = Timeline()
-        timeline.attachedWorkspaceIds = "not-valid-json"
-        #expect(timeline.attachedWorkspaces.isEmpty)
+        #expect(timeline.attachedWorkspaceIds == ids)
     }
 }
 
@@ -108,72 +101,30 @@ struct TimelineAttachedWorkspacesTests {
 
 @Suite("TimelineManager.attachWorkspace")
 struct AttachWorkspaceTests {
-    @Test("attaching non-primary adds to attachedWorkspaces")
-    func attachNonPrimary() async throws {
+    @Test("attaching adds to attachedWorkspaceIds")
+    func attach() async throws {
         try await withFixture { fix in
             let timeline = try await fix.manager.createTimeline()
 
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
             let attached = workspaces?.attached ?? []
             #expect(attached.contains { $0.id == fix.clientWS.id })
-            #expect(workspaces?.primary?.id != fix.clientWS.id)
         }
     }
 
-    @Test("attaching as primary sets primaryWorkspaceId")
-    func attachAsPrimary() async throws {
-        try await withFixture { fix in
-            let timeline = try await fix.manager.createTimeline()
-
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: true)
-
-            let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
-            #expect(workspaces?.primary?.id == fix.clientWS.id)
-        }
-    }
-
-    @Test("attaching as primary does not also add to attached list")
-    func primaryNotDuplicated() async throws {
-        try await withFixture { fix in
-            let timeline = try await fix.manager.createTimeline()
-
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: true)
-
-            let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
-            let attached = workspaces?.attached ?? []
-            #expect(!attached.contains { $0.id == fix.clientWS.id }, "Primary workspace must not appear in attached list")
-        }
-    }
-
-    @Test("attaching same non-primary workspace twice does not duplicate")
+    @Test("attaching same workspace twice does not duplicate")
     func noDuplicateAttach() async throws {
         try await withFixture { fix in
             let timeline = try await fix.manager.createTimeline()
 
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
             let matching = (workspaces?.attached ?? []).filter { $0.id == fix.clientWS.id }
             #expect(matching.count == 1)
-        }
-    }
-
-    @Test("attaching a workspace already set as primary as non-primary is a no-op")
-    func attachPrimaryAsNonPrimaryIsNoOp() async throws {
-        try await withFixture { fix in
-            let timeline = try await fix.manager.createTimeline()
-
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: true)
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
-
-            let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
-            // Should still be primary, not moved to attached
-            #expect(workspaces?.primary?.id == fix.clientWS.id)
-            let attached = workspaces?.attached ?? []
-            #expect(!attached.contains { $0.id == fix.clientWS.id })
         }
     }
 
@@ -182,8 +133,8 @@ struct AttachWorkspaceTests {
         try await withFixture { fix in
             let timeline = try await fix.manager.createTimeline()
 
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
-            try await fix.manager.attachWorkspace(fix.extraWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
+            try await fix.manager.attachWorkspace(fix.extraWS.id, to: timeline.id)
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
             let attached = workspaces?.attached ?? []
@@ -197,7 +148,7 @@ struct AttachWorkspaceTests {
     func attachPersistsToDB() async throws {
         try await withFixture { fix in
             let timeline = try await fix.manager.createTimeline()
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
 
             // New manager, same persistence — simulates server restart
             let freshManager = TimelineManager(workspaceRoot: fix.workspaceRoot)
@@ -211,7 +162,7 @@ struct AttachWorkspaceTests {
     func unknownTimelineThrows() async throws {
         try await withFixture { fix in
             await #expect(throws: (any Error).self) {
-                try await fix.manager.attachWorkspace(fix.clientWS.id, to: UUID(), isPrimary: false)
+                try await fix.manager.attachWorkspace(fix.clientWS.id, to: UUID())
             }
         }
     }
@@ -225,26 +176,13 @@ struct DetachWorkspaceTests {
     func detachAttached() async throws {
         try await withFixture { fix in
             let timeline = try await fix.manager.createTimeline()
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
 
             try await fix.manager.detachWorkspace(fix.clientWS.id, from: timeline.id)
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
             let attached = workspaces?.attached ?? []
             #expect(!attached.contains { $0.id == fix.clientWS.id })
-        }
-    }
-
-    @Test("detaching primary workspace clears primaryWorkspaceId")
-    func detachPrimary() async throws {
-        try await withFixture { fix in
-            let timeline = try await fix.manager.createTimeline()
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: true)
-
-            try await fix.manager.detachWorkspace(fix.clientWS.id, from: timeline.id)
-
-            let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
-            #expect(workspaces?.primary == nil)
         }
     }
 
@@ -257,7 +195,7 @@ struct DetachWorkspaceTests {
             try await fix.manager.detachWorkspace(fix.clientWS.id, from: timeline.id)
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
-            #expect(workspaces?.attached.isEmpty == true || workspaces?.attached != nil)
+            #expect(workspaces?.attached != nil)
         }
     }
 
@@ -265,8 +203,8 @@ struct DetachWorkspaceTests {
     func detachLeavesOthers() async throws {
         try await withFixture { fix in
             let timeline = try await fix.manager.createTimeline()
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
-            try await fix.manager.attachWorkspace(fix.extraWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
+            try await fix.manager.attachWorkspace(fix.extraWS.id, to: timeline.id)
 
             try await fix.manager.detachWorkspace(fix.clientWS.id, from: timeline.id)
 
@@ -281,7 +219,7 @@ struct DetachWorkspaceTests {
     func detachPersistsToDB() async throws {
         try await withFixture { fix in
             let timeline = try await fix.manager.createTimeline()
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
             try await fix.manager.detachWorkspace(fix.clientWS.id, from: timeline.id)
 
             let freshManager = TimelineManager(workspaceRoot: fix.workspaceRoot)
@@ -313,14 +251,11 @@ struct GetWorkspacesTests {
         }
     }
 
-    @Test("returns nil primary and empty attached when nothing is attached")
+    @Test("returns empty attached when nothing is attached")
     func emptyAfterCreate() async throws {
         try await withFixture { fix in
-            // Create a timeline without a primary workspace
-            var timeline = Timeline()
+            let timeline = Timeline()
             try await fix.persistence.saveTimeline(timeline)
-            // Remove primary workspace set by createTimeline by saving a bare timeline
-            _ = timeline // just for clarity
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
             #expect(workspaces != nil)
@@ -334,7 +269,7 @@ struct GetWorkspacesTests {
         try await withFixture { fix in
             let timeline = try await fix.manager.createTimeline()
 
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
             let afterAttach = await fix.manager.getWorkspaces(for: timeline.id)
             #expect(afterAttach?.attached.contains { $0.id == fix.clientWS.id } == true)
 
@@ -347,7 +282,6 @@ struct GetWorkspacesTests {
     @Test("server workspace with missing rootPath is marked .missing")
     func serverMissingPath() async throws {
         try await withFixture { fix in
-            // serverWS has rootPath pointing to a non-existent directory
             let missingWS = WorkspaceReference(
                 uri: WorkspaceURI(host: "monad-server", path: "/agent/gone"),
                 hostType: .server,
@@ -356,7 +290,7 @@ struct GetWorkspacesTests {
             try await fix.persistence.saveWorkspace(missingWS)
 
             let timeline = try await fix.manager.createTimeline()
-            try await fix.manager.attachWorkspace(missingWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(missingWS.id, to: timeline.id)
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
             let ws = workspaces?.attached.first { $0.id == missingWS.id }
@@ -375,7 +309,7 @@ struct GetWorkspacesTests {
             try await fix.persistence.saveWorkspace(clientWithPath)
 
             let timeline = try await fix.manager.createTimeline()
-            try await fix.manager.attachWorkspace(clientWithPath.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(clientWithPath.id, to: timeline.id)
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
             let ws = workspaces?.attached.first { $0.id == clientWithPath.id }
@@ -397,7 +331,7 @@ struct GetWorkspacesTests {
             try await fix.persistence.saveWorkspace(ws)
 
             let timeline = try await fix.manager.createTimeline()
-            try await fix.manager.attachWorkspace(ws.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(ws.id, to: timeline.id)
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
             let found = workspaces?.attached.first { $0.id == ws.id }
@@ -416,10 +350,11 @@ struct GetWorkspacesTests {
             try await fix.persistence.saveWorkspace(wsNoPath)
 
             let timeline = try await fix.manager.createTimeline()
-            try await fix.manager.attachWorkspace(wsNoPath.id, to: timeline.id, isPrimary: true)
+            try await fix.manager.attachWorkspace(wsNoPath.id, to: timeline.id)
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
-            #expect(workspaces?.primary?.status != .missing)
+            let found = workspaces?.attached.first { $0.id == wsNoPath.id }
+            #expect(found?.status != .missing)
         }
     }
 }
@@ -428,26 +363,13 @@ struct GetWorkspacesTests {
 
 @Suite("Workspace attach/detach round-trip")
 struct WorkspaceRoundTripTests {
-    @Test("replacing primary by attaching a new one as primary")
-    func replacePrimary() async throws {
-        try await withFixture { fix in
-            let timeline = try await fix.manager.createTimeline()
-
-            try await fix.manager.attachWorkspace(fix.serverWS.id, to: timeline.id, isPrimary: true)
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: true)
-
-            let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
-            #expect(workspaces?.primary?.id == fix.clientWS.id, "New primary should replace old")
-        }
-    }
-
-    @Test("detaching all workspaces leaves timeline with no primary and no attached")
+    @Test("detaching all extra workspaces removes them from attached list")
     func detachAll() async throws {
         try await withFixture { fix in
             let timeline = try await fix.manager.createTimeline()
-            try await fix.manager.attachWorkspace(fix.serverWS.id, to: timeline.id, isPrimary: true)
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
-            try await fix.manager.attachWorkspace(fix.extraWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(fix.serverWS.id, to: timeline.id)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
+            try await fix.manager.attachWorkspace(fix.extraWS.id, to: timeline.id)
 
             try await fix.manager.detachWorkspace(fix.serverWS.id, from: timeline.id)
             try await fix.manager.detachWorkspace(fix.clientWS.id, from: timeline.id)
@@ -455,7 +377,10 @@ struct WorkspaceRoundTripTests {
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
             #expect(workspaces?.primary == nil)
-            #expect(workspaces?.attached.isEmpty == true)
+            let attached = workspaces?.attached ?? []
+            #expect(!attached.contains { $0.id == fix.serverWS.id })
+            #expect(!attached.contains { $0.id == fix.clientWS.id })
+            #expect(!attached.contains { $0.id == fix.extraWS.id })
         }
     }
 
@@ -464,9 +389,9 @@ struct WorkspaceRoundTripTests {
         try await withFixture { fix in
             let timeline = try await fix.manager.createTimeline()
 
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
             try await fix.manager.detachWorkspace(fix.clientWS.id, from: timeline.id)
-            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id, isPrimary: false)
+            try await fix.manager.attachWorkspace(fix.clientWS.id, to: timeline.id)
 
             let workspaces = await fix.manager.getWorkspaces(for: timeline.id)
             #expect(workspaces?.attached.contains { $0.id == fix.clientWS.id } == true)

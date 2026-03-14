@@ -45,11 +45,9 @@ public struct SyncToolsRequest: Codable, Sendable {
 
 public struct AttachWorkspaceRequest: Codable, Sendable {
     public let workspaceId: UUID
-    public let isPrimary: Bool
 
-    public init(workspaceId: UUID, isPrimary: Bool) {
+    public init(workspaceId: UUID) {
         self.workspaceId = workspaceId
-        self.isPrimary = isPrimary
     }
 }
 

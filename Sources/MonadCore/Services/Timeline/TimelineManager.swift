@@ -85,12 +85,16 @@ public actor TimelineManager {
         workspaceURL: URL,
         parentId: UUID? = nil
     ) async {
-        // Resolve primary workspace via manager
-        let primaryWorkspaceId = timeline.primaryWorkspaceId ?? UUID() // Should ideally exist
-        let primaryWorkspace = try? await workspaceManager.getWorkspace(id: primaryWorkspaceId)
+        // Use first attached workspace for ContextManager (primary concept moved to AgentInstance)
+        let contextWorkspace: (any WorkspaceProtocol)?
+        if let firstId = timeline.attachedWorkspaceIds.first {
+            contextWorkspace = try? await workspaceManager.getWorkspace(id: firstId)
+        } else {
+            contextWorkspace = nil
+        }
 
         let contextManager = ContextManager(
-            workspace: primaryWorkspace
+            workspace: contextWorkspace
         )
         contextManagers[timeline.id] = contextManager
 
@@ -108,14 +112,8 @@ public actor TimelineManager {
         )
         toolManagers[timeline.id] = toolManager
 
-        // Hydrate workspaces and register with ToolManager using WorkspaceManager
-        if let primary = primaryWorkspace {
-            await toolManager.registerWorkspace(primary)
-        }
-
-        // Handle attached workspaces
-        let attachedIds = timeline.attachedWorkspaces
-        for attachedId in attachedIds {
+        // Hydrate and register all attached workspaces with ToolManager
+        for attachedId in timeline.attachedWorkspaceIds {
             if let ws = try? await workspaceManager.getWorkspace(id: attachedId) {
                 await toolManager.registerWorkspace(ws)
             }
@@ -137,8 +135,7 @@ public actor TimelineManager {
     /// - Returns: The newly created `Timeline`.
     public func createTimeline(title: String = "New Conversation")
         async throws
-        -> Timeline
-    {
+        -> Timeline {
         let timelineId = UUID()
 
         let timelineWorkspaceURL = workspaceRoot.appendingPathComponent(
@@ -194,7 +191,7 @@ public actor TimelineManager {
         var timeline = Timeline(
             id: timelineId,
             title: title,
-            primaryWorkspaceId: workspace.id
+            attachedWorkspaceIds: [workspace.id]
         )
         timeline.workingDirectory = timelineWorkspaceURL.path
 

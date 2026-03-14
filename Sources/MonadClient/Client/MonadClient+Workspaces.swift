@@ -77,14 +77,11 @@ public extension MonadWorkspaceClient {
         return try await client.perform(request)
     }
 
-    func attachWorkspace(_ workspaceId: UUID, to timelineId: UUID, isPrimary: Bool)
-        async throws {
+    func attachWorkspace(_ workspaceId: UUID, to timelineId: UUID) async throws {
         var request = try await client.buildRequest(
             path: "/api/sessions/\(timelineId.uuidString)/workspaces", method: "POST"
         )
-        request.httpBody = try await client.encode(
-            AttachWorkspaceRequest(workspaceId: workspaceId, isPrimary: isPrimary)
-        )
+        request.httpBody = try await client.encode(AttachWorkspaceRequest(workspaceId: workspaceId))
         _ = try await client.performRaw(request)
     }
 

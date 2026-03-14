@@ -165,8 +165,7 @@ struct Chat: AsyncParsableCommand {
         let logger = Logger.module(named: "startup")
 
         if let agentIdStr = localConfig.lastAgentInstanceId,
-           let agentId = UUID(uuidString: agentIdStr)
-        {
+           let agentId = UUID(uuidString: agentIdStr) {
             do {
                 restoredAgent = try await client.chat.getAgentInstance(id: agentId)
             } catch {

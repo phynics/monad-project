@@ -65,15 +65,11 @@ extension DatabaseSchema {
             t.column("createdAt", .datetime).notNull()
             t.column("updatedAt", .datetime).notNull()
             t.column("isArchived", .boolean).notNull().defaults(to: false)
-            t.column("tags", .text).notNull().defaults(to: "")
             t.column("workingDirectory", .text)
-            t.column("primaryWorkspaceId", .blob)
-                .references("workspace", onDelete: .setNull)
             t.column("attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
             t.column("persona", .text)
             t.column("attachedAgentInstanceId", .blob)
             t.column("isPrivate", .boolean).notNull().defaults(to: false)
-            t.column("ownerAgentInstanceId", .blob)
         }
 
         // Conversation messages

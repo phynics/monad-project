@@ -1,23 +1,21 @@
-import MonadShared
-import MonadCore
-import Testing
 import Foundation
 import GRDB
+import MonadCore
 import MonadServer
+import MonadShared
+import Testing
 
 @Suite struct ModelSerializationTests {
-
     // MARK: - Timeline
 
     @Test("Timeline JSON Serialization")
-    func testTimelineJSON() throws {
+    func timelineJSON() throws {
         let session = Timeline(
             id: UUID(),
             title: "Test Session",
             createdAt: Date(),
             updatedAt: Date(),
             isArchived: true,
-            tags: ["tag1", "tag2"],
             workingDirectory: "/tmp/test"
         )
 
@@ -27,22 +25,18 @@ import MonadServer
         #expect(decoded.id == session.id)
         #expect(decoded.title == session.title)
         #expect(decoded.isArchived == session.isArchived)
-        #expect(decoded.tagArray == session.tagArray)
         #expect(decoded.workingDirectory == session.workingDirectory)
     }
 
     @Test("Timeline Database Roundtrip")
-    func testTimelineDB() throws {
+    func timelineDB() throws {
         let dbQueue = try DatabaseQueue()
         var migrator = DatabaseMigrator()
         DatabaseSchema.registerMigrations(in: &migrator)
         try migrator.migrate(dbQueue)
 
-        let session = Timeline(
-            id: UUID(),
-            title: "DB Session",
-            tags: ["db", "test"]
-        )
+        let wsId = UUID()
+        let session = Timeline(id: UUID(), title: "DB Session", attachedWorkspaceIds: [wsId])
 
         try dbQueue.write { db in
             try session.insert(db)
@@ -54,13 +48,13 @@ import MonadServer
 
         #expect(fetched != nil)
         #expect(fetched?.title == "DB Session")
-        #expect(fetched?.tagArray == ["db", "test"])
+        #expect(fetched?.attachedWorkspaceIds == [wsId])
     }
 
     // MARK: - Memory
 
     @Test("Memory JSON Serialization")
-    func testMemoryJSON() throws {
+    func memoryJSON() throws {
         let memory = Memory(
             id: UUID(),
             title: "Test Memory",
@@ -81,7 +75,7 @@ import MonadServer
     }
 
     @Test("Memory Database Decoding with Non-Hyphenated UUID")
-    func testMemoryUUIDDecoding() throws {
+    func memoryUUIDDecoding() throws {
         let dbQueue = try DatabaseQueue()
         var migrator = DatabaseMigrator()
         DatabaseSchema.registerMigrations(in: &migrator)
@@ -111,11 +105,11 @@ import MonadServer
     // MARK: - Edge Cases
 
     @Test("Edge Case: Empty Fields")
-    func testEmptyFields() throws {
+    func emptyFields() throws {
         let session = Timeline(title: "")
         let data = try JSONEncoder().encode(session)
         let decoded = try JSONDecoder().decode(Timeline.self, from: data)
         #expect(decoded.title.isEmpty)
-        #expect(decoded.tagArray.isEmpty)
+        #expect(decoded.attachedWorkspaceIds.isEmpty)
     }
 }

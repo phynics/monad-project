@@ -56,7 +56,7 @@ public struct TimelineSendTool: MonadShared.Tool, Sendable {
         guard let timeline = try? await timelineStore.fetchTimeline(id: timelineId) else {
             return .failure("Timeline not found: \(timelineIdStr)")
         }
-        if timeline.isPrivate && timeline.ownerAgentInstanceId != agentInstanceId {
+        if timeline.isPrivate && timeline.attachedAgentInstanceId != agentInstanceId {
             return .failure("Cannot send to another agent's private timeline.")
         }
 

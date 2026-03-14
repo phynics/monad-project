@@ -32,10 +32,10 @@ import Testing
             let timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
 
             let timeline = try await timelineManager.createTimeline(title: "Files Test Session")
-            guard let workspaceId = timeline.primaryWorkspaceId,
+            guard let workspaceId = timeline.attachedWorkspaceIds.first,
                   let workingDirectory = timeline.workingDirectory
             else {
-                Issue.record("Timeline should have a primary workspace and working directory")
+                Issue.record("Timeline should have an attached workspace and working directory")
                 return
             }
 
@@ -89,7 +89,7 @@ import Testing
             let timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
 
             let timeline = try await timelineManager.createTimeline(title: "List Files Session")
-            guard let workspaceId = timeline.primaryWorkspaceId,
+            guard let workspaceId = timeline.attachedWorkspaceIds.first,
                   let workingDirectory = timeline.workingDirectory else { return }
 
             let timelineWorkspacePath = URL(fileURLWithPath: workingDirectory)

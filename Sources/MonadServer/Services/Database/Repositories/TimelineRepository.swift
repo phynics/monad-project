@@ -1,8 +1,8 @@
+import Foundation
 import GRDB
+import Logging
 import MonadCore
 import MonadShared
-import Foundation
-import Logging
 
 public actor TimelineRepository: TimelinePersistenceProtocol {
     private let dbQueue: DatabaseQueue
@@ -30,14 +30,14 @@ public actor TimelineRepository: TimelinePersistenceProtocol {
             if includeArchived {
                 return
                     try Timeline
-                    .order(Column("updatedAt").desc)
-                    .fetchAll(db)
+                        .order(Column("updatedAt").desc)
+                        .fetchAll(db)
             } else {
                 return
                     try Timeline
-                    .filter(Column("isArchived") == false)
-                    .order(Column("updatedAt").desc)
-                    .fetchAll(db)
+                        .filter(Column("isArchived") == false)
+                        .order(Column("updatedAt").desc)
+                        .fetchAll(db)
             }
         }
     }
@@ -56,46 +56,20 @@ public actor TimelineRepository: TimelinePersistenceProtocol {
             // Subquery to find timeline IDs that have matching messages
             let matchingMessageSessionIds =
                 try ConversationMessage
-                .filter(Column("content").like(pattern))
-                .select(Column("timelineId"))
-                .fetchAll(database)
-                .map { $0 as UUID }
+                    .filter(Column("content").like(pattern))
+                    .select(Column("timelineId"))
+                    .fetchAll(database)
+                    .map { $0 as UUID }
 
             return
                 try Timeline
-                .filter(Column("isArchived") == true)
-                .filter(
-                    Column("title").like(pattern) || Column("tags").like(pattern)
-                        || matchingMessageSessionIds.contains(Column("id"))
-                )
-                .order(Column("updatedAt").desc)
-                .fetchAll(database)
-        }
-    }
-
-    /// Search for archived timelines that contain any of the provided tags
-    public func searchArchivedTimelines(matchingAnyTag tags: [String]) throws
-        -> [Timeline] {
-        guard !tags.isEmpty else { return [] }
-
-        return try dbQueue.read { database in
-            var conditions: [SQLExpression] = []
-            for tag in tags {
-                conditions.append(Column("tags").like("%\(tag)%"))
-            }
-
-            let query = conditions.joined(operator: .or)
-
-            let candidates =
-                try Timeline
-                .filter(Column("isArchived") == true)
-                .filter(query)
-                .fetchAll(database)
-
-            return candidates.filter {
-                let sessionTags = Set($0.tagArray.map { $0.lowercased() })
-                return !sessionTags.isDisjoint(with: tags.map { $0.lowercased() })
-            }
+                    .filter(Column("isArchived") == true)
+                    .filter(
+                        Column("title").like(pattern)
+                            || matchingMessageSessionIds.contains(Column("id"))
+                    )
+                    .order(Column("updatedAt").desc)
+                    .fetchAll(database)
         }
     }
 
@@ -127,7 +101,8 @@ public actor TimelineRepository: TimelinePersistenceProtocol {
 
                     do {
                         let didDelete = try Timeline.deleteOne(
-                            database, key: ["id": timeline.id])
+                            database, key: ["id": timeline.id]
+                        )
                         deletedCount += (didDelete ? 1 : 0)
                     } catch {
                         // Ignore individual failures to continue pruning

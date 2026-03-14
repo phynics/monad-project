@@ -1,10 +1,10 @@
-import MonadShared
-import MonadCore
-import Testing
-import Foundation
-import MonadTestSupport
-@testable import MonadServer
 import Dependencies
+import Foundation
+import MonadCore
+@testable import MonadServer
+import MonadShared
+import MonadTestSupport
+import Testing
 
 @Suite final class OrphanCleanupServiceTests {
     var workspaceRoot: URL!
@@ -22,8 +22,7 @@ import Dependencies
 
     @Test
 
-
-    func testCleanupOrphanedWorkspace() async throws {
+    func cleanupOrphanedWorkspace() async throws {
         // Setup
         let orphanId = UUID()
         let orphanPath = workspaceRoot.appendingPathComponent(orphanId.uuidString).path
@@ -38,7 +37,7 @@ import Dependencies
 
         mockPersistence.workspaces = [wsOrphan, wsActive]
 
-        let session = Timeline(id: UUID(), title: "Test", primaryWorkspaceId: activeId)
+        let session = Timeline(id: UUID(), title: "Test", attachedWorkspaceIds: [activeId])
         mockPersistence.timelines = [session]
 
         let service = OrphanCleanupService(workspaceRoot: workspaceRoot)
@@ -74,8 +73,7 @@ import Dependencies
 
     @Test
 
-
-    func testDoNotCleanupUserManagedWorkspace() async throws {
+    func doNotCleanupUserManagedWorkspace() async throws {
         // Setup
         let userWsId = UUID()
         let userWsPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("UserManaged_\(UUID().uuidString)").path
