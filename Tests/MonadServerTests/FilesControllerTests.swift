@@ -47,7 +47,7 @@ import Testing
             let filePath = noteDir.appendingPathComponent("TestFile.md")
             try content.write(to: filePath, atomically: true, encoding: .utf8)
 
-            let workspaceManager = WorkspaceManager(repository: WorkspaceRepository(workspaceRoot: workspaceRoot), workspaceCreator: WorkspaceFactory())
+            let workspaceManager = WorkspaceManager(repository: AgentWorkspaceService(workspaceRoot: workspaceRoot), workspaceCreator: WorkspaceFactory())
             try await withDependencies {
                 $0.workspaceManager = workspaceManager
             } operation: {
@@ -97,7 +97,7 @@ import Testing
             try FileManager.default.createDirectory(at: noteDir, withIntermediateDirectories: true)
             try "Content".write(to: noteDir.appendingPathComponent("TestNote.md"), atomically: true, encoding: .utf8)
 
-            let workspaceManager = WorkspaceManager(repository: WorkspaceRepository(workspaceRoot: workspaceRoot), workspaceCreator: WorkspaceFactory())
+            let workspaceManager = WorkspaceManager(repository: AgentWorkspaceService(workspaceRoot: workspaceRoot), workspaceCreator: WorkspaceFactory())
             try await withDependencies {
                 $0.workspaceManager = workspaceManager
             } operation: {

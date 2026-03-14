@@ -1,14 +1,12 @@
-import Testing
 import Dependencies
 import Foundation
-import MonadTestSupport
 @testable import MonadCore
 @testable import MonadShared
-@testable import MonadShared
+import MonadTestSupport
+import Testing
 
-@Suite("Workspace Repository Tests")
-struct WorkspaceRepositoryTests {
-    
+@Suite("AgentWorkspaceService Tests")
+struct AgentWorkspaceServiceTests {
     @Test("Create Workspace")
     func testCreateWorkspace() async throws {
         let persistence = MockPersistenceService()
@@ -22,7 +20,7 @@ struct WorkspaceRepositoryTests {
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository(workspaceRoot: FileManager.default.temporaryDirectory)
+            AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
         }
 
         let uri = WorkspaceURI(host: "monad-server", path: "/test")
@@ -58,7 +56,7 @@ struct WorkspaceRepositoryTests {
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository(workspaceRoot: FileManager.default.temporaryDirectory)
+            AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
         }
 
         let ws = WorkspaceReference(
@@ -88,7 +86,7 @@ struct WorkspaceRepositoryTests {
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository(workspaceRoot: FileManager.default.temporaryDirectory)
+            AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
         }
 
         let ws1 = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
@@ -115,7 +113,7 @@ struct WorkspaceRepositoryTests {
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository(workspaceRoot: FileManager.default.temporaryDirectory)
+            AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
         }
 
         let ws = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
@@ -139,7 +137,7 @@ struct WorkspaceRepositoryTests {
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository(workspaceRoot: FileManager.default.temporaryDirectory)
+            AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
         }
 
         var ws = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)

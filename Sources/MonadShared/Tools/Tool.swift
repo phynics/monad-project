@@ -92,8 +92,7 @@ public extension Tool {
         // JSONSerialization, which cannot handle the AnyCodable wrapper (__SwiftValue crash).
         let schema: JSONSchema
         if let data = try? JSONEncoder().encode(parametersSchema),
-           let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data)
-        {
+           let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data) {
             schema = decoded
         } else {
             var logger: Logger {

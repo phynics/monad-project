@@ -26,6 +26,7 @@ public final class ChatEngine: @unchecked Sendable {
     @Dependency(\.messageStore) var messageStore
     @Dependency(\.llmService) var llmService
     @Dependency(\.toolRouter) var toolRouter
+    @Dependency(\.chatTurnPlugins) var chatTurnPlugins
 
     let logger = Logger.module(named: "com.monad.chat-engine")
 
@@ -72,6 +73,7 @@ public final class ChatEngine: @unchecked Sendable {
         )
 
         let params = BuildPromptParams(
+            timelineId: timelineId,
             timeline: entities.timeline,
             agentInstance: entities.agentInstance,
             message: message,
@@ -139,8 +141,29 @@ public final class ChatEngine: @unchecked Sendable {
             priorOutput = await turnContext.outputs.accumulatedRawOutput
             switch signal {
             case .stop:
-                continuation.finish()
-                return
+                var pluginMessages: [ChatQuery.ChatCompletionMessageParam] = []
+                let completedTurn = CompletedTurn(
+                    timelineId: context.timelineId,
+                    agentInstanceId: context.agentInstanceId,
+                    turnCount: turnCount,
+                    fullResponse: priorOutput,
+                    modelName: context.modelName
+                )
+                do {
+                    for plugin in chatTurnPlugins {
+                        pluginMessages += try await plugin.afterTurn(completedTurn)
+                    }
+                } catch {
+                    logger.error("Plugin error after turn \(turnCount): \(error)")
+                    continuation.finish(throwing: error)
+                    return
+                }
+                if !pluginMessages.isEmpty, turnCount < context.maxTurns {
+                    loopMessages += pluginMessages
+                } else {
+                    continuation.finish()
+                    return
+                }
             case let .continueWith(newMessages):
                 loopMessages += newMessages
             }

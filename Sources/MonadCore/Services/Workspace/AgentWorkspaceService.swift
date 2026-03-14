@@ -2,8 +2,11 @@ import Dependencies
 import Foundation
 import MonadShared
 
-/// Repository for managing Workspace data persistence and business logic.
-public actor WorkspaceRepository {
+/// Manages the persistence and provisioning of agent private workspaces.
+///
+/// Handles workspace CRUD (delegating to `workspacePersistence`) and agent-specific
+/// provisioning: creating sandboxed directories and seeding them from ``AgentTemplate`` files.
+public actor AgentWorkspaceService {
     @Dependency(\.workspacePersistence) private var persistenceService
     private let workspaceRoot: URL
 
@@ -84,8 +87,7 @@ public actor WorkspaceRepository {
     public func deleteWorkspace(id: UUID, deleteDirectory: Bool = false) async throws {
         if deleteDirectory,
            let workspace = try await getWorkspace(id: id, includeTools: false),
-           let rootPath = workspace.rootPath
-        {
+           let rootPath = workspace.rootPath {
             let url = URL(fileURLWithPath: rootPath)
             if FileManager.default.fileExists(atPath: url.path) {
                 try FileManager.default.removeItem(at: url)

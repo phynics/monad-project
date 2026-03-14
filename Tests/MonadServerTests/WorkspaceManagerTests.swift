@@ -1,14 +1,14 @@
-import MonadShared
-import MonadCore
-import Testing
-import Foundation
 import Dependencies
-import MonadTestSupport
+import Foundation
+import MonadCore
 @testable import MonadServer
+import MonadShared
+import MonadTestSupport
+import Testing
 
 @Suite final class WorkspaceManagerTests {
     var persistence: MockPersistenceService!
-    var repository: WorkspaceRepository!
+    var repository: AgentWorkspaceService!
     var manager: WorkspaceManager!
     var testDir: URL!
 
@@ -24,7 +24,7 @@ import MonadTestSupport
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
         } operation: {
-            WorkspaceRepository(workspaceRoot: URL(fileURLWithPath: NSTemporaryDirectory()))
+            AgentWorkspaceService(workspaceRoot: URL(fileURLWithPath: NSTemporaryDirectory()))
         }
 
         manager = WorkspaceManager(repository: repository, workspaceCreator: WorkspaceFactory())
@@ -40,8 +40,7 @@ import MonadTestSupport
 
     @Test
 
-
-    func testGetWorkspaceCreatesAndCaches() async throws {
+    func getWorkspaceCreatesAndCaches() async throws {
         let wsId = UUID()
         let wsDir = testDir.appendingPathComponent("ws1")
         try FileManager.default.createDirectory(at: wsDir, withIntermediateDirectories: true)
@@ -66,14 +65,12 @@ import MonadTestSupport
 
     @Test
 
-
-    func testGetNonExistentWorkspace() async throws {
+    func getNonExistentWorkspace() async throws {
         let ws = try await manager.getWorkspace(id: UUID())
         #expect(ws == nil)
     }
 
     @Test
-
 
     func testCloseWorkspace() async throws {
         let wsId = UUID()
@@ -98,7 +95,6 @@ import MonadTestSupport
     }
 
     @Test
-
 
     func testHealthCheckAll() async throws {
         let wsId1 = UUID()

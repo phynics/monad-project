@@ -26,5 +26,14 @@ public extension DatabaseSchema {
                 }
             }
         }
+
+        migrator.registerMigration("v3") { db in
+            try db.execute(sql: """
+            CREATE TABLE IF NOT EXISTS key_value_store (
+                key   TEXT PRIMARY KEY NOT NULL,
+                value BLOB NOT NULL
+            )
+            """)
+        }
     }
 }

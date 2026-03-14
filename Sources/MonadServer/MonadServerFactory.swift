@@ -42,6 +42,7 @@ public struct MonadServerFactory {
         let timelinePersistence = TimelineRepository(dbQueue: dbQueue)
         let toolPersistence = ToolDataRepository(dbQueue: dbQueue)
         let workspacePersistence = WorkspaceDataRepository(dbQueue: dbQueue)
+        let keyValueStore = DatabaseKeyValueStore(dbQueue: dbQueue)
 
         let router = Router(context: AppRequestContext.self)
 
@@ -83,18 +84,17 @@ public struct MonadServerFactory {
         // Initialize WebSocket Manager
         let connectionManager = WebSocketConnectionManager()
 
-        // Initialize Workspace Repository
-        let workspaceRepository = WorkspaceRepository(workspaceRoot: workspaceRoot)
+        // Initialize Agent Workspace Service
+        let agentWorkspaceService = AgentWorkspaceService(workspaceRoot: workspaceRoot)
 
         // Initialize Core Services
         let timelineManager = TimelineManager(
             workspaceRoot: workspaceRoot,
             connectionManager: connectionManager,
-            workspaceCreator: WorkspaceFactory(),
-            contextProviders: []
+            workspaceCreator: WorkspaceFactory()
         )
 
-        let agentInstanceManager = AgentInstanceManager(repository: workspaceRepository)
+        let agentInstanceManager = AgentInstanceManager(repository: agentWorkspaceService)
         let toolRouter = ToolRouter()
         let chatEngine = ChatEngine()
 
@@ -103,7 +103,7 @@ public struct MonadServerFactory {
         )
 
         let workspaceManager = WorkspaceManager(
-            repository: workspaceRepository,
+            repository: agentWorkspaceService,
             connectionManager: connectionManager,
             workspaceCreator: WorkspaceFactory()
         )
@@ -122,6 +122,7 @@ public struct MonadServerFactory {
             $0.llmService = llmService
             $0.embeddingService = embeddingService
             $0.vectorStore = vectorStore
+            $0.keyValueStore = keyValueStore
             $0.timelineManager = timelineManager
             $0.toolRouter = toolRouter
             $0.chatEngine = chatEngine
@@ -210,7 +211,7 @@ public struct MonadServerFactory {
                     services: [
                         .init(service: app),
                         .init(service: orphanCleanup),
-                        .init(service: bonjourAdvertiser),
+                        .init(service: bonjourAdvertiser)
                     ],
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                     logger: logger

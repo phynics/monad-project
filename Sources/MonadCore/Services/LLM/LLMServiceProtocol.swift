@@ -75,7 +75,8 @@ public protocol LLMServiceProtocol: HealthCheckable {
         clientName: String?,
         systemInstructions: String?,
         agentInstance: AgentInstance?,
-        timeline: Timeline?
+        timeline: Timeline?,
+        extensionSections: [any ContextSection]
     ) async -> Prompt
 
     // Utilities
@@ -84,4 +85,38 @@ public protocol LLMServiceProtocol: HealthCheckable {
     func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws
         -> [String: Double]
     func fetchAvailableModels() async throws -> [String]?
+}
+
+// MARK: - Default Implementations
+
+public extension LLMServiceProtocol {
+    /// Convenience overload with no extension sections.
+    func buildContext(
+        userQuery: String,
+        contextNotes: [ContextFile],
+        memories: [Memory],
+        chatHistory: [Message],
+        tools: [AnyTool],
+        workspaces: [WorkspaceReference],
+        primaryWorkspace: WorkspaceReference?,
+        clientName: String?,
+        systemInstructions: String?,
+        agentInstance: AgentInstance? = nil,
+        timeline: Timeline? = nil
+    ) async -> Prompt {
+        await buildContext(
+            userQuery: userQuery,
+            contextNotes: contextNotes,
+            memories: memories,
+            chatHistory: chatHistory,
+            tools: tools,
+            workspaces: workspaces,
+            primaryWorkspace: primaryWorkspace,
+            clientName: clientName,
+            systemInstructions: systemInstructions,
+            agentInstance: agentInstance,
+            timeline: timeline,
+            extensionSections: []
+        )
+    }
 }

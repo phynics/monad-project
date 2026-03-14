@@ -28,6 +28,7 @@ struct ResolvedEntities {
 
 /// Input parameters for prompt assembly, passed to `buildPrompt`.
 struct BuildPromptParams {
+    let timelineId: UUID
     let timeline: Timeline?
     let agentInstance: AgentInstance?
     let message: String
@@ -103,8 +104,7 @@ extension ChatEngine {
         }
         var clientName: String?
         if let ownerId = primaryWorkspaceOwnerId,
-           let client = try? await clientStore.fetchClient(id: ownerId)
-        {
+           let client = try? await clientStore.fetchClient(id: ownerId) {
             clientName = client.displayName
         }
         return ResolvedEntities(timeline: timeline, agentInstance: agentInstance, clientName: clientName)
@@ -113,6 +113,12 @@ extension ChatEngine {
     func buildPrompt(
         _ params: BuildPromptParams
     ) async -> (messages: [ChatQuery.ChatCompletionMessageParam], structuredContext: [String: String]) {
+        let extensionSections = await timelineManager.gatherExtensionSections(
+            timelineId: params.timelineId,
+            agentInstanceId: params.agentInstance?.id,
+            message: params.message
+        )
+
         let prompt = await llmService.buildContext(
             userQuery: params.message,
             contextNotes: params.contextData.notes,
@@ -124,7 +130,8 @@ extension ChatEngine {
             clientName: params.clientName,
             systemInstructions: params.systemInstructions,
             agentInstance: params.agentInstance,
-            timeline: params.timeline
+            timeline: params.timeline,
+            extensionSections: extensionSections
         )
 
         let messages = await prompt.toMessages()

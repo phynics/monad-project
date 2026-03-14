@@ -55,7 +55,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     public func getHealthDetails() async -> [String: String]? {
         return [
             "model": configuration.modelName,
-            "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom"),
+            "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom")
         ]
     }
 
@@ -236,45 +236,44 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
         clientName: String?,
         systemInstructions: String?,
         agentInstance: AgentInstance? = nil,
-        timeline: Timeline? = nil
+        timeline: Timeline? = nil,
+        extensionSections: [any ContextSection] = []
     ) async -> Prompt {
         let instructions = systemInstructions ?? DefaultInstructions.system()
         let capturedAgent = agentInstance
         let capturedTimeline = timeline
 
-        return Prompt {
-            SystemInstructions(instructions)
+        var sections: [any ContextSection] = []
 
-            // Agent identity (when an agent is attached)
-            if let agent = capturedAgent {
-                AgentContext(agent, timelineTitle: capturedTimeline?.title)
-            }
+        sections.append(SystemInstructions(instructions))
 
-            // Context & Memories
-            ContextNotes(contextNotes)
-            Memories(memories)
-
-            // Tools
-            Tools(tools)
-
-            // Workspaces
-            WorkspacesContext(
-                workspaces: workspaces,
-                primaryWorkspace: primaryWorkspace,
-                clientName: clientName
-            )
-
-            // Current timeline identity
-            if let tl = capturedTimeline {
-                TimelineContext(tl)
-            }
-
-            // Conversation
-            ChatHistory(optimizeHistory(chatHistory, availableTokens: Constants.maxHistoryTokens - Constants.historyTokenBuffer)) // Reserve buffer for other sections
-
-            // User Query
-            UserQuery(userQuery)
+        if let agent = capturedAgent {
+            sections.append(AgentContext(agent, timelineTitle: capturedTimeline?.title))
         }
+
+        sections.append(ContextNotes(contextNotes))
+        sections.append(Memories(memories))
+        sections.append(Tools(tools))
+        sections.append(WorkspacesContext(
+            workspaces: workspaces,
+            primaryWorkspace: primaryWorkspace,
+            clientName: clientName
+        ))
+
+        if let tl = capturedTimeline {
+            sections.append(TimelineContext(tl))
+        }
+
+        sections.append(ChatHistory(
+            optimizeHistory(
+                chatHistory,
+                availableTokens: Constants.maxHistoryTokens - Constants.historyTokenBuffer
+            )
+        ))
+        sections.append(UserQuery(userQuery))
+        sections += extensionSections
+
+        return Prompt(sections: sections)
     }
 
     func optimizeHistory(

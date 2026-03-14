@@ -251,7 +251,8 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         clientName _: String?,
         systemInstructions _: String?,
         agentInstance _: AgentInstance?,
-        timeline _: Timeline?
+        timeline _: Timeline?,
+        extensionSections _: [any ContextSection]
     ) async -> Prompt {
         return Prompt(sections: [])
     }

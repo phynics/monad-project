@@ -53,6 +53,11 @@ public enum VectorStoreKey: DependencyKey {
     public static let liveValue: (any VectorStoreProtocol)? = nil
 }
 
+public enum KeyValueStoreKey: DependencyKey {
+    public static let liveValue: any KeyValueStoreProtocol = InMemoryKeyValueStore()
+    public static let testValue: any KeyValueStoreProtocol = InMemoryKeyValueStore()
+}
+
 // MARK: - Dependency Values
 
 public extension DependencyValues {
@@ -104,6 +109,11 @@ public extension DependencyValues {
     var vectorStore: (any VectorStoreProtocol)? {
         get { self[VectorStoreKey.self] }
         set { self[VectorStoreKey.self] = newValue }
+    }
+
+    var keyValueStore: any KeyValueStoreProtocol {
+        get { self[KeyValueStoreKey.self] }
+        set { self[KeyValueStoreKey.self] = newValue }
     }
 }
 

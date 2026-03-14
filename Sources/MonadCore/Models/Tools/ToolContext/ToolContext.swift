@@ -2,16 +2,6 @@ import Foundation
 import Logging
 import MonadShared
 
-// MARK: - ContextGatewayProviding
-
-/// Provides a gateway tool that activates a ToolContext.
-///
-/// Implement this protocol in the module that owns the context (e.g. MonadServer)
-/// and inject instances into `TimelineManager` via its `contextProviders` parameter.
-public protocol ContextGatewayProviding: Sendable {
-    func makeGatewayTool(timelineContext: ToolTimelineContext) -> AnyTool
-}
-
 // MARK: - ToolContext
 
 public protocol ToolContext: AnyObject, Sendable {
@@ -28,11 +18,6 @@ public protocol ToolContext: AnyObject, Sendable {
     /// Default: false (auto-exits on non-context tool calls)
     var isPersistent: Bool { get }
 
-    /// Whether this context's state should be "pinned" to the prompt.
-    /// Pinned contexts contribute their state to formatToolsForPrompt even when not active.
-    /// Useful for contexts where the LLM needs ongoing awareness.
-    var isPinned: Bool { get }
-
     /// Tools available only within this context
     var contextTools: [AnyTool] { get async }
 
@@ -47,10 +32,6 @@ public protocol ToolContext: AnyObject, Sendable {
 
     /// Welcome message shown when context is activated
     func welcomeMessage() async -> String
-
-    /// Format pinned state for inclusion in prompt (only used if isPinned is true)
-    /// This is a condensed version of formatState for prompt injection
-    func formatPinnedState() async -> String?
 }
 
 // MARK: - Default Implementations
@@ -61,22 +42,12 @@ public extension ToolContext {
         false
     }
 
-    /// Default: not pinned
-    var isPinned: Bool {
-        false
-    }
-
     func activate() async {
         // Default: no-op
     }
 
     func deactivate() async {
         // Default: no-op
-    }
-
-    /// Default: no pinned state
-    func formatPinnedState() async -> String? {
-        nil
     }
 
     func welcomeMessage() async -> String {

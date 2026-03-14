@@ -153,7 +153,8 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         clientName _: String?,
         systemInstructions _: String?,
         agentInstance _: AgentInstance?,
-        timeline _: Timeline?
+        timeline _: Timeline?,
+        extensionSections _: [any ContextSection]
     ) async -> Prompt {
         fail()
     }

@@ -8,7 +8,7 @@ import MonadShared
 /// WorkspaceProtocol implementations, maintaining a cache of active workspaces,
 /// and coordinating their lifecycle (creation, health checks, and shutdown).
 public actor WorkspaceManager {
-    private let repository: WorkspaceRepository
+    private let repository: AgentWorkspaceService
     private let connectionManager: (any ClientConnectionManagerProtocol)?
     private let workspaceCreator: any WorkspaceCreating
 
@@ -16,7 +16,7 @@ public actor WorkspaceManager {
     private var activeWorkspaces: [UUID: any WorkspaceProtocol] = [:]
 
     public init(
-        repository: WorkspaceRepository,
+        repository: AgentWorkspaceService,
         connectionManager: (any ClientConnectionManagerProtocol)? = nil,
         workspaceCreator: any WorkspaceCreating
     ) {

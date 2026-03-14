@@ -18,10 +18,10 @@ public actor AgentInstanceManager {
     @Dependency(\.messageStore) private var messageStore
     @Dependency(\.workspacePersistence) private var workspaceStore
 
-    private let repository: WorkspaceRepository
+    private let repository: AgentWorkspaceService
     private let logger = Logger.module(named: "agent-instance-manager")
 
-    public init(repository: WorkspaceRepository) {
+    public init(repository: AgentWorkspaceService) {
         self.repository = repository
     }
 

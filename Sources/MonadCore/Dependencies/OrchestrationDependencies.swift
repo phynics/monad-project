@@ -4,17 +4,24 @@ import MonadShared
 
 // MARK: - Dependency Keys
 
-public enum WorkspaceRepositoryKey: DependencyKey {
-    public static let liveValue = WorkspaceRepository(
+public enum AgentWorkspaceServiceKey: DependencyKey {
+    public static var liveValue: AgentWorkspaceService {
+        preconditionFailure(
+            "AgentWorkspaceService requires an explicit workspaceRoot. " +
+                "Configure it via MonadServerFactory or your test setup."
+        )
+    }
+
+    public static let testValue = AgentWorkspaceService(
         workspaceRoot: FileManager.default.temporaryDirectory
     )
 }
 
 public enum WorkspaceManagerKey: DependencyKey {
     public static var liveValue: WorkspaceManager {
-        @Dependency(\.workspaceRepository) var repository
+        @Dependency(\.agentWorkspaceService) var service
         return WorkspaceManager(
-            repository: repository,
+            repository: service,
             workspaceCreator: NullWorkspaceCreator()
         )
     }
@@ -36,17 +43,22 @@ public enum ChatEngineKey: DependencyKey {
 
 public enum AgentInstanceManagerKey: DependencyKey {
     public static var liveValue: AgentInstanceManager {
-        @Dependency(\.workspaceRepository) var repository
-        return AgentInstanceManager(repository: repository)
+        @Dependency(\.agentWorkspaceService) var service
+        return AgentInstanceManager(repository: service)
     }
+}
+
+public enum ChatTurnPluginsKey: DependencyKey {
+    public static let liveValue: [any ChatTurnPlugin] = []
+    public static let testValue: [any ChatTurnPlugin] = []
 }
 
 // MARK: - Dependency Values
 
 public extension DependencyValues {
-    var workspaceRepository: WorkspaceRepository {
-        get { self[WorkspaceRepositoryKey.self] }
-        set { self[WorkspaceRepositoryKey.self] = newValue }
+    var agentWorkspaceService: AgentWorkspaceService {
+        get { self[AgentWorkspaceServiceKey.self] }
+        set { self[AgentWorkspaceServiceKey.self] = newValue }
     }
 
     var workspaceManager: WorkspaceManager {
@@ -72,5 +84,10 @@ public extension DependencyValues {
     var agentInstanceManager: AgentInstanceManager {
         get { self[AgentInstanceManagerKey.self] }
         set { self[AgentInstanceManagerKey.self] = newValue }
+    }
+
+    var chatTurnPlugins: [any ChatTurnPlugin] {
+        get { self[ChatTurnPluginsKey.self] }
+        set { self[ChatTurnPluginsKey.self] = newValue }
     }
 }

@@ -99,8 +99,7 @@ public actor ToolExecutor {
             // Append context state if a context is active and this is a context tool.
             var finalContent = responseContent
             if await timelineContext.hasActiveContext && isContextTool,
-               let context = await timelineContext.activeContext
-            {
+               let context = await timelineContext.activeContext {
                 let contextState = await context.formatState()
                 if !contextState.isEmpty {
                     finalContent += "\n\n---\n\(contextState)"

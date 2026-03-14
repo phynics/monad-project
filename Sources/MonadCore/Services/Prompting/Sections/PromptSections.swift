@@ -307,7 +307,7 @@ public struct AgentContext: ContextSection {
     public func render() async -> String? {
         var lines: [String] = [
             "## Your Identity",
-            "You are **\(agent.name)**.",
+            "You are **\(agent.name)**."
         ]
         if !agent.description.isEmpty {
             lines.append("Description: \(agent.description)")

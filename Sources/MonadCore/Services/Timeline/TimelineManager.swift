@@ -2,6 +2,7 @@ import Dependencies
 import ErrorKit
 import Foundation
 import Logging
+import MonadPrompt
 import MonadShared
 
 /// Manages conversation timelines, their associated context, and tool execution environments.
@@ -41,7 +42,7 @@ public actor TimelineManager {
     let workspaceRoot: URL
     let connectionManager: (any ClientConnectionManagerProtocol)?
     public let workspaceManager: WorkspaceManager
-    let contextProviders: [any ContextGatewayProviding]
+    let sectionProviders: [any PromptSectionProviding]
 
     /// Initializes a new `TimelineManager`.
     /// - Parameters:
@@ -49,26 +50,44 @@ public actor TimelineManager {
     ///   - workspaceRoot: The root directory where timeline data is stored.
     ///   - connectionManager: Optional manager for client-side tool connections.
     ///   - workspaceCreator: Factory for creating concrete `WorkspaceProtocol` instances.
-    ///   - contextProviders: Providers that inject gateway tools for external ToolContext implementations.
+    ///   - sectionProviders: Providers that inject extra prompt sections into every chat turn.
     public init(
         vectorStore: (any VectorStoreProtocol)? = nil,
         workspaceRoot: URL,
         connectionManager: (any ClientConnectionManagerProtocol)? = nil,
         workspaceCreator: any WorkspaceCreating = NullWorkspaceCreator(),
-        contextProviders: [any ContextGatewayProviding] = []
+        sectionProviders: [any PromptSectionProviding] = []
     ) {
         self.vectorStore = vectorStore
         self.workspaceRoot = workspaceRoot
         self.connectionManager = connectionManager
-        self.contextProviders = contextProviders
+        self.sectionProviders = sectionProviders
 
         // Use withDependencies to ensure repository picks up current context if needed,
         // although Dependencies usually works via property wrappers.
         workspaceManager = WorkspaceManager(
-            repository: WorkspaceRepository(workspaceRoot: workspaceRoot),
+            repository: AgentWorkspaceService(workspaceRoot: workspaceRoot),
             connectionManager: connectionManager,
             workspaceCreator: workspaceCreator
         )
+    }
+
+    /// Gathers additional prompt sections from all registered `PromptSectionProviding` instances.
+    public func gatherExtensionSections(
+        timelineId: UUID,
+        agentInstanceId: UUID?,
+        message: String
+    ) async -> [any ContextSection] {
+        let buildContext = PromptBuildContext(
+            timelineId: timelineId,
+            agentInstanceId: agentInstanceId,
+            message: message
+        )
+        var sections: [any ContextSection] = []
+        for provider in sectionProviders {
+            sections += await provider.sections(for: buildContext)
+        }
+        return sections
     }
 
     // MARK: - Component Setup
@@ -134,8 +153,7 @@ public actor TimelineManager {
     /// - Returns: The newly created `Timeline`.
     public func createTimeline(title: String = "New Conversation")
         async throws
-        -> Timeline
-    {
+        -> Timeline {
         let timelineId = UUID()
 
         let timelineWorkspaceURL = workspaceRoot.appendingPathComponent(
