@@ -19,7 +19,6 @@ import Foundation
 
     @Test
 
-
     func testPersistence() {
         let config = manager.getConfig()
         #expect(config.lastSessionId == nil)

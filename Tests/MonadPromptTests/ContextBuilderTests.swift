@@ -20,7 +20,6 @@ import Foundation
 
     @Test
 
-
     func testExampleBuilder() async {
         let prompt = Prompt {
             MockSection(id: "1", priority: 10, content: "Low Priority")
@@ -38,7 +37,6 @@ import Foundation
     }
 
     @Test
-
 
     func testConditionals() async {
         let includeSecret = false
@@ -59,7 +57,6 @@ import Foundation
     }
 
     @Test
-
 
     func testLoop() async {
         let items = ["A", "B", "C"]

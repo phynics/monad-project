@@ -200,8 +200,7 @@ private func makePaginatedSessions(_ items: [TimelineResponse] = []) throws -> D
         do {
             _ = try await client.chat.listMemories()
             Issue.record("Expected unauthorized error")
-        } catch MonadClientError.unauthorized { /* expected */ }
-        catch { Issue.record("Expected unauthorized, got \(error)") }
+        } catch MonadClientError.unauthorized { /* expected */ } catch { Issue.record("Expected unauthorized, got \(error)") }
     }
 
     @Test("404 response throws notFound error")
@@ -213,8 +212,7 @@ private func makePaginatedSessions(_ items: [TimelineResponse] = []) throws -> D
         do {
             _ = try await client.chat.listMemories()
             Issue.record("Expected notFound error")
-        } catch MonadClientError.notFound { /* expected */ }
-        catch { Issue.record("Expected notFound, got \(error)") }
+        } catch MonadClientError.notFound { /* expected */ } catch { Issue.record("Expected notFound, got \(error)") }
     }
 
     @Test("500 response throws httpError with status code")
@@ -245,8 +243,7 @@ private func makePaginatedSessions(_ items: [TimelineResponse] = []) throws -> D
             _ = try await client.chat.listMemories()
             Issue.record("Expected error to be thrown")
         } catch let error as MonadClientError {
-            if case .networkError = error { /* expected */ }
-            else { Issue.record("Expected networkError, got \(error)") }
+            if case .networkError = error { /* expected */ } else { Issue.record("Expected networkError, got \(error)") }
         }
     }
 }

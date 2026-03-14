@@ -12,20 +12,20 @@ struct ProtocolWrapper: @unchecked Sendable {
 
 class MockURLProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var mockEvents: [(delay: TimeInterval, data: String?)] = []
-    
+
     override class func canInit(with request: URLRequest) -> Bool {
         return true
     }
-    
+
     override class func canonicalRequest(for request: URLRequest) -> URLRequest {
         return request
     }
-    
+
     override func startLoading() {
         let events = MockURLProtocol.mockEvents
         guard let client = self.client else { return }
         let wrapper = ProtocolWrapper(obj: self, client: client)
-        
+
         // Send synthetic HTTP response
         if let url = request.url,
            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil) {
@@ -47,15 +47,15 @@ class MockURLProtocol: URLProtocol, @unchecked Sendable {
             }
         }
     }
-    
+
     override func stopLoading() {}
 }
 
 @Suite(.serialized) final class SSEStreamReaderTests {
-    
+
     var session: URLSession!
     var logger: Logger!
-    
+
     init() {
         // super.setUp()
         let config = URLSessionConfiguration.ephemeral
@@ -63,13 +63,13 @@ class MockURLProtocol: URLProtocol, @unchecked Sendable {
         session = URLSession(configuration: config)
         logger = Logger(label: "test.sse")
     }
-    
+
     deinit {
         MockURLProtocol.mockEvents = []
         session = nil
         // super.tearDown()
     }
-    
+
     @Test
     func testSSEStreamReader_SingleMessage() async throws {
         MockURLProtocol.mockEvents = [
@@ -77,22 +77,22 @@ class MockURLProtocol: URLProtocol, @unchecked Sendable {
             (0, "data: {\"completion\":{\"event\":\"streamCompleted\"}}\n\n"),
             (0, nil)
         ]
-        
+
         let url = URL(string: "https://test.local")!
         let (bytes, _) = try await session.bytes(from: url)
-        
+
         let reader = SSEStreamReader()
         let events = reader.events(from: bytes, logger: logger)
-        
+
         var receivedEvents: [ChatEvent] = []
         for try await event in events {
             receivedEvents.append(event)
         }
-        
+
         #expect(receivedEvents.count == 1)
         #expect(receivedEvents.first?.textContent == "Hello")
     }
-    
+
     @Test
     func testSSEStreamReader_MultipleChunks() async throws {
         MockURLProtocol.mockEvents = [
@@ -102,18 +102,18 @@ class MockURLProtocol: URLProtocol, @unchecked Sendable {
             (0, "data: {\"completion\":{\"event\":\"streamCompleted\"}}\n\n"),
             (0, nil)
         ]
-        
+
         let url = URL(string: "https://test.local")!
         let (bytes, _) = try await session.bytes(from: url)
-        
+
         let reader = SSEStreamReader()
         let events = reader.events(from: bytes, logger: logger)
-        
+
         var contents: [String] = []
         for try await event in events {
             if let c = event.textContent { contents.append(c) }
         }
-        
+
         #expect(contents == ["Hel", "lo"])
     }
 }
