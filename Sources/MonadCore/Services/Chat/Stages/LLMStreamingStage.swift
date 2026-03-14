@@ -24,7 +24,7 @@ struct LLMStreamingStage: PipelineStage {
                     for try await result in streamData {
                         if Task.isCancelled { break }
 
-                        if let usage = result.usage { context.streamUsage = usage }
+                        if let usage = result.usage { context.outputs.streamUsage = usage }
 
                         if let delta = result.choices.first?.delta.content {
                             let oldThinkingCount = parser.thinking.count
@@ -44,12 +44,12 @@ struct LLMStreamingStage: PipelineStage {
                             }
 
                             if !thinkingChunk.isEmpty {
-                                context.fullThinking += thinkingChunk
+                                context.outputs.fullThinking += thinkingChunk
                                 continuation.yield(.thinking(String(thinkingChunk)))
                             }
 
                             if !contentChunk.isEmpty {
-                                context.fullResponse += contentChunk
+                                context.outputs.fullResponse += contentChunk
                                 continuation.yield(.generation(String(contentChunk)))
                             }
                         }
@@ -57,11 +57,11 @@ struct LLMStreamingStage: PipelineStage {
                         if let calls = result.choices.first?.delta.toolCalls {
                             for call in calls {
                                 guard let index = call.index else { continue }
-                                var acc = context.toolCallAccumulators[index] ?? ("", "", "")
+                                var acc = context.outputs.toolCallAccumulators[index] ?? ("", "", "")
                                 if let id = call.id { acc.id = id }
                                 if let name = call.function?.name { acc.name += name }
                                 if let args = call.function?.arguments { acc.args += args }
-                                context.toolCallAccumulators[index] = acc
+                                context.outputs.toolCallAccumulators[index] = acc
 
                                 continuation.yield(.toolCall(ToolCallDelta(
                                     index: index,
@@ -75,22 +75,22 @@ struct LLMStreamingStage: PipelineStage {
 
                     if !parser.buffer.isEmpty {
                         if parser.isThinking {
-                            context.fullThinking += parser.buffer
+                            context.outputs.fullThinking += parser.buffer
                             continuation.yield(.thinking(parser.buffer))
                         } else {
-                            context.fullResponse += parser.buffer
+                            context.outputs.fullResponse += parser.buffer
                             continuation.yield(.generation(parser.buffer))
                         }
                     }
 
-                    context.accumulatedRawOutput += context.fullThinking
-                    context.accumulatedRawOutput += context.fullResponse
-                    context.turnDuration = Date().timeIntervalSince(turnStartTime)
+                    context.outputs.accumulatedRawOutput += context.outputs.fullThinking
+                    context.outputs.accumulatedRawOutput += context.outputs.fullResponse
+                    context.outputs.turnDuration = Date().timeIntervalSince(turnStartTime)
 
-                    let completionTokens = context.streamUsage?.completionTokens
-                        ?? TokenEstimator.estimate(text: context.fullResponse + context.fullThinking)
-                    context.tokensPerSecond = context.turnDuration > 0
-                        ? Double(completionTokens) / context.turnDuration : nil
+                    let completionTokens = context.outputs.streamUsage?.completionTokens
+                        ?? TokenEstimator.estimate(text: context.outputs.fullResponse + context.outputs.fullThinking)
+                    context.outputs.tokensPerSecond = context.outputs.turnDuration > 0
+                        ? Double(completionTokens) / context.outputs.turnDuration : nil
 
                     // Task cancellation after natural stream completion is not an error.
                     continuation.finish()

@@ -9,23 +9,23 @@ import OpenAI
 /// - With `toolCalls` JSON when the LLM requested tool calls (pending execution).
 /// - Without `toolCalls` when the response is a plain text reply.
 ///
-/// After this stage, `ChatEngine.runChatLoop` inspects `context.toolCallAccumulators` to decide
+/// After this stage, `ChatEngine.runChatLoop` inspects `context.outputs.toolCallAccumulators` to decide
 /// whether to invoke `ToolRouter.handlePendingToolCalls` and continue the loop.
 struct MessagePersistenceStage: PipelineStage {
     let messageStore: any MessageStoreProtocol
     let logger: Logger
 
     func process(_ context: ChatTurnContext) async throws -> AsyncThrowingStream<ChatEvent, Error> {
-        let hasPendingToolCalls = !context.toolCallAccumulators.isEmpty
+        let hasPendingToolCalls = !context.outputs.toolCallAccumulators.isEmpty
         let toolCallsJSON = buildToolCallsJSON(from: context, hasPendingToolCalls: hasPendingToolCalls)
         let recalledMemories = buildRecalledMemories(from: context, hasPendingToolCalls: hasPendingToolCalls)
 
         let assistantMsg = ConversationMessage(
             timelineId: context.timelineId,
             role: .assistant,
-            content: context.fullResponse,
+            content: context.outputs.fullResponse,
             recalledMemories: recalledMemories,
-            think: context.fullThinking.isEmpty ? nil : context.fullThinking,
+            think: context.outputs.fullThinking.isEmpty ? nil : context.outputs.fullThinking,
             toolCalls: toolCallsJSON,
             agentInstanceId: context.agentInstanceId
         )
@@ -40,11 +40,11 @@ struct MessagePersistenceStage: PipelineStage {
                     message: assistantMsg.toMessage(),
                     metadata: APIResponseMetadata(
                         model: context.modelName,
-                        promptTokens: context.streamUsage?.promptTokens,
-                        completionTokens: context.streamUsage?.completionTokens,
-                        totalTokens: context.streamUsage?.totalTokens,
-                        duration: context.turnDuration,
-                        tokensPerSecond: context.tokensPerSecond,
+                        promptTokens: context.outputs.streamUsage?.promptTokens,
+                        completionTokens: context.outputs.streamUsage?.completionTokens,
+                        totalTokens: context.outputs.streamUsage?.totalTokens,
+                        duration: context.outputs.turnDuration,
+                        tokensPerSecond: context.outputs.tokensPerSecond,
                         debugSnapshotData: snapshotData
                     )
                 ))
@@ -55,7 +55,7 @@ struct MessagePersistenceStage: PipelineStage {
 
     private func buildToolCallsJSON(from context: ChatTurnContext, hasPendingToolCalls: Bool) -> String {
         guard hasPendingToolCalls else { return "[]" }
-        let sortedCalls = context.toolCallAccumulators.sorted(by: { $0.key < $1.key })
+        let sortedCalls = context.outputs.toolCallAccumulators.sorted(by: { $0.key < $1.key })
         let callsForDB = sortedCalls.compactMap { _, value -> ToolCall? in
             let argsData = value.args.data(using: .utf8) ?? Data()
             let args = (try? JSONDecoder().decode([String: AnyCodable].self, from: argsData)) ?? [:]
@@ -75,10 +75,10 @@ struct MessagePersistenceStage: PipelineStage {
     private func buildDebugSnapshot(from context: ChatTurnContext, hasPendingToolCalls _: Bool) -> DebugSnapshot {
         DebugSnapshot(
             structuredContext: context.structuredContext,
-            toolCalls: context.debugToolCalls,
-            toolResults: context.debugToolResults,
+            toolCalls: context.outputs.debugToolCalls,
+            toolResults: context.outputs.debugToolResults,
             renderedPrompt: ChatEngine.renderMessagesStatic(context.currentMessages),
-            rawOutput: context.accumulatedRawOutput,
+            rawOutput: context.outputs.accumulatedRawOutput,
             model: context.modelName,
             turnCount: context.turnCount
         )

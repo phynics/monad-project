@@ -13,7 +13,7 @@ import Testing
     func toolExecutionStage_TextFallback() async throws {
         // Given
         let context = createTestContext()
-        context.fullResponse = #"<tool_call>{"name": "test_tool", "arguments": {"foo": "bar"}}</tool_call>"#
+        context.outputs.fullResponse = #"<tool_call>{"name": "test_tool", "arguments": {"foo": "bar"}}</tool_call>"#
 
         let stage = ToolCallExtractionStage(logger: logger)
 
@@ -22,10 +22,10 @@ import Testing
         for try await _ in stream {}
 
         // Then
-        #expect(context.toolCallAccumulators.count == 1)
-        #expect(context.toolCallAccumulators[0]?.name == "test_tool")
-        #expect(context.debugToolCalls.count == 1)
-        #expect(context.debugToolCalls[0].name == "test_tool")
+        #expect(context.outputs.toolCallAccumulators.count == 1)
+        #expect(context.outputs.toolCallAccumulators[0]?.name == "test_tool")
+        #expect(context.outputs.debugToolCalls.count == 1)
+        #expect(context.outputs.debugToolCalls[0].name == "test_tool")
     }
 
     @Test
@@ -36,7 +36,7 @@ import Testing
         let stage = MessagePersistenceStage(messageStore: persistence, logger: logger)
 
         let context = createTestContext()
-        context.fullResponse = "Hello world"
+        context.outputs.fullResponse = "Hello world"
 
         // When
         let stream = try await stage.process(context)
@@ -50,18 +50,19 @@ import Testing
     // MARK: - Helpers
 
     private func createTestContext() -> ChatTurnContext {
-        let _ = AsyncThrowingStream<ChatEvent, Error>.makeStream()
+        let outputs = TurnOutputs()
         return ChatTurnContext(
             timelineId: UUID(),
             agentInstanceId: nil,
             modelName: "test-model",
-            turnCount: 1,
-            currentMessages: [],
-            toolParams: [],
+            maxTurns: 5,
+            systemInstructions: nil,
             availableTools: [],
             contextData: ContextData(),
             structuredContext: [:],
-            accumulatedRawOutput: ""
+            currentMessages: [],
+            turnCount: 1,
+            outputs: outputs
         )
     }
 }

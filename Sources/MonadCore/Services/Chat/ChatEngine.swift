@@ -31,33 +31,6 @@ public final class ChatEngine: @unchecked Sendable {
 
     public init() {}
 
-    // MARK: - Configuration
-
-    /// Bundles the fixed rules and metadata for the entire multi-turn generation.
-    public struct ChatSession: Sendable {
-        public let timelineId: UUID
-        public let agentInstanceId: UUID?
-        public let availableTools: [AnyTool]
-        public let modelName: String
-        public let maxTurns: Int
-        public let systemInstructions: String?
-        public let structuredContext: [String: String]
-        public let contextData: ContextData
-    }
-
-    /// Tracks the evolving state of the conversation across multiple turns.
-    private final class ChatTurnState: @unchecked Sendable {
-        var currentMessages: [ChatQuery.ChatCompletionMessageParam]
-        var turnCount: Int
-        var accumulatedRawOutput: String
-
-        init(initialMessages: [ChatQuery.ChatCompletionMessageParam]) {
-            currentMessages = initialMessages
-            turnCount = 0
-            accumulatedRawOutput = ""
-        }
-    }
-
     // MARK: - Public API
 
     /// Execute a chat turn and return a stream of deltas.
@@ -91,34 +64,46 @@ public final class ChatEngine: @unchecked Sendable {
         let history = try await timelineManager.getHistory(for: timelineId)
         let contextData = await fetchContext(contextManager: contextManager, message: message, history: history)
 
-        let turnInput = TurnInitInput(
-            timelineId: timelineId, message: message, tools: tools,
-            contextData: contextData, history: history,
-            agentInstanceId: agentInstanceId, systemInstructions: systemInstructions
-        )
-        let (initialMessages, structuredContext) = try await buildTurnInitialState(input: turnInput)
-        let modelName = await llmService.configuration.modelName
-
-        let session = ChatSession(
+        let workspaceResult = await timelineManager.getWorkspaces(for: timelineId)
+        let entities = await resolveEntities(
             timelineId: timelineId,
             agentInstanceId: agentInstanceId,
+            primaryWorkspaceOwnerId: workspaceResult?.primary?.ownerId
+        )
+
+        let params = BuildPromptParams(
+            timeline: entities.timeline,
+            agentInstance: entities.agentInstance,
+            message: message,
+            contextData: contextData,
+            history: history,
             availableTools: tools,
+            workspaces: workspaceResult?.attached ?? [],
+            primaryWorkspace: workspaceResult?.primary,
+            clientName: entities.clientName,
+            connectedClients: Set<UUID>(),
+            systemInstructions: systemInstructions
+        )
+        let (initialMessages, structuredContext) = await buildPrompt(params)
+        let modelName = await llmService.configuration.modelName
+
+        let context = ChatTurnContext(
+            timelineId: timelineId,
+            agentInstanceId: agentInstanceId,
             modelName: modelName,
             maxTurns: maxTurns,
             systemInstructions: systemInstructions,
+            availableTools: tools,
+            contextData: contextData,
             structuredContext: structuredContext,
-            contextData: contextData
+            currentMessages: initialMessages,
+            turnCount: 0,
+            outputs: TurnOutputs()
         )
-
-        let state = ChatTurnState(initialMessages: initialMessages)
 
         return AsyncThrowingStream<ChatEvent, Error> { continuation in
             let task = Task {
-                await self.runChatLoop(
-                    continuation: continuation,
-                    session: session,
-                    state: state
-                )
+                await self.runChatLoop(continuation: continuation, context: context)
             }
             continuation.onTermination = { @Sendable _ in task.cancel() }
         }
@@ -126,49 +111,54 @@ public final class ChatEngine: @unchecked Sendable {
 
     // MARK: - Core Loop
 
-    private enum LoopContinuation: Equatable {
-        case `continue`
+    private enum LoopContinuation {
         case stop
-    }
-
-    private enum PostTurnAction {
-        case finish
         case continueWith([ChatQuery.ChatCompletionMessageParam])
     }
 
     private func runChatLoop(
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation,
-        session: ChatSession,
-        state: ChatTurnState
+        context: ChatTurnContext
     ) async {
         continuation.yield(.generationContext(ChatMetadata(
-            memories: session.contextData.memories.map { $0.memory.id },
-            files: session.contextData.notes.map { $0.name }
+            memories: context.contextData.memories.map { $0.memory.id },
+            files: context.contextData.notes.map { $0.name }
         )))
 
-        while state.turnCount < session.maxTurns {
-            state.turnCount += 1
-            let signal = await runOneTurn(
-                continuation: continuation,
-                session: session,
-                state: state
+        var loopMessages = context.currentMessages
+        var turnCount = 0
+        var priorOutput = ""
+
+        while turnCount < context.maxTurns {
+            turnCount += 1
+            let turnContext = context.forTurn(
+                turnCount: turnCount,
+                messages: loopMessages,
+                priorAccumulatedOutput: priorOutput
             )
-            if signal == .stop { return }
+            let signal = await runOneTurn(continuation: continuation, context: turnContext)
+            priorOutput = turnContext.outputs.accumulatedRawOutput
+            switch signal {
+            case .stop:
+                continuation.finish()
+                return
+            case let .continueWith(newMessages):
+                loopMessages += newMessages
+            }
         }
 
-        logger.warning("Max turns (\(session.maxTurns)) reached for timeline \(session.timelineId)")
+        logger.warning("Max turns (\(context.maxTurns)) reached for timeline \(context.timelineId)")
         continuation.finish()
     }
 
     private func runOneTurn(
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation,
-        session: ChatSession,
-        state: ChatTurnState
+        context: ChatTurnContext
     ) async -> LoopContinuation {
         let sid = ANSIColors.colorize(
-            session.timelineId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue
+            context.timelineId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue
         )
-        let turnLabel = ANSIColors.colorize("\(state.turnCount)", color: ANSIColors.brightYellow)
+        let turnLabel = ANSIColors.colorize("\(context.turnCount)", color: ANSIColors.brightYellow)
         logger.info("Starting turn \(turnLabel) for timeline \(sid)")
 
         if Task.isCancelled {
@@ -177,54 +167,34 @@ public final class ChatEngine: @unchecked Sendable {
             return .stop
         }
 
-        let context: ChatTurnContext
         do {
-            context = try await processTurn(
-                session: session,
-                state: state,
-                continuation: continuation
-            )
+            try await processTurn(context: context, continuation: continuation)
         } catch is CancellationError {
             continuation.yield(.generationCancelled())
             continuation.finish()
             return .stop
         } catch {
-            logger.error("Error in chat loop turn \(state.turnCount): \(error)")
+            logger.error("Error in chat loop turn \(context.turnCount): \(error)")
             continuation.finish(throwing: error)
             return .stop
         }
 
-        let action: PostTurnAction
         do {
-            action = try await handleToolCallsAfterTurn(
-                context: context,
-                session: session,
-                continuation: continuation
-            )
+            return try await handleToolCallsAfterTurn(context: context, continuation: continuation)
         } catch {
-            logger.error("Tool execution error on turn \(state.turnCount): \(error)")
+            logger.error("Tool execution error on turn \(context.turnCount): \(error)")
             continuation.finish(throwing: error)
             return .stop
-        }
-
-        switch action {
-        case .finish:
-            continuation.finish()
-            return .stop
-        case let .continueWith(newMessages):
-            state.currentMessages.append(contentsOf: newMessages)
-            return .continue
         }
     }
 
     private func handleToolCallsAfterTurn(
         context: ChatTurnContext,
-        session: ChatSession,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
-    ) async throws -> PostTurnAction {
-        guard !context.toolCallAccumulators.isEmpty else { return .finish }
+    ) async throws -> LoopContinuation {
+        guard !context.outputs.toolCallAccumulators.isEmpty else { return .stop }
 
-        let sortedCalls = context.toolCallAccumulators.sorted(by: { $0.key < $1.key })
+        let sortedCalls = context.outputs.toolCallAccumulators.sorted(by: { $0.key < $1.key })
         let parsedCalls = sortedCalls.map { _, value in
             ParsedToolCall(callId: value.id, name: value.name, argumentsJSON: value.args)
         }
@@ -234,36 +204,22 @@ public final class ChatEngine: @unchecked Sendable {
             )
         }
         let assistantParam = ChatQuery.ChatCompletionMessageParam.assistant(
-            .init(content: .textContent(.init(context.fullResponse)), toolCalls: toolCallsParam)
+            .init(content: .textContent(.init(context.outputs.fullResponse)), toolCalls: toolCallsParam)
         )
         let result = try await toolRouter.handlePendingToolCalls(
-            timelineId: session.timelineId,
+            timelineId: context.timelineId,
             calls: parsedCalls,
-            availableTools: session.availableTools,
+            availableTools: context.availableTools,
             continuation: continuation
         )
-        if result.hasDeferred { return .finish }
+        if result.hasDeferred { return .stop }
         return .continueWith([assistantParam] + result.resolvedToolParams)
     }
 
     private func processTurn(
-        session: ChatSession,
-        state: ChatTurnState,
+        context: ChatTurnContext,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
-    ) async throws -> ChatTurnContext {
-        let context = ChatTurnContext(
-            timelineId: session.timelineId,
-            agentInstanceId: session.agentInstanceId,
-            modelName: session.modelName,
-            turnCount: state.turnCount,
-            currentMessages: state.currentMessages,
-            toolParams: session.availableTools.map { $0.toToolParam() },
-            availableTools: session.availableTools,
-            contextData: session.contextData,
-            structuredContext: session.structuredContext,
-            accumulatedRawOutput: state.accumulatedRawOutput
-        )
-
+    ) async throws {
         let pipeline = Pipeline<ChatTurnContext, ChatEvent>()
             .add(LLMStreamingStage(llmService: llmService, logger: logger))
             .add(ToolCallExtractionStage(logger: logger))
@@ -273,9 +229,6 @@ public final class ChatEngine: @unchecked Sendable {
         for try await event in stream {
             continuation.yield(event)
         }
-
-        state.accumulatedRawOutput = context.accumulatedRawOutput
-        return context
     }
 
     // MARK: - Utilities

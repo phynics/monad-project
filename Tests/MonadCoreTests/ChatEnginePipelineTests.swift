@@ -16,21 +16,22 @@ private func makeContext(
     toolCallAccumulators: [Int: (id: String, name: String, args: String)] = [:],
     currentMessages: [ChatQuery.ChatCompletionMessageParam] = []
 ) -> ChatTurnContext {
-    let context = ChatTurnContext(
+    let outputs = TurnOutputs(priorAccumulatedOutput: accumulatedRawOutput)
+    outputs.fullResponse = fullResponse
+    outputs.toolCallAccumulators = toolCallAccumulators
+    return ChatTurnContext(
         timelineId: UUID(),
         agentInstanceId: nil,
         modelName: "test-model",
-        turnCount: 1,
-        currentMessages: currentMessages,
-        toolParams: [],
+        maxTurns: 5,
+        systemInstructions: nil,
         availableTools: [],
         contextData: ContextData(),
         structuredContext: [:],
-        accumulatedRawOutput: accumulatedRawOutput
+        currentMessages: currentMessages,
+        turnCount: 1,
+        outputs: outputs
     )
-    context.fullResponse = fullResponse
-    context.toolCallAccumulators = toolCallAccumulators
-    return context
 }
 
 private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws -> [ChatEvent] {
@@ -99,26 +100,26 @@ private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws
     func sentinelCallsFiltered() async throws {
         let stage = ToolCallExtractionStage(logger: testLogger)
         let context = makeContext()
-        context.toolCallAccumulators[0] = (id: "s1", name: ChatEngine.Constants.sentinelToolName, args: "{}")
-        context.toolCallAccumulators[1] = (id: "r1", name: "real_tool", args: "{}")
+        context.outputs.toolCallAccumulators[0] = (id: "s1", name: ChatEngine.Constants.sentinelToolName, args: "{}")
+        context.outputs.toolCallAccumulators[1] = (id: "r1", name: "real_tool", args: "{}")
 
         _ = try await drain(await stage.process(context))
 
-        #expect(context.toolCallAccumulators.count == 1)
-        #expect(context.toolCallAccumulators.values.first?.name == "real_tool")
+        #expect(context.outputs.toolCallAccumulators.count == 1)
+        #expect(context.outputs.toolCallAccumulators.values.first?.name == "real_tool")
     }
 
     @Test
     func emptyNameCallsFiltered() async throws {
         let stage = ToolCallExtractionStage(logger: testLogger)
         let context = makeContext()
-        context.toolCallAccumulators[0] = (id: "e1", name: "", args: "{}")
-        context.toolCallAccumulators[1] = (id: "k1", name: "valid_tool", args: "{}")
+        context.outputs.toolCallAccumulators[0] = (id: "e1", name: "", args: "{}")
+        context.outputs.toolCallAccumulators[1] = (id: "k1", name: "valid_tool", args: "{}")
 
         _ = try await drain(await stage.process(context))
 
-        #expect(context.toolCallAccumulators.count == 1)
-        #expect(context.toolCallAccumulators.values.first?.name == "valid_tool")
+        #expect(context.outputs.toolCallAccumulators.count == 1)
+        #expect(context.outputs.toolCallAccumulators.values.first?.name == "valid_tool")
     }
 
     @Test
@@ -130,8 +131,8 @@ private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws
 
         _ = try await drain(await stage.process(context))
 
-        #expect(!context.toolCallAccumulators.isEmpty)
-        #expect(context.toolCallAccumulators.values.contains { $0.name == "test_tool" })
+        #expect(!context.outputs.toolCallAccumulators.isEmpty)
+        #expect(context.outputs.toolCallAccumulators.values.contains { $0.name == "test_tool" })
     }
 }
 
@@ -151,8 +152,8 @@ private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws
         let content = events.compactMap { $0.textContent }.joined()
         #expect(thinking.contains("reasoning here"))
         #expect(content.contains("content here"))
-        #expect(context.fullThinking.contains("reasoning here"))
-        #expect(context.fullResponse.contains("content here"))
+        #expect(context.outputs.fullThinking.contains("reasoning here"))
+        #expect(context.outputs.fullResponse.contains("content here"))
     }
 
     @Test
@@ -163,8 +164,8 @@ private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws
             [
                 "id": "tc-1",
                 "type": "function",
-                "function": ["name": "my_tool", "arguments": "{\"x\": 1}"]
-            ]
+                "function": ["name": "my_tool", "arguments": "{\"x\": 1}"],
+            ],
         ]]
         let stage = LLMStreamingStage(llmService: mockService, logger: testLogger)
         let context = makeContext()
@@ -176,6 +177,6 @@ private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws
             return false
         }
         #expect(!toolCallDeltas.isEmpty)
-        #expect(!context.toolCallAccumulators.isEmpty)
+        #expect(!context.outputs.toolCallAccumulators.isEmpty)
     }
 }

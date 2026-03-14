@@ -19,18 +19,14 @@ public enum ChatEngineError: Throwable {
     }
 }
 
-/// Input for `buildTurnInitialState`, grouping the per-turn setup parameters.
-struct TurnInitInput {
-    let timelineId: UUID
-    let message: String
-    let tools: [AnyTool]
-    let contextData: ContextData
-    let history: [Message]
-    let agentInstanceId: UUID?
-    let systemInstructions: String?
+/// Resolved entity snapshot used to assemble the prompt.
+struct ResolvedEntities {
+    let timeline: Timeline?
+    let agentInstance: AgentInstance?
+    let clientName: String?
 }
 
-/// Input parameters for building the LLM prompt in a chat turn.
+/// Input parameters for prompt assembly, passed to `buildPrompt`.
 struct BuildPromptParams {
     let timeline: Timeline?
     let agentInstance: AgentInstance?
@@ -96,37 +92,22 @@ extension ChatEngine {
         return ContextData()
     }
 
-    func buildTurnInitialState(
-        input: TurnInitInput
-    ) async throws -> (messages: [ChatQuery.ChatCompletionMessageParam], structuredContext: [String: String]) {
-        let timeline = await timelineManager.getTimeline(id: input.timelineId)
-        let workspaces = await timelineManager.getWorkspaces(for: input.timelineId)
-        let attachedWorkspaces = workspaces?.attached ?? []
-
-        let agentInstance: AgentInstance? = input.agentInstanceId != nil
-            ? try? await agentInstanceStore.fetchAgentInstance(id: input.agentInstanceId!)
-            : nil
-
+    func resolveEntities(
+        timelineId: UUID,
+        agentInstanceId: UUID?,
+        primaryWorkspaceOwnerId: UUID?
+    ) async -> ResolvedEntities {
+        let timeline = await timelineManager.getTimeline(id: timelineId)
+        var agentInstance: AgentInstance?
+        if let agentId = agentInstanceId {
+            agentInstance = try? await agentInstanceStore.fetchAgentInstance(id: agentId)
+        }
         var clientName: String?
-        if let ownerId = workspaces?.primary?.ownerId,
+        if let ownerId = primaryWorkspaceOwnerId,
            let client = try? await clientStore.fetchClient(id: ownerId) {
             clientName = client.displayName
         }
-
-        let params = BuildPromptParams(
-            timeline: timeline,
-            agentInstance: agentInstance,
-            message: input.message,
-            contextData: input.contextData,
-            history: input.history,
-            availableTools: input.tools,
-            workspaces: attachedWorkspaces,
-            primaryWorkspace: workspaces?.primary,
-            clientName: clientName,
-            connectedClients: Set<UUID>(),
-            systemInstructions: input.systemInstructions
-        )
-        return await buildPrompt(params)
+        return ResolvedEntities(timeline: timeline, agentInstance: agentInstance, clientName: clientName)
     }
 
     func buildPrompt(
