@@ -3,26 +3,7 @@ import Foundation
 import Logging
 import MonadShared
 
-/// Error types for ToolExecutor
-public enum ToolExecutorError: Throwable, Equatable {
-    case toolNotFound(String)
-
-    public var errorDescription: String? {
-        switch self {
-        case let .toolNotFound(name):
-            return "Tool '\(name)' not found"
-        }
-    }
-
-    public var userFriendlyMessage: String {
-        switch self {
-        case let .toolNotFound(name):
-            return "The assistant tried to use a tool named '\(name)', but it is not available in the current context."
-        }
-    }
-}
-
-/// Executes tool calls and manages tool results
+/// Executes tool calls and manages tool results.
 public actor ToolExecutor {
     private let toolManager: TimelineToolManager
     private let logger = Logger.module(named: "tools")
@@ -33,18 +14,24 @@ public actor ToolExecutor {
     /// Reference to job queue for auto-dequeue functionality
     public let jobQueueContext: BackgroundJobQueueContext?
 
-    // Loop detection
+    /// Maximum times the same tool call (same name + arguments) is allowed before loop detection
+    /// fires. Note: `ToolCall.==` compares `name` and `arguments` only — calls with *different*
+    /// arguments are counted separately.
+    private let maxRepeatedCalls: Int
+
+    /// Loop detection state
     private var callCounts: [ToolCall: Int] = [:]
-    private let maxRepeatedCalls = 3
 
     public init(
         toolManager: TimelineToolManager,
         timelineContext: ToolTimelineContext = ToolTimelineContext(),
-        jobQueueContext: BackgroundJobQueueContext? = nil
+        jobQueueContext: BackgroundJobQueueContext? = nil,
+        maxRepeatedCalls: Int = 3
     ) {
         self.toolManager = toolManager
         self.timelineContext = timelineContext
         self.jobQueueContext = jobQueueContext
+        self.maxRepeatedCalls = maxRepeatedCalls
     }
 
     /// Reset loop detection state
@@ -62,24 +49,24 @@ public actor ToolExecutor {
         return await toolManager.getEnabledTools()
     }
 
-    /// Execute a single tool call
-    public func execute(_ toolCall: ToolCall) async throws -> Message {
-        // Loop detection check
+    /// Execute a single tool call. Always returns a `Message`; errors are surfaced as tool
+    /// messages so the LLM can observe and recover from failures.
+    public func execute(_ toolCall: ToolCall) async -> Message {
+        // Loop detection
         let count = callCounts[toolCall, default: 0] + 1
         callCounts[toolCall] = count
 
         if count >= maxRepeatedCalls {
             logger.warning("Loop detected for tool: \(toolCall.name)")
             return Message(
-                content:
-                "Error: Loop detected. Tool '\(toolCall.name)' has been called \(count) times with the exact same parameters. Please try a different approach or verify your logic.",
+                content: "Error: Loop detected. Tool '\(toolCall.name)' has been called \(count) times with the exact same parameters. Please try a different approach or verify your logic.",
                 role: .tool,
                 think: nil
             )
         }
 
         // Check for context auto-exit: if a context is active and this is NOT a context tool,
-        // deactivate the context before proceeding
+        // deactivate the context before proceeding.
         let isContextTool = await timelineContext.isContextTool(toolCall.name)
         let isGatewayForActiveContext = await timelineContext.isActiveContextGateway(toolCall.name)
 
@@ -90,50 +77,42 @@ public actor ToolExecutor {
 
         guard let tool = await toolManager.getTool(id: toolCall.name) else {
             logger.error("Tool not found: \(toolCall.name)")
-            throw ToolExecutorError.toolNotFound(toolCall.name)
+            return Message(
+                content: "Error: Tool '\(toolCall.name)' is not available.",
+                role: .tool,
+                think: nil
+            )
         }
 
         logger.info("Executing tool: \(tool.name)")
 
-        // Convert [String: AnyCodable] to [String: Any] for tool execution
-        var anyArgs: [String: Any] = [:]
-        for (key, value) in toolCall.arguments {
-            anyArgs[key] = value.value
-        }
+        let anyArgs = toolCall.arguments.toAnyDictionary
 
         do {
             let result = try await tool.execute(parameters: anyArgs)
 
-            var responseContent: String
+            let responseContent: String
             if result.success {
+                logger.info("Tool \(tool.name) executed successfully")
                 responseContent = result.output
             } else {
                 let errorMsg = result.error ?? "Unknown error"
+                logger.error("Tool \(tool.name) failed: \(errorMsg)")
                 responseContent = "Error: \(errorMsg)"
             }
 
-            // Append context state if a context is active and this is a context tool
+            // Append context state if a context is active and this is a context tool.
+            var finalContent = responseContent
             if await timelineContext.hasActiveContext && isContextTool,
                let context = await timelineContext.activeContext
             {
                 let contextState = await context.formatState()
                 if !contextState.isEmpty {
-                    responseContent += "\n\n---\n\(contextState)"
+                    finalContent += "\n\n---\n\(contextState)"
                 }
             }
 
-            if result.success {
-                logger.info("Tool \(tool.name) executed successfully")
-            } else {
-                let errorDesc = result.error ?? "Unknown error"
-                logger.error("Tool \(tool.name) failed: \(errorDesc)")
-            }
-
-            return Message(
-                content: responseContent,
-                role: .tool,
-                think: nil
-            )
+            return Message(content: finalContent, role: .tool, think: nil)
         } catch {
             let errMsg = ErrorKit.userFriendlyMessage(for: error)
             logger.error("Error executing tool \(tool.name): \(errMsg)")
@@ -155,33 +134,18 @@ public actor ToolExecutor {
         if await timelineContext.hasActiveContext {
             var messages: [Message] = []
             for toolCall in toolCalls {
-                do {
-                    try messages.append(await execute(toolCall))
-                } catch {
-                    messages.append(Message(
-                        content: "Failed to execute tool \(toolCall.name): \(ErrorKit.userFriendlyMessage(for: error))",
-                        role: .tool,
-                        think: nil
-                    ))
-                }
+                messages.append(await execute(toolCall))
             }
             return messages
         }
 
+        // Note: execute() is actor-isolated, so concurrent tasks serialise at the actor boundary.
+        // withTaskGroup is used here for efficient result collection and to restore original order.
         return await withTaskGroup(of: (Int, Message).self) { group in
             for (index, toolCall) in toolCalls.enumerated() {
                 group.addTask {
-                    do {
-                        let result = try await self.execute(toolCall)
-                        return (index, result)
-                    } catch {
-                        let errorMessage = Message(
-                            content: "Failed to execute tool \(toolCall.name): \(ErrorKit.userFriendlyMessage(for: error))",
-                            role: .tool,
-                            think: nil
-                        )
-                        return (index, errorMessage)
-                    }
+                    let result = await self.execute(toolCall)
+                    return (index, result)
                 }
             }
 

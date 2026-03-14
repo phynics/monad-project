@@ -1,4 +1,5 @@
 import Dependencies
+import ErrorKit
 import Foundation
 import Logging
 import MonadShared
@@ -17,10 +18,15 @@ public struct ParsedToolCall: Sendable {
     public let callId: String
     public let name: String
     public let argumentsJSON: String
+    /// Arguments decoded once at init time. Malformed JSON silently produces an empty dictionary.
+    public let arguments: [String: AnyCodable]
 
-    public var arguments: [String: AnyCodable] {
+    public init(callId: String, name: String, argumentsJSON: String) {
+        self.callId = callId
+        self.name = name
+        self.argumentsJSON = argumentsJSON
         let data = argumentsJSON.data(using: .utf8) ?? Data()
-        return (try? JSONDecoder().decode([String: AnyCodable].self, from: data)) ?? [:]
+        arguments = (try? JSONDecoder().decode([String: AnyCodable].self, from: data)) ?? [:]
     }
 }
 
@@ -102,8 +108,9 @@ public actor ToolRouter {
                     hasDeferred = true
                 }
             } catch {
+                let errorMsg = ErrorKit.userFriendlyMessage(for: error)
                 logger.error("Tool \(toolDisplayName) error: \(error.localizedDescription)")
-                let errorOutput = "Error: \(error.localizedDescription)"
+                let errorOutput = "Error: \(errorMsg)"
                 continuation.yield(.toolCompleted(
                     toolCallId: call.callId,
                     status: .failed(reference: toolRef, error: error.localizedDescription)
@@ -139,6 +146,8 @@ public actor ToolRouter {
 
         logger.info("Routing 🛠️ \(toolName) in timeline \(sid)")
 
+        // resolveWorkspace returns nil when the tool is not registered in any of the
+        // timeline's workspaces, or when the timeline has no workspaces at all.
         guard let workspaceId = try await resolveWorkspace(for: tool, in: timelineId) else {
             throw ToolError.toolNotFound(tool.displayName)
         }
@@ -152,7 +161,6 @@ public actor ToolRouter {
             let output = try await executeLocally(
                 tool: tool,
                 arguments: arguments,
-                workspace: workspace,
                 timelineId: timelineId,
                 availableTools: availableTools
             )
@@ -182,7 +190,6 @@ public actor ToolRouter {
     private func executeLocally(
         tool: ToolReference,
         arguments: [String: AnyCodable],
-        workspace _: WorkspaceReference,
         timelineId: UUID,
         availableTools: [AnyTool]? = nil
     ) async throws -> String {
@@ -195,7 +202,9 @@ public actor ToolRouter {
 
         var toolList = await toolManager.getAvailableTools()
         if let dynamicTools = availableTools {
-            toolList = dynamicTools + toolList
+            // Dynamic tools take priority; exclude static tools with the same ID.
+            let dynamicIds = Set(dynamicTools.map { $0.id })
+            toolList = dynamicTools + toolList.filter { !dynamicIds.contains($0.id) }
         }
 
         guard let resolvedTool = toolList.first(where: {
@@ -204,10 +213,7 @@ public actor ToolRouter {
             throw ToolError.toolNotFound(tool.displayName)
         }
 
-        var params: [String: Any] = [:]
-        for (key, val) in arguments {
-            params[key] = val.value
-        }
+        let params = arguments.toAnyDictionary
 
         let result = try await resolvedTool.execute(parameters: params)
         if result.success {

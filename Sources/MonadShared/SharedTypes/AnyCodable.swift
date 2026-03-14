@@ -114,4 +114,9 @@ public extension Dictionary where Key == String, Value == AnyCodable {
     func toJsonString() throws -> String {
         return try MonadShared.toJsonString(self)
     }
+
+    /// Converts a `[String: AnyCodable]` dictionary to `[String: Any]` by unwrapping each value.
+    var toAnyDictionary: [String: Any] {
+        mapValues { $0.value }
+    }
 }
