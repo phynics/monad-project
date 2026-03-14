@@ -1,7 +1,7 @@
-import Foundation
-import MonadShared
-import Logging
 import ErrorKit
+import Foundation
+import Logging
+import MonadShared
 
 /// Error types for ToolExecutor
 public enum ToolExecutorError: Throwable, Equatable {
@@ -19,16 +19,6 @@ public enum ToolExecutorError: Throwable, Equatable {
         case let .toolNotFound(name):
             return "The assistant tried to use a tool named '\(name)', but it is not available in the current context."
         }
-    }
-}
-
-/// Result of tool execution including message and compactification node
-public struct ToolExecutionResult: Sendable {
-    /// The response message from the tool
-    public let message: Message
-
-    public init(message: Message) {
-        self.message = message
     }
 }
 
@@ -124,7 +114,8 @@ public actor ToolExecutor {
 
             // Append context state if a context is active and this is a context tool
             if await timelineContext.hasActiveContext && isContextTool,
-               let context = await timelineContext.activeContext {
+               let context = await timelineContext.activeContext
+            {
                 let contextState = await context.formatState()
                 if !contextState.isEmpty {
                     responseContent += "\n\n---\n\(contextState)"
@@ -144,45 +135,38 @@ public actor ToolExecutor {
                 think: nil
             )
         } catch {
-            logger.error("Error executing tool \(tool.name): \(error.localizedDescription)")
+            let errMsg = ErrorKit.userFriendlyMessage(for: error)
+            logger.error("Error executing tool \(tool.name): \(errMsg)")
             return Message(
-                content: "Failed to execute tool \(tool.name): \(error.localizedDescription)",
+                content: "Failed to execute tool \(tool.name): \(errMsg)",
                 role: .tool,
                 think: nil
             )
         }
     }
 
-    /// Execute a tool call and generate a compactification summary
-    /// - Parameters:
-    ///   - toolCall: The tool call to execute
-    ///   - assistantMessageId: ID of the assistant message that triggered this call
-    /// - Returns: ToolExecutionResult containing message and optional compactification node
-    public func executeWithSummary(_ toolCall: ToolCall, assistantMessageId _: UUID) async throws
-        -> ToolExecutionResult {
-        let message = try await execute(toolCall)
-
-        // Generate compactification node
-        guard let tool = await toolManager.getTool(id: toolCall.name) else {
-            return ToolExecutionResult(message: message)
-        }
-
-        // Convert arguments to [String: Any]
-        var anyArgs: [String: Any] = [:]
-        for (key, value) in toolCall.arguments {
-            anyArgs[key] = value.value
-        }
-
-        // Create tool result for summarization
-        let toolResult = ToolResult.success(message.content)
-        _ = tool.summarize(parameters: anyArgs, result: toolResult)
-
-        return ToolExecutionResult(message: message)
-    }
-
-    /// Execute multiple tool calls concurrently
+    /// Execute multiple tool calls, sequentially when a context is active to avoid races,
+    /// concurrently otherwise.
     public func executeAll(_ toolCalls: [ToolCall]) async -> [Message] {
-        logger.debug("Executing \(toolCalls.count) tool calls concurrently")
+        logger.debug("Executing \(toolCalls.count) tool calls")
+
+        // Context mutations (activate/deactivate) are not safe to interleave across concurrent
+        // tasks. Fall back to sequential execution whenever a context is active.
+        if await timelineContext.hasActiveContext {
+            var messages: [Message] = []
+            for toolCall in toolCalls {
+                do {
+                    try messages.append(await execute(toolCall))
+                } catch {
+                    messages.append(Message(
+                        content: "Failed to execute tool \(toolCall.name): \(ErrorKit.userFriendlyMessage(for: error))",
+                        role: .tool,
+                        think: nil
+                    ))
+                }
+            }
+            return messages
+        }
 
         return await withTaskGroup(of: (Int, Message).self) { group in
             for (index, toolCall) in toolCalls.enumerated() {
@@ -192,8 +176,7 @@ public actor ToolExecutor {
                         return (index, result)
                     } catch {
                         let errorMessage = Message(
-                            content:
-                            "Failed to execute tool \(toolCall.name): \(error.localizedDescription)",
+                            content: "Failed to execute tool \(toolCall.name): \(ErrorKit.userFriendlyMessage(for: error))",
                             role: .tool,
                             think: nil
                         )

@@ -1,6 +1,6 @@
 import Foundation
-import MonadShared
 import Logging
+import MonadShared
 
 // MARK: - ContextGatewayTool Protocol
 
@@ -18,6 +18,14 @@ public protocol ContextGatewayTool: Tool {
     var timelineContext: ToolTimelineContext { get }
 }
 
+public extension ContextGatewayTool {
+    func execute(parameters _: [String: Any]) async throws -> ToolResult {
+        await timelineContext.activate(context, gatewayToolId: id)
+        let message = await context.welcomeMessage()
+        return .success(message)
+    }
+}
+
 // MARK: - ToolTimelineContext
 
 /// Manages the lifecycle of active tool contexts.
@@ -33,13 +41,16 @@ public actor ToolTimelineContext {
     /// IDs of tools belonging to the active context
     private var contextToolIds: Set<String> = []
 
+    /// The ID of the gateway tool that activated the current context
+    private var activeGatewayToolId: String?
+
     /// Pinned contexts that persist across tool calls and inject state into prompts
     private var pinnedContexts: [String: any ToolContext] = [:]
 
     public init() {}
 
     /// Activate a new context (deactivates any existing non-persistent context)
-    public func activate(_ context: any ToolContext) async {
+    public func activate(_ context: any ToolContext, gatewayToolId: String? = nil) async {
         // Deactivate existing context first (only if it's not persistent)
         if let existing = activeContext, !existing.isPersistent {
             logger.info("Deactivating context: \(type(of: existing).contextId)")
@@ -47,6 +58,7 @@ public actor ToolTimelineContext {
         }
 
         activeContext = context
+        activeGatewayToolId = gatewayToolId
         let tools = await context.contextTools
         contextToolIds = Set(tools.map { $0.id })
 
@@ -73,6 +85,7 @@ public actor ToolTimelineContext {
         await context.deactivate()
 
         activeContext = nil
+        activeGatewayToolId = nil
         contextToolIds = []
     }
 
@@ -87,15 +100,21 @@ public actor ToolTimelineContext {
         pinnedContexts.removeValue(forKey: type(of: context).contextId)
 
         activeContext = nil
+        activeGatewayToolId = nil
         contextToolIds = []
     }
 
     /// Unpin a context
     public func unpin(_ contextId: String) async {
-        if let context = pinnedContexts.removeValue(forKey: contextId) {
-            logger.info("Unpinned context: \(contextId)")
-            await context.deactivate()
+        guard let context = pinnedContexts.removeValue(forKey: contextId) else { return }
+        logger.info("Unpinned context: \(contextId)")
+        // If the unpinned context is also the active one, clear active state too
+        if activeContextId == contextId {
+            activeContext = nil
+            activeGatewayToolId = nil
+            contextToolIds = []
         }
+        await context.deactivate()
     }
 
     /// Check if a tool belongs to the active context
@@ -103,10 +122,9 @@ public actor ToolTimelineContext {
         contextToolIds.contains(toolId)
     }
 
-    /// Check if a tool is a gateway tool for the active context
+    /// Check if a tool is the gateway for the currently active context
     public func isActiveContextGateway(_ toolId: String) -> Bool {
-        guard let context = activeContext else { return false }
-        return type(of: context).contextId == toolId
+        activeGatewayToolId == toolId
     }
 
     /// Get context tools if a context is active

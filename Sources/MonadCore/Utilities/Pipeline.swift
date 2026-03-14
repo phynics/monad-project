@@ -76,6 +76,9 @@ public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
             let task = Task {
                 var executionError: Error?
 
+                // Stages execute serially — each stage's stream is fully consumed before the next
+                // begins. This is the safety contract that allows @unchecked Sendable contexts
+                // (e.g. TurnOutputs) to mutate shared state without locks.
                 for stage in stages {
                     if Task.isCancelled { break }
                     let startTime = CFAbsoluteTimeGetCurrent()

@@ -81,7 +81,6 @@ public final class ChatEngine: @unchecked Sendable {
             workspaces: workspaceResult?.attached ?? [],
             primaryWorkspace: workspaceResult?.primary,
             clientName: entities.clientName,
-            connectedClients: Set<UUID>(),
             systemInstructions: systemInstructions
         )
         let (initialMessages, structuredContext) = await buildPrompt(params)
@@ -137,7 +136,7 @@ public final class ChatEngine: @unchecked Sendable {
                 priorAccumulatedOutput: priorOutput
             )
             let signal = await runOneTurn(continuation: continuation, context: turnContext)
-            priorOutput = turnContext.outputs.accumulatedRawOutput
+            priorOutput = await turnContext.outputs.accumulatedRawOutput
             switch signal {
             case .stop:
                 continuation.finish()
@@ -192,9 +191,10 @@ public final class ChatEngine: @unchecked Sendable {
         context: ChatTurnContext,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
     ) async throws -> LoopContinuation {
-        guard !context.outputs.toolCallAccumulators.isEmpty else { return .stop }
+        let accumulators = await context.outputs.toolCallAccumulators
+        guard !accumulators.isEmpty else { return .stop }
 
-        let sortedCalls = context.outputs.toolCallAccumulators.sorted(by: { $0.key < $1.key })
+        let sortedCalls = accumulators.sorted(by: { $0.key < $1.key })
         let parsedCalls = sortedCalls.map { _, value in
             ParsedToolCall(callId: value.id, name: value.name, argumentsJSON: value.args)
         }
@@ -203,8 +203,9 @@ public final class ChatEngine: @unchecked Sendable {
                 id: value.id, function: .init(arguments: value.args, name: value.name)
             )
         }
+        let fullResponse = await context.outputs.fullResponse
         let assistantParam = ChatQuery.ChatCompletionMessageParam.assistant(
-            .init(content: .textContent(.init(context.outputs.fullResponse)), toolCalls: toolCallsParam)
+            .init(content: .textContent(.init(fullResponse)), toolCalls: toolCallsParam)
         )
         let result = try await toolRouter.handlePendingToolCalls(
             timelineId: context.timelineId,

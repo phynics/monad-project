@@ -24,7 +24,9 @@ struct LLMStreamingStage: PipelineStage {
                     for try await result in streamData {
                         if Task.isCancelled { break }
 
-                        if let usage = result.usage { context.outputs.streamUsage = usage }
+                        if let usage = result.usage {
+                            await context.outputs.setStreamUsage(usage)
+                        }
 
                         if let delta = result.choices.first?.delta.content {
                             let oldThinkingCount = parser.thinking.count
@@ -44,12 +46,12 @@ struct LLMStreamingStage: PipelineStage {
                             }
 
                             if !thinkingChunk.isEmpty {
-                                context.outputs.fullThinking += thinkingChunk
+                                await context.outputs.appendThinking(String(thinkingChunk))
                                 continuation.yield(.thinking(String(thinkingChunk)))
                             }
 
                             if !contentChunk.isEmpty {
-                                context.outputs.fullResponse += contentChunk
+                                await context.outputs.appendResponse(String(contentChunk))
                                 continuation.yield(.generation(String(contentChunk)))
                             }
                         }
@@ -57,12 +59,12 @@ struct LLMStreamingStage: PipelineStage {
                         if let calls = result.choices.first?.delta.toolCalls {
                             for call in calls {
                                 guard let index = call.index else { continue }
-                                var acc = context.outputs.toolCallAccumulators[index] ?? ("", "", "")
-                                if let id = call.id { acc.id = id }
-                                if let name = call.function?.name { acc.name += name }
-                                if let args = call.function?.arguments { acc.args += args }
-                                context.outputs.toolCallAccumulators[index] = acc
-
+                                await context.outputs.accumulateToolCall(
+                                    index: index,
+                                    id: call.id,
+                                    name: call.function?.name,
+                                    args: call.function?.arguments
+                                )
                                 continuation.yield(.toolCall(ToolCallDelta(
                                     index: index,
                                     id: call.id,
@@ -75,22 +77,15 @@ struct LLMStreamingStage: PipelineStage {
 
                     if !parser.buffer.isEmpty {
                         if parser.isThinking {
-                            context.outputs.fullThinking += parser.buffer
+                            await context.outputs.appendThinking(parser.buffer)
                             continuation.yield(.thinking(parser.buffer))
                         } else {
-                            context.outputs.fullResponse += parser.buffer
+                            await context.outputs.appendResponse(parser.buffer)
                             continuation.yield(.generation(parser.buffer))
                         }
                     }
 
-                    context.outputs.accumulatedRawOutput += context.outputs.fullThinking
-                    context.outputs.accumulatedRawOutput += context.outputs.fullResponse
-                    context.outputs.turnDuration = Date().timeIntervalSince(turnStartTime)
-
-                    let completionTokens = context.outputs.streamUsage?.completionTokens
-                        ?? TokenEstimator.estimate(text: context.outputs.fullResponse + context.outputs.fullThinking)
-                    context.outputs.tokensPerSecond = context.outputs.turnDuration > 0
-                        ? Double(completionTokens) / context.outputs.turnDuration : nil
+                    await context.outputs.finalizeTurn(startTime: turnStartTime)
 
                     // Task cancellation after natural stream completion is not an error.
                     continuation.finish()

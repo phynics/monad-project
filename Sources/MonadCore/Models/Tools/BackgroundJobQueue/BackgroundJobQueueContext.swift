@@ -1,6 +1,6 @@
 import Foundation
-import MonadShared
 import Logging
+import MonadShared
 
 // MARK: - BackgroundJobQueueContext
 
@@ -24,7 +24,7 @@ public actor BackgroundJobQueueContext: ToolContext {
             AnyTool(ChangePriorityTool(context: self)),
             AnyTool(ListJobsTool(context: self)),
             AnyTool(UpdateJobStatusTool(context: self)),
-            AnyTool(ClearQueueTool(context: self))
+            AnyTool(ClearQueueTool(context: self)),
         ]
     }
 
@@ -54,25 +54,26 @@ public actor BackgroundJobQueueContext: ToolContext {
         let jobList = sortedJobs.map { $0.formatted }.joined(separator: "\n")
 
         return """
-            **BackgroundJob Queue** (\(jobs.count) job\(jobs.count == 1 ? "" : "s")):
-            \(jobList)
-            """
+        **BackgroundJob Queue** (\(jobs.count) job\(jobs.count == 1 ? "" : "s")):
+        \(jobList)
+        """
     }
 
     public func welcomeMessage() async -> String {
         let toolList = contextTools.map { "- `\($0.id)`: \($0.description)" }.joined(
-            separator: "\n")
+            separator: "\n"
+        )
         return """
-            ## BackgroundJob Queue Manager Activated
+        ## BackgroundJob Queue Manager Activated
 
-            You are now in job queue management mode. Available commands:
+        You are now in job queue management mode. Available commands:
 
-            \(toolList)
+        \(toolList)
 
-            > **Note**: Calling any tool outside this context will exit job queue mode.
+        > **Note**: Calling any tool outside this context will exit job queue mode.
 
-            \(await formatState())
-            """
+        \(await formatState())
+        """
     }
 
     // MARK: - Queue Operations
@@ -188,9 +189,7 @@ public actor BackgroundJobQueueContext: ToolContext {
 // MARK: - Context Tools
 
 /// Add a new job to the queue
-public struct AddJobTool: ContextTool, Sendable {
-    public static let parentContextId = BackgroundJobQueueContext.contextId
-
+public struct AddJobTool: Tool, Sendable {
     public let id = "jq_add"
     public let name = "Add BackgroundJob"
     public let description = "Add a new job to the queue"
@@ -202,7 +201,9 @@ public struct AddJobTool: ContextTool, Sendable {
         self.context = context
     }
 
-    public func canExecute() async -> Bool { true }
+    public func canExecute() async -> Bool {
+        true
+    }
 
     public var parametersSchema: [String: AnyCodable] {
         ToolParameterSchema.object { b in
@@ -230,9 +231,7 @@ public struct AddJobTool: ContextTool, Sendable {
 }
 
 /// Remove a job from the queue
-public struct RemoveJobTool: ContextTool, Sendable {
-    public static let parentContextId = BackgroundJobQueueContext.contextId
-
+public struct RemoveJobTool: Tool, Sendable {
     public let id = "jq_remove"
     public let name = "Remove BackgroundJob"
     public let description = "Remove a job from the queue by ID"
@@ -244,7 +243,9 @@ public struct RemoveJobTool: ContextTool, Sendable {
         self.context = context
     }
 
-    public func canExecute() async -> Bool { true }
+    public func canExecute() async -> Bool {
+        true
+    }
 
     public var parametersSchema: [String: AnyCodable] {
         ToolParameterSchema.object { b in
@@ -266,7 +267,8 @@ public struct RemoveJobTool: ContextTool, Sendable {
             _ = try await context.removeJob(id: job.id)
             return .success("Removed job: \(job.title)")
         } else if let uuid = UUID(uuidString: idString),
-            let job = try await context.removeJob(id: uuid) {
+                  let job = try await context.removeJob(id: uuid)
+        {
             return .success("Removed job: \(job.title)")
         }
 
@@ -275,9 +277,7 @@ public struct RemoveJobTool: ContextTool, Sendable {
 }
 
 /// Change job priority
-public struct ChangePriorityTool: ContextTool, Sendable {
-    public static let parentContextId = BackgroundJobQueueContext.contextId
-
+public struct ChangePriorityTool: Tool, Sendable {
     public let id = "jq_priority"
     public let name = "Change Priority"
     public let description = "Change the priority of a job"
@@ -289,7 +289,9 @@ public struct ChangePriorityTool: ContextTool, Sendable {
         self.context = context
     }
 
-    public func canExecute() async -> Bool { true }
+    public func canExecute() async -> Bool {
+        true
+    }
 
     public var parametersSchema: [String: AnyCodable] {
         ToolParameterSchema.object { b in
@@ -325,9 +327,7 @@ public struct ChangePriorityTool: ContextTool, Sendable {
 }
 
 /// List all jobs
-public struct ListJobsTool: ContextTool, Sendable {
-    public static let parentContextId = BackgroundJobQueueContext.contextId
-
+public struct ListJobsTool: Tool, Sendable {
     public let id = "jq_list"
     public let name = "List Jobs"
     public let description = "List all jobs in the queue sorted by priority"
@@ -339,13 +339,15 @@ public struct ListJobsTool: ContextTool, Sendable {
         self.context = context
     }
 
-    public func canExecute() async -> Bool { true }
+    public func canExecute() async -> Bool {
+        true
+    }
 
     public var parametersSchema: [String: AnyCodable] {
         ToolParameterSchema.object { _ in }.schema
     }
 
-    public func execute(parameters: [String: Any]) async throws -> ToolResult {
+    public func execute(parameters _: [String: Any]) async throws -> ToolResult {
         let jobs = try await context.listJobs()
         if jobs.isEmpty {
             return .success("Queue is empty")
@@ -357,9 +359,7 @@ public struct ListJobsTool: ContextTool, Sendable {
 }
 
 /// Update job status
-public struct UpdateJobStatusTool: ContextTool, Sendable {
-    public static let parentContextId = BackgroundJobQueueContext.contextId
-
+public struct UpdateJobStatusTool: Tool, Sendable {
     public let id = "jq_status"
     public let name = "Update Status"
     public let description =
@@ -372,7 +372,9 @@ public struct UpdateJobStatusTool: ContextTool, Sendable {
         self.context = context
     }
 
-    public func canExecute() async -> Bool { true }
+    public func canExecute() async -> Bool {
+        true
+    }
 
     public var parametersSchema: [String: AnyCodable] {
         ToolParameterSchema.object { b in
@@ -412,9 +414,7 @@ public struct UpdateJobStatusTool: ContextTool, Sendable {
 }
 
 /// Clear all jobs
-public struct ClearQueueTool: ContextTool, Sendable {
-    public static let parentContextId = BackgroundJobQueueContext.contextId
-
+public struct ClearQueueTool: Tool, Sendable {
     public let id = "jq_clear"
     public let name = "Clear Queue"
     public let description = "Remove all jobs from the queue"
@@ -426,13 +426,15 @@ public struct ClearQueueTool: ContextTool, Sendable {
         self.context = context
     }
 
-    public func canExecute() async -> Bool { true }
+    public func canExecute() async -> Bool {
+        true
+    }
 
     public var parametersSchema: [String: AnyCodable] {
         ToolParameterSchema.object { _ in }.schema
     }
 
-    public func execute(parameters: [String: Any]) async throws -> ToolResult {
+    public func execute(parameters _: [String: Any]) async throws -> ToolResult {
         let count = try await context.clearQueue()
         return .success("Cleared \(count) job\(count == 1 ? "" : "s") from queue")
     }

@@ -1,7 +1,7 @@
-import MonadShared
-import MonadCore
 import Foundation
+import MonadCore
 @testable import MonadServer
+import MonadShared
 import MonadTestSupport
 import OpenAI
 import Testing
@@ -145,7 +145,6 @@ import Testing
             workspaces: [],
             primaryWorkspace: nil,
             clientName: nil,
-            connectedClients: [],
             systemInstructions: nil as String?,
             responseFormat: nil as ChatQuery.ResponseFormat?,
             useFastModel: false

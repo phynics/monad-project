@@ -17,41 +17,48 @@ struct ToolCallExtractionStage: PipelineStage {
     let logger: Logger
 
     func process(_ context: ChatTurnContext) async throws -> AsyncThrowingStream<ChatEvent, Error> {
-        return AsyncThrowingStream { continuation in
-            // Fallback: parse tool calls from response text when structured calls are absent.
-            if context.outputs.toolCallAccumulators.isEmpty {
-                let fallbackCalls = ToolOutputParser.parse(from: context.outputs.fullResponse)
-                if !fallbackCalls.isEmpty {
-                    logger.warning(
-                        "Structured tool calls empty — falling back to text parsing (\(fallbackCalls.count) call(s))."
-                    )
-                    for (index, call) in fallbackCalls.enumerated() {
-                        let argsJson =
-                            (try? SerializationUtils.jsonEncoder.encode(call.arguments))
-                                .flatMap { String(bytes: $0, encoding: .utf8) } ?? "{}"
-                        context.outputs.toolCallAccumulators[index] = (
-                            id: UUID().uuidString, name: call.name, args: argsJson
-                        )
-                    }
+        var eventsToYield: [ChatEvent] = []
 
-                    for (index, value) in context.outputs.toolCallAccumulators.sorted(by: { $0.key < $1.key }) {
-                        continuation.yield(
-                            .toolCall(ToolCallDelta(index: index, id: value.id, name: value.name, arguments: value.args))
-                        )
-                    }
+        // Fallback: parse tool calls from response text when structured calls are absent.
+        let accumulators = await context.outputs.toolCallAccumulators
+        if accumulators.isEmpty {
+            let fallbackCalls = ToolOutputParser.parse(from: await context.outputs.fullResponse)
+            if !fallbackCalls.isEmpty {
+                logger.warning(
+                    "Structured tool calls empty — falling back to text parsing (\(fallbackCalls.count) call(s))."
+                )
+                for (index, call) in fallbackCalls.enumerated() {
+                    let argsJson =
+                        (try? SerializationUtils.jsonEncoder.encode(call.arguments))
+                            .flatMap { String(bytes: $0, encoding: .utf8) } ?? "{}"
+                    await context.outputs.setToolCallAccumulator(
+                        index: index, id: UUID().uuidString, name: call.name, args: argsJson
+                    )
+                }
+
+                let updatedAccumulators = await context.outputs.toolCallAccumulators
+                for (index, value) in updatedAccumulators.sorted(by: { $0.key < $1.key }) {
+                    eventsToYield.append(
+                        .toolCall(ToolCallDelta(index: index, id: value.id, name: value.name, arguments: value.args))
+                    )
                 }
             }
+        }
 
-            // Remove sentinel/empty calls so downstream stages see only actionable tool calls.
-            context.outputs.toolCallAccumulators = context.outputs.toolCallAccumulators.filter { _, value in
-                !value.name.isEmpty && value.name != ChatEngine.Constants.sentinelToolName
-            }
+        // Remove sentinel/empty calls so downstream stages see only actionable tool calls.
+        await context.outputs.removeSentinelAndEmptyToolCalls(sentinel: ChatEngine.Constants.sentinelToolName)
 
-            // Record for the debug snapshot.
-            for (_, value) in context.outputs.toolCallAccumulators.sorted(by: { $0.key < $1.key }) {
-                context.outputs.debugToolCalls.append(
-                    ToolCallRecord(name: value.name, arguments: value.args, turn: context.turnCount)
-                )
+        // Record for the debug snapshot.
+        let finalAccumulators = await context.outputs.toolCallAccumulators
+        for (_, value) in finalAccumulators.sorted(by: { $0.key < $1.key }) {
+            await context.outputs.addDebugToolCall(
+                ToolCallRecord(name: value.name, arguments: value.args, turn: context.turnCount)
+            )
+        }
+
+        return AsyncThrowingStream { continuation in
+            for event in eventsToYield {
+                continuation.yield(event)
             }
             continuation.finish()
         }

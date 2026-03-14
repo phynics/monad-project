@@ -35,7 +35,7 @@ extension OpenAIClient: LLMClientProtocol {}
 extension OllamaClient: LLMClientProtocol {}
 
 /// Service for managing LLM interactions with configuration support
-public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendable {
+public actor LLMService: LLMServiceProtocol, HealthCheckable {
     // MARK: - Constants
 
     private enum Constants {
@@ -55,7 +55,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
     public func getHealthDetails() async -> [String: String]? {
         return [
             "model": configuration.modelName,
-            "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom")
+            "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom"),
         ]
     }
 
@@ -234,7 +234,6 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         workspaces: [WorkspaceReference],
         primaryWorkspace: WorkspaceReference?,
         clientName: String?,
-        connectedClients: Set<UUID>,
         systemInstructions: String?,
         agentInstance: AgentInstance? = nil,
         timeline: Timeline? = nil
@@ -262,8 +261,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
             WorkspacesContext(
                 workspaces: workspaces,
                 primaryWorkspace: primaryWorkspace,
-                clientName: clientName,
-                connectedClients: connectedClients
+                clientName: clientName
             )
 
             // Current timeline identity
@@ -318,7 +316,6 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
         workspaces: [WorkspaceReference],
         primaryWorkspace: WorkspaceReference?,
         clientName: String?,
-        connectedClients: Set<UUID>,
         systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
@@ -335,7 +332,6 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable, @unchecked Sendabl
             workspaces: workspaces,
             primaryWorkspace: primaryWorkspace,
             clientName: clientName,
-            connectedClients: connectedClients,
             systemInstructions: systemInstructions
         )
 

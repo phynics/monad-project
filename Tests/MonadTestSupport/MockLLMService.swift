@@ -197,7 +197,6 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         workspaces _: [WorkspaceReference],
         primaryWorkspace _: WorkspaceReference?,
         clientName _: String?,
-        connectedClients _: Set<UUID>,
         systemInstructions _: String?,
         responseFormat: ChatQuery.ResponseFormat?,
         useFastModel _: Bool
@@ -232,7 +231,6 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         workspaces _: [WorkspaceReference],
         primaryWorkspace _: WorkspaceReference?,
         clientName _: String?,
-        connectedClients _: Set<UUID>,
         systemInstructions _: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
@@ -251,7 +249,6 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         workspaces _: [WorkspaceReference],
         primaryWorkspace _: WorkspaceReference?,
         clientName _: String?,
-        connectedClients _: Set<UUID>,
         systemInstructions _: String?,
         agentInstance _: AgentInstance?,
         timeline _: Timeline?

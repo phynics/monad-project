@@ -31,7 +31,6 @@ public protocol LLMServiceProtocol: HealthCheckable {
         workspaces: [WorkspaceReference],
         primaryWorkspace: WorkspaceReference?,
         clientName: String?,
-        connectedClients: Set<UUID>,
         systemInstructions: String?,
         responseFormat: ChatQuery.ResponseFormat?,
         useFastModel: Bool
@@ -57,7 +56,6 @@ public protocol LLMServiceProtocol: HealthCheckable {
         workspaces: [WorkspaceReference],
         primaryWorkspace: WorkspaceReference?,
         clientName: String?,
-        connectedClients: Set<UUID>,
         systemInstructions: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
@@ -75,7 +73,6 @@ public protocol LLMServiceProtocol: HealthCheckable {
         workspaces: [WorkspaceReference],
         primaryWorkspace: WorkspaceReference?,
         clientName: String?,
-        connectedClients: Set<UUID>,
         systemInstructions: String?,
         agentInstance: AgentInstance?,
         timeline: Timeline?

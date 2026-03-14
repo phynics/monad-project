@@ -22,18 +22,11 @@ public final class BackgroundJobQueueGatewayTool: ContextGatewayTool, Sendable {
         self.timelineContext = timelineContext
     }
 
-    public func canExecute() async -> Bool { true }
+    public func canExecute() async -> Bool {
+        true
+    }
 
     public var parametersSchema: [String: AnyCodable] {
         ToolParameterSchema.object { _ in }.schema
-    }
-
-    public func execute(parameters: [String: Any]) async throws -> ToolResult {
-        // Activate the context
-        await timelineContext.activate(context)
-
-        // Return welcome message
-        let message = await context.welcomeMessage()
-        return .success(message)
     }
 }

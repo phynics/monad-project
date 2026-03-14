@@ -1,7 +1,6 @@
 @testable import MonadCore
-@testable import MonadShared
-@testable import MonadShared
 import MonadPrompt
+@testable import MonadShared
 import MonadTestSupport
 import OpenAI
 import Testing
@@ -47,7 +46,6 @@ struct LLMServiceTests {
             workspaces: [],
             primaryWorkspace: nil,
             clientName: nil,
-            connectedClients: [],
             systemInstructions: "System rules"
         )
 
@@ -125,7 +123,6 @@ struct LLMServiceTests {
             workspaces: [],
             primaryWorkspace: nil,
             clientName: nil,
-            connectedClients: [],
             systemInstructions: "System Only"
         )
         let messages = await prompt.toMessages()

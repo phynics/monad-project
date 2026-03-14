@@ -22,7 +22,6 @@ struct PromptIntegrationTests {
             workspaces: [],
             primaryWorkspace: nil,
             clientName: nil,
-            connectedClients: [],
             systemInstructions: nil
         )
         let messages = await prompt.toMessages()
@@ -36,7 +35,8 @@ struct PromptIntegrationTests {
         #expect(userMessages.count == 1)
 
         if let first = userMessages.first, case let .user(params) = first,
-           case let .string(content) = params.content {
+           case let .string(content) = params.content
+        {
             #expect(content == "Hello")
         }
     }
@@ -55,7 +55,6 @@ struct PromptIntegrationTests {
             workspaces: [],
             primaryWorkspace: nil,
             clientName: nil,
-            connectedClients: [],
             systemInstructions: nil
         )
         let messages = await prompt.toMessages()
@@ -108,7 +107,6 @@ struct PromptIntegrationTests {
             workspaces: [],
             primaryWorkspace: nil,
             clientName: nil,
-            connectedClients: [],
             systemInstructions: nil
         )
         let messages = await prompt.toMessages()

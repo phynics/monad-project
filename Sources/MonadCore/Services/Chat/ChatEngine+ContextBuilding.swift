@@ -37,7 +37,6 @@ struct BuildPromptParams {
     let workspaces: [WorkspaceReference]
     let primaryWorkspace: WorkspaceReference?
     let clientName: String?
-    let connectedClients: Set<UUID>
     let systemInstructions: String?
 }
 
@@ -104,7 +103,8 @@ extension ChatEngine {
         }
         var clientName: String?
         if let ownerId = primaryWorkspaceOwnerId,
-           let client = try? await clientStore.fetchClient(id: ownerId) {
+           let client = try? await clientStore.fetchClient(id: ownerId)
+        {
             clientName = client.displayName
         }
         return ResolvedEntities(timeline: timeline, agentInstance: agentInstance, clientName: clientName)
@@ -122,7 +122,6 @@ extension ChatEngine {
             workspaces: params.workspaces,
             primaryWorkspace: params.primaryWorkspace,
             clientName: params.clientName,
-            connectedClients: params.connectedClients,
             systemInstructions: params.systemInstructions,
             agentInstance: params.agentInstance,
             timeline: params.timeline

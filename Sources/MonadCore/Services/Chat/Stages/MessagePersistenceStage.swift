@@ -16,22 +16,28 @@ struct MessagePersistenceStage: PipelineStage {
     let logger: Logger
 
     func process(_ context: ChatTurnContext) async throws -> AsyncThrowingStream<ChatEvent, Error> {
-        let hasPendingToolCalls = !context.outputs.toolCallAccumulators.isEmpty
-        let toolCallsJSON = buildToolCallsJSON(from: context, hasPendingToolCalls: hasPendingToolCalls)
+        let hasPendingToolCalls = await !context.outputs.toolCallAccumulators.isEmpty
+        let toolCallsJSON = await buildToolCallsJSON(from: context, hasPendingToolCalls: hasPendingToolCalls)
         let recalledMemories = buildRecalledMemories(from: context, hasPendingToolCalls: hasPendingToolCalls)
+
+        let fullResponse = await context.outputs.fullResponse
+        let fullThinking = await context.outputs.fullThinking
+        let streamUsage = await context.outputs.streamUsage
+        let turnDuration = await context.outputs.turnDuration
+        let tokensPerSecond = await context.outputs.tokensPerSecond
 
         let assistantMsg = ConversationMessage(
             timelineId: context.timelineId,
             role: .assistant,
-            content: context.outputs.fullResponse,
+            content: fullResponse,
             recalledMemories: recalledMemories,
-            think: context.outputs.fullThinking.isEmpty ? nil : context.outputs.fullThinking,
+            think: fullThinking.isEmpty ? nil : fullThinking,
             toolCalls: toolCallsJSON,
             agentInstanceId: context.agentInstanceId
         )
         try await messageStore.saveMessage(assistantMsg)
 
-        let snapshot = buildDebugSnapshot(from: context, hasPendingToolCalls: hasPendingToolCalls)
+        let snapshot = await buildDebugSnapshot(from: context, hasPendingToolCalls: hasPendingToolCalls)
         let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
 
         return AsyncThrowingStream { continuation in
@@ -40,11 +46,11 @@ struct MessagePersistenceStage: PipelineStage {
                     message: assistantMsg.toMessage(),
                     metadata: APIResponseMetadata(
                         model: context.modelName,
-                        promptTokens: context.outputs.streamUsage?.promptTokens,
-                        completionTokens: context.outputs.streamUsage?.completionTokens,
-                        totalTokens: context.outputs.streamUsage?.totalTokens,
-                        duration: context.outputs.turnDuration,
-                        tokensPerSecond: context.outputs.tokensPerSecond,
+                        promptTokens: streamUsage?.promptTokens,
+                        completionTokens: streamUsage?.completionTokens,
+                        totalTokens: streamUsage?.totalTokens,
+                        duration: turnDuration,
+                        tokensPerSecond: tokensPerSecond,
                         debugSnapshotData: snapshotData
                     )
                 ))
@@ -53,12 +59,12 @@ struct MessagePersistenceStage: PipelineStage {
         }
     }
 
-    private func buildToolCallsJSON(from context: ChatTurnContext, hasPendingToolCalls: Bool) -> String {
+    private func buildToolCallsJSON(from context: ChatTurnContext, hasPendingToolCalls: Bool) async -> String {
         guard hasPendingToolCalls else { return "[]" }
-        let sortedCalls = context.outputs.toolCallAccumulators.sorted(by: { $0.key < $1.key })
+        let sortedCalls = await context.outputs.toolCallAccumulators.sorted(by: { $0.key < $1.key })
         let callsForDB = sortedCalls.compactMap { _, value -> ToolCall? in
             let argsData = value.args.data(using: .utf8) ?? Data()
-            let args = (try? JSONDecoder().decode([String: AnyCodable].self, from: argsData)) ?? [:]
+            let args = (try? SerializationUtils.jsonDecoder.decode([String: AnyCodable].self, from: argsData)) ?? [:]
             return ToolCall(name: value.name, arguments: args)
         }
         return (try? SerializationUtils.jsonEncoder.encode(callsForDB))
@@ -72,13 +78,16 @@ struct MessagePersistenceStage: PipelineStage {
             .flatMap { String(bytes: $0, encoding: .utf8) } ?? "[]"
     }
 
-    private func buildDebugSnapshot(from context: ChatTurnContext, hasPendingToolCalls _: Bool) -> DebugSnapshot {
-        DebugSnapshot(
+    private func buildDebugSnapshot(from context: ChatTurnContext, hasPendingToolCalls _: Bool) async -> DebugSnapshot {
+        let debugToolCalls = await context.outputs.debugToolCalls
+        let debugToolResults = await context.outputs.debugToolResults
+        let accumulatedRawOutput = await context.outputs.accumulatedRawOutput
+        return DebugSnapshot(
             structuredContext: context.structuredContext,
-            toolCalls: context.outputs.debugToolCalls,
-            toolResults: context.outputs.debugToolResults,
+            toolCalls: debugToolCalls,
+            toolResults: debugToolResults,
             renderedPrompt: ChatEngine.renderMessagesStatic(context.currentMessages),
-            rawOutput: context.outputs.accumulatedRawOutput,
+            rawOutput: accumulatedRawOutput,
             model: context.modelName,
             turnCount: context.turnCount
         )

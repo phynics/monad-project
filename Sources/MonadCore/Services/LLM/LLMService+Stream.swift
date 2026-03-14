@@ -2,10 +2,10 @@ import Foundation
 import MonadShared
 import OpenAI
 
-extension LLMService {
+public extension LLMService {
     /// Stream chat with full prompt building (includes notes, history, etc.)
     /// Returns tuple of (stream, rawPrompt for debug)
-    public func chatStreamWithContext(
+    func chatStreamWithContext(
         userQuery: String,
         contextNotes: [ContextFile],
         memories: [Memory] = [],
@@ -14,7 +14,6 @@ extension LLMService {
         workspaces: [WorkspaceReference],
         primaryWorkspace: WorkspaceReference?,
         clientName: String?,
-        connectedClients: Set<UUID>,
         systemInstructions: String? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil,
         useFastModel: Bool = false
@@ -41,7 +40,6 @@ extension LLMService {
             workspaces: workspaces,
             primaryWorkspace: primaryWorkspace,
             clientName: clientName,
-            connectedClients: connectedClients,
             systemInstructions: systemInstructions
         )
 
@@ -53,14 +51,15 @@ extension LLMService {
         // Delegate to client for streaming
         let toolParams = tools.isEmpty ? nil : tools.map { $0.toToolParam() }
         let stream = await client.chatStream(
-            messages: messages, tools: toolParams, responseFormat: responseFormat)
+            messages: messages, tools: toolParams, responseFormat: responseFormat
+        )
 
         return (stream, rawPrompt, structuredContext)
     }
 
     /// Stream chat responses (low-level API)
     /// Stream chat responses (low-level API)
-    public func chatStream(
+    func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil
@@ -72,6 +71,7 @@ extension LLMService {
         }
 
         return await client.chatStream(
-            messages: messages, tools: tools, responseFormat: responseFormat)
+            messages: messages, tools: tools, responseFormat: responseFormat
+        )
     }
 }

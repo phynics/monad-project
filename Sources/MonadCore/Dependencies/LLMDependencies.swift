@@ -105,7 +105,6 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         workspaces _: [WorkspaceReference],
         primaryWorkspace _: WorkspaceReference?,
         clientName _: String?,
-        connectedClients _: Set<UUID>,
         systemInstructions _: String?,
         responseFormat _: ChatQuery.ResponseFormat?,
         useFastModel _: Bool
@@ -134,7 +133,6 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         workspaces _: [WorkspaceReference],
         primaryWorkspace _: WorkspaceReference?,
         clientName _: String?,
-        connectedClients _: Set<UUID>,
         systemInstructions _: String?
     ) async -> (
         messages: [ChatQuery.ChatCompletionMessageParam],
@@ -153,7 +151,6 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         workspaces _: [WorkspaceReference],
         primaryWorkspace _: WorkspaceReference?,
         clientName _: String?,
-        connectedClients _: Set<UUID>,
         systemInstructions _: String?,
         agentInstance _: AgentInstance?,
         timeline _: Timeline?
