@@ -29,8 +29,7 @@ final class MockPersistenceStore:
     AgentTemplateStoreProtocol,
     WorkspacePersistenceProtocol,
     ToolPersistenceProtocol,
-    @unchecked Sendable
-{
+    @unchecked Sendable {
     /// MemoryStoreProtocol
     func saveMemory(_: Memory, policy _: MemorySavePolicy) async throws -> UUID {
         UUID()

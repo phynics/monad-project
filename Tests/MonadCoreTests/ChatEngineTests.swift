@@ -185,7 +185,7 @@ struct ChatEngineTests {
             let mockTool = MockTool()
 
             // Set up responses for both turns at once
-            mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "mock_tool", "arguments": "{}"]]]]
+            mockLLM.mockClient.nextToolCalls = [[MockToolCall(id: "call_1", name: "mock_tool")]]
             mockLLM.mockClient.nextResponses = ["", "Processed result"]
 
             let stream = try await engine.execute(
@@ -223,7 +223,7 @@ struct ChatEngineTests {
     func sentinelToolNameDiscarded() async throws {
         try await withChatEngineDependencies { engine, mockLLM, _ in
             // Emit "tool_call" name which is a sentinel for some models
-            mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "tool_call", "arguments": "{}"]]]]
+            mockLLM.mockClient.nextToolCalls = [[MockToolCall(id: "call_1", name: "tool_call")]]
             mockLLM.mockClient.nextResponses = ["Ignored tool name"]
 
             let stream = try await engine.execute(
@@ -244,7 +244,7 @@ struct ChatEngineTests {
     @Test("Unknown tool name emits toolCallError")
     func unknownToolNameEmitsError() async throws {
         try await withChatEngineDependencies { engine, mockLLM, _ in
-            mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "unknown_tool", "arguments": "{}"]]]]
+            mockLLM.mockClient.nextToolCalls = [[MockToolCall(id: "call_1", name: "unknown_tool")]]
             mockLLM.mockClient.nextResponses = ["", "Unknown tool call"]
 
             let stream = try await engine.execute(
@@ -276,7 +276,7 @@ struct ChatEngineTests {
             var mockTool = MockTool()
             mockTool.result = .failure("client_tools_disallowed_on_private_timeline")
 
-            mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "mock_tool", "arguments": "{}"]]]]
+            mockLLM.mockClient.nextToolCalls = [[MockToolCall(id: "call_1", name: "mock_tool")]]
             mockLLM.mockClient.nextResponses = ["Pause here"]
 
             let stream = try await engine.execute(
@@ -318,7 +318,7 @@ struct ChatEngineTests {
             mockTool.result = .failure("Tool failed")
 
             // Set up responses for both turns
-            mockLLM.mockClient.nextToolCalls = [[["id": "call_1", "function": ["name": "mock_tool", "arguments": "{}"]]]]
+            mockLLM.mockClient.nextToolCalls = [[MockToolCall(id: "call_1", name: "mock_tool")]]
             mockLLM.mockClient.nextResponses = ["", "It failed."]
 
             let stream = try await engine.execute(
@@ -384,9 +384,9 @@ struct ChatEngineTests {
             let mockTool = MockTool()
             // Setup a loop: LLM calls tool, tool returns result, LLM calls tool again...
             mockLLM.mockClient.nextToolCalls = [
-                [["id": "c1", "function": ["name": "mock_tool", "arguments": "{}"]]],
-                [["id": "c2", "function": ["name": "mock_tool", "arguments": "{}"]]],
-                [["id": "c3", "function": ["name": "mock_tool", "arguments": "{}"]]]
+                [MockToolCall(id: "c1", name: "mock_tool")],
+                [MockToolCall(id: "c2", name: "mock_tool")],
+                [MockToolCall(id: "c3", name: "mock_tool")]
             ]
             mockLLM.mockClient.nextResponses = ["", "", ""]
 
@@ -532,8 +532,8 @@ struct ChatEngineTests {
         try await withChatEngineDependencies { engine, mockLLM, _ in
             let mockTool = MockTool()
             mockLLM.mockClient.nextToolCalls = [[
-                ["id": "c1", "function": ["name": "mock_tool", "arguments": "{}"]],
-                ["id": "c2", "function": ["name": "mock_tool", "arguments": "{}"]]
+                MockToolCall(id: "c1", name: "mock_tool"),
+                MockToolCall(id: "c2", name: "mock_tool")
             ]]
             mockLLM.mockClient.nextResponses = ["", "Both done"]
 
@@ -579,7 +579,7 @@ struct ChatEngineTests {
     func generationCompletedPerTurnAfterMultiTurn() async throws {
         try await withChatEngineDependencies { engine, mockLLM, _ in
             let mockTool = MockTool()
-            mockLLM.mockClient.nextToolCalls = [[["id": "c1", "function": ["name": "mock_tool", "arguments": "{}"]]]]
+            mockLLM.mockClient.nextToolCalls = [[MockToolCall(id: "c1", name: "mock_tool")]]
             mockLLM.mockClient.nextResponses = ["", "Final answer"]
 
             let stream = try await engine.execute(

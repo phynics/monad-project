@@ -14,18 +14,11 @@ import Testing
 
     init() async throws {
         persistence = MockPersistenceService()
-        repository = try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-        } operation: {
-            AgentWorkspaceService(workspaceRoot: URL(fileURLWithPath: NSTemporaryDirectory()))
-        }
+        repository = try await TestDependencies()
+            .withMocks(persistence: persistence)
+            .run {
+                AgentWorkspaceService(workspaceRoot: URL(fileURLWithPath: NSTemporaryDirectory()))
+            }
 
         manager = WorkspaceManager(repository: repository, workspaceCreator: WorkspaceFactory())
         testDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)

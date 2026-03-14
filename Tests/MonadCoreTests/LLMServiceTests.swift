@@ -30,11 +30,11 @@ struct LLMServiceTests {
     @Test("Test prompt building logic and structure")
     func promptBuilding() async {
         let contextFiles = [
-            ContextFile(name: "Test Note", content: "Note Content", source: "note"),
+            ContextFile(name: "Test Note", content: "Note Content", source: "note")
         ]
         let history = [
             Message(content: "Previous user message", role: .user),
-            Message(content: "Previous assistant message", role: .assistant),
+            Message(content: "Previous assistant message", role: .assistant)
         ]
 
         let prompt = await llmService.buildContext(
@@ -191,7 +191,7 @@ struct LLMServiceTests {
 
         let messages = [
             Message(content: "How do I use SwiftUI?", role: .user),
-            Message(content: "You use it by declaring views.", role: .assistant),
+            Message(content: "You use it by declaring views.", role: .assistant)
         ]
 
         let title = try await service.generateTitle(for: messages)

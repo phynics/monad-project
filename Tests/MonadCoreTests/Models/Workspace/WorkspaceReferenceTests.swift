@@ -7,14 +7,13 @@ import Foundation
     private func assertCodable<T: Codable>(_ value: T) throws {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
-        
+
         let data = try encoder.encode(value)
         _ = try decoder.decode(T.self, from: data)
     }
-    
+
     @Test
 
-    
     func testWorkspaceReferenceCodable() throws {
         let ref = WorkspaceReference(
             id: UUID(),
@@ -23,10 +22,9 @@ import Foundation
         )
         try assertCodable(ref)
     }
-    
+
     @Test
 
-    
     func testWorkspaceReferenceWithClientHost() throws {
         let ownerId = UUID()
         let ref = WorkspaceReference(

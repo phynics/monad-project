@@ -2,55 +2,34 @@ import Dependencies
 import Foundation
 @testable import MonadCore
 @testable import MonadShared
-@testable import MonadShared
 import MonadTestSupport
 import Testing
 
 @Suite(.serialized) struct ToolRouterConcurrencyTests {
-    private func makeSetup() async -> (ToolRouter, TimelineManager, MockPersistenceService) {
+    private func makeSetup() async throws -> (ToolRouter, TimelineManager, MockPersistenceService) {
         let persistence = MockPersistenceService()
-        let embedding = MockEmbeddingService()
-        let llm = MockLLMService()
-        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        let workspace = TestWorkspace()
 
         let router = ToolRouter()
-        let manager = try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-            $0.embeddingService = embedding
-            $0.llmService = llm
-            $0.timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
-        } operation: {
-            TimelineManager(workspaceRoot: workspaceRoot)
-        }
+        let manager = try await TestDependencies()
+            .withMocks(persistence: persistence)
+            .withTimelineManager(workspaceRoot: workspace.root)
+            .run {
+                TimelineManager(workspaceRoot: workspace.root)
+            }
         return (router, manager, persistence)
     }
 
     @Test("Concurrent execute calls for unknown tools each throw toolNotFound")
     func concurrentExecute_unknownTool_allThrow() async throws {
-        let (router, manager, _) = await makeSetup()
+        let (router, manager, _) = try await makeSetup()
 
-        let timelineId = try await withDependencies {
-            $0.timelinePersistence = MockPersistenceService()
-            $0.workspacePersistence = MockPersistenceService()
-            $0.memoryStore = MockPersistenceService()
-            $0.messageStore = MockPersistenceService()
-            $0.agentTemplateStore = MockPersistenceService()
-            $0.clientStore = MockPersistenceService()
-            $0.toolPersistence = MockPersistenceService()
-            $0.agentInstanceStore = MockPersistenceService()
-            $0.embeddingService = MockEmbeddingService()
-            $0.llmService = MockLLMService()
-            $0.timelineManager = manager
-        } operation: {
-            try await manager.createTimeline().id
-        }
+        let timelineId = try await TestDependencies()
+            .withMocks()
+            .with { $0.timelineManager = manager }
+            .run {
+                try await manager.createTimeline().id
+            }
 
         let tool = ToolReference.known(id: "nonexistent")
         let concurrency = 4
@@ -86,7 +65,7 @@ import Testing
 
     @Test("ToolRouter.execute for disconnected session throws toolNotFound or workspaceNotFound")
     func execute_unknownSession_throws() async throws {
-        let (router, manager, _) = await makeSetup()
+        let (router, manager, _) = try await makeSetup()
         let unknownSessionId = UUID()
         let tool = ToolReference.known(id: "some-tool")
 

@@ -2,12 +2,9 @@ import Testing
 import Foundation
 @testable import MonadCore
 @testable import MonadShared
-@testable import MonadShared
-import MonadShared
-
 @Suite("System Status Tests")
 struct SystemStatusTests {
-    
+
     @Test("StatusResponse Serialization")
     func testStatusResponseSerialization() throws {
         let component = ComponentStatus(status: .ok, details: ["provider": "openai"])

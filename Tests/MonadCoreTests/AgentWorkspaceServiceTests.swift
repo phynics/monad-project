@@ -10,18 +10,11 @@ struct AgentWorkspaceServiceTests {
     @Test("Create Workspace")
     func testCreateWorkspace() async throws {
         let persistence = MockPersistenceService()
-        let repository = try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-        } operation: {
-            AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
-        }
+        let repository = try await TestDependencies()
+            .withMocks(persistence: persistence)
+            .run {
+                AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
+            }
 
         let uri = WorkspaceURI(host: "monad-server", path: "/test")
         let metadata: [String: AnyCodable] = ["key": .string("value")]
@@ -46,18 +39,11 @@ struct AgentWorkspaceServiceTests {
     @Test("Get Workspace")
     func testGetWorkspace() async throws {
         let persistence = MockPersistenceService()
-        let repository = try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-        } operation: {
-            AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
-        }
+        let repository = try await TestDependencies()
+            .withMocks(persistence: persistence)
+            .run {
+                AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
+            }
 
         let ws = WorkspaceReference(
             uri: .serverTimeline(UUID()),
@@ -76,18 +62,11 @@ struct AgentWorkspaceServiceTests {
     @Test("List Workspaces")
     func testListWorkspaces() async throws {
         let persistence = MockPersistenceService()
-        let repository = try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-        } operation: {
-            AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
-        }
+        let repository = try await TestDependencies()
+            .withMocks(persistence: persistence)
+            .run {
+                AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
+            }
 
         let ws1 = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
         let ws2 = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
@@ -103,18 +82,11 @@ struct AgentWorkspaceServiceTests {
     @Test("Delete Workspace")
     func testDeleteWorkspace() async throws {
         let persistence = MockPersistenceService()
-        let repository = try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-        } operation: {
-            AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
-        }
+        let repository = try await TestDependencies()
+            .withMocks(persistence: persistence)
+            .run {
+                AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
+            }
 
         let ws = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
         try await persistence.saveWorkspace(ws)
@@ -127,18 +99,11 @@ struct AgentWorkspaceServiceTests {
     @Test("Update Workspace")
     func testUpdateWorkspace() async throws {
         let persistence = MockPersistenceService()
-        let repository = try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-        } operation: {
-            AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
-        }
+        let repository = try await TestDependencies()
+            .withMocks(persistence: persistence)
+            .run {
+                AgentWorkspaceService(workspaceRoot: FileManager.default.temporaryDirectory)
+            }
 
         var ws = WorkspaceReference(uri: .serverTimeline(UUID()), hostType: .server)
         try await persistence.saveWorkspace(ws)

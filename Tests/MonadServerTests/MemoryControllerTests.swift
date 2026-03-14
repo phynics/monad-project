@@ -1,89 +1,72 @@
-import MonadShared
-import MonadCore
-import Testing
+import Dependencies
+import Foundation
 import Hummingbird
 import HummingbirdTesting
-import Foundation
-import Dependencies
-import MonadTestSupport
+import MonadCore
 @testable import MonadServer
+import MonadShared
+import MonadTestSupport
 import NIOCore
+import Testing
 
 @Suite struct MemoryControllerTests {
-
     @Test("Test Memories CRUD")
-    func testMemoriesCRUD() async throws {
-        let persistence = MockPersistenceService()
-        let embedding = MockEmbeddingService()
-        let llm = MockLLMService()
-        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+    func memoriesCRUD() async throws {
+        let workspace = TestWorkspace()
 
-        try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-            $0.embeddingService = embedding
-            $0.llmService = llm
-        } operation: {
-            let timelineManager = TimelineManager(
-                workspaceRoot: workspaceRoot
-            )
+        try await TestDependencies()
+            .withMocks()
+            .run {
+                let router = Router()
+                let controller = MemoryAPIController<BasicRequestContext>()
+                controller.addRoutes(to: router.group("/memories"))
 
-            let router = Router()
-            let controller = MemoryAPIController<BasicRequestContext>()
-            controller.addRoutes(to: router.group("/memories"))
+                let app = Application(router: router)
 
-            let app = Application(router: router)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
 
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
+                try await app.test(.router) { client in
+                    // 1. List (Empty)
+                    try await client.execute(uri: "/memories", method: .get) { response in
+                        #expect(response.status == .ok)
+                        let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
+                        #expect(paginated.items.isEmpty)
+                    }
 
-            try await app.test(.router) { client in
-                // 1. List (Empty)
-                try await client.execute(uri: "/memories", method: .get) { response in
-                    #expect(response.status == .ok)
-                    let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
-                    #expect(paginated.items.isEmpty)
-                }
+                    // 2. Create
+                    let createReq = CreateMemoryRequest(content: "Test Content", title: "Test Memory", tags: ["test"])
+                    let createBuffer = try ByteBuffer(bytes: JSONEncoder().encode(createReq))
 
-                // 2. Create
-                let createReq = CreateMemoryRequest(content: "Test Content", title: "Test Memory", tags: ["test"])
-                let createBuffer = ByteBuffer(bytes: try JSONEncoder().encode(createReq))
+                    try await client.execute(uri: "/memories", method: .post, body: createBuffer) { response in
+                        #expect(response.status == .created)
+                        let memory = try decoder.decode(Memory.self, from: response.body)
+                        #expect(memory.title == "Test Memory")
+                        #expect(memory.tagArray == ["test"])
+                    }
 
-                try await client.execute(uri: "/memories", method: .post, body: createBuffer) { response in
-                    #expect(response.status == .created)
-                    let memory = try decoder.decode(Memory.self, from: response.body)
-                    #expect(memory.title == "Test Memory")
-                    #expect(memory.tagArray == ["test"])
-                }
+                    // 3. List (1 item)
+                    try await client.execute(uri: "/memories", method: .get) { response in
+                        #expect(response.status == .ok)
+                        let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
+                        #expect(paginated.items.count == 1)
+                        #expect(paginated.items[0].title == "Test Memory")
+                    }
 
-                // 3. List (1 item)
-                try await client.execute(uri: "/memories", method: .get) { response in
-                    #expect(response.status == .ok)
-                    let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
-                    #expect(paginated.items.count == 1)
-                    #expect(paginated.items[0].title == "Test Memory")
-                }
+                    let listResponse = try await client.execute(uri: "/memories", method: .get) { $0 }
+                    let memoryId = try (decoder.decode(PaginatedResponse<Memory>.self, from: listResponse.body)).items[0].id
 
-                let listResponse = try await client.execute(uri: "/memories", method: .get) { $0 }
-                let memoryId = (try decoder.decode(PaginatedResponse<Memory>.self, from: listResponse.body)).items[0].id
+                    // 4. Delete
+                    try await client.execute(uri: "/memories/\(memoryId)", method: .delete) { response in
+                        #expect(response.status == .noContent)
+                    }
 
-                // 4. Delete
-                try await client.execute(uri: "/memories/\(memoryId)", method: .delete) { response in
-                    #expect(response.status == .noContent)
-                }
-
-                // 5. List (Empty)
-                try await client.execute(uri: "/memories", method: .get) { response in
-                    let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
-                    #expect(paginated.items.isEmpty)
+                    // 5. List (Empty)
+                    try await client.execute(uri: "/memories", method: .get) { response in
+                        let paginated = try decoder.decode(PaginatedResponse<Memory>.self, from: response.body)
+                        #expect(paginated.items.isEmpty)
+                    }
                 }
             }
-        }
     }
 }

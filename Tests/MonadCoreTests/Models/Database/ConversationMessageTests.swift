@@ -7,17 +7,16 @@ import Foundation
     private func assertCodable<T: Codable>(_ value: T) throws {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        
+
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        
+
         let data = try encoder.encode(value)
         _ = try decoder.decode(T.self, from: data)
     }
-    
+
     @Test
 
-    
     func testConversationMessageCodable() throws {
         // Need to provide a realistic `Session` ID for foreign key in DB context
         let timelineId = UUID()
@@ -30,10 +29,9 @@ import Foundation
         )
         try assertCodable(msg)
     }
-    
+
     @Test
 
-    
     func testToMessageConversion() throws {
         let uuid = UUID()
         let date = Date()
@@ -44,7 +42,7 @@ import Foundation
             content: "Pong",
             timestamp: date
         )
-        
+
         let msg = dbMsg.toMessage()
         #expect(msg.id == uuid)
         #expect(msg.role == Message.MessageRole.assistant)

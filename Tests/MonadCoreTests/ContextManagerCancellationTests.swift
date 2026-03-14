@@ -1,25 +1,17 @@
 import Dependencies
 import Foundation
-import MonadTestSupport
 @testable import MonadCore
 @testable import MonadShared
+import MonadTestSupport
 import Testing
 
 @Suite(.serialized) struct ContextManagerCancellationTests {
     private func makeContextManager() async throws -> ContextManager {
-        return try await withDependencies {
-            $0.timelinePersistence = MockPersistenceService()
-            $0.workspacePersistence = MockPersistenceService()
-            $0.memoryStore = MockPersistenceService()
-            $0.messageStore = MockPersistenceService()
-            $0.agentTemplateStore = MockPersistenceService()
-            $0.clientStore = MockPersistenceService()
-            $0.toolPersistence = MockPersistenceService()
-            $0.agentInstanceStore = MockPersistenceService()
-            $0.embeddingService = MockEmbeddingService()
-        } operation: {
-            ContextManager(workspace: nil)
-        }
+        return try await TestDependencies()
+            .withMocks()
+            .run {
+                ContextManager(workspace: nil)
+            }
     }
 
     @Test("gatherContext emits at least one progress event before completing")
@@ -35,8 +27,7 @@ import Testing
         #expect(!events.isEmpty, "Should emit at least one event")
         // Last event should be .complete
         if let last = events.last {
-            if case .complete = last { /* expected */ }
-            else { Issue.record("Last event should be .complete, got \(last)") }
+            if case .complete = last { /* expected */ } else { Issue.record("Last event should be .complete, got \(last)") }
         }
     }
 

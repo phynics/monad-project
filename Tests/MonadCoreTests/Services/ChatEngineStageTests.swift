@@ -13,7 +13,8 @@ import Testing
     func toolExecutionStage_TextFallback() async throws {
         // Given
         let context = createTestContext()
-        context.outputs.fullResponse = #"<tool_call>{"name": "test_tool", "arguments": {"foo": "bar"}}</tool_call>"#
+        let toolCallText = #"<tool_call>{"name": "test_tool", "arguments": {"foo": "bar"}}</tool_call>"#
+        await context.outputs.appendResponse(toolCallText)
 
         let stage = ToolCallExtractionStage(logger: logger)
 
@@ -22,10 +23,12 @@ import Testing
         for try await _ in stream {}
 
         // Then
-        #expect(context.outputs.toolCallAccumulators.count == 1)
-        #expect(context.outputs.toolCallAccumulators[0]?.name == "test_tool")
-        #expect(context.outputs.debugToolCalls.count == 1)
-        #expect(context.outputs.debugToolCalls[0].name == "test_tool")
+        let accumulators = await context.outputs.toolCallAccumulators
+        let debugToolCalls = await context.outputs.debugToolCalls
+        #expect(accumulators.count == 1)
+        #expect(accumulators[0]?.name == "test_tool")
+        #expect(debugToolCalls.count == 1)
+        #expect(debugToolCalls[0].name == "test_tool")
     }
 
     @Test
@@ -36,7 +39,7 @@ import Testing
         let stage = MessagePersistenceStage(messageStore: persistence, logger: logger)
 
         let context = createTestContext()
-        context.outputs.fullResponse = "Hello world"
+        await context.outputs.appendResponse("Hello world")
 
         // When
         let stream = try await stage.process(context)

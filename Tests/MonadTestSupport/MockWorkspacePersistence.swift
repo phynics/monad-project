@@ -1,6 +1,6 @@
-import MonadShared
-import MonadCore
 import Foundation
+import MonadCore
+import MonadShared
 
 public final class MockWorkspacePersistence: WorkspacePersistenceProtocol, @unchecked Sendable {
     public var workspaces: [WorkspaceReference] = []
@@ -15,11 +15,7 @@ public final class MockWorkspacePersistence: WorkspacePersistenceProtocol, @unch
         }
     }
 
-    public func fetchWorkspace(id: UUID) async throws -> WorkspaceReference? {
-        return workspaces.first(where: { $0.id == id })
-    }
-
-    public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? {
+    public func fetchWorkspace(id: UUID, includeTools _: Bool = false) async throws -> WorkspaceReference? {
         return workspaces.first(where: { $0.id == id })
     }
 

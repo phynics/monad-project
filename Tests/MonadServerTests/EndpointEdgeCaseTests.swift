@@ -1,256 +1,165 @@
-import MonadShared
-import MonadCore
+import Dependencies
 import Foundation
 import HTTPTypes
 import Hummingbird
 import HummingbirdTesting
+import MonadCore
+@testable import MonadServer
+import MonadShared
+import MonadTestSupport
 import NIOCore
 import Testing
-import Dependencies
-
-import MonadTestSupport
-@testable import MonadServer
 
 @Suite struct EndpointEdgeCaseTests {
-
     @Test("Chat with non-existent session (404)")
-    func testChatNoSession() async throws {
+    func chatNoSession() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
-        try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-            $0.embeddingService = embedding
-            $0.llmService = llm
-        } operation: {
-            let timelineManager = TimelineManager(
-                workspaceRoot: workspaceRoot
-            )
+        try await TestDependencies()
+            .withMocks(persistence: persistence, llm: llm, embedding: embedding)
+            .withOrchestration(workspaceRoot: workspaceRoot)
+            .run {
+                let router = Router()
+                router.add(middleware: ErrorMiddleware())
+                let protected = router.group("/api").add(middleware: AuthMiddleware())
+                ChatAPIController<BasicRequestContext>().addRoutes(to: protected.group("/sessions"))
 
-            // We need to inject timelineManager into the context for ToolRouter and ChatEngine
-            try await withDependencies {
-                $0.timelineManager = timelineManager
-            } operation: {
-                let toolRouter = ToolRouter()
-                try await withDependencies {
-                    $0.toolRouter = toolRouter
-                } operation: {
-                    let engine = ChatEngine()
+                let app = Application(router: router)
 
-                    let router = Router()
-                    router.add(middleware: ErrorMiddleware())
-                    let protected = router.group("/api").add(middleware: AuthMiddleware())
-                    ChatAPIController<BasicRequestContext>().addRoutes(to: protected.group("/sessions"))
+                let req = ChatRequest(message: "Hi")
+                let buffer = try ByteBuffer(bytes: JSONEncoder().encode(req))
 
-                    let app = Application(router: router)
-
-                    let req = ChatRequest(message: "Hi")
-                    let buffer = ByteBuffer(bytes: try JSONEncoder().encode(req))
-
-                    try await app.test(.router) { client in
-                        var headers = HTTPFields()
-                        headers[.authorization] = "Bearer monad-secret"
-                        try await client.execute(
-                            uri: "/api/sessions/\(UUID())/chat", method: .post,
-                            headers: headers, body: buffer
-                        ) { response in
-                            #expect(response.status == .notFound)
-                        }
+                try await app.test(.router) { client in
+                    var headers = HTTPFields()
+                    headers[.authorization] = "Bearer monad-secret"
+                    try await client.execute(
+                        uri: "/api/sessions/\(UUID())/chat", method: .post,
+                        headers: headers, body: buffer
+                    ) { response in
+                        #expect(response.status == .notFound)
                     }
                 }
             }
-        }
     }
 
     @Test("Chat with invalid UUID (400)")
-    func testChatInvalidUUID() async throws {
+    func chatInvalidUUID() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
 
-        try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-            $0.embeddingService = embedding
-            $0.llmService = llm
-        } operation: {
-            let timelineManager = TimelineManager(
-                workspaceRoot: workspaceRoot
-            )
+        try await TestDependencies()
+            .withMocks(persistence: persistence, llm: llm, embedding: embedding)
+            .withOrchestration(workspaceRoot: workspaceRoot)
+            .run {
+                let router = Router()
+                router.add(middleware: ErrorMiddleware())
+                let protected = router.group("/api").add(middleware: AuthMiddleware())
+                ChatAPIController<BasicRequestContext>().addRoutes(to: protected.group("/sessions"))
 
-            try await withDependencies {
-                $0.timelineManager = timelineManager
-            } operation: {
-                let toolRouter = ToolRouter()
-                try await withDependencies {
-                    $0.toolRouter = toolRouter
-                } operation: {
-                    let engine = ChatEngine()
+                let app = Application(router: router)
 
-                    let router = Router()
-                    router.add(middleware: ErrorMiddleware())
-                    let protected = router.group("/api").add(middleware: AuthMiddleware())
-                    ChatAPIController<BasicRequestContext>().addRoutes(to: protected.group("/sessions"))
+                let req = ChatRequest(message: "Hi")
+                let buffer = try ByteBuffer(bytes: JSONEncoder().encode(req))
 
-                    let app = Application(router: router)
-
-                    let req = ChatRequest(message: "Hi")
-                    let buffer = ByteBuffer(bytes: try JSONEncoder().encode(req))
-
-                    try await app.test(.router) { client in
-                        var headers = HTTPFields()
-                        headers[.authorization] = "Bearer monad-secret"
-                        try await client.execute(
-                            uri: "/api/sessions/invalid-uuid/chat", method: .post,
-                            headers: headers, body: buffer
-                        ) { response in
-                            #expect(response.status == .badRequest)
-                        }
+                try await app.test(.router) { client in
+                    var headers = HTTPFields()
+                    headers[.authorization] = "Bearer monad-secret"
+                    try await client.execute(
+                        uri: "/api/sessions/invalid-uuid/chat", method: .post,
+                        headers: headers, body: buffer
+                    ) { response in
+                        #expect(response.status == .badRequest)
                     }
                 }
             }
-        }
     }
 
     @Test("Auth Failure: Missing Header (Strict -> 401 Unauthorized)")
-    func testAuthMissingHeader() async throws {
+    func authMissingHeader() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
-        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        try await TestDependencies()
+            .withMocks(persistence: persistence, llm: llm, embedding: embedding)
+            .run {
+                let router = Router()
+                router.add(middleware: ErrorMiddleware())
+                let protected = router.group("/api").add(middleware: AuthMiddleware())
+                MemoryAPIController<BasicRequestContext>().addRoutes(
+                    to: protected.group("/memories")
+                )
 
-        try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-            $0.embeddingService = embedding
-            $0.llmService = llm
-        } operation: {
-            let timelineManager = TimelineManager(
-                workspaceRoot: workspaceRoot
-            )
+                let app = Application(router: router)
 
-            let router = Router()
-            router.add(middleware: ErrorMiddleware())
-            let protected = router.group("/api").add(middleware: AuthMiddleware())
-            MemoryAPIController<BasicRequestContext>().addRoutes(
-                to: protected.group("/memories"))
-
-            let app = Application(router: router)
-
-            try await app.test(.router) { client in
-                try await client.execute(uri: "/api/memories", method: .get) { response in
-                    // With strict auth, request is blocked
-                    #expect(response.status == .unauthorized)
+                try await app.test(.router) { client in
+                    try await client.execute(uri: "/api/memories", method: .get) { response in
+                        // With strict auth, request is blocked
+                        #expect(response.status == .unauthorized)
+                    }
                 }
             }
-        }
     }
 
     @Test("Auth Failure: Invalid Token (Strict -> 401 Unauthorized)")
-    func testAuthInvalidToken() async throws {
+    func authInvalidToken() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
-        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        try await TestDependencies()
+            .withMocks(persistence: persistence, llm: llm, embedding: embedding)
+            .run {
+                let router = Router()
+                router.add(middleware: ErrorMiddleware())
+                let protected = router.group("/api").add(middleware: AuthMiddleware())
+                MemoryAPIController<BasicRequestContext>().addRoutes(
+                    to: protected.group("/memories")
+                )
 
-        try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-            $0.embeddingService = embedding
-            $0.llmService = llm
-        } operation: {
-            let timelineManager = TimelineManager(
-                workspaceRoot: workspaceRoot
-            )
+                let app = Application(router: router)
 
-            let router = Router()
-            router.add(middleware: ErrorMiddleware())
-            let protected = router.group("/api").add(middleware: AuthMiddleware())
-            MemoryAPIController<BasicRequestContext>().addRoutes(
-                to: protected.group("/memories"))
-
-            let app = Application(router: router)
-
-            try await app.test(.router) { client in
-                var headers = HTTPFields()
-                headers[.authorization] = "Bearer wrong"
-                try await client.execute(uri: "/api/memories", method: .get, headers: headers) {
-                    response in
-                    // With strict auth, request is blocked
-                    #expect(response.status == .unauthorized)
+                try await app.test(.router) { client in
+                    var headers = HTTPFields()
+                    headers[.authorization] = "Bearer wrong"
+                    try await client.execute(uri: "/api/memories", method: .get, headers: headers) {
+                        response in
+                        // With strict auth, request is blocked
+                        #expect(response.status == .unauthorized)
+                    }
                 }
             }
-        }
     }
 
     @Test("Delete non-existent memory (Should be 204)")
-    func testDeleteNoMemory() async throws {
+    func deleteNoMemory() async throws {
         let persistence = MockPersistenceService()
         let embedding = MockEmbeddingService()
         let llm = MockLLMService()
-        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        try await TestDependencies()
+            .withMocks(persistence: persistence, llm: llm, embedding: embedding)
+            .run {
+                let router = Router()
+                router.add(middleware: ErrorMiddleware())
+                let protected = router.group("/api").add(middleware: AuthMiddleware())
+                MemoryAPIController<BasicRequestContext>().addRoutes(
+                    to: protected.group("/memories")
+                )
 
-        try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-            $0.embeddingService = embedding
-            $0.llmService = llm
-        } operation: {
-            let timelineManager = TimelineManager(
-                workspaceRoot: workspaceRoot
-            )
+                let app = Application(router: router)
 
-            let router = Router()
-            router.add(middleware: ErrorMiddleware())
-            let protected = router.group("/api").add(middleware: AuthMiddleware())
-            MemoryAPIController<BasicRequestContext>().addRoutes(
-                to: protected.group("/memories"))
-
-            let app = Application(router: router)
-
-            try await app.test(.router) { client in
-                var headers = HTTPFields()
-                headers[.authorization] = "Bearer monad-secret"
-                try await client.execute(
-                    uri: "/api/memories/\(UUID())", method: .delete, headers: headers
-                ) { response in
-                    #expect(response.status == .noContent)
+                try await app.test(.router) { client in
+                    var headers = HTTPFields()
+                    headers[.authorization] = "Bearer monad-secret"
+                    try await client.execute(
+                        uri: "/api/memories/\(UUID())", method: .delete, headers: headers
+                    ) { response in
+                        #expect(response.status == .noContent)
+                    }
                 }
             }
-        }
     }
 }

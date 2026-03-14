@@ -25,8 +25,7 @@ import Testing
         do {
             _ = try await manager.send(method: "ping", params: nil, expecting: String.self, to: clientId)
             Issue.record("Expected connectionLost error")
-        } catch RPCError.connectionLost { /* expected */ }
-        catch { Issue.record("Expected connectionLost, got \(error)") }
+        } catch RPCError.connectionLost { /* expected */ } catch { Issue.record("Expected connectionLost, got \(error)") }
     }
 
     @Test("handleResponse ignores unknown response IDs without crashing")
@@ -52,8 +51,7 @@ import Testing
         do {
             _ = try await manager.send(method: "executeTool", params: AnyCodable(["tool": "bash"]), expecting: String.self, to: clientId)
             Issue.record("Expected connectionLost error")
-        } catch RPCError.connectionLost { /* expected */ }
-        catch { Issue.record("Expected connectionLost, got \(error)") }
+        } catch RPCError.connectionLost { /* expected */ } catch { Issue.record("Expected connectionLost, got \(error)") }
 
         // Verify handleResponse with a remote error (unknown id — just ignored).
         let errorResponse = RPCResponse(id: UUID().uuidString, result: nil, error: errorMessage)

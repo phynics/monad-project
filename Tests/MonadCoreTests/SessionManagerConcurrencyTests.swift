@@ -2,36 +2,23 @@ import Dependencies
 import Foundation
 @testable import MonadCore
 @testable import MonadShared
-@testable import MonadShared
 import MonadTestSupport
 import Testing
 
 @Suite(.serialized) struct TimelineManagerConcurrencyTests {
-    private func makeTimelineManager() async -> TimelineManager {
-        let persistence = MockPersistenceService()
-        let embedding = MockEmbeddingService()
-        let llm = MockLLMService()
-        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+    private func makeTimelineManager() async throws -> TimelineManager {
+        let workspace = TestWorkspace()
 
-        return try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.clientStore = persistence
-            $0.toolPersistence = persistence
-            $0.agentInstanceStore = persistence
-            $0.embeddingService = embedding
-            $0.llmService = llm
-        } operation: {
-            TimelineManager(workspaceRoot: workspaceRoot)
-        }
+        return try await TestDependencies()
+            .withMocks()
+            .run {
+                TimelineManager(workspaceRoot: workspace.root)
+            }
     }
 
     @Test("Concurrent createTimeline calls each produce a unique session ID")
     func concurrentCreate_uniqueIds() async throws {
-        let manager = await makeTimelineManager()
+        let manager = try await makeTimelineManager()
 
         let concurrency = 5
         let sessions = try await withThrowingTaskGroup(of: Timeline.self, returning: [Timeline].self) { group in
@@ -54,7 +41,7 @@ import Testing
 
     @Test("Concurrent createTimeline calls all succeed without data corruption")
     func concurrentCreate_noDataCorruption() async throws {
-        let manager = await makeTimelineManager()
+        let manager = try await makeTimelineManager()
 
         let sessions = try await withThrowingTaskGroup(of: Timeline.self, returning: [Timeline].self) { group in
             for index in 0 ..< 4 {
@@ -76,23 +63,23 @@ import Testing
     }
 
     @Test("getTimeline returns nil for unknown ID")
-    func getTimeline_unknownId_returnsNil() async {
-        let manager = await makeTimelineManager()
+    func getTimeline_unknownId_returnsNil() async throws {
+        let manager = try await makeTimelineManager()
         let session = await manager.getTimeline(id: UUID())
         #expect(session == nil)
     }
 
     @Test("createTimeline then getTimeline returns the created session")
     func createTimeline_thenGet_returnsSession() async throws {
-        let manager = await makeTimelineManager()
+        let manager = try await makeTimelineManager()
         let created = try await manager.createTimeline(title: "Test Session")
         let fetched = await manager.getTimeline(id: created.id)
         #expect(fetched?.id == created.id)
     }
 
     @Test("Concurrent getTimeline calls for different IDs return nil without conflict")
-    func concurrentGet_differentIds_allReturnNil() async {
-        let manager = await makeTimelineManager()
+    func concurrentGet_differentIds_allReturnNil() async throws {
+        let manager = try await makeTimelineManager()
         let ids = (0 ..< 10).map { _ in UUID() }
 
         let results = await withTaskGroup(of: Timeline?.self, returning: [Timeline?].self) { group in

@@ -6,7 +6,6 @@ import Foundation
 
     @Test
 
-
     func testChatEventDelta() {
         let event = ChatEvent.delta(event: .generation(text: "Hello"))
         if case .delta(event: .generation(text: let text)) = event {
@@ -18,7 +17,6 @@ import Foundation
 
     @Test
 
-
     func testChatEventThinking() {
         let event = ChatEvent.delta(event: .thinking(text: "Thinking..."))
         if case .delta(event: .thinking(text: let text)) = event {
@@ -29,7 +27,6 @@ import Foundation
     }
 
     @Test
-
 
     func testChatEventToolCall() {
         let delta = ToolCallDelta(index: 0, id: "call1", name: "test", arguments: "{}")
@@ -43,7 +40,6 @@ import Foundation
 
     @Test
 
-
     func testChatEventToolCallError() {
         let event = ChatEvent.error(event: .toolCallError(toolCallId: "call1", name: "test", error: "Not found"))
         if case .error(event: .toolCallError(let id, _, let error)) = event {
@@ -55,7 +51,6 @@ import Foundation
     }
 
     @Test
-
 
     func testChatEventToolExecution() {
         let ref = ToolReference.known("tool-1")
@@ -69,7 +64,6 @@ import Foundation
 
     @Test
 
-
     func testChatEventGenerationContext() {
         let metadata = ChatMetadata(memories: [UUID()], files: ["README.md"])
         let event = ChatEvent.meta(event: .generationContext(metadata: metadata))
@@ -81,7 +75,6 @@ import Foundation
     }
 
     @Test
-
 
     func testChatEventGenerationCompleted() {
         let message = Message(content: "Done", role: .assistant)
@@ -95,7 +88,6 @@ import Foundation
     }
 
     @Test
-
 
     func testChatEventError() {
         let event = ChatEvent.error(event: .error(message: "Test error"))

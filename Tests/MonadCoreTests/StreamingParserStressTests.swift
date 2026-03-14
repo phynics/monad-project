@@ -3,8 +3,6 @@ import Testing
 
 @testable import MonadCore
 @testable import MonadShared
-@testable import MonadShared
-
 @Suite struct StreamingParserStressTests {
 
     // MARK: - Code Block Protection
@@ -70,8 +68,6 @@ import Testing
         parser.process("`")
         parser.process("`")
         parser.process(" End")
-
-        
 
         // "```" are stripped or preserved?
         // In `extractNextSegment`, it returns "```" as text.

@@ -11,25 +11,12 @@ import Testing
 @Suite struct SessionControllerTests {
     @Test("Test Create Session Endpoint")
     func createSession() async throws {
-        let persistence = MockPersistenceService()
-        let embedding = MockEmbeddingService()
-        let llm = MockLLMService()
-        let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
+        let workspace = TestWorkspace()
 
-        try await withDependencies {
-            $0.timelinePersistence = persistence
-            $0.workspacePersistence = persistence
-            $0.memoryStore = persistence
-            $0.messageStore = persistence
-            $0.agentTemplateStore = persistence
-            $0.embeddingService = embedding
-            $0.llmService = llm
-        } operation: {
-            let timelineManager = TimelineManager(workspaceRoot: workspaceRoot)
-
-            try await withDependencies {
-                $0.timelineManager = timelineManager
-            } operation: {
+        try await TestDependencies()
+            .withMocks()
+            .withTimelineManager(workspaceRoot: workspace.root)
+            .run {
                 let router = Router()
                 let controller = TimelineAPIController<BasicRequestContext>()
                 controller.addRoutes(to: router.group("/sessions"))
@@ -46,6 +33,5 @@ import Testing
                     }
                 }
             }
-        }
     }
 }

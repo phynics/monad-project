@@ -46,7 +46,7 @@ import NIOCore
             }
         }
     }
-    
+
     @Test("Test Missing Bearer Prefix")
     func testMissingBearerPrefix() async throws {
         let router = Router(context: BasicRequestContext.self)

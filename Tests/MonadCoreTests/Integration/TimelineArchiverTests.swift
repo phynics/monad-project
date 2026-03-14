@@ -26,7 +26,7 @@ struct TimelineArchiverTests {
         // Given
         mockLLM.nextResponse = "A Great Conversation"
         let messages = [
-            Message(content: "Hello, I want to talk about Swift programming.", role: .user),
+            Message(content: "Hello, I want to talk about Swift programming.", role: .user)
         ]
 
         // When
@@ -42,7 +42,7 @@ struct TimelineArchiverTests {
     func archive_usesDefaultTitleIfNoUserMessage() async throws {
         // Given
         let messages = [
-            Message(content: "I am an assistant.", role: .assistant),
+            Message(content: "I am an assistant.", role: .assistant)
         ]
 
         // When
@@ -61,7 +61,7 @@ struct TimelineArchiverTests {
 
         let longMessage = "This is a very long message that should be indexed as a memory because it is longer than 20 characters."
         let messages = [
-            Message(content: longMessage, role: .user),
+            Message(content: longMessage, role: .user)
         ]
 
         // When
@@ -81,7 +81,7 @@ struct TimelineArchiverTests {
         // Given
         let shortMessage = "Too short."
         let messages = [
-            Message(content: shortMessage, role: .user),
+            Message(content: shortMessage, role: .user)
         ]
 
         // When
@@ -97,7 +97,7 @@ struct TimelineArchiverTests {
         // Given
         let messages = [
             Message(content: "Message 1", role: .user),
-            Message(content: "Message 2", role: .assistant),
+            Message(content: "Message 2", role: .assistant)
         ]
 
         // When
@@ -120,7 +120,7 @@ struct TimelineArchiverTests {
 
         mockLLM.nextResponse = "New Title"
         let messages = [
-            Message(content: "New user message", role: .user),
+            Message(content: "New user message", role: .user)
         ]
 
         // When

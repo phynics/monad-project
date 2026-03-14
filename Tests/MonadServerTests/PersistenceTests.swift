@@ -61,7 +61,7 @@ struct PersistenceTests {
 
         let memories = [
             Memory(title: "Memory 1", content: "Content 1"),
-            Memory(title: "Memory 2", content: "Content 2"),
+            Memory(title: "Memory 2", content: "Content 2")
         ]
         let memoriesJson = try #require(String(data: JSONEncoder().encode(memories), encoding: .utf8))
 

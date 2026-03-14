@@ -2,7 +2,7 @@ import ErrorKit
 import Foundation
 
 /// Errors related to tool execution and routing
-public enum ToolError: Throwable, Sendable {
+public enum ToolError: Throwable, Sendable, Equatable {
     case missingArgument(String)
     case invalidArgument(String, expected: String, got: String)
     case executionFailed(String)

@@ -58,7 +58,6 @@ actor MockConnectionManagerForRemote: ClientConnectionManagerProtocol {
 
     @Test
 
-
     func testExecuteTool() async throws {
         let response = ToolExecutionResponse(status: "success", output: "Tool executed")
         await mockConnection.setNextResponse(response)
@@ -93,7 +92,6 @@ actor MockConnectionManagerForRemote: ClientConnectionManagerProtocol {
     }
 
     @Test
-
 
     func testReadFile() async throws {
         let content = "Hello World"

@@ -61,9 +61,10 @@ import Testing
 
         let toolCall = ToolCall(name: "unknown_tool", arguments: [:])
 
-        await #expect(throws: ToolError.toolNotFound("unknown_tool")) {
-            try await executor.execute(toolCall)
-        }
+        let resultMessage = try await executor.execute(toolCall)
+
+        #expect(resultMessage.role == .tool)
+        #expect(resultMessage.content.contains("unknown_tool"))
     }
 
     @Test("Test executing multiple tools")
@@ -75,7 +76,7 @@ import Testing
 
         let calls = [
             ToolCall(name: "tool_1", arguments: [:]),
-            ToolCall(name: "tool_2", arguments: [:]),
+            ToolCall(name: "tool_2", arguments: [:])
         ]
 
         let results = await executor.executeAll(calls)

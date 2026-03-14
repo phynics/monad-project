@@ -43,25 +43,19 @@ import Testing
         let service = OrphanCleanupService(workspaceRoot: workspaceRoot)
 
         // Act
-        try await withDependencies {
-            $0.timelinePersistence = mockPersistence
-            $0.workspacePersistence = mockPersistence
-            $0.memoryStore = mockPersistence
-            $0.messageStore = mockPersistence
-            $0.agentTemplateStore = mockPersistence
-            $0.clientStore = mockPersistence
-            $0.toolPersistence = mockPersistence
-            $0.agentInstanceStore = mockPersistence
-        } operation: {
-            // Internal cleanup method is private, but run() calls it once on start.
-            // We'll use Task and cancellation to run it just once.
-            let task = Task {
-                try await service.run()
+        let mockPersistence = try #require(mockPersistence)
+        try await TestDependencies()
+            .withMocks(persistence: mockPersistence)
+            .run {
+                // Internal cleanup method is private, but run() calls it once on start.
+                // We'll use Task and cancellation to run it just once.
+                let task = Task {
+                    try await service.run()
+                }
+                // Give it a moment to run the initial cleanup
+                try await Task.sleep(nanoseconds: 100 * 1_000_000)
+                task.cancel()
             }
-            // Give it a moment to run the initial cleanup
-            try await Task.sleep(nanoseconds: 100 * 1_000_000)
-            task.cancel()
-        }
 
         // Assert
         #expect(!(FileManager.default.fileExists(atPath: orphanPath)))
@@ -86,22 +80,16 @@ import Testing
         let service = OrphanCleanupService(workspaceRoot: workspaceRoot)
 
         // Act
-        try await withDependencies {
-            $0.timelinePersistence = mockPersistence
-            $0.workspacePersistence = mockPersistence
-            $0.memoryStore = mockPersistence
-            $0.messageStore = mockPersistence
-            $0.agentTemplateStore = mockPersistence
-            $0.clientStore = mockPersistence
-            $0.toolPersistence = mockPersistence
-            $0.agentInstanceStore = mockPersistence
-        } operation: {
-            let task = Task {
-                try await service.run()
+        let mockPersistence = try #require(mockPersistence)
+        try await TestDependencies()
+            .withMocks(persistence: mockPersistence)
+            .run {
+                let task = Task {
+                    try await service.run()
+                }
+                try await Task.sleep(nanoseconds: 100 * 1_000_000)
+                task.cancel()
             }
-            try await Task.sleep(nanoseconds: 100 * 1_000_000)
-            task.cancel()
-        }
 
         // Assert
         #expect(FileManager.default.fileExists(atPath: userWsPath))

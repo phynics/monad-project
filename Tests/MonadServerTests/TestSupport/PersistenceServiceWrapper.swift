@@ -126,7 +126,7 @@ public final class PersistenceService: HealthCheckable, @unchecked Sendable {
     }
 
     public func fetchWorkspace(id: UUID) async throws -> WorkspaceReference? {
-        try await workspaceStore.fetchWorkspace(id: id)
+        try await workspaceStore.fetchWorkspace(id: id, includeTools: false)
     }
 
     public func fetchWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? {

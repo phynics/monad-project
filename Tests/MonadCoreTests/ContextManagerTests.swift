@@ -1,31 +1,21 @@
-import Testing
+import Dependencies
 import Foundation
-import MonadTestSupport
 @testable import MonadCore
 @testable import MonadShared
-@testable import MonadShared
-import Dependencies
+import MonadTestSupport
+import Testing
 
 @Suite("Context Manager Tests")
 struct ContextManagerTests {
-    
     @Test("Gather Context: Semantic Retrieval")
-    func testGatherContextSemanticRetrieval() async throws {
+    func gatherContextSemanticRetrieval() async throws {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
-        let contextManager = try await withDependencies {
-            $0.timelinePersistence = mockPersistence
-            $0.workspacePersistence = mockPersistence
-            $0.memoryStore = mockPersistence
-            $0.messageStore = mockPersistence
-            $0.agentTemplateStore = mockPersistence
-            $0.clientStore = mockPersistence
-            $0.toolPersistence = mockPersistence
-            $0.agentInstanceStore = mockPersistence
-            $0.embeddingService = mockEmbedding
-        } operation: {
-            ContextManager(workspace: nil)
-        }
+        let contextManager = try await TestDependencies()
+            .withMocks(persistence: mockPersistence, embedding: mockEmbedding)
+            .run {
+                ContextManager(workspace: nil)
+            }
 
         let expectedMemory = Memory.fixture(
             title: "SwiftUI Guide",
@@ -37,9 +27,9 @@ struct ContextManagerTests {
 
         let stream = await contextManager.gatherContext(for: "How to use SwiftUI?")
         let events = try await stream.collect()
-        
-        let context = events.compactMap { if case .complete(let data) = $0 { return data } else { return nil } }.first
-        
+
+        let context = events.compactMap { if case let .complete(data) = $0 { return data } else { return nil } }.first
+
         guard let context = context else {
             Issue.record("Context gathering failed to produce result")
             return
@@ -53,22 +43,14 @@ struct ContextManagerTests {
     }
 
     @Test("Gather Context: Uses History for Tags but Query for Embedding")
-    func testGatherContextUsesHistoryForTagsButQueryForEmbedding() async throws {
+    func gatherContextUsesHistoryForTagsButQueryForEmbedding() async throws {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
-        let contextManager = try await withDependencies {
-            $0.timelinePersistence = mockPersistence
-            $0.workspacePersistence = mockPersistence
-            $0.memoryStore = mockPersistence
-            $0.messageStore = mockPersistence
-            $0.agentTemplateStore = mockPersistence
-            $0.clientStore = mockPersistence
-            $0.toolPersistence = mockPersistence
-            $0.agentInstanceStore = mockPersistence
-            $0.embeddingService = mockEmbedding
-        } operation: {
-            ContextManager(workspace: nil)
-        }
+        let contextManager = try await TestDependencies()
+            .withMocks(persistence: mockPersistence, embedding: mockEmbedding)
+            .run {
+                ContextManager(workspace: nil)
+            }
 
         let memory = Memory.fixture(title: "Project Alpha", tags: ["alpha"])
         mockPersistence.memories = [memory]
@@ -87,7 +69,7 @@ struct ContextManagerTests {
             tagGenerator: tagGenerator
         )
         let events = try await stream.collect()
-        let context = events.compactMap { if case .complete(let data) = $0 { return data } else { return nil } }.first
+        let context = events.compactMap { if case let .complete(data) = $0 { return data } else { return nil } }.first
 
         guard let context = context else {
             Issue.record("Context gathering failed to produce result")
@@ -99,22 +81,14 @@ struct ContextManagerTests {
     }
 
     @Test("Ranking Logic with Tag Boost")
-    func testRankingLogicWithTagBoost() async throws {
+    func rankingLogicWithTagBoost() async throws {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
-        let contextManager = try await withDependencies {
-            $0.timelinePersistence = mockPersistence
-            $0.workspacePersistence = mockPersistence
-            $0.memoryStore = mockPersistence
-            $0.messageStore = mockPersistence
-            $0.agentTemplateStore = mockPersistence
-            $0.clientStore = mockPersistence
-            $0.toolPersistence = mockPersistence
-            $0.agentInstanceStore = mockPersistence
-            $0.embeddingService = mockEmbedding
-        } operation: {
-            ContextManager(workspace: nil)
-        }
+        let contextManager = try await TestDependencies()
+            .withMocks(persistence: mockPersistence, embedding: mockEmbedding)
+            .run {
+                ContextManager(workspace: nil)
+            }
 
         let memory1 = Memory.fixture(title: "Tag Match", tags: ["swift"])
         let memory2 = Memory.fixture(title: "Semantic Match")
@@ -129,7 +103,7 @@ struct ContextManagerTests {
             tagGenerator: tagGenerator
         )
         let events = try await stream.collect()
-        let context = events.compactMap { if case .complete(let data) = $0 { return data } else { return nil } }.first
+        let context = events.compactMap { if case let .complete(data) = $0 { return data } else { return nil } }.first
 
         guard let context = context else {
             Issue.record("Context gathering failed to produce result")
@@ -138,7 +112,7 @@ struct ContextManagerTests {
 
         #expect(context.memories.count == 2)
         #expect(context.memories.first?.memory.title == "Semantic Match")
-        
+
         let tagMatch = context.memories.last
         #expect(tagMatch?.memory.title == "Tag Match")
         let tagSimilarity = tagMatch?.similarity ?? 0
@@ -146,10 +120,10 @@ struct ContextManagerTests {
     }
 
     @Test("Filesystem Notes Retrieval")
-    func testFilesystemNotesRetrieval() async throws {
+    func filesystemNotesRetrieval() async throws {
         let mockPersistence = MockPersistenceService()
         let mockEmbedding = MockEmbeddingService()
-        
+
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let notesDir = tempURL.appendingPathComponent("Notes", isDirectory: true)
         try FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true)
@@ -168,23 +142,15 @@ struct ContextManagerTests {
         )
         let workspace = try MockLocalWorkspace(reference: ref)
 
-        let manager = try await withDependencies {
-            $0.timelinePersistence = mockPersistence
-            $0.workspacePersistence = mockPersistence
-            $0.memoryStore = mockPersistence
-            $0.messageStore = mockPersistence
-            $0.agentTemplateStore = mockPersistence
-            $0.clientStore = mockPersistence
-            $0.toolPersistence = mockPersistence
-            $0.agentInstanceStore = mockPersistence
-            $0.embeddingService = mockEmbedding
-        } operation: {
-            ContextManager(workspace: workspace)
-        }
+        let manager = try await TestDependencies()
+            .withMocks(persistence: mockPersistence, embedding: mockEmbedding)
+            .run {
+                ContextManager(workspace: workspace)
+            }
 
         let stream = await manager.gatherContext(for: "some query")
         let events = try await stream.collect()
-        let context = events.compactMap { if case .complete(let data) = $0 { return data } else { return nil } }.first
+        let context = events.compactMap { if case let .complete(data) = $0 { return data } else { return nil } }.first
 
         guard let context = context else {
             Issue.record("Context gathering failed to produce result")

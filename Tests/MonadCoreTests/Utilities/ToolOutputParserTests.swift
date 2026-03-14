@@ -9,7 +9,6 @@ import Foundation
 
     @Test
 
-
     func testParsePipeDelimitedSingleCall() {
         let content = """
         <|tool_calls_section_begin|>
@@ -46,7 +45,6 @@ import Foundation
 
     @Test
 
-
     func testParseXMLToolCall() {
         let content = """
         Let me check that for you.
@@ -62,7 +60,6 @@ import Foundation
     // MARK: - No Matches
 
     @Test
-
 
     func testParseNoToolCalls() {
         let content = "Just a regular response with no tool calls."

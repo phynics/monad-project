@@ -55,20 +55,11 @@ private func withFixture(
     _ body: @Sendable (AttachmentFixture) async throws -> Void
 ) async throws {
     let fixture = try await AttachmentFixture.make()
-    try await withDependencies {
-        $0.timelinePersistence = fixture.persistence
-        $0.workspacePersistence = fixture.persistence
-        $0.memoryStore = fixture.persistence
-        $0.messageStore = fixture.persistence
-        $0.agentTemplateStore = fixture.persistence
-        $0.clientStore = fixture.persistence
-        $0.toolPersistence = fixture.persistence
-        $0.agentInstanceStore = fixture.persistence
-        $0.embeddingService = MockEmbeddingService()
-        $0.llmService = MockLLMService()
-    } operation: {
-        try await body(fixture)
-    }
+    try await TestDependencies()
+        .withMocks(persistence: fixture.persistence)
+        .run {
+            try await body(fixture)
+        }
 }
 
 // MARK: - Timeline.attachedWorkspaceIds (model)
