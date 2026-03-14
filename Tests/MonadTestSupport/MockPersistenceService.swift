@@ -1,13 +1,12 @@
+import Dependencies
 import Foundation
 import MonadCore
 import MonadShared
-import Dependencies
 
-public final class MockPersistenceService: MemoryStoreProtocol, MessageStoreProtocol, TimelinePersistenceProtocol, WorkspacePersistenceProtocol, AgentTemplateStoreProtocol, BackgroundJobStoreProtocol, ClientStoreProtocol, ToolPersistenceProtocol, AgentInstanceStoreProtocol, HealthCheckable, @unchecked Sendable {
+public final class MockPersistenceService: MemoryStoreProtocol, MessageStoreProtocol, TimelinePersistenceProtocol, WorkspacePersistenceProtocol, AgentTemplateStoreProtocol, ClientStoreProtocol, ToolPersistenceProtocol, AgentInstanceStoreProtocol, HealthCheckable, @unchecked Sendable {
     private let memoriesMock = MockMemoryStore()
     private let messagesMock = MockMessageStore()
     private let timelinesMock = MockTimelinePersistence()
-    private let jobsMock = MockBackgroundJobStore()
     private let agentTemplatesMock = MockAgentTemplateStore()
     private let workspacesMock = MockWorkspacePersistence()
     private let toolsMock = MockToolPersistence()
@@ -143,41 +142,6 @@ public final class MockPersistenceService: MemoryStoreProtocol, MessageStoreProt
 
     public func pruneTimelines(olderThan timeInterval: TimeInterval, excluding excludedTimelineIds: [UUID], dryRun: Bool) async throws -> Int {
         try await timelinesMock.pruneTimelines(olderThan: timeInterval, excluding: excludedTimelineIds, dryRun: dryRun)
-    }
-
-    // MARK: - BackgroundJobStoreProtocol
-
-    public var jobs: [BackgroundJob] {
-        get { jobsMock.jobs }
-        set { jobsMock.jobs = newValue }
-    }
-
-    public func saveJob(_ job: BackgroundJob) async throws {
-        try await jobsMock.saveJob(job)
-    }
-
-    public func fetchJob(id: UUID) async throws -> BackgroundJob? {
-        try await jobsMock.fetchJob(id: id)
-    }
-
-    public func fetchAllJobs() async throws -> [BackgroundJob] {
-        try await jobsMock.fetchAllJobs()
-    }
-
-    public func fetchJobs(for timelineId: UUID) async throws -> [BackgroundJob] {
-        try await jobsMock.fetchJobs(for: timelineId)
-    }
-
-    public func fetchPendingJobs(limit: Int) async throws -> [BackgroundJob] {
-        try await jobsMock.fetchPendingJobs(limit: limit)
-    }
-
-    public func deleteJob(id: UUID) async throws {
-        try await jobsMock.deleteJob(id: id)
-    }
-
-    public func monitorJobs() async -> AsyncStream<BackgroundJobEvent> {
-        await jobsMock.monitorJobs()
     }
 
     // MARK: - AgentTemplateStoreProtocol
@@ -327,25 +291,23 @@ public final class MockPersistenceService: MemoryStoreProtocol, MessageStoreProt
         searchResults = []
         messages = []
         timelines = []
-        jobs = []
         agentTemplates = []
         workspaces = []
     }
 }
 
-extension DependencyValues {
-    public var persistenceService: MockPersistenceService {
+public extension DependencyValues {
+    var persistenceService: MockPersistenceService {
         get { fatalError("persistenceService is deprecated. Use individual stores.") }
         set {
-            self.workspacePersistence = newValue
-            self.timelinePersistence = newValue
-            self.memoryStore = newValue
-            self.messageStore = newValue
-            self.clientStore = newValue
-            self.toolPersistence = newValue
-            self.agentTemplateStore = newValue
-            self.backgroundJobStore = newValue
-            self.agentInstanceStore = newValue
+            workspacePersistence = newValue
+            timelinePersistence = newValue
+            memoryStore = newValue
+            messageStore = newValue
+            clientStore = newValue
+            toolPersistence = newValue
+            agentTemplateStore = newValue
+            agentInstanceStore = newValue
         }
     }
 }

@@ -1,22 +1,23 @@
+import Foundation
+import HTTPTypes
 import Hummingbird
 import MonadCore
 import MonadShared
-import Foundation
 import NIOCore
-import HTTPTypes
 
 /// Standard extension to make any Codable & Sendable type a ResponseGenerator
-extension ResponseGenerator where Self: Codable & Sendable {
-    public func response(from request: Request, context: some RequestContext) throws -> Response {
-        return try self.response(status: .ok, from: request, context: context)
+public extension ResponseGenerator where Self: Codable & Sendable {
+    func response(from request: Request, context: some RequestContext) throws -> Response {
+        return try response(status: .ok, from: request, context: context)
     }
 
-    public func response(status: HTTPResponse.Status, from request: Request, context: some RequestContext) throws -> Response {
+    func response(status: HTTPResponse.Status, from _: Request, context _: some RequestContext) throws -> Response {
         let data = try SerializationUtils.jsonEncoder.encode(self)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
         return Response(
-            status: status, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data)))
+            status: status, headers: headers, body: .init(byteBuffer: ByteBuffer(bytes: data))
+        )
     }
 }
 
@@ -37,8 +38,6 @@ extension Memory: ResponseGenerator {}
 extension ClientIdentity: ResponseGenerator {}
 
 extension ClientRegistrationResponse: ResponseGenerator {}
-
-extension BackgroundJob: ResponseGenerator {}
 
 extension LLMConfiguration: ResponseGenerator {}
 

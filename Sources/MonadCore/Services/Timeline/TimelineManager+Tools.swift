@@ -8,8 +8,7 @@ public extension TimelineManager {
         for session: Timeline,
         jailRoot: String,
         toolContextTimeline: ToolTimelineContext,
-        jobQueueContext: BackgroundJobQueueContext,
-        parentId: UUID? = nil
+        parentId _: UUID? = nil
     ) async -> TimelineToolManager {
         let currentWD = session.workingDirectory ?? jailRoot
 
@@ -28,22 +27,15 @@ public extension TimelineManager {
             AnyTool(SearchFilesTool(currentDirectory: currentWD, jailRoot: jailRoot)),
             AnyTool(ReadFileTool(currentDirectory: currentWD, jailRoot: jailRoot)),
 
-            // AgentTemplate Coordination
-            AnyTool(LaunchSubagentTool(
-                backgroundJobStore: backgroundJobStore,
-                messageStore: messageStore,
-                agentTemplateStore: agentTemplateStore,
-                timelineId: session.id,
-                parentId: parentId
-            )),
-
-            // BackgroundJob Queue Gateway
-            AnyTool(BackgroundJobQueueGatewayTool(context: jobQueueContext, timelineContext: toolContextTimeline)),
-
             // Timeline Observation Tools (always available)
             AnyTool(TimelineListTool(timelineStore: timelineStore)),
-            AnyTool(TimelinePeekTool(messageStore: messageStore, timelineStore: timelineStore))
+            AnyTool(TimelinePeekTool(messageStore: messageStore, timelineStore: timelineStore)),
         ]
+
+        // Context gateway tools injected by providers
+        for provider in contextProviders {
+            availableTools.append(provider.makeGatewayTool(timelineContext: toolContextTimeline))
+        }
 
         // Timeline Send: only available when an agent is attached (needs sender identity)
         if let agentId = session.attachedAgentInstanceId {
@@ -65,19 +57,18 @@ public extension TimelineManager {
         let jailRoot = workspaceRoot.path
         let dummyId = UUID()
         let toolTimelineContext = ToolTimelineContext()
-        let jobQueueContext = BackgroundJobQueueContext(backgroundJobStore: backgroundJobStore, timelineId: dummyId)
         let dummyTimeline = Timeline(id: dummyId, workingDirectory: jailRoot)
         let manager = await createToolManager(
             for: dummyTimeline,
             jailRoot: jailRoot,
-            toolContextTimeline: toolTimelineContext,
-            jobQueueContext: jobQueueContext
+            toolContextTimeline: toolTimelineContext
         )
         return await manager.getAvailableTools()
     }
 
     func findWorkspaceForTool(_ tool: ToolReference, in workspaceIds: [UUID]) async throws
-        -> UUID? {
+        -> UUID?
+    {
         return try await toolPersistence.findWorkspaceId(forToolId: tool.toolId, in: workspaceIds)
     }
 

@@ -92,10 +92,13 @@ public extension Tool {
         // JSONSerialization, which cannot handle the AnyCodable wrapper (__SwiftValue crash).
         let schema: JSONSchema
         if let data = try? JSONEncoder().encode(parametersSchema),
-           let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data) {
+           let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data)
+        {
             schema = decoded
         } else {
-           var logger: Logger { Logger(label: "com.monad.shared.tools") }
+            var logger: Logger {
+                Logger(label: "com.monad.shared.tools")
+            }
             logger.warning("Failed to decode parametersSchema for tool '\(id)' — using empty schema. Raw: \(parametersSchema)")
             // Fallback to empty object if conversion fails
             schema = .object([:])
@@ -151,7 +154,6 @@ public func formatToolsForPrompt(_ tools: [AnyTool]) async -> String {
     Rules:
     - Use tools only for missing context.
     - Create memories frequently via `create_memory`.
-    - `launch_subagent` for isolated tasks.
     - Path Resolution: If a tool provenance indicates a specific workspace (e.g. `[Workspace: project-x]`), all file paths passed to it MUST be relative to that workspace root.
     - System Tools: Tools labeled `[System]` have global scope or session-specific sandbox scope.
     - Summarize the result if it is excessively long.

@@ -14,11 +14,6 @@ public enum AgentInstanceStoreKey: DependencyKey {
     public static let testValue: any AgentInstanceStoreProtocol = UnconfiguredAgentInstanceStore()
 }
 
-public enum BackgroundJobStoreKey: DependencyKey {
-    public static let liveValue: any BackgroundJobStoreProtocol = UnconfiguredBackgroundJobStore()
-    public static let testValue: any BackgroundJobStoreProtocol = UnconfiguredBackgroundJobStore()
-}
-
 public enum ClientStoreKey: DependencyKey {
     public static let liveValue: any ClientStoreProtocol = UnconfiguredClientStore()
     public static let testValue: any ClientStoreProtocol = UnconfiguredClientStore()
@@ -69,11 +64,6 @@ public extension DependencyValues {
     var agentInstanceStore: any AgentInstanceStoreProtocol {
         get { self[AgentInstanceStoreKey.self] }
         set { self[AgentInstanceStoreKey.self] = newValue }
-    }
-
-    var backgroundJobStore: any BackgroundJobStoreProtocol {
-        get { self[BackgroundJobStoreKey.self] }
-        set { self[BackgroundJobStoreKey.self] = newValue }
     }
 
     var clientStore: any ClientStoreProtocol {
@@ -161,41 +151,6 @@ public struct UnconfiguredAgentInstanceStore: AgentInstanceStoreProtocol {
     }
 
     public func fetchTimelines(attachedToAgent _: UUID) async throws -> [Timeline] {
-        fail()
-    }
-}
-
-public struct UnconfiguredBackgroundJobStore: BackgroundJobStoreProtocol {
-    public init() {}
-    private func fail() -> Never {
-        fatalError("BackgroundJobStore not configured.")
-    }
-
-    public func saveJob(_: BackgroundJob) async throws {
-        fail()
-    }
-
-    public func fetchJob(id _: UUID) async throws -> BackgroundJob? {
-        fail()
-    }
-
-    public func fetchAllJobs() async throws -> [BackgroundJob] {
-        fail()
-    }
-
-    public func fetchJobs(for _: UUID) async throws -> [BackgroundJob] {
-        fail()
-    }
-
-    public func fetchPendingJobs(limit _: Int) async throws -> [BackgroundJob] {
-        fail()
-    }
-
-    public func deleteJob(id _: UUID) async throws {
-        fail()
-    }
-
-    public func monitorJobs() async -> AsyncStream<BackgroundJobEvent> {
         fail()
     }
 }

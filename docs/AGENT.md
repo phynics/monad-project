@@ -159,17 +159,6 @@ Agents communicate through **timeline tools**:
 4. Monitors sub-agents via `timeline_peek`
 5. Synthesizes results
 
-### AgentTemplateAsTool
-
-Expose an AgentTemplate as a directly callable tool:
-
-```swift
-let tool = AgentTemplateAsTool(agent: template, jobQueueContext: jobQueue)
-// LLM can call this agent as if it were a function
-```
-
-**Location:** `Sources/MonadCore/Services/Tools/AgentTemplate/AgentTemplateAsTool.swift`
-
 ---
 
 ## CLI Commands

@@ -20,7 +20,6 @@ import Testing
             $0.memoryStore = persistence
             $0.messageStore = persistence
             $0.agentTemplateStore = persistence
-            $0.backgroundJobStore = persistence
             $0.clientStore = persistence
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
@@ -43,7 +42,6 @@ import Testing
             $0.memoryStore = MockPersistenceService()
             $0.messageStore = MockPersistenceService()
             $0.agentTemplateStore = MockPersistenceService()
-            $0.backgroundJobStore = MockPersistenceService()
             $0.clientStore = MockPersistenceService()
             $0.toolPersistence = MockPersistenceService()
             $0.agentInstanceStore = MockPersistenceService()

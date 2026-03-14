@@ -68,6 +68,7 @@ public struct Message: Identifiable, Equatable, Sendable, Codable {
         case embedding = "Generating Embedding"
         case searching = "Searching Memories"
         case ranking = "Ranking Results"
+        case discoveringNotes = "Discovering Notes"
         case complete = "Context Ready"
     }
 

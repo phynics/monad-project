@@ -1,8 +1,8 @@
-import MonadShared
+import ErrorKit
 import Foundation
 import GRDB
 import MonadCore
-import ErrorKit
+import MonadShared
 
 // MARK: - Persistence Error
 
@@ -11,7 +11,7 @@ public enum PersistenceError: Throwable {
 
     public var errorDescription: String? {
         switch self {
-        case .invalidUUIDFormat(let value):
+        case let .invalidUUIDFormat(value):
             return "Invalid UUID format: \(value)"
         }
     }
@@ -33,24 +33,22 @@ extension ConversationMessage: FetchableRecord, PersistableRecord {
 // MARK: - Timeline
 
 extension Timeline: FetchableRecord, PersistableRecord {
-    public static var databaseTableName: String { "timeline" }
-}
-
-// MARK: - BackgroundJob
-
-extension BackgroundJob: FetchableRecord, PersistableRecord {
-    public static var databaseTableName: String { "job" }
+    public static var databaseTableName: String {
+        "timeline"
+    }
 }
 
 // MARK: - AgentTemplate
 
 extension AgentTemplate: FetchableRecord, PersistableRecord {
-    public static var databaseTableName: String { "agent" }
+    public static var databaseTableName: String {
+        "agent"
+    }
 }
 
-extension AgentTemplate {
+public extension AgentTemplate {
     /// Helper to fetch the default agent from the database
-    public static func fetchDefault(in db: Database) throws -> AgentTemplate? {
+    static func fetchDefault(in db: Database) throws -> AgentTemplate? {
         return try AgentTemplate.fetchOne(db, key: "default")
     }
 }

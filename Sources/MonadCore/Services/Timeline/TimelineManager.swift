@@ -33,7 +33,6 @@ public actor TimelineManager {
     @Dependency(\.workspacePersistence) var workspaceStore
     @Dependency(\.memoryStore) var memoryStore
     @Dependency(\.toolPersistence) var toolPersistence
-    @Dependency(\.backgroundJobStore) var backgroundJobStore
     @Dependency(\.agentTemplateStore) var agentTemplateStore
     @Dependency(\.clientStore) var clientStore
     @Dependency(\.agentInstanceStore) var agentInstanceStore
@@ -42,6 +41,7 @@ public actor TimelineManager {
     let workspaceRoot: URL
     let connectionManager: (any ClientConnectionManagerProtocol)?
     public let workspaceManager: WorkspaceManager
+    let contextProviders: [any ContextGatewayProviding]
 
     /// Initializes a new `TimelineManager`.
     /// - Parameters:
@@ -49,15 +49,18 @@ public actor TimelineManager {
     ///   - workspaceRoot: The root directory where timeline data is stored.
     ///   - connectionManager: Optional manager for client-side tool connections.
     ///   - workspaceCreator: Factory for creating concrete `WorkspaceProtocol` instances.
+    ///   - contextProviders: Providers that inject gateway tools for external ToolContext implementations.
     public init(
         vectorStore: (any VectorStoreProtocol)? = nil,
         workspaceRoot: URL,
         connectionManager: (any ClientConnectionManagerProtocol)? = nil,
-        workspaceCreator: any WorkspaceCreating = NullWorkspaceCreator()
+        workspaceCreator: any WorkspaceCreating = NullWorkspaceCreator(),
+        contextProviders: [any ContextGatewayProviding] = []
     ) {
         self.vectorStore = vectorStore
         self.workspaceRoot = workspaceRoot
         self.connectionManager = connectionManager
+        self.contextProviders = contextProviders
 
         // Use withDependencies to ensure repository picks up current context if needed,
         // although Dependencies usually works via property wrappers.
@@ -101,13 +104,10 @@ public actor TimelineManager {
         let toolContextTimeline = ToolTimelineContext()
         toolContextTimelines[timeline.id] = toolContextTimeline
 
-        let jobQueueContext = BackgroundJobQueueContext(backgroundJobStore: backgroundJobStore, timelineId: timeline.id)
-
         // Setup Tools for timeline
         let toolManager = await createToolManager(
             for: timeline, jailRoot: workspaceURL.path,
             toolContextTimeline: toolContextTimeline,
-            jobQueueContext: jobQueueContext,
             parentId: parentId
         )
         toolManagers[timeline.id] = toolManager
@@ -121,8 +121,7 @@ public actor TimelineManager {
 
         let toolExecutor = ToolExecutor(
             toolManager: toolManager,
-            timelineContext: toolContextTimeline,
-            jobQueueContext: jobQueueContext
+            timelineContext: toolContextTimeline
         )
         toolExecutors[timeline.id] = toolExecutor
     }

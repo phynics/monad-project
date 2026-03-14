@@ -38,7 +38,6 @@ import Testing
             $0.memoryStore = persistenceService.memoryStore
             $0.messageStore = persistenceService.messageStore
             $0.agentTemplateStore = persistenceService.agentTemplateStore
-            $0.backgroundJobStore = persistenceService.backgroundJobStore
             $0.clientStore = persistenceService.clientStore
             $0.agentInstanceStore = persistenceService.agentInstanceStore
             $0.embeddingService = embeddingService

@@ -1,11 +1,10 @@
 import Foundation
-import MonadShared
 import MonadCore
+import MonadShared
 import Testing
 
 @Suite struct ToolExecutorTests {
-
-    // Mock Tool for testing
+    /// Mock Tool for testing
     struct MockTool: MonadShared.Tool {
         let id: String
         let name: String
@@ -13,11 +12,15 @@ import Testing
         let requiresPermission: Bool = false
         let shouldFail: Bool
 
-        var parametersSchema: [String: AnyCodable] { [:] }
+        var parametersSchema: [String: AnyCodable] {
+            [:]
+        }
 
-        func canExecute() async -> Bool { true }
+        func canExecute() async -> Bool {
+            true
+        }
 
-        func execute(parameters: [String: Any]) async throws -> ToolResult {
+        func execute(parameters _: [String: Any]) async throws -> ToolResult {
             if shouldFail {
                 return .failure("Mock failure")
             }
@@ -58,13 +61,13 @@ import Testing
 
         let toolCall = ToolCall(name: "unknown_tool", arguments: [:])
 
-        await #expect(throws: ToolExecutorError.toolNotFound("unknown_tool")) {
+        await #expect(throws: ToolError.toolNotFound("unknown_tool")) {
             try await executor.execute(toolCall)
         }
     }
 
     @Test("Test executing multiple tools")
-    func executeAll() async throws {
+    func executeAll() async {
         let tool1 = MockTool(id: "tool_1", name: "T1", description: "T1", shouldFail: false)
         let tool2 = MockTool(id: "tool_2", name: "T2", description: "T2", shouldFail: false)
         let manager = TimelineToolManager(availableTools: [AnyTool(tool1), AnyTool(tool2)])
@@ -72,7 +75,7 @@ import Testing
 
         let calls = [
             ToolCall(name: "tool_1", arguments: [:]),
-            ToolCall(name: "tool_2", arguments: [:])
+            ToolCall(name: "tool_2", arguments: [:]),
         ]
 
         let results = await executor.executeAll(calls)

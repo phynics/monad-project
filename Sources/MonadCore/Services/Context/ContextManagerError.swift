@@ -1,6 +1,6 @@
 import ErrorKit
-import MonadShared
 import Foundation
+import MonadShared
 
 /// Error types specific to ContextManager
 public enum ContextManagerError: Throwable {
@@ -8,14 +8,11 @@ public enum ContextManagerError: Throwable {
     case embeddingFailed(Error)
     /// Database retrieval failed
     case persistenceFailed(Error)
-    /// Tag generation failed (non-critical)
-    case tagGenerationFailed(Error)
 
     public var errorDescription: String? {
         switch self {
-        case .embeddingFailed(let error): return "Embedding failed: \(error.localizedDescription)"
-        case .persistenceFailed(let error): return "Database error: \(error.localizedDescription)"
-        case .tagGenerationFailed(let error): return "Tag generation failed: \(error.localizedDescription)"
+        case let .embeddingFailed(error): return "Embedding failed: \(error.localizedDescription)"
+        case let .persistenceFailed(error): return "Database error: \(error.localizedDescription)"
         }
     }
 
@@ -25,8 +22,6 @@ public enum ContextManagerError: Throwable {
             return "Failed to analyze your request for relevant context."
         case .persistenceFailed:
             return "Could not retrieve saved memories or notes."
-        case .tagGenerationFailed:
-            return "Failed to extract keywords for research. Results might be less precise."
         }
     }
 }

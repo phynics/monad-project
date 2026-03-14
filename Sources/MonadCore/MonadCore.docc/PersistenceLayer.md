@@ -5,12 +5,11 @@ Modular storage architecture for MonadCore.
 
 ## Domain-Specific Protocols
 
-The persistence layer is split into 8 focused protocols to ensure high cohesion and low coupling:
+The persistence layer is split into focused protocols to ensure high cohesion and low coupling:
 
 - `MemoryStoreProtocol`: Vector and semantic memory storage.
 - `MessageStoreProtocol`: Chat history management.
 - `TimelinePersistenceProtocol`: Conversation timeline lifecycle.
-- `BackgroundJobStoreProtocol`: Background task and subagent job queue.
 - `AgentTemplateStoreProtocol`: Static agent definitions.
 - `WorkspacePersistenceProtocol`: Virtual document workspace tracking.
 - `ClientStoreProtocol`: Remote client identity and state.

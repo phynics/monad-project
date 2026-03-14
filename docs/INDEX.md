@@ -91,7 +91,7 @@ Start with **[../CLAUDE.md](../CLAUDE.md)** for:
 - Build commands and testing (`swift build`, `swift test`, `make lint`)
 - Module architecture and model layout
 - Critical conventions: concurrency, graceful shutdown, DI, logging
-- System tools (18 implementations)
+- System tools (14 implementations)
 
 Then check this INDEX for the specific area you're working on.
 
@@ -161,7 +161,6 @@ Sources/MonadCore/Models/
 ├── Database/      ConversationMessage, DatabaseBackup, Memory, SemanticSearchResult, Timeline
 ├── Tools/         Tool, ToolReference, ToolError, ToolParameters, …
 │   ├── Filesystem/         7 tools: cd, find, inspect, ls, cat, grep, search
-│   ├── BackgroundJobQueue/ BackgroundJobQueueGatewayTool, Job, BackgroundJobQueueContext
 │   └── ToolContext/        ContextTool, ToolContext, ToolTimelineContext
 └── Workspace/     WorkspaceAttachment, WorkspaceLock, WorkspaceProtocol,
                    WorkspaceReference, WorkspaceTool, WorkspaceToolDefinition,
@@ -195,21 +194,18 @@ Sources/MonadCore/Services/
 ├── Prompting/                    — DefaultInstructions, PromptSections
 ├── Timeline/                     — TimelineManager, TimelineToolManager
 ├── Tools/                        — SystemToolRegistry, ToolExecutor, ToolRouter
-│   ├── AgentTemplate/            — LaunchSubagentTool, AgentTemplateAsTool
 │   └── Timeline/                 — TimelineListTool, TimelinePeekTool, TimelineSendTool
 ├── Vector/                       — VectorStore, MockVectorStore
 └── Workspace/                    — WorkspaceManager, WorkspaceRepository
 ```
 
-## System Tools (17 Implemented)
+## System Tools (14 Implemented)
 
 | Category | Tools |
 |:---------|:------|
 | Filesystem (7) | `cd`, `find`, `inspect_file`, `ls`, `cat`, `grep`, `search_files` |
-| AgentTemplate (2) | `LaunchSubagentTool`, `AgentTemplateAsTool` |
 | Timeline (3) | `timeline_list`, `timeline_peek`, `timeline_send` |
 | System (2) | `system_memory_search`, `system_web_search` |
-| Job Queue (1) | `BackgroundJobQueueGatewayTool` |
 | Context (1) | `ContextTool` (marker protocol) |
 | Permission (1) | `request_write_access` |
 

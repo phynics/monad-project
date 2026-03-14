@@ -35,7 +35,6 @@ public struct MonadServerFactory {
 
         let dbQueue = databaseManager.dbQueue
         let agentInstanceStore = AgentInstanceDataRepository(dbQueue: dbQueue)
-        let backgroundJobStore = BackgroundJobRepository(dbQueue: dbQueue)
         let clientStore = ClientIdentityRepository(dbQueue: dbQueue)
         let agentTemplateStore = AgentTemplateRepository(dbQueue: dbQueue)
         let memoryStore = MemoryRepository(dbQueue: dbQueue)
@@ -91,17 +90,14 @@ public struct MonadServerFactory {
         let timelineManager = TimelineManager(
             workspaceRoot: workspaceRoot,
             connectionManager: connectionManager,
-            workspaceCreator: WorkspaceFactory()
+            workspaceCreator: WorkspaceFactory(),
+            contextProviders: []
         )
 
         let agentInstanceManager = AgentInstanceManager(repository: workspaceRepository)
         let toolRouter = ToolRouter()
         let chatEngine = ChatEngine()
 
-        let jobRunner = BackgroundJobRunnerService(
-            timelineManager: timelineManager,
-            chatEngine: chatEngine
-        )
         let orphanCleanup = OrphanCleanupService(
             workspaceRoot: workspaceRoot
         )
@@ -115,7 +111,6 @@ public struct MonadServerFactory {
         return try await withDependencies {
             $0.databaseManager = databaseManager
             $0.agentInstanceStore = agentInstanceStore
-            $0.backgroundJobStore = backgroundJobStore
             $0.clientStore = clientStore
             $0.agentTemplateStore = agentTemplateStore
             $0.memoryStore = memoryStore
@@ -169,9 +164,6 @@ public struct MonadServerFactory {
             let chatController = ChatAPIController<AppRequestContext>(verbose: verbose)
             chatController.addRoutes(to: protected.group("/sessions"))
 
-            let jobController = BackgroundJobAPIController<AppRequestContext>()
-            jobController.addRoutes(to: protected.group("/sessions"))
-
             let memoryController = MemoryAPIController<AppRequestContext>()
             memoryController.addRoutes(to: protected.group("/memories"))
 
@@ -217,9 +209,8 @@ public struct MonadServerFactory {
                 configuration: ServiceGroupConfiguration(
                     services: [
                         .init(service: app),
-                        .init(service: jobRunner),
                         .init(service: orphanCleanup),
-                        .init(service: bonjourAdvertiser)
+                        .init(service: bonjourAdvertiser),
                     ],
                     gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                     logger: logger

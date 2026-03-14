@@ -119,7 +119,6 @@ extension ChatREPL {
         await registry.register(MemoryCommand())
         await registry.register(PruneSlashCommand())
         await registry.register(ClientCommand())
-        await registry.register(JobSlashCommand())
         await registry.register(AgentSlashCommand())
 
         // Utilities

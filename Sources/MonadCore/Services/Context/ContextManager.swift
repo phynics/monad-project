@@ -1,10 +1,11 @@
-import MonadShared
 import Dependencies
+import ErrorKit
 import Foundation
 import Logging
+import MonadShared
 
 /// Manages the retrieval and organization of context for the chat
-public actor ContextManager: @unchecked Sendable {
+public actor ContextManager {
     @Dependency(\.memoryStore) var memoryStore
     @Dependency(\.embeddingService) var embeddingService
 
@@ -94,8 +95,14 @@ public actor ContextManager: @unchecked Sendable {
         let manager: ContextManager
 
         func process(_ context: ContextGatheringContext) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
-            context.notes = try await manager.fetchAllNotes()
-            return AsyncThrowingStream { $0.finish() }
+            return AsyncThrowingStream { continuation in
+                let task = Task {
+                    continuation.yield(.progress(.discoveringNotes))
+                    context.notes = (try? await manager.fetchAllNotes()) ?? []
+                    continuation.finish()
+                }
+                continuation.onTermination = { @Sendable _ in task.cancel() }
+            }
         }
     }
 
@@ -146,7 +153,7 @@ public actor ContextManager: @unchecked Sendable {
                     "Gathering context for query length: \(query.count), history count: \(history.count)"
                 )
 
-                var context = ContextGatheringContext(
+                let context = ContextGatheringContext(
                     query: query,
                     history: history,
                     limit: limit,
@@ -172,7 +179,7 @@ public actor ContextManager: @unchecked Sendable {
                     }
                     continuation.finish()
                 } catch {
-                    logger.error("Context gathering failed: \(error.localizedDescription)")
+                    logger.error("Context gathering failed: \(ErrorKit.userFriendlyMessage(for: error))")
                     continuation.finish(throwing: error)
                 }
             }
@@ -186,7 +193,6 @@ public actor ContextManager: @unchecked Sendable {
     private func fetchAllNotes() async throws -> [ContextFile] {
         var allNotes: [ContextFile] = []
 
-        // 2. Fetch from Workspace
         if let workspace = workspace {
             do {
                 let files = try await workspace.listFiles(path: "Notes")
@@ -206,7 +212,7 @@ public actor ContextManager: @unchecked Sendable {
                 }
             } catch {
                 logger.warning(
-                    "Failed to fetch notes from workspace: \(error.localizedDescription)"
+                    "Failed to fetch notes from workspace: \(ErrorKit.userFriendlyMessage(for: error))"
                 )
             }
         }
@@ -214,7 +220,7 @@ public actor ContextManager: @unchecked Sendable {
         return allNotes.sorted(by: { $0.name < $1.name })
     }
 
-    nonisolated private func buildAugmentedContext(query: String, history: [Message]) -> String {
+    private nonisolated func buildAugmentedContext(query: String, history: [Message]) -> String {
         guard !history.isEmpty else { return query }
 
         // Take the last few user/assistant messages to provide context for tags
@@ -239,16 +245,10 @@ public actor ContextManager: @unchecked Sendable {
         limit: Int,
         tagGenerator: (@Sendable (String) async throws -> [String])?,
         onProgress: (@Sendable (Message.ContextGatheringProgress) -> Void)?
-    ) async throws -> (
-        memories: [SemanticSearchResult],
-        tags: [String],
-        vector: [Double],
-        semanticResults: [SemanticSearchResult],
-        tagResults: [Memory]
-    ) {
+    ) async throws -> MemoryRetrievalResult {
         // Validation
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return ([], [], [], [], [])
+            return MemoryRetrievalResult(memories: [], tags: [], vector: [], semanticResults: [], tagResults: [])
         }
 
         // 1. Generate Tags (Fault tolerant)
@@ -259,7 +259,7 @@ public actor ContextManager: @unchecked Sendable {
                 tags = try await generator(tagContext)
                 logger.debug("Generated tags: \(tags)")
             } catch {
-                logger.warning("Optional tag generation failed: \(error.localizedDescription)")
+                logger.warning("Optional tag generation failed: \(ErrorKit.userFriendlyMessage(for: error))")
                 // Non-critical, continue with just embedding
             }
         }
@@ -274,7 +274,9 @@ public actor ContextManager: @unchecked Sendable {
         }
 
         // Check cancellation
-        if Task.isCancelled { return ([], [], [], [], []) }
+        if Task.isCancelled {
+            return MemoryRetrievalResult(memories: [], tags: [], vector: [], semanticResults: [], tagResults: [])
+        }
 
         // 3. Parallel Retrieval: Vector Search & Tag Search
         onProgress?(.searching)
@@ -313,14 +315,20 @@ public actor ContextManager: @unchecked Sendable {
             "Recall performance: \(topResults.count) memories selected from \(semanticResults.count) semantic + \(tagResults.count) tag matches"
         )
 
-        return (
-            topResults,
-            tags,
-            doubleEmbedding,
-            semanticResults.map {
-                SemanticSearchResult(memory: $0.memory, similarity: $0.similarity)
-            },
-            tagResults
+        return MemoryRetrievalResult(
+            memories: topResults,
+            tags: tags,
+            vector: doubleEmbedding,
+            semanticResults: semanticResults,
+            tagResults: tagResults
         )
     }
+}
+
+private struct MemoryRetrievalResult {
+    let memories: [SemanticSearchResult]
+    let tags: [String]
+    let vector: [Double]
+    let semanticResults: [SemanticSearchResult]
+    let tagResults: [Memory]
 }

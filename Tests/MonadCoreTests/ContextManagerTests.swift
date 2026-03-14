@@ -19,7 +19,6 @@ struct ContextManagerTests {
             $0.memoryStore = mockPersistence
             $0.messageStore = mockPersistence
             $0.agentTemplateStore = mockPersistence
-            $0.backgroundJobStore = mockPersistence
             $0.clientStore = mockPersistence
             $0.toolPersistence = mockPersistence
             $0.agentInstanceStore = mockPersistence
@@ -63,7 +62,6 @@ struct ContextManagerTests {
             $0.memoryStore = mockPersistence
             $0.messageStore = mockPersistence
             $0.agentTemplateStore = mockPersistence
-            $0.backgroundJobStore = mockPersistence
             $0.clientStore = mockPersistence
             $0.toolPersistence = mockPersistence
             $0.agentInstanceStore = mockPersistence
@@ -110,7 +108,6 @@ struct ContextManagerTests {
             $0.memoryStore = mockPersistence
             $0.messageStore = mockPersistence
             $0.agentTemplateStore = mockPersistence
-            $0.backgroundJobStore = mockPersistence
             $0.clientStore = mockPersistence
             $0.toolPersistence = mockPersistence
             $0.agentInstanceStore = mockPersistence
@@ -177,7 +174,6 @@ struct ContextManagerTests {
             $0.memoryStore = mockPersistence
             $0.messageStore = mockPersistence
             $0.agentTemplateStore = mockPersistence
-            $0.backgroundJobStore = mockPersistence
             $0.clientStore = mockPersistence
             $0.toolPersistence = mockPersistence
             $0.agentInstanceStore = mockPersistence

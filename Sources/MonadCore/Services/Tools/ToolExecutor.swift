@@ -11,9 +11,6 @@ public actor ToolExecutor {
     /// Active tool context session
     public let timelineContext: ToolTimelineContext
 
-    /// Reference to job queue for auto-dequeue functionality
-    public let jobQueueContext: BackgroundJobQueueContext?
-
     /// Maximum times the same tool call (same name + arguments) is allowed before loop detection
     /// fires. Note: `ToolCall.==` compares `name` and `arguments` only — calls with *different*
     /// arguments are counted separately.
@@ -25,12 +22,10 @@ public actor ToolExecutor {
     public init(
         toolManager: TimelineToolManager,
         timelineContext: ToolTimelineContext = ToolTimelineContext(),
-        jobQueueContext: BackgroundJobQueueContext? = nil,
         maxRepeatedCalls: Int = 3
     ) {
         self.toolManager = toolManager
         self.timelineContext = timelineContext
-        self.jobQueueContext = jobQueueContext
         self.maxRepeatedCalls = maxRepeatedCalls
     }
 

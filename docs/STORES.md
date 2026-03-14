@@ -34,10 +34,6 @@ Note: There is a `WorkspacePersistenceProtocol` for DB access and a `WorkspaceSt
 Tracks remote client identities (e.g., your laptop running the CLI).
 - **API**: `saveClient`, `fetchClient`, `fetchAllClients`, `deleteClient`.
 
-### 8. `BackgroundJobStore`
-Manages asynchronous tasks scheduled for agent execution.
-- **API**: `saveJob`, `fetchJob`, `fetchAllJobs`, `deleteJob`, `dequeueNextJob`.
-
 ---
 
 ## Caching Stores

@@ -61,7 +61,6 @@ private func withFixture(
         $0.memoryStore = fixture.persistence
         $0.messageStore = fixture.persistence
         $0.agentTemplateStore = fixture.persistence
-        $0.backgroundJobStore = fixture.persistence
         $0.clientStore = fixture.persistence
         $0.toolPersistence = fixture.persistence
         $0.agentInstanceStore = fixture.persistence

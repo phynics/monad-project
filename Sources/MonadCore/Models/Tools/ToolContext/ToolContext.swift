@@ -1,6 +1,19 @@
 import Foundation
-import MonadShared
 import Logging
+import MonadShared
+
+// MARK: - ContextGatewayProviding
+
+/// Provides a gateway tool that activates a ToolContext.
+///
+/// Implement this protocol in the module that owns the context (e.g. MonadServer)
+/// and inject instances into `TimelineManager` via its `contextProviders` parameter.
+public protocol ContextGatewayProviding: Sendable {
+    func makeGatewayTool(timelineContext: ToolTimelineContext) -> AnyTool
+}
+
+// MARK: - ToolContext
+
 public protocol ToolContext: AnyObject, Sendable {
     /// Unique identifier for this context type
     static var contextId: String { get }

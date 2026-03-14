@@ -1,9 +1,9 @@
-import MonadCore
-import MonadShared
+import ErrorKit
 import Foundation
 import GRDB
-import ErrorKit
 import Logging
+import MonadCore
+import MonadShared
 
 /// Core Database Manager that owns the SQLite connection and handles migrations.
 public actor DatabaseManager: HealthCheckable {
@@ -87,7 +87,6 @@ public actor DatabaseManager: HealthCheckable {
     public func resetDatabase() throws {
         try dbQueue.write { db in
             try Memory.deleteAll(db)
-            try BackgroundJob.deleteAll(db)
 
             logger.info(
                 "Database reset: Memories cleared. Archives preserved due to immutability constraints."
@@ -101,29 +100,33 @@ public actor DatabaseManager: HealthCheckable {
             let currentTables = try String.fetchAll(
                 db,
                 sql: """
-                        SELECT name FROM sqlite_master
-                        WHERE type='table'
-                        AND name NOT LIKE 'sqlite_%'
-                        AND name NOT LIKE 'grdb_%'
-                        AND name != 'table_directory'
-                    """)
+                    SELECT name FROM sqlite_master
+                    WHERE type='table'
+                    AND name NOT LIKE 'sqlite_%'
+                    AND name NOT LIKE 'grdb_%'
+                    AND name != 'table_directory'
+                """
+            )
 
             let placeholders = currentTables.map { _ in "?" }.joined(separator: ",")
             try db.execute(
                 sql: "DELETE FROM table_directory WHERE name NOT IN (\(placeholders))",
-                arguments: StatementArguments(currentTables))
+                arguments: StatementArguments(currentTables)
+            )
 
             let now = Date()
             for table in currentTables {
                 let exists =
                     try Int.fetchOne(
                         db, sql: "SELECT COUNT(*) FROM table_directory WHERE name = ?",
-                        arguments: [table]) ?? 0
+                        arguments: [table]
+                    ) ?? 0
                 if exists == 0 {
                     try db.execute(
                         sql:
-                            "INSERT INTO table_directory (name, description, createdAt) VALUES (?, ?, ?)",
-                        arguments: [table, "", now])
+                        "INSERT INTO table_directory (name, description, createdAt) VALUES (?, ?, ?)",
+                        arguments: [table, "", now]
+                    )
                 }
             }
         }

@@ -13,7 +13,6 @@ import Testing
             $0.memoryStore = MockPersistenceService()
             $0.messageStore = MockPersistenceService()
             $0.agentTemplateStore = MockPersistenceService()
-            $0.backgroundJobStore = MockPersistenceService()
             $0.clientStore = MockPersistenceService()
             $0.toolPersistence = MockPersistenceService()
             $0.agentInstanceStore = MockPersistenceService()

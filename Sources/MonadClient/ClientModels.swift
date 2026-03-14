@@ -30,10 +30,6 @@ public typealias AgentTemplate = MonadShared.AgentTemplate
 public typealias Message = MonadShared.Message
 public typealias MessageRole = MonadShared.Message.MessageRole
 
-// BackgroundJob Models
-public typealias BackgroundJob = MonadShared.BackgroundJob
-public typealias AddBackgroundJobRequest = MonadShared.AddBackgroundJobRequest
-
 // MARK: - Client-Specific Models
 
 /// A delta for a tool call in a streaming response

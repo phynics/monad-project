@@ -26,7 +26,6 @@ import MonadTestSupport
             $0.memoryStore = persistence
             $0.messageStore = persistence
             $0.agentTemplateStore = persistence
-            $0.backgroundJobStore = persistence
             $0.clientStore = persistence
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
@@ -85,7 +84,6 @@ import MonadTestSupport
             $0.memoryStore = persistence
             $0.messageStore = persistence
             $0.agentTemplateStore = persistence
-            $0.backgroundJobStore = persistence
             $0.clientStore = persistence
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
@@ -143,7 +141,6 @@ import MonadTestSupport
             $0.memoryStore = persistence
             $0.messageStore = persistence
             $0.agentTemplateStore = persistence
-            $0.backgroundJobStore = persistence
             $0.clientStore = persistence
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
@@ -184,7 +181,6 @@ import MonadTestSupport
             $0.memoryStore = persistence
             $0.messageStore = persistence
             $0.agentTemplateStore = persistence
-            $0.backgroundJobStore = persistence
             $0.clientStore = persistence
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence
@@ -228,7 +224,6 @@ import MonadTestSupport
             $0.memoryStore = persistence
             $0.messageStore = persistence
             $0.agentTemplateStore = persistence
-            $0.backgroundJobStore = persistence
             $0.clientStore = persistence
             $0.toolPersistence = persistence
             $0.agentInstanceStore = persistence

@@ -63,7 +63,6 @@ Sources/MonadCore/Models/
 ├── Database/      ConversationMessage, DatabaseBackup, Memory, SemanticSearchResult, Timeline
 ├── Tools/         Tool, ToolReference, ToolError, ToolParameters, …
 │   ├── Filesystem/    7 filesystem tools (cd, find, inspect, ls, cat, grep, search)
-│   ├── BackgroundJobQueue/  BackgroundJobQueueGatewayTool, Job, BackgroundJobQueueContext
 │   └── ToolContext/  ContextTool, ToolContext, ToolTimelineContext
 └── Workspace/     WorkspaceAttachment, WorkspaceLock, WorkspaceProtocol,
                    WorkspaceReference, WorkspaceTool, WorkspaceToolDefinition
@@ -125,7 +124,6 @@ The backend server hosting the agent and exposing the brain to clients.
 - **Persistence**: GRDB/SQLite implementation via `PersistenceService`
 - **WebSocket**: Real-time client connections via `WebSocketConnectionManager`
 - **Discovery**: Bonjour/mDNS advertisement for client auto-discovery
-- **Background Jobs**: `JobRunnerService` for async task execution
 - **Maintenance**: `OrphanCleanupService` for database cleanup
 - **Service Lifecycle**: Graceful shutdown via `ServiceGroup`
 
@@ -146,7 +144,6 @@ The backend server hosting the agent and exposing the brain to clients.
 - `TimelineAPIController` — Timeline CRUD (`/sessions`)
 - `MemoryAPIController` — Memory operations (`/memories`)
 - `WorkspaceAPIController` — Workspace management (`/workspaces`)
-- `JobAPIController` — Background job management (`/sessions/:id/...`)
 - `ClientAPIController` — Client registration (`/clients`)
 - `ConfigurationAPIController` — Configuration management (`/config`)
 - `ToolAPIController` — Tool listing (`/tools`)
@@ -161,7 +158,6 @@ The backend server hosting the agent and exposing the brain to clients.
 - `PersistenceService` — GRDB-based storage (implements all persistence protocols)
 - `BonjourAdvertiser` — mDNS/Bonjour service discovery
 - `WebSocketConnectionManager` — Client connection tracking
-- `JobRunnerService` — Background job processing
 - `OrphanCleanupService` — Maintenance tasks
 - `ServerLLMService` — Server-specific LLM service wrapper
 - `ConfigurationStorage` — Configuration persistence

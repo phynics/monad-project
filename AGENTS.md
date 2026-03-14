@@ -161,22 +161,16 @@ Six targets with strict dependency hierarchy:
 - `MONAD_API_KEY` — API key for LLM access
 - `MONAD_VERBOSE=true` — Enable verbose logging
 
-## System Tools (17 implemented)
+## System Tools (14 implemented)
 
 **Filesystem (7):**
 - `cd`, `find`, `inspect_file`, `ls`, `cat`, `grep`, `search_files`
-
-**AgentTemplate (2):**
-- `LaunchSubagentTool`, `AgentTemplateAsTool`
 
 **Timeline (3):**
 - `timeline_list`, `timeline_peek`, `timeline_send`
 
 **System (2):**
 - `system_memory_search`, `system_web_search`
-
-**Job Queue (1):**
-- `BackgroundJobQueueGatewayTool`
 
 **Permission (1):**
 - `request_write_access`
