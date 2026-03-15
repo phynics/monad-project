@@ -55,7 +55,9 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     public func getHealthDetails() async -> [String: String]? {
         return [
             "model": configuration.modelName,
-            "provider": configuration.endpoint.contains("openai") ? "openai" : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom")
+            "provider": configuration.endpoint.contains("openai")
+                ? "openai"
+                : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom")
         ]
     }
 
@@ -144,9 +146,8 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
         isConfigured = config.isValid
 
         if config.isValid {
-            logger.info(
-                "Loaded configuration. Main: \(config.modelName), Utility: \(config.utilityModel), Fast: \(config.fastModel)"
-            )
+            let modelInfo = "Main: \(config.modelName), Utility: \(config.utilityModel), Fast: \(config.fastModel)"
+            logger.info("Loaded configuration. \(modelInfo)")
             updateClient(with: config)
         } else {
             logger.notice("LLM service not yet configured")
@@ -226,51 +227,41 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     }
 
     public func buildContext(
-        userQuery: String,
-        contextNotes: [ContextFile],
-        memories: [Memory],
-        chatHistory: [Message],
-        tools: [AnyTool],
-        workspaces: [WorkspaceReference],
-        primaryWorkspace: WorkspaceReference?,
-        clientName: String?,
-        systemInstructions: String?,
+        _ request: LLMPromptRequest,
         agentInstance: AgentInstance? = nil,
         timeline: Timeline? = nil,
         extensionSections: [any ContextSection] = []
     ) async -> Prompt {
-        let instructions = systemInstructions ?? DefaultInstructions.system()
-        let capturedAgent = agentInstance
-        let capturedTimeline = timeline
+        let instructions = request.systemInstructions ?? DefaultInstructions.system()
 
         var sections: [any ContextSection] = []
 
         sections.append(SystemInstructions(instructions))
 
-        if let agent = capturedAgent {
-            sections.append(AgentContext(agent, timelineTitle: capturedTimeline?.title))
+        if let agent = agentInstance {
+            sections.append(AgentContext(agent, timelineTitle: timeline?.title))
         }
 
-        sections.append(ContextNotes(contextNotes))
-        sections.append(Memories(memories))
-        sections.append(Tools(tools))
+        sections.append(ContextNotes(request.contextNotes))
+        sections.append(Memories(request.memories))
+        sections.append(Tools(request.tools))
         sections.append(WorkspacesContext(
-            workspaces: workspaces,
-            primaryWorkspace: primaryWorkspace,
-            clientName: clientName
+            workspaces: request.workspaces,
+            primaryWorkspace: request.primaryWorkspace,
+            clientName: request.clientName
         ))
 
-        if let tl = capturedTimeline {
-            sections.append(TimelineContext(tl))
+        if let timeline {
+            sections.append(TimelineContext(timeline))
         }
 
         sections.append(ChatHistory(
             optimizeHistory(
-                chatHistory,
+                request.chatHistory,
                 availableTokens: Constants.maxHistoryTokens - Constants.historyTokenBuffer
             )
         ))
-        sections.append(UserQuery(userQuery))
+        sections.append(UserQuery(request.userQuery))
         sections += extensionSections
 
         return Prompt(sections: sections)
@@ -294,7 +285,8 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
                 if result.count < messages.count {
                     let skippedCount = messages.count - result.count
                     let summary = Message(
-                        content: "[System: History truncated. \(skippedCount) earlier messages hidden. Use `view_chat_history` tool to retrieve them.]",
+                        content: "[System: History truncated. \(skippedCount) earlier messages hidden. " +
+                            "Use `view_chat_history` tool to retrieve them.]",
                         role: .system,
                         isSummary: true
                     )
@@ -306,40 +298,16 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
         return result
     }
 
-    public func buildPrompt(
-        userQuery: String,
-        contextNotes: [ContextFile],
-        memories: [Memory],
-        chatHistory: [Message],
-        tools: [AnyTool],
-        workspaces: [WorkspaceReference],
-        primaryWorkspace: WorkspaceReference?,
-        clientName: String?,
-        systemInstructions: String?
-    ) async -> (
-        messages: [ChatQuery.ChatCompletionMessageParam],
-        rawPrompt: String,
-        structuredContext: [String: String]
-    ) {
+    public func buildPrompt(_ request: LLMPromptRequest) async -> LLMPromptResult {
         // Use the new builder locally
-        let prompt = await buildContext(
-            userQuery: userQuery,
-            contextNotes: contextNotes,
-            memories: memories,
-            chatHistory: chatHistory,
-            tools: tools,
-            workspaces: workspaces,
-            primaryWorkspace: primaryWorkspace,
-            clientName: clientName,
-            systemInstructions: systemInstructions
-        )
+        let prompt = await buildContext(request)
 
         // Convert using the extension
         let messages = await prompt.toMessages()
         let raw = await prompt.render()
         let ctx = await prompt.structuredContext()
 
-        return (messages, raw, ctx)
+        return LLMPromptResult(messages: messages, rawPrompt: raw, structuredContext: ctx)
     }
 }
 

@@ -1,9 +1,9 @@
-import MonadShared
 import Foundation
-import MonadCore
 import Hummingbird
 import HummingbirdWebSocket
 import Logging
+import MonadCore
+import MonadShared
 
 public actor WebSocketConnectionManager: ClientConnectionManagerProtocol {
     private let logger = Logger(label: "com.monad.server.websocket")
@@ -33,7 +33,7 @@ public actor WebSocketConnectionManager: ClientConnectionManagerProtocol {
     public func send<T: Codable & Sendable>(
         method: String,
         params: AnyCodable?,
-        expecting: T.Type,
+        expecting _: T.Type,
         to clientId: UUID
     ) async throws -> T {
         guard let writer = connections[clientId] else {
@@ -53,7 +53,7 @@ public actor WebSocketConnectionManager: ClientConnectionManagerProtocol {
             Task {
                 do {
                     // Send text frame
-                    try await writer.write(.text(String(decoding: data, as: UTF8.self)))
+                    try await writer.write(.text(String(bytes: data, encoding: .utf8) ?? ""))
                 } catch {
                     pendingRequests.removeValue(forKey: requestId)
                     continuation.resume(throwing: error)
@@ -86,10 +86,10 @@ public actor WebSocketConnectionManager: ClientConnectionManagerProtocol {
         if let error = response.error {
             continuation.resume(throwing: RPCError.remoteError(error))
         } else if let result = response.result {
-             continuation.resume(returning: result)
+            continuation.resume(returning: result)
         } else {
-             // Return void/null representation
-             continuation.resume(returning: AnyCodable(NSNull()))
+            // Return void/null representation
+            continuation.resume(returning: AnyCodable(NSNull()))
         }
     }
 }

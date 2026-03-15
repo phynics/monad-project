@@ -1,7 +1,7 @@
-import MonadShared
-import MonadCore
 import Foundation
 import Logging
+import MonadCore
+import MonadShared
 
 // MARK: - Configuration Storage
 
@@ -14,7 +14,7 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
 
     public init(configURL: URL, userDefaults: UserDefaults = .standard) {
         self.configURL = configURL
-        self.backupURL = configURL.deletingPathExtension().appendingPathExtension("bak")
+        backupURL = configURL.deletingPathExtension().appendingPathExtension("bak")
         self.userDefaults = userDefaults
     }
 
@@ -106,7 +106,7 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
     /// Load configuration from backup
     private func loadBackup() -> LLMConfiguration? {
         guard let data = try? Data(contentsOf: backupURL),
-            let config = try? JSONDecoder().decode(LLMConfiguration.self, from: data)
+              let config = try? JSONDecoder().decode(LLMConfiguration.self, from: data)
         else {
             return nil
         }
@@ -143,11 +143,10 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
         // Validate imported config and restore API keys from current config if missing
         var validatedConfig = config
 
-        for (provider, _) in validatedConfig.providers {
-            if validatedConfig.providers[provider]?.apiKey.isEmpty ?? true {
-                validatedConfig.providers[provider]?.apiKey =
-                    currentConfig.providers[provider]?.apiKey ?? ""
-            }
+        for (provider, _) in validatedConfig.providers
+            where validatedConfig.providers[provider]?.apiKey.isEmpty ?? true {
+            validatedConfig.providers[provider]?.apiKey =
+                currentConfig.providers[provider]?.apiKey ?? ""
         }
 
         try save(validatedConfig)
@@ -190,7 +189,8 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
             }
 
             if let oldConfig = try? JSONDecoder().decode(
-                LegacyLLMConfigurationV1.self, from: oldData) {
+                LegacyLLMConfigurationV1.self, from: oldData
+            ) {
                 logger.info("Migrating configuration from V1 to file...")
 
                 // Initialize defaults

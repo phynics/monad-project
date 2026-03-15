@@ -1,10 +1,10 @@
-import MonadShared
 import Foundation
-import USearch
 import Logging
 import MonadCore
+import MonadShared
+import USearch
 
-// Mark USearchIndex as unchecked Sendable since we are managing thread safety via serial queue
+/// Mark USearchIndex as unchecked Sendable since we are managing thread safety via serial queue
 extension USearchIndex: @unchecked @retroactive Sendable {}
 
 public actor VectorStore: VectorStoreProtocol {
@@ -26,7 +26,9 @@ public actor VectorStore: VectorStoreProtocol {
             let filename = "monad_vector_index.usearch"
 
             #if os(macOS)
-                guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+                guard let appSupport = fileManager.urls(
+                    for: .applicationSupportDirectory, in: .userDomainMask
+                ).first else {
                     throw VectorStoreError.initializationFailed("Could not locate Application Support directory")
                 }
                 let dir = appSupport.appendingPathComponent(appName)
@@ -50,7 +52,7 @@ public actor VectorStore: VectorStoreProtocol {
 
         // Initialize USearch index
         do {
-            self.index = try USearchIndex.make(
+            index = try USearchIndex.make(
                 metric: .cos,
                 dimensions: UInt32(dimensions),
                 connectivity: 16,
@@ -121,7 +123,7 @@ public actor VectorStore: VectorStoreProtocol {
             let finalDistances = matchDistances.prefix(actualCount)
 
             // Zip and map to required format
-            return zip(finalKeys, finalDistances).map { (key, distance) in
+            return zip(finalKeys, finalDistances).map { key, distance in
                 (key: UInt64(key), distance: distance)
             }
         }
@@ -138,8 +140,6 @@ public actor VectorStore: VectorStoreProtocol {
     }
 
     public var count: Int {
-        get {
-            return (try? Int(index.count)) ?? 0
-        }
+        (try? Int(index.count)) ?? 0
     }
 }

@@ -31,10 +31,10 @@ public struct SearchFilesTool: Tool, Sendable {
     }
 
     public var parametersSchema: [String: AnyCodable] {
-        ToolParameterSchema.object { b in
-            b.string("pattern", description: "The text pattern to search for (regex supported)", required: true)
-            b.string("path", description: "The directory to search within (default: current directory)")
-            b.string("include", description: "Optional glob pattern for files to include (e.g. '*.swift')")
+        ToolParameterSchema.object { builder in
+            builder.string("pattern", description: "The text pattern to search for (regex supported)", required: true)
+            builder.string("path", description: "The directory to search within (default: current directory)")
+            builder.string("include", description: "Optional glob pattern for files to include (e.g. '*.swift')")
         }.schema
     }
 
@@ -57,19 +57,19 @@ public struct SearchFilesTool: Tool, Sendable {
             return .failure(error.localizedDescription)
         }
 
-        // Use 'grep' for search
+        return runGrepSearch(pattern: pattern, searchURL: url, includePattern: includePattern)
+    }
+
+    private func runGrepSearch(pattern: String, searchURL: URL, includePattern: String?) -> ToolResult {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/grep")
 
         var arguments = ["-rn", "--exclude-dir=.git", "--exclude-dir=.build"]
-
         if let include = includePattern {
             arguments.append("--include=\(include)")
         }
-
         arguments.append(pattern)
-        arguments.append(url.path)
-
+        arguments.append(searchURL.path)
         process.arguments = arguments
 
         let outputPipe = Pipe()
@@ -86,21 +86,21 @@ public struct SearchFilesTool: Tool, Sendable {
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
 
             if process.terminationStatus == 0 || process.terminationStatus == 1 {
-                // status 1 means no matches found
-                let output = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let output = String(data: outputData, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 if output.isEmpty {
                     return .success("No matches found for '\(pattern)'")
                 }
 
-                // Limit output lines
                 let lines = output.components(separatedBy: .newlines)
                 if lines.count > 100 {
                     return .success(lines.prefix(100).joined(separator: "\n") + "\n... (limit reached)")
                 }
                 return .success(output)
             } else {
-                let error = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown error"
-                return .failure("Search failed with status \(process.terminationStatus): \(error)")
+                let errorOutput = String(data: errorData, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown error"
+                return .failure("Search failed with status \(process.terminationStatus): \(errorOutput)")
             }
         } catch {
             return .failure("Failed to execute search: \(error.localizedDescription)")

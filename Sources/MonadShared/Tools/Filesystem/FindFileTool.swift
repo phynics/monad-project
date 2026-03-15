@@ -31,9 +31,13 @@ public struct FindFileTool: Tool, Sendable {
     }
 
     public var parametersSchema: [String: AnyCodable] {
-        ToolParameterSchema.object { b in
-            b.string("path", description: "The root directory to start searching (default: .)")
-            b.string("pattern", description: "The filename pattern to match (contains check, case insensitive)", required: true)
+        ToolParameterSchema.object { builder in
+            builder.string("path", description: "The root directory to start searching (default: .)")
+            builder.string(
+                "pattern",
+                description: "The filename pattern to match (contains check, case insensitive)",
+                required: true
+            )
         }.schema
     }
 

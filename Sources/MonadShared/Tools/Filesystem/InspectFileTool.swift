@@ -5,7 +5,7 @@ public struct InspectFileTool: Tool, Sendable {
     public let id = "inspect_file"
     public let name = "Inspect File"
     public let description = "Determine file type and basic metadata using the unix 'file' command."
-    public let requiresPermission = false  // Inspection is usually safe
+    public let requiresPermission = false // Inspection is usually safe
 
     public var usageExample: String? {
         """
@@ -31,8 +31,8 @@ public struct InspectFileTool: Tool, Sendable {
     }
 
     public var parametersSchema: [String: AnyCodable] {
-        ToolParameterSchema.object { b in
-            b.string("path", description: "The path to the file to inspect", required: true)
+        ToolParameterSchema.object { builder in
+            builder.string("path", description: "The path to the file to inspect", required: true)
         }.schema
     }
 
@@ -56,12 +56,14 @@ public struct InspectFileTool: Tool, Sendable {
             return .failure(error.localizedDescription)
         }
 
-        let fileManager = FileManager.default
-
-        guard fileManager.fileExists(atPath: url.path) else {
+        guard FileManager.default.fileExists(atPath: url.path) else {
             return .failure("File not found: \(pathString)")
         }
 
+        return runFileCommand(at: url)
+    }
+
+    private func runFileCommand(at url: URL) -> ToolResult {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/file")
         process.arguments = [url.path]
@@ -82,14 +84,17 @@ public struct InspectFileTool: Tool, Sendable {
             if process.terminationStatus == 0 {
                 let output =
                     String(data: outputData, encoding: .utf8)?.trimmingCharacters(
-                        in: .whitespacesAndNewlines) ?? "No output"
+                        in: .whitespacesAndNewlines
+                    ) ?? "No output"
                 return .success(output)
             } else {
-                let error =
+                let errorOutput =
                     String(data: errorData, encoding: .utf8)?.trimmingCharacters(
-                        in: .whitespacesAndNewlines) ?? "Unknown error"
+                        in: .whitespacesAndNewlines
+                    ) ?? "Unknown error"
                 return .failure(
-                    "File command failed with status \(process.terminationStatus): \(error)")
+                    "File command failed with status \(process.terminationStatus): \(errorOutput)"
+                )
             }
         } catch {
             return .failure("Failed to execute file command: \(error.localizedDescription)")

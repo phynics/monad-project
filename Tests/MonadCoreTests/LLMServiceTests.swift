@@ -38,15 +38,17 @@ struct LLMServiceTests {
         ]
 
         let prompt = await llmService.buildContext(
-            userQuery: "Current question",
-            contextNotes: contextFiles,
-            memories: [],
-            chatHistory: history,
-            tools: [],
-            workspaces: [],
-            primaryWorkspace: nil,
-            clientName: nil,
-            systemInstructions: "System rules"
+            LLMPromptRequest(
+                userQuery: "Current question",
+                contextNotes: contextFiles,
+                memories: [],
+                chatHistory: history,
+                tools: [],
+                workspaces: [],
+                primaryWorkspace: nil,
+                clientName: nil,
+                systemInstructions: "System rules"
+            )
         )
 
         // Render content to check presence
@@ -115,15 +117,17 @@ struct LLMServiceTests {
     @Test("Test prompt building with empty context")
     func promptBuildingEmptyContext() async {
         let prompt = await llmService.buildContext(
-            userQuery: "Hello",
-            contextNotes: [],
-            memories: [],
-            chatHistory: [],
-            tools: [],
-            workspaces: [],
-            primaryWorkspace: nil,
-            clientName: nil,
-            systemInstructions: "System Only"
+            LLMPromptRequest(
+                userQuery: "Hello",
+                contextNotes: [],
+                memories: [],
+                chatHistory: [],
+                tools: [],
+                workspaces: [],
+                primaryWorkspace: nil,
+                clientName: nil,
+                systemInstructions: "System Only"
+            )
         )
         let messages = await prompt.toMessages()
 

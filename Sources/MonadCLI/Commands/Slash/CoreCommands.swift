@@ -145,8 +145,8 @@ struct TimelineCommand: SlashCommand {
         if let primary = timelineWS.primary {
             wsDesc.append("\(primary.uri.description) (★)")
         }
-        for ws in timelineWS.attached.prefix(2) {
-            wsDesc.append("\(ws.uri.description) (●)")
+        for workspace in timelineWS.attached.prefix(2) {
+            wsDesc.append("\(workspace.uri.description) (●)")
         }
         if timelineWS.attached.count > 2 {
             wsDesc.append("+\(timelineWS.attached.count - 2) more")

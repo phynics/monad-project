@@ -13,6 +13,14 @@ public struct MonadLogHandler: LogHandler {
         labelPrefix = ANSIColors.colorize("[\(module)]", color: ANSIColors.brightBlue)
     }
 
+    /// Configuration for a single log entry
+    private struct LogEntry {
+        let level: Logger.Level
+        let message: Logger.Message
+        let metadata: Logger.Metadata?
+    }
+
+    // swiftlint:disable:next function_parameter_count
     public func log(level: Logger.Level,
                     message: Logger.Message,
                     metadata: Logger.Metadata?,
@@ -20,14 +28,19 @@ public struct MonadLogHandler: LogHandler {
                     file _: String,
                     function _: String,
                     line _: UInt) {
-        let timestamp = ISO8601DateFormatter().string(from: Date())
-        let levelColor = color(for: level)
-        let levelStr = ANSIColors.colorize(level.rawValue.uppercased(), color: levelColor)
+        let entry = LogEntry(level: level, message: message, metadata: metadata)
+        formatAndPrint(entry)
+    }
 
-        var messageStr = "\(timestamp) \(levelStr) \(labelPrefix) \(message)"
+    private func formatAndPrint(_ entry: LogEntry) {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let levelColor = color(for: entry.level)
+        let levelStr = ANSIColors.colorize(entry.level.rawValue.uppercased(), color: levelColor)
+
+        var messageStr = "\(timestamp) \(levelStr) \(labelPrefix) \(entry.message)"
 
         // Add metadata if present
-        let mergedMetadata = self.metadata.merging(metadata ?? [:], uniquingKeysWith: { _, new in new })
+        let mergedMetadata = metadata.merging(entry.metadata ?? [:], uniquingKeysWith: { _, new in new })
         if !mergedMetadata.isEmpty {
             let metadataStr = mergedMetadata.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
             messageStr += " " + ANSIColors.colorize("{\(metadataStr)}", color: ANSIColors.dim)

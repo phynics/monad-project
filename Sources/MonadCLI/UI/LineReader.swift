@@ -15,13 +15,13 @@ final class LineReader {
     private var prompt: String
 
     // Configuration
-    private var originalTerm: termios = termios()
+    private var originalTerm: termios = .init()
     private var isRawMode = false
 
     init(prompt: String = "> ", history: [String] = []) {
         self.prompt = prompt
         self.history = history
-        self.historyIndex = history.count
+        historyIndex = history.count
     }
 
     /// Read a line of input with support for editing and history
@@ -41,42 +41,61 @@ final class LineReader {
         while true {
             guard let char = readChar() else { return nil }
 
-            switch char {
-            case "\u{7F}":  // Backspace
-                handleBackspace()
-
-            case "\r", "\n":  // Enter
-                print("\n", terminator: "")
-                let result = String(buffer)
-                if !result.isEmpty {
-                    history.append(result)
-                    historyIndex = history.count
-                }
-                return result
-
-            case "\t":  // Tab
-                if let handler = completion {
-                    handleTab(handler: handler)
-                }
-
-            case "\u{1B}":  // Escape sequence
-                handleEscapeSequence()
-
-            case "\u{03}":  // Ctrl+C
+            let result = processInputCharacter(char, completion: completion)
+            switch result {
+            case .continueReading:
+                refreshLine()
+            case let .finished(value):
+                return value
+            case .cancelled:
                 return nil
-
-            case "\u{04}":  // Ctrl+D (EOF)
-                if buffer.isEmpty { return nil }
-
-            default:
-                // Printable character
-                if !char.isControl {
-                    insertCharacter(char)
-                }
             }
-
-            refreshLine()
         }
+    }
+
+    // MARK: - Input Processing
+
+    private enum InputResult {
+        case continueReading
+        case finished(String)
+        case cancelled
+    }
+
+    private func processInputCharacter(
+        _ char: Character,
+        completion: ((String) -> [String])?
+    ) -> InputResult {
+        switch char {
+        case "\u{7F}": // Backspace
+            handleBackspace()
+        case "\r", "\n": // Enter
+            return finishInput()
+        case "\t": // Tab
+            if let handler = completion {
+                handleTab(handler: handler)
+            }
+        case "\u{1B}": // Escape sequence
+            handleEscapeSequence()
+        case "\u{03}": // Ctrl+C
+            return .cancelled
+        case "\u{04}": // Ctrl+D (EOF)
+            if buffer.isEmpty { return .cancelled }
+        default:
+            if !char.isControl {
+                insertCharacter(char)
+            }
+        }
+        return .continueReading
+    }
+
+    private func finishInput() -> InputResult {
+        print("\n", terminator: "")
+        let result = String(buffer)
+        if !result.isEmpty {
+            history.append(result)
+            historyIndex = history.count
+        }
+        return .finished(result)
     }
 
     // MARK: - Terminal Control
@@ -140,8 +159,8 @@ final class LineReader {
         } else {
             // Partial completion: Find longest common prefix
             let prefix = longestCommonPrefix(of: candidates)
-            if !prefix.isEmpty && prefix.count > current.count {
-               replaceBuffer(with: prefix)
+            if !prefix.isEmpty, prefix.count > current.count {
+                replaceBuffer(with: prefix)
             }
             // Optional: Print candidates? (Complex in raw mode, skipping for now)
         }
@@ -164,17 +183,17 @@ final class LineReader {
 
     private func handleEscapeSequence() {
         // Read next 2 bytes for [A, [B, etc.
-        guard let b1 = readChar(), b1 == "[" else { return }
-        guard let b2 = readChar() else { return }
+        guard let byte1 = readChar(), byte1 == "[" else { return }
+        guard let byte2 = readChar() else { return }
 
-        switch b2 {
-        case "A":  // Up
+        switch byte2 {
+        case "A": // Up
             navigateHistory(offset: -1)
-        case "B":  // Down
+        case "B": // Down
             navigateHistory(offset: 1)
-        case "C":  // Right
+        case "C": // Right
             moveCursor(offset: 1)
-        case "D":  // Left
+        case "D": // Left
             moveCursor(offset: -1)
         default:
             break
@@ -183,7 +202,7 @@ final class LineReader {
 
     private func navigateHistory(offset: Int) {
         let newIndex = historyIndex + offset
-        if newIndex >= 0 && newIndex <= history.count {
+        if newIndex >= 0, newIndex <= history.count {
             historyIndex = newIndex
             if newIndex == history.count {
                 replaceBuffer(with: "")
@@ -195,7 +214,7 @@ final class LineReader {
 
     private func moveCursor(offset: Int) {
         let newPos = cursorIndex + offset
-        if newPos >= 0 && newPos <= buffer.count {
+        if newPos >= 0, newPos <= buffer.count {
             cursorIndex = newPos
         }
     }
@@ -209,7 +228,8 @@ final class LineReader {
 
     private func stripAnsi(_ text: String) -> String {
         return text.replacingOccurrences(
-            of: "\u{001B}\\[[;\\d]*[mK]", with: "", options: .regularExpression)
+            of: "\u{001B}\\[[;\\d]*[mK]", with: "", options: .regularExpression
+        )
     }
 
     private func refreshLine() {
@@ -234,13 +254,14 @@ final class LineReader {
         fflush(stdout)
     }
 }
+
 extension Character {
     var isControl: Bool {
         return isASCII && (whichASCIIValue ?? 0) < 32
     }
 
     var whichASCIIValue: UInt8? {
-        if let scalar = self.unicodeScalars.first, scalar.isASCII {
+        if let scalar = unicodeScalars.first, scalar.isASCII {
             return UInt8(scalar.value)
         }
         return nil

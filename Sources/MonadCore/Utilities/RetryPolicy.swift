@@ -11,7 +11,8 @@ public enum RetryPolicy {
     /// - Parameters:
     ///   - maxRetries: Maximum number of retries (default: 3)
     ///   - baseDelay: Base delay in seconds for exponential backoff (default: 1.0)
-    ///   - shouldRetry: Closure to determine if an error should trigger a retry (default: always true for known transient errors)
+    ///   - shouldRetry: Closure to determine if an error should trigger a retry
+    ///     (default: always true for known transient errors)
     ///   - operation: The async operation to execute
     public static func retry<T>(
         maxRetries: Int = 3,
@@ -26,7 +27,8 @@ public enum RetryPolicy {
                 return try await operation()
             } catch {
                 if attempts >= maxRetries {
-                    logger.error("Max retries (\(maxRetries)) reached. Final error: \(ErrorKit.userFriendlyMessage(for: error))")
+                    let msg = ErrorKit.userFriendlyMessage(for: error)
+                    logger.error("Max retries (\(maxRetries)) reached. Final error: \(msg)")
                     throw error
                 }
 
@@ -43,7 +45,11 @@ public enum RetryPolicy {
                 let jitter = Double.random(in: 0.0 ... (delay * 0.1))
                 let finalDelay = delay + jitter
 
-                logger.warning("Retry attempt \(attempts)/\(maxRetries) in \(String(format: "%.2f", finalDelay))s due to: \(ErrorKit.userFriendlyMessage(for: error))")
+                let retryMsg = ErrorKit.userFriendlyMessage(for: error)
+                let delayStr = String(format: "%.2f", finalDelay)
+                logger.warning(
+                    "Retry attempt \(attempts)/\(maxRetries) in \(delayStr)s due to: \(retryMsg)"
+                )
 
                 try await Task.sleep(nanoseconds: UInt64(finalDelay * 1_000_000_000))
             }

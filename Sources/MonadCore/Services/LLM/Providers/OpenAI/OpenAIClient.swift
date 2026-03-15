@@ -1,8 +1,8 @@
-import MonadShared
-import Synchronization
 import Foundation
 import Logging
+import MonadShared
 import OpenAI
+import Synchronization
 
 /// A wrapper around the OpenAI SDK that provides a clean interface for the Monad Assistant
 public actor OpenAIClient {
@@ -30,7 +30,8 @@ public actor OpenAIClient {
         client = OpenAI(configuration: configuration)
         self.modelName = modelName
         self.maxRetries = maxRetries
-        logger.debug("Initialized OpenAIClient with model: \(modelName), host: \(host), port: \(port), scheme: \(scheme), timeout: \(timeoutInterval)s, maxRetries: \(maxRetries)")
+        // swiftlint:disable:next line_length
+        logger.debug("Initialized OpenAIClient: model=\(modelName), host=\(host), port=\(port), scheme=\(scheme), timeout=\(timeoutInterval)s")
     }
 
     /// Stream chat responses
@@ -71,26 +72,27 @@ public actor OpenAIClient {
                             // Only retry if we haven't started yielding data to avoid duplication
                             // and if the error is transient
                             !hasYielded.withLock { $0 } && RetryPolicy.isTransient(error: error)
-                        }
-                    ) {
-                        // Create a new stream for each attempt
-                        let stream: AsyncThrowingStream<ChatStreamResult, Error> = client.chatsStream(query: query)
+                        },
+                        operation: {
+                            // Create a new stream for each attempt
+                            let stream: AsyncThrowingStream<ChatStreamResult, Error> = client.chatsStream(query: query)
 
-                        for try await result in stream {
-                            if let delta = result.choices.first?.delta.content {
-                                if !delta.isEmpty {
-                                    hasYielded.withLock { $0 = true }
-                                    logger.debug("Yielding OpenAI chunk (\(delta.count) chars)")
+                            for try await result in stream {
+                                if let delta = result.choices.first?.delta.content {
+                                    if !delta.isEmpty {
+                                        hasYielded.withLock { $0 = true }
+                                        logger.debug("Yielding OpenAI chunk (\(delta.count) chars)")
+                                    }
                                 }
-                            }
-                            // Also mark as yielded if we get tool calls or other content
-                            if result.choices.first?.delta.toolCalls != nil {
-                                hasYielded.withLock { $0 = true }
-                            }
+                                // Also mark as yielded if we get tool calls or other content
+                                if result.choices.first?.delta.toolCalls != nil {
+                                    hasYielded.withLock { $0 = true }
+                                }
 
-                            continuation.yield(result)
+                                continuation.yield(result)
+                            }
                         }
-                    }
+                    )
 
                     logger.debug("OpenAI stream finished normally")
                     continuation.finish()

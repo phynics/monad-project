@@ -1,6 +1,6 @@
-import MonadShared
 import Foundation
 import Logging
+import MonadShared
 
 /// Parser for streaming LLM responses with Chain of Thought support
 ///
@@ -8,6 +8,7 @@ import Logging
 /// separating reasoning from main content in real-time.
 public struct StreamingParser {
     // MARK: - State
+
     public private(set) var buffer = ""
     public private(set) var thinking = ""
     public private(set) var content = ""
@@ -16,7 +17,7 @@ public struct StreamingParser {
     public private(set) var insideCodeBlock = false
     public private(set) var hasReclassified = false
 
-    private var rawBuffer = ""  // Debug history
+    private var rawBuffer = "" // Debug history
 
     public init() {}
 
@@ -36,26 +37,30 @@ public struct StreamingParser {
             if result.isThinking {
                 thinking += result.text
             } else {
-                // Check for orphaned closing tag marker
-                if result.text.contains("RECLASSIFY_THINKING_MARKER") {
-                    Logger.module(named: "parser").warning("[Parser] ORPHANED </think> DETECTED! Reclassifying.")
-                    let actualText = result.text.replacingOccurrences(
-                        of: "RECLASSIFY_THINKING_MARKER", with: "")
-
-                    // Move all previous content to thinking
-                    thinking = content + actualText
-                    content = ""
-                    hasReclassified = true
-                } else {
-                    content += result.text
-                }
+                appendContentSegment(result.text)
             }
+        }
+    }
+
+    /// Appends a content segment, handling reclassification markers.
+    private mutating func appendContentSegment(_ text: String) {
+        if text.contains("RECLASSIFY_THINKING_MARKER") {
+            Logger.module(named: "parser").warning("[Parser] ORPHANED </think> DETECTED! Reclassifying.")
+            let actualText = text.replacingOccurrences(
+                of: "RECLASSIFY_THINKING_MARKER", with: ""
+            )
+            thinking = content + actualText
+            content = ""
+            hasReclassified = true
+        } else {
+            content += text
         }
     }
 
     // MARK: - Pipe-Delimited Marker Stripping
 
-    /// Known LLM formatting token markers to strip from streaming output.
+    // Known LLM formatting token markers to strip from streaming output.
+    // swiftlint:disable:next force_try
     private static let pipeMarkerPattern = try! NSRegularExpression(
         pattern: #"<\|[a-z_]+\|>"#,
         options: []
@@ -74,106 +79,113 @@ public struct StreamingParser {
 
     // MARK: - Core Parsing Logic
 
-    /// Extracts the next valid text segment from the buffer, updating state
+    /// Extracts the next valid text segment from the buffer, updating state.
     private mutating func extractNextSegment() -> (text: String, isThinking: Bool)? {
         guard !buffer.isEmpty else { return nil }
 
-        // 1. Check for Code Block Delimiters ("```")
-        // We prioritize this to prevent parsing tags inside code blocks
-        if let range = buffer.range(of: "```") {
-            let prefix = String(buffer[..<range.lowerBound])
-            buffer.removeSubrange(..<range.upperBound)
-            insideCodeBlock.toggle()
+        if let result = tryExtractCodeBlock() { return result }
+        if holdingPartialCodeDelimiter() { return nil }
 
-            // Return text before delimiter with *previous* state
-            if !prefix.isEmpty {
-                return (prefix, isThinking)
-            }
-            // Return the delimiter itself
-            return ("```", isThinking)
-        }
-
-        // 2. Hold Partial Code Delimiters
-        // If buffer ends with "`" or "``", wait for more data to ensure we don't miss a block toggle.
-        // Unless the buffer is getting dangerously large.
-        if buffer.count < 1000 && (buffer.hasSuffix("``") || buffer.hasSuffix("`")) {
-            return nil
-        }
-
-        // 3. Handle Tags (Only if NOT inside a code block)
         if !insideCodeBlock {
-            if isThinking {
-                // Looking for closing </think>
-                if let range = buffer.range(of: "</think>") {
-                    let text = String(buffer[..<range.lowerBound])
-                    buffer.removeSubrange(..<range.upperBound)
-                    isThinking = false
-                    return (text, true)
-                }
-
-                // Check for partial closing tag at end
-                if let start = buffer.lastIndex(of: "<") {
-                    let suffix = buffer[start...]
-                    if "</think>".hasPrefix(String(suffix)) {
-                        // Return safe content before tag
-                        if start > buffer.startIndex {
-                            let content = String(buffer[..<start])
-                            buffer = String(suffix)
-                            return (content, true)
-                        }
-                        return nil  // Wait for full tag
-                    }
-                }
-            } else {
-                // Looking for opening <think>
-                if let range = buffer.range(of: "<think>") {
-                    let text = String(buffer[..<range.lowerBound])
-                    buffer.removeSubrange(..<range.upperBound)
-                    isThinking = true
-
-                    if !text.isEmpty {
-                        return (text, false)
-                    }
-                    // Recursively process immediately to handle content inside the tag
-                    return extractNextSegment()
-                }
-
-                // Check for partial opening tag at end
-                if let start = buffer.lastIndex(of: "<") {
-                    let suffix = buffer[start...]
-                    // Check for <think>
-                    if "<think>".hasPrefix(String(suffix)) {
-                        if start > buffer.startIndex {
-                            let content = String(buffer[..<start])
-                            buffer = String(suffix)
-                            return (content, false)
-                        }
-                        return nil
-                    }
-                    // Check for orphaned </think> (partial)
-                    if "</think>".hasPrefix(String(suffix)) {
-                        if start > buffer.startIndex {
-                            let content = String(buffer[..<start])
-                            buffer = String(suffix)
-                            return (content, false)
-                        }
-                        return nil
-                    }
-                }
-
-                // Check for full orphaned closing tag (Reclassify Workaround)
-                if let range = buffer.range(of: "</think>") {
-                    let content = String(buffer[..<range.lowerBound])
-                    buffer.removeSubrange(..<range.upperBound)
-                    return (content + "RECLASSIFY_THINKING_MARKER", false)
-                }
-            }
+            if let result = tryExtractThinkTags() { return result }
+            if holdingPartialThinkTag() { return nil }
         }
 
-        // 4. Flush Remaining Buffer
-        // If we reached here, no full tags/blocks were found.
-        // And we already checked for partials at the end.
-        // So safe to flush everything.
+        return flushBuffer()
+    }
+
+    /// Tries to extract content around a code block delimiter ("```").
+    private mutating func tryExtractCodeBlock() -> (text: String, isThinking: Bool)? {
+        guard let range = buffer.range(of: "```") else { return nil }
+        let prefix = String(buffer[..<range.lowerBound])
+        buffer.removeSubrange(..<range.upperBound)
+        insideCodeBlock.toggle()
+
+        if !prefix.isEmpty {
+            return (prefix, isThinking)
+        }
+        return ("```", isThinking)
+    }
+
+    /// Returns true if buffer ends with a partial code delimiter that needs more data.
+    private func holdingPartialCodeDelimiter() -> Bool {
+        buffer.count < 1000 && (buffer.hasSuffix("``") || buffer.hasSuffix("`"))
+    }
+
+    /// Returns true if buffer ends with a partial <think> or </think> tag.
+    private func holdingPartialThinkTag() -> Bool {
+        guard let start = buffer.lastIndex(of: "<") else { return false }
+        let suffix = String(buffer[start...])
+        return "<think>".hasPrefix(suffix) || "</think>".hasPrefix(suffix)
+    }
+
+    /// Tries to extract content around `<think>` / `</think>` tags.
+    private mutating func tryExtractThinkTags() -> (text: String, isThinking: Bool)? {
+        if isThinking {
+            return tryExtractClosingThinkTag()
+        } else {
+            return tryExtractOpeningThinkTag()
+        }
+    }
+
+    /// Handles extraction when inside a `<think>` block.
+    private mutating func tryExtractClosingThinkTag() -> (text: String, isThinking: Bool)? {
+        if let range = buffer.range(of: "</think>") {
+            let text = String(buffer[..<range.lowerBound])
+            buffer.removeSubrange(..<range.upperBound)
+            isThinking = false
+            return (text, true)
+        }
+
+        return tryHoldPartialTag("</think>", asThinking: true)
+    }
+
+    /// Handles extraction when outside a `<think>` block.
+    private mutating func tryExtractOpeningThinkTag() -> (text: String, isThinking: Bool)? {
+        // Check for opening <think>
+        if let range = buffer.range(of: "<think>") {
+            let text = String(buffer[..<range.lowerBound])
+            buffer.removeSubrange(..<range.upperBound)
+            isThinking = true
+
+            if !text.isEmpty {
+                return (text, false)
+            }
+            return extractNextSegment()
+        }
+
+        // Check for partial opening or closing tag at end
+        if let result = tryHoldPartialTag("<think>", asThinking: false) { return result }
+        if let result = tryHoldPartialTag("</think>", asThinking: false) { return result }
+
+        // Check for full orphaned closing tag (Reclassify Workaround)
+        if let range = buffer.range(of: "</think>") {
+            let contentBeforeTag = String(buffer[..<range.lowerBound])
+            buffer.removeSubrange(..<range.upperBound)
+            return (contentBeforeTag + "RECLASSIFY_THINKING_MARKER", false)
+        }
+
+        return nil
+    }
+
+    /// Holds content before a partial tag at the end of the buffer.
+    private mutating func tryHoldPartialTag(
+        _ tag: String, asThinking: Bool
+    ) -> (text: String, isThinking: Bool)? {
+        guard let start = buffer.lastIndex(of: "<") else { return nil }
+        let suffix = buffer[start...]
+        guard tag.hasPrefix(String(suffix)) else { return nil }
+
+        if start > buffer.startIndex {
+            let text = String(buffer[..<start])
+            buffer = String(suffix)
+            return (text, asThinking)
+        }
+        return nil
+    }
+
+    /// Flushes the remaining buffer as a single segment.
+    private mutating func flushBuffer() -> (text: String, isThinking: Bool) {
         let text = buffer
         buffer = ""
         return (text, isThinking)
@@ -208,7 +220,7 @@ public struct StreamingParser {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
             if let jsonData = jsonString.data(using: .utf8),
-                let toolCall = try? JSONDecoder().decode(ToolCall.self, from: jsonData) {
+               let toolCall = try? JSONDecoder().decode(ToolCall.self, from: jsonData) {
                 toolCalls.append(toolCall)
             } else {
                 Logger.module(named: "parser").error("Failed to parse tool call JSON: \(jsonString)")

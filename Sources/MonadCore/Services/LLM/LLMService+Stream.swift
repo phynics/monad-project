@@ -4,44 +4,28 @@ import OpenAI
 
 public extension LLMService {
     /// Stream chat with full prompt building (includes notes, history, etc.)
-    /// Returns tuple of (stream, rawPrompt for debug)
-    func chatStreamWithContext(
-        userQuery: String,
-        contextNotes: [ContextFile],
-        memories: [Memory] = [],
-        chatHistory: [Message],
-        tools: [AnyTool],
-        workspaces: [WorkspaceReference],
-        primaryWorkspace: WorkspaceReference?,
-        clientName: String?,
-        systemInstructions: String? = nil,
-        responseFormat: ChatQuery.ResponseFormat? = nil,
-        useFastModel: Bool = false
-    ) async -> (
-        stream: AsyncThrowingStream<ChatStreamResult, Error>,
-        rawPrompt: String,
-        structuredContext: [String: String]
-    ) {
-        let clientToUse = useFastModel ? (getFastClient() ?? getClient()) : getClient()
+    func chatStreamWithContext(_ request: LLMChatRequest) async -> LLMStreamResult {
+        let clientToUse = request.useFastModel ? (getFastClient() ?? getClient()) : getClient()
 
         guard let client = clientToUse else {
             let stream = AsyncThrowingStream<ChatStreamResult, Error> { continuation in
                 continuation.finish(throwing: LLMServiceError.notConfigured)
             }
-            return (stream, "Error: Not configured", [:])
+            return LLMStreamResult(stream: stream, rawPrompt: "Error: Not configured", structuredContext: [:])
         }
 
-        let prompt = await buildContext(
-            userQuery: userQuery,
-            contextNotes: contextNotes,
-            memories: memories,
-            chatHistory: chatHistory,
-            tools: tools,
-            workspaces: workspaces,
-            primaryWorkspace: primaryWorkspace,
-            clientName: clientName,
-            systemInstructions: systemInstructions
+        let promptRequest = LLMPromptRequest(
+            userQuery: request.userQuery,
+            contextNotes: request.contextNotes,
+            memories: request.memories,
+            chatHistory: request.chatHistory,
+            tools: request.tools,
+            workspaces: request.workspaces,
+            primaryWorkspace: request.primaryWorkspace,
+            clientName: request.clientName,
+            systemInstructions: request.systemInstructions
         )
+        let prompt = await buildContext(promptRequest)
 
         // Convert to OpenAI format
         let messages = await prompt.toMessages()
@@ -49,15 +33,14 @@ public extension LLMService {
         let structuredContext = await prompt.structuredContext()
 
         // Delegate to client for streaming
-        let toolParams = tools.isEmpty ? nil : tools.map { $0.toToolParam() }
+        let toolParams = request.tools.isEmpty ? nil : request.tools.map { $0.toToolParam() }
         let stream = await client.chatStream(
-            messages: messages, tools: toolParams, responseFormat: responseFormat
+            messages: messages, tools: toolParams, responseFormat: request.responseFormat
         )
 
-        return (stream, rawPrompt, structuredContext)
+        return LLMStreamResult(stream: stream, rawPrompt: rawPrompt, structuredContext: structuredContext)
     }
 
-    /// Stream chat responses (low-level API)
     /// Stream chat responses (low-level API)
     func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],

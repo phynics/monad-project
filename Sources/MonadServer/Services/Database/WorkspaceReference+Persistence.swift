@@ -1,13 +1,14 @@
-import MonadShared
-import MonadCore
-
 import Foundation
 import GRDB
+import MonadCore
+import MonadShared
 
 // MARK: - Persistence
 
 extension WorkspaceReference: FetchableRecord, PersistableRecord {
-    public static var databaseTableName: String { "workspace" }
+    public static var databaseTableName: String {
+        "workspace"
+    }
 
     public func encode(to container: inout PersistenceContainer) throws {
         container["id"] = id
@@ -40,8 +41,8 @@ extension WorkspaceReference: FetchableRecord, PersistableRecord {
 
 // MARK: - Initializer with Row
 
-extension WorkspaceReference {
-    public init(row: Row) throws {
+public extension WorkspaceReference {
+    init(row: Row) throws {
         let id: UUID = row["id"]
 
         let uriString: String = row["uri"]
@@ -56,8 +57,8 @@ extension WorkspaceReference {
 
         let toolsString: String? = row.hasColumn("tools") ? row["tools"] : nil
         let tools: [ToolReference]
-        if let ts = toolsString, !ts.isEmpty {
-            tools = (try? JSONDecoder().decode([ToolReference].self, from: ts.data(using: .utf8) ?? Data())) ?? []
+        if let toolsStr = toolsString, !toolsStr.isEmpty {
+            tools = (try? JSONDecoder().decode([ToolReference].self, from: toolsStr.data(using: .utf8) ?? Data())) ?? []
         } else {
             tools = []
         }
@@ -72,10 +73,12 @@ extension WorkspaceReference {
         let statusString: String = row["status"]
         let status = WorkspaceStatus(rawValue: statusString) ?? .active
 
-        let metadataString: String? = row.hasColumn("metadata") ? row["metadata"] : nil
+        let metadataString: String? = row.hasColumn("metadata")
+            ? row["metadata"] : nil
         let metadata: [String: AnyCodable]
-        if let ms = metadataString, !ms.isEmpty {
-            metadata = (try? JSONDecoder().decode([String: AnyCodable].self, from: ms.data(using: .utf8) ?? Data())) ?? [:]
+        if let metaStr = metadataString, !metaStr.isEmpty {
+            let metaData = metaStr.data(using: .utf8) ?? Data()
+            metadata = (try? JSONDecoder().decode([String: AnyCodable].self, from: metaData)) ?? [:]
         } else {
             metadata = [:]
         }

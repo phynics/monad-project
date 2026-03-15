@@ -47,7 +47,9 @@ struct ClientToolExecutor {
         return submissions
     }
 
-    private func handleRequestWriteAccess(toolCall: ToolCall, workspace: WorkspaceReference) async -> ToolOutputSubmission {
+    private func handleRequestWriteAccess(
+        toolCall: ToolCall, workspace: WorkspaceReference
+    ) async -> ToolOutputSubmission {
         let reason = toolCall.arguments["reason"]?.value as? String ?? "No reason provided."
 
         let answer = await repl.promptForWriteAccess(reason: reason, workspaceURI: workspace.uri.description)

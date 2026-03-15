@@ -77,7 +77,10 @@ extension Memory: FetchableRecord, PersistableRecord {
                 let range = NSRange(uuidString.startIndex..., in: uuidString)
                 if let match = regex.firstMatch(in: uuidString, range: range) {
                     let nsString = uuidString as NSString
-                    let formatted = "\(nsString.substring(with: match.range(at: 1)))-\(nsString.substring(with: match.range(at: 2)))-\(nsString.substring(with: match.range(at: 3)))-\(nsString.substring(with: match.range(at: 4)))-\(nsString.substring(with: match.range(at: 5)))"
+                    let parts = (1 ... 5).map {
+                        nsString.substring(with: match.range(at: $0))
+                    }
+                    let formatted = parts.joined(separator: "-")
                     if let uuid = UUID(uuidString: formatted) {
                         id = uuid
                     } else {

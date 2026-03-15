@@ -123,7 +123,8 @@ public actor AgentInstanceManager {
         let logMsg = ConversationMessage(
             timelineId: agent.privateTimelineId,
             role: .system,
-            content: "[ATTACH] Agent '\(agent.name)' (\(agentId.uuidString.prefix(8))) attached to timeline \"\(timeline.title)\" (\(timelineId.uuidString.prefix(8)))"
+            content: "[ATTACH] Agent '\(agent.name)' (\(agentId.uuidString.prefix(8))) " +
+                "attached to timeline \"\(timeline.title)\" (\(timelineId.uuidString.prefix(8)))"
         )
         try? await messageStore.saveMessage(logMsg)
 
@@ -153,7 +154,8 @@ public actor AgentInstanceManager {
             let logMsg = ConversationMessage(
                 timelineId: agent.privateTimelineId,
                 role: .system,
-                content: "[DETACH] Agent '\(agent.name)' detached from timeline \"\(timeline.title)\" (\(timelineId.uuidString.prefix(8)))"
+                content: "[DETACH] Agent '\(agent.name)' detached from timeline " +
+                    "\"\(timeline.title)\" (\(timelineId.uuidString.prefix(8)))"
             )
             try? await messageStore.saveMessage(logMsg)
             logger.info("Agent '\(agent.name)' detached from timeline '\(timeline.title)'")
@@ -286,7 +288,8 @@ public enum AgentInstanceError: Throwable, Sendable {
         case let .timelineNotFound(id):
             return "The requested timeline \(id.uuidString.prefix(8)) could not be found."
         case let .differentAgentAlreadyAttached(id):
-            return "Timeline already has agent \(id.uuidString.prefix(8)) attached. Please detach it before attaching a new one."
+            return "Timeline already has agent \(id.uuidString.prefix(8)) attached. " +
+                "Please detach it before attaching a new one."
         case let .hasAttachedTimelines(count):
             return "This agent is currently active on \(count) timeline(s) and cannot be deleted."
         case .nameTooShort:

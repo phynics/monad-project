@@ -1,8 +1,21 @@
-import MonadShared
-import Synchronization
 import Foundation
 import Logging
+import MonadShared
 import OpenAI
+import Synchronization
+
+// MARK: - Response Types
+
+/// Response structure for the OpenRouter models API.
+private struct OpenRouterModelsResponse: Codable {
+    struct Model: Codable {
+        let id: String
+    }
+
+    let data: [Model]
+}
+
+// MARK: - OpenRouterClient
 
 /// A specialized client for OpenRouter that handles their specific model discovery API
 /// and ensures the correct /api/v1 path prefix is used for OpenAI compatibility.
@@ -27,15 +40,11 @@ public actor OpenRouterClient {
         self.modelName = modelName
         self.maxRetries = maxRetries
 
-        // OpenRouter base URL is usually https://openrouter.ai/api
-        // We ensure we have the base domain and /api path
         var urlString = "\(scheme)://\(host)"
         if port != 443, port != 80 {
             urlString += ":\(port)"
         }
 
-        // If the host didn't already include /api, we might need it
-        // But usually the host from LLMService is just the domain
         if !urlString.contains("/api") {
             urlString += "/api"
         }
@@ -49,8 +58,10 @@ public actor OpenRouterClient {
 
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = timeoutInterval
-        self.session = URLSession(configuration: config)
-        logger.debug("Initialized OpenRouterClient with model: \(modelName), endpoint: \(urlString), timeout: \(timeoutInterval)s")
+        session = URLSession(configuration: config)
+        logger.debug(
+            "Initialized OpenRouterClient: model=\(modelName), endpoint=\(urlString), timeout=\(timeoutInterval)s"
+        )
     }
 
     /// Stream chat responses using direct URLSession bytes stream
@@ -59,7 +70,6 @@ public actor OpenRouterClient {
         tools: [ChatQuery.ChatCompletionToolParam]? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil
     ) -> AsyncThrowingStream<ChatStreamResult, Error> {
-        // Capture dependencies
         let endpoint = self.endpoint
         let apiKey = self.apiKey
         let modelName = self.modelName
@@ -78,75 +88,22 @@ public actor OpenRouterClient {
                         maxRetries: maxRetries,
                         shouldRetry: { error in
                             !hasYielded.withLock { $0 } && RetryPolicy.isTransient(error: error)
+                        },
+                        operation: {
+                            let request = self.buildChatRequest(
+                                chatURL: chatURL, apiKey: apiKey,
+                                query: ChatQuery(
+                                    messages: messages, model: modelName,
+                                    responseFormat: responseFormat, tools: tools,
+                                    stream: true, streamOptions: .init(includeUsage: true)
+                                )
+                            )
+                            try await self.streamChatResponse(
+                                request: request, hasYielded: hasYielded,
+                                logger: logger, continuation: continuation
+                            )
                         }
-                    ) {
-                        var request = URLRequest(url: chatURL)
-                        request.httpMethod = "POST"
-                        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-                        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                        request.setValue("https://github.com/monad-assistant/monad", forHTTPHeaderField: "HTTP-Referer")
-                        request.setValue("Monad Assistant", forHTTPHeaderField: "X-Title")
-
-                        // Map OpenAI parameters to a dictionary for JSON encoding
-                        // We reuse the library's types but encode them manually to ensure control
-                        let query = ChatQuery(
-                            messages: messages,
-                            model: modelName,
-                            responseFormat: responseFormat,
-                            tools: tools,
-                            stream: true,
-                            streamOptions: .init(includeUsage: true)
-                        )
-
-                        request.httpBody = try JSONEncoder().encode(query)
-
-                        let (stream, response) = try await self.session.bytes(for: request)
-
-                        guard let httpResponse = response as? HTTPURLResponse else {
-                            throw LLMServiceError.networkError("Invalid response type from OpenRouter")
-                        }
-
-                        logger.debug("OpenRouter response status: \(httpResponse.statusCode)")
-
-                        guard (200 ... 299).contains(httpResponse.statusCode) else {
-                            var errorBody = ""
-                            for try await line in stream.lines {
-                                errorBody += line
-                            }
-                            logger.error("OpenRouter error body: \(errorBody)")
-                            throw LLMServiceError.networkError("OpenRouter API Error: \(httpResponse.statusCode) - \(errorBody)")
-                        }
-
-                        for try await line in stream.lines {
-                            let trimmed = line.trimmingCharacters(in: .whitespaces)
-                            guard !trimmed.isEmpty else { continue }
-
-                            // OpenRouter (OpenAI format) lines start with "data: "
-                            if trimmed.hasPrefix("data: ") {
-                                let dataString = String(trimmed.dropFirst(6))
-                                if dataString == "[DONE]" {
-                                    break
-                                }
-
-                                if let data = dataString.data(using: .utf8) {
-                                    do {
-                                        let result = try JSONDecoder().decode(ChatStreamResult.self, from: data)
-                                        // Mark as yielded if we have content or tool calls
-                                        if let content = result.choices.first?.delta.content, !content.isEmpty {
-                                            hasYielded.withLock { $0 = true }
-                                        }
-                                        if result.choices.first?.delta.toolCalls != nil {
-                                            hasYielded.withLock { $0 = true }
-                                        }
-
-                                        continuation.yield(result)
-                                    } catch {
-                                        logger.error("Failed to decode OpenRouter chunk: \(error.localizedDescription). Raw: \(dataString)")
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    )
 
                     logger.debug("OpenRouter stream finished normally")
                     continuation.finish()
@@ -158,8 +115,88 @@ public actor OpenRouterClient {
         }
     }
 
+    // MARK: - Stream Helpers
+
+    private nonisolated func buildChatRequest(
+        chatURL: URL,
+        apiKey: String,
+        query: ChatQuery
+    ) -> URLRequest {
+        var request = URLRequest(url: chatURL)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(
+            "https://github.com/monad-assistant/monad",
+            forHTTPHeaderField: "HTTP-Referer"
+        )
+        request.setValue("Monad Assistant", forHTTPHeaderField: "X-Title")
+
+        request.httpBody = try? JSONEncoder().encode(query)
+        return request
+    }
+
+    private func streamChatResponse(
+        request: URLRequest,
+        hasYielded: borrowing Mutex<Bool>,
+        logger: Logger,
+        continuation: AsyncThrowingStream<ChatStreamResult, Error>.Continuation
+    ) async throws {
+        let (stream, response) = try await session.bytes(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMServiceError.networkError("Invalid response type from OpenRouter")
+        }
+
+        logger.debug("OpenRouter response status: \(httpResponse.statusCode)")
+
+        guard (200 ... 299).contains(httpResponse.statusCode) else {
+            var errorBody = ""
+            for try await line in stream.lines {
+                errorBody += line
+            }
+            logger.error("OpenRouter error body: \(errorBody)")
+            throw LLMServiceError.networkError("OpenRouter API Error: \(httpResponse.statusCode) - \(errorBody)")
+        }
+
+        for try await line in stream.lines {
+            processSSELine(line, hasYielded: hasYielded, logger: logger, continuation: continuation)
+        }
+    }
+
+    private nonisolated func processSSELine(
+        _ line: String,
+        hasYielded: borrowing Mutex<Bool>,
+        logger: Logger,
+        continuation: AsyncThrowingStream<ChatStreamResult, Error>.Continuation
+    ) {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, trimmed.hasPrefix("data: ") else { return }
+
+        let dataString = String(trimmed.dropFirst(6))
+        guard dataString != "[DONE]", let data = dataString.data(using: .utf8) else { return }
+
+        do {
+            let result = try JSONDecoder().decode(ChatStreamResult.self, from: data)
+            if let content = result.choices.first?.delta.content, !content.isEmpty {
+                hasYielded.withLock { $0 = true }
+            }
+            if result.choices.first?.delta.toolCalls != nil {
+                hasYielded.withLock { $0 = true }
+            }
+            continuation.yield(result)
+        } catch {
+            logger.error(
+                // swiftlint:disable:next line_length
+                "Failed to decode OpenRouter chunk: \(error.localizedDescription). Raw: \(dataString)"
+            )
+        }
+    }
+
     /// Send a single message (collects all content from stream)
-    public func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat? = nil) async throws -> String {
+    public func sendMessage(
+        _ content: String, responseFormat: ChatQuery.ResponseFormat? = nil
+    ) async throws -> String {
         let maxRetries = self.maxRetries
 
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
@@ -198,14 +235,6 @@ public actor OpenRouterClient {
 
             guard (200 ... 299).contains(httpResponse.statusCode) else {
                 throw LLMServiceError.networkError("OpenRouter API Error: \(httpResponse.statusCode)")
-            }
-
-            struct OpenRouterModelsResponse: Codable {
-                struct Model: Codable {
-                    let id: String
-                }
-
-                let data: [Model]
             }
 
             let modelsResponse = try JSONDecoder().decode(OpenRouterModelsResponse.self, from: data)

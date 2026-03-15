@@ -7,38 +7,38 @@ extension DatabaseSchema {
 
     static func createWorkspaceTables(in db: Database) throws {
         // Client entity table
-        try db.create(table: "clientIdentity") { t in
-            t.column("id", .blob).primaryKey()
-            t.column("hostname", .text).notNull()
-            t.column("displayName", .text).notNull()
-            t.column("platform", .text).notNull()
-            t.column("registeredAt", .datetime).notNull()
-            t.column("lastSeenAt", .datetime)
+        try db.create(table: "clientIdentity") { table in
+            table.column("id", .blob).primaryKey()
+            table.column("hostname", .text).notNull()
+            table.column("displayName", .text).notNull()
+            table.column("platform", .text).notNull()
+            table.column("registeredAt", .datetime).notNull()
+            table.column("lastSeenAt", .datetime)
         }
 
         // Workspace table
-        try db.create(table: "workspace") { t in
-            t.column("id", .blob).primaryKey()
-            t.column("uri", .text).notNull().unique()
-            t.column("hostType", .text).notNull()
-            t.column("ownerId", .blob).references("clientIdentity", onDelete: .setNull)
-            t.column("tools", .text).notNull().defaults(to: "[]")
-            t.column("rootPath", .text)
-            t.column("trustLevel", .text).notNull().defaults(to: "full")
-            t.column("lastModifiedBy", .blob)
-            t.column("status", .text).notNull().defaults(to: "active")
-            t.column("metadata", .text).notNull().defaults(to: "{}")
-            t.column("createdAt", .datetime).notNull()
+        try db.create(table: "workspace") { table in
+            table.column("id", .blob).primaryKey()
+            table.column("uri", .text).notNull().unique()
+            table.column("hostType", .text).notNull()
+            table.column("ownerId", .blob).references("clientIdentity", onDelete: .setNull)
+            table.column("tools", .text).notNull().defaults(to: "[]")
+            table.column("rootPath", .text)
+            table.column("trustLevel", .text).notNull().defaults(to: "full")
+            table.column("lastModifiedBy", .blob)
+            table.column("status", .text).notNull().defaults(to: "active")
+            table.column("metadata", .text).notNull().defaults(to: "{}")
+            table.column("createdAt", .datetime).notNull()
         }
 
         // Workspace tools (tool definitions per workspace)
-        try db.create(table: "workspaceTool") { t in
-            t.column("id", .blob).primaryKey()
-            t.column("workspaceId", .blob).notNull()
+        try db.create(table: "workspaceTool") { table in
+            table.column("id", .blob).primaryKey()
+            table.column("workspaceId", .blob).notNull()
                 .references("workspace", onDelete: .cascade)
-            t.column("toolId", .text).notNull()
-            t.column("isKnown", .boolean).notNull()
-            t.column("definition", .text)
+            table.column("toolId", .text).notNull()
+            table.column("isKnown", .boolean).notNull()
+            table.column("definition", .text)
         }
         try db.create(
             index: "idx_workspaceTool_workspace",
@@ -47,11 +47,11 @@ extension DatabaseSchema {
         )
 
         // Workspace locks
-        try db.create(table: "workspaceLock") { t in
-            t.column("workspaceId", .blob).primaryKey()
+        try db.create(table: "workspaceLock") { table in
+            table.column("workspaceId", .blob).primaryKey()
                 .references("workspace", onDelete: .cascade)
-            t.column("heldBy", .blob).notNull()
-            t.column("acquiredAt", .datetime).notNull()
+            table.column("heldBy", .blob).notNull()
+            table.column("acquiredAt", .datetime).notNull()
         }
     }
 
@@ -59,34 +59,34 @@ extension DatabaseSchema {
 
     static func createConversationTables(in db: Database) throws {
         // Conversation sessions
-        try db.create(table: "timeline") { t in
-            t.primaryKey("id", .blob).notNull()
-            t.column("title", .text).notNull()
-            t.column("createdAt", .datetime).notNull()
-            t.column("updatedAt", .datetime).notNull()
-            t.column("isArchived", .boolean).notNull().defaults(to: false)
-            t.column("workingDirectory", .text)
-            t.column("attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
-            t.column("persona", .text)
-            t.column("attachedAgentInstanceId", .blob)
-            t.column("isPrivate", .boolean).notNull().defaults(to: false)
+        try db.create(table: "timeline") { table in
+            table.primaryKey("id", .blob).notNull()
+            table.column("title", .text).notNull()
+            table.column("createdAt", .datetime).notNull()
+            table.column("updatedAt", .datetime).notNull()
+            table.column("isArchived", .boolean).notNull().defaults(to: false)
+            table.column("workingDirectory", .text)
+            table.column("attachedWorkspaceIds", .text).notNull().defaults(to: "[]")
+            table.column("persona", .text)
+            table.column("attachedAgentInstanceId", .blob)
+            table.column("isPrivate", .boolean).notNull().defaults(to: false)
         }
 
         // Conversation messages
-        try db.create(table: "conversationMessage") { t in
-            t.primaryKey("id", .blob).notNull()
-            t.column("timelineId", .blob).notNull()
+        try db.create(table: "conversationMessage") { table in
+            table.primaryKey("id", .blob).notNull()
+            table.column("timelineId", .blob).notNull()
                 .references("timeline", onDelete: .cascade)
-            t.column("role", .text).notNull()
-            t.column("content", .text).notNull()
-            t.column("timestamp", .datetime).notNull()
-            t.column("recalledMemories", .text).notNull().defaults(to: "[]")
-            t.column("parentId", .blob).references("conversationMessage", onDelete: .setNull)
-            t.column("think", .text)
-            t.column("toolCalls", .text).notNull().defaults(to: "[]")
-            t.column("toolCallId", .text)
-            t.column("agentInstanceId", .blob)
-            t.column("remoteDepth", .integer).notNull().defaults(to: 0)
+            table.column("role", .text).notNull()
+            table.column("content", .text).notNull()
+            table.column("timestamp", .datetime).notNull()
+            table.column("recalledMemories", .text).notNull().defaults(to: "[]")
+            table.column("parentId", .blob).references("conversationMessage", onDelete: .setNull)
+            table.column("think", .text)
+            table.column("toolCalls", .text).notNull().defaults(to: "[]")
+            table.column("toolCallId", .text)
+            table.column("agentInstanceId", .blob)
+            table.column("remoteDepth", .integer).notNull().defaults(to: 0)
         }
 
         // Indexes for timeline
@@ -119,37 +119,37 @@ extension DatabaseSchema {
     // MARK: - Memory Table
 
     static func createMemoryTable(in db: Database) throws {
-        try db.create(table: "memory") { t in
-            t.primaryKey("id", .blob).notNull()
-            t.column("title", .text).notNull()
-            t.column("content", .text).notNull()
-            t.column("createdAt", .datetime).notNull()
-            t.column("updatedAt", .datetime).notNull()
-            t.column("tags", .text).notNull().defaults(to: "")
-            t.column("metadata", .text).notNull().defaults(to: "{}")
-            t.column("embedding", .text).notNull().defaults(to: "[]")
+        try db.create(table: "memory") { table in
+            table.primaryKey("id", .blob).notNull()
+            table.column("title", .text).notNull()
+            table.column("content", .text).notNull()
+            table.column("createdAt", .datetime).notNull()
+            table.column("updatedAt", .datetime).notNull()
+            table.column("tags", .text).notNull().defaults(to: "")
+            table.column("metadata", .text).notNull().defaults(to: "{}")
+            table.column("embedding", .text).notNull().defaults(to: "[]")
         }
     }
 
     // MARK: - Job Table
 
     static func createJobTable(in db: Database) throws {
-        try db.create(table: "job") { t in
-            t.column("id", .blob).primaryKey()
-            t.column("timelineId", .blob).notNull()
+        try db.create(table: "job") { table in
+            table.column("id", .blob).primaryKey()
+            table.column("timelineId", .blob).notNull()
                 .references("timeline", onDelete: .cascade)
-            t.column("title", .text).notNull()
-            t.column("description", .text)
-            t.column("priority", .integer).notNull().defaults(to: 0)
-            t.column("agentId", .text).notNull().defaults(to: "default")
-            t.column("status", .text).notNull().defaults(to: "pending")
-            t.column("createdAt", .datetime).notNull()
-            t.column("updatedAt", .datetime).notNull()
-            t.column("logs", .text).notNull().defaults(to: "[]")
-            t.column("retryCount", .integer).notNull().defaults(to: 0)
-            t.column("lastRetryAt", .datetime)
-            t.column("nextRunAt", .datetime)
-            t.column("parentId", .blob).references("job", onDelete: .cascade)
+            table.column("title", .text).notNull()
+            table.column("description", .text)
+            table.column("priority", .integer).notNull().defaults(to: 0)
+            table.column("agentId", .text).notNull().defaults(to: "default")
+            table.column("status", .text).notNull().defaults(to: "pending")
+            table.column("createdAt", .datetime).notNull()
+            table.column("updatedAt", .datetime).notNull()
+            table.column("logs", .text).notNull().defaults(to: "[]")
+            table.column("retryCount", .integer).notNull().defaults(to: 0)
+            table.column("lastRetryAt", .datetime)
+            table.column("nextRunAt", .datetime)
+            table.column("parentId", .blob).references("job", onDelete: .cascade)
         }
         try db.create(index: "idx_job_status", on: "job", columns: ["status"])
         try db.create(index: "idx_job_priority", on: "job", columns: ["priority"])
@@ -161,16 +161,16 @@ extension DatabaseSchema {
     // MARK: - Compactification Node Table
 
     static func createCompactificationNodeTable(in db: Database) throws {
-        try db.create(table: "compactificationNode") { t in
-            t.column("id", .blob).primaryKey()
-            t.column("timelineId", .blob).notNull()
+        try db.create(table: "compactificationNode") { table in
+            table.column("id", .blob).primaryKey()
+            table.column("timelineId", .blob).notNull()
                 .references("timeline", onDelete: .cascade)
-            t.column("type", .text).notNull()
-            t.column("summary", .text).notNull()
-            t.column("displayHint", .text).notNull()
-            t.column("childIds", .text).notNull()
-            t.column("metadata", .text).notNull().defaults(to: "{}")
-            t.column("createdAt", .datetime).notNull()
+            table.column("type", .text).notNull()
+            table.column("summary", .text).notNull()
+            table.column("displayHint", .text).notNull()
+            table.column("childIds", .text).notNull()
+            table.column("metadata", .text).notNull().defaults(to: "{}")
+            table.column("createdAt", .datetime).notNull()
         }
         try db.create(
             index: "idx_compactificationNode_session",
@@ -182,17 +182,17 @@ extension DatabaseSchema {
     // MARK: - AgentInstance Table
 
     static func createAgentInstanceTable(in db: Database) throws {
-        try db.create(table: "agentInstance") { t in
-            t.column("id", .blob).primaryKey()
-            t.column("name", .text).notNull()
-            t.column("description", .text).notNull().defaults(to: "")
-            t.column("primaryWorkspaceId", .blob)
+        try db.create(table: "agentInstance") { table in
+            table.column("id", .blob).primaryKey()
+            table.column("name", .text).notNull()
+            table.column("description", .text).notNull().defaults(to: "")
+            table.column("primaryWorkspaceId", .blob)
                 .references("workspace", onDelete: .setNull)
-            t.column("privateTimelineId", .blob).notNull()
-            t.column("lastActiveAt", .datetime).notNull()
-            t.column("createdAt", .datetime).notNull()
-            t.column("updatedAt", .datetime).notNull()
-            t.column("metadata", .text).notNull().defaults(to: "{}")
+            table.column("privateTimelineId", .blob).notNull()
+            table.column("lastActiveAt", .datetime).notNull()
+            table.column("createdAt", .datetime).notNull()
+            table.column("updatedAt", .datetime).notNull()
+            table.column("metadata", .text).notNull().defaults(to: "{}")
         }
         try db.create(
             index: "idx_agentInstance_privateTimeline",
@@ -205,16 +205,16 @@ extension DatabaseSchema {
     // MARK: - AgentTemplate Table
 
     static func createAgentTemplateTable(in db: Database) throws {
-        try db.create(table: "agent") { t in
-            t.column("id", .text).primaryKey()
-            t.column("name", .text).notNull()
-            t.column("description", .text).notNull()
-            t.column("systemPrompt", .text).notNull()
-            t.column("personaPrompt", .text)
-            t.column("guardrailsPrompt", .text)
-            t.column("createdAt", .datetime).notNull()
-            t.column("updatedAt", .datetime).notNull()
-            t.column("workspaceFilesSeed", .text)
+        try db.create(table: "agent") { table in
+            table.column("id", .text).primaryKey()
+            table.column("name", .text).notNull()
+            table.column("description", .text).notNull()
+            table.column("systemPrompt", .text).notNull()
+            table.column("personaPrompt", .text)
+            table.column("guardrailsPrompt", .text)
+            table.column("createdAt", .datetime).notNull()
+            table.column("updatedAt", .datetime).notNull()
+            table.column("workspaceFilesSeed", .text)
         }
     }
 

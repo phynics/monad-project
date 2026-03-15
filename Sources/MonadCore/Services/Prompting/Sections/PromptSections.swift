@@ -161,7 +161,8 @@ public struct ContextNotes: ContextSection {
         }.joined(separator: "\n\n")
 
         return """
-        The following context files contain important information about the user, the project, and your persona. Use them to provide accurate and personalized responses.
+        The following context files contain important information about the user, \
+        the project, and your persona. Use them to provide accurate and personalized responses.
 
         You can edit or create new files in the `Notes/` directory to store long-term information.
 
@@ -247,13 +248,13 @@ public struct WorkspacesContext: ContextSection {
         output += "## Available Workspaces\n"
         output += "You have access to the following attached workspaces natively within this session:\n\n"
 
-        for ws in allWorkspaces {
-            let isPrimary = ws.id == primaryWorkspace?.id
+        for workspace in allWorkspaces {
+            let isPrimary = workspace.id == primaryWorkspace?.id
 
             output.append("- Workspace ID: `")
-            output.append(ws.id.uuidString)
+            output.append(workspace.id.uuidString)
             output.append("`\n  Location: `")
-            output.append(ws.uri.description)
+            output.append(workspace.uri.description)
             output.append("`\n  Environment: ")
 
             if isPrimary {
@@ -262,9 +263,9 @@ public struct WorkspacesContext: ContextSection {
                 output.append("Client\n")
             }
 
-            if !ws.tools.isEmpty {
+            if !workspace.tools.isEmpty {
                 output.append("  Available Tools:\n")
-                for tool in ws.tools {
+                for tool in workspace.tools {
                     output.append("    - `")
                     output.append(tool.toolId)
                     output.append("`\n")
@@ -275,13 +276,14 @@ public struct WorkspacesContext: ContextSection {
             } else {
                 output.append("  Available Tools: None specific to this workspace\n")
             }
-            if let wsInjection = ws.contextInjection, !wsInjection.isEmpty {
+            if let wsInjection = workspace.contextInjection, !wsInjection.isEmpty {
                 output.append("  Workspace Instructions: \(wsInjection)\n")
             }
             output += "\n"
         }
 
-        output += "When a user asks you to operate on files or perform actions in these workspaces, you can use the appropriate tools with the workspace's URI or ID."
+        output += "When a user asks you to operate on files or perform actions " +
+            "in these workspaces, you can use the appropriate tools with the workspace's URI or ID."
         return output
     }
 

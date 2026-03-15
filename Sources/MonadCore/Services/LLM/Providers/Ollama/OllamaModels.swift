@@ -70,52 +70,67 @@ struct OllamaChatResponse: Codable {
 
 extension OllamaMessage {
     init(from param: ChatQuery.ChatCompletionMessageParam) {
-        var role = "user"
-        var content = ""
-
+        let role: String
         switch param {
-        case let .system(message):
-            role = "system"
-            if case let .textContent(text) = message.content {
-                content = text
-            } else {
-                content = "\(message.content)"
-            }
-        case let .user(message):
-            role = "user"
-            if case let .string(text) = message.content {
-                content = text
-            } else {
-                content = "\(message.content)"
-            }
-        case let .assistant(message):
-            role = "assistant"
-            if let messageContent = message.content {
-                if case let .textContent(text) = messageContent {
-                    content = text
-                } else {
-                    content = "\(messageContent)"
-                }
-            } else {
-                content = ""
-            }
-        case let .tool(message):
-            role = "tool"
-            if case let .textContent(text) = message.content {
-                content = text
-            } else {
-                content = "\(message.content)"
-            }
-        case let .developer(message):
-            role = "system"
-            if case let .textContent(text) = message.content {
-                content = text
-            } else {
-                content = "\(message.content)"
-            }
+        case .system: role = "system"
+        case .user: role = "user"
+        case .assistant: role = "assistant"
+        case .tool: role = "tool"
+        case .developer: role = "system"
         }
 
-        self.init(role: role, content: content, toolCalls: nil)
+        self.init(role: role, content: Self.extractContent(from: param), toolCalls: nil)
+    }
+
+    private static func extractContent(from param: ChatQuery.ChatCompletionMessageParam) -> String {
+        switch param {
+        case let .system(msg):
+            return textFromSystemContent(msg)
+        case let .user(msg):
+            return textFromUserContent(msg)
+        case let .assistant(msg):
+            return textFromAssistantContent(msg)
+        case let .tool(msg):
+            return textFromToolContent(msg)
+        case let .developer(msg):
+            return textFromDeveloperContent(msg)
+        }
+    }
+
+    private static func textFromSystemContent(
+        _ msg: ChatQuery.ChatCompletionMessageParam.SystemMessageParam
+    ) -> String {
+        if case let .textContent(text) = msg.content { return text }
+        return "\(msg.content)"
+    }
+
+    private static func textFromUserContent(
+        _ msg: ChatQuery.ChatCompletionMessageParam.UserMessageParam
+    ) -> String {
+        if case let .string(text) = msg.content { return text }
+        return "\(msg.content)"
+    }
+
+    private static func textFromAssistantContent(
+        _ msg: ChatQuery.ChatCompletionMessageParam.AssistantMessageParam
+    ) -> String {
+        guard let content = msg.content else { return "" }
+        if case let .textContent(text) = content { return text }
+        return "\(content)"
+    }
+
+    private static func textFromToolContent(
+        _ msg: ChatQuery.ChatCompletionMessageParam.ToolMessageParam
+    ) -> String {
+        if case let .textContent(text) = msg.content { return text }
+        return "\(msg.content)"
+    }
+
+    private static func textFromDeveloperContent(
+        _ msg: ChatQuery.ChatCompletionMessageParam.DeveloperMessageParam
+    ) -> String {
+        if case let .textContent(text) = msg.content { return text }
+        return "\(msg.content)"
     }
 }
 

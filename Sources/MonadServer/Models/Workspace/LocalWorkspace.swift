@@ -1,5 +1,5 @@
-import MonadCore
 import Foundation
+import MonadCore
 import MonadShared
 
 /// Implementation of WorkspaceProtocol for workspaces hosted on the local server filesystem
@@ -12,26 +12,27 @@ public actor LocalWorkspace: WorkspaceProtocol {
 
     public init(reference: WorkspaceReference) throws {
         guard reference.hostType == .server || reference.hostType == .serverTimeline,
-              let path = reference.rootPath else {
+              let path = reference.rootPath
+        else {
             throw WorkspaceError.invalidWorkspaceType
         }
         self.reference = reference
-        self.id = reference.id
-        self.rootURL = URL(fileURLWithPath: path)
+        id = reference.id
+        rootURL = URL(fileURLWithPath: path)
     }
 
     public func listTools() async throws -> [ToolReference] {
         return reference.tools
     }
 
-    public func executeTool(id: String, parameters: [String: AnyCodable]) async throws -> ToolResult {
+    public func executeTool(id _: String, parameters _: [String: AnyCodable]) async throws -> ToolResult {
         throw WorkspaceError.toolExecutionNotSupported
     }
 
     public func readFile(path: String) async throws -> String {
         let fileURL = rootURL.appendingPathComponent(path)
         guard fileURL.path.hasPrefix(rootURL.path) else {
-             throw WorkspaceError.accessDenied
+            throw WorkspaceError.accessDenied
         }
         return try String(contentsOf: fileURL, encoding: .utf8)
     }
@@ -39,18 +40,20 @@ public actor LocalWorkspace: WorkspaceProtocol {
     public func writeFile(path: String, content: String) async throws {
         let fileURL = rootURL.appendingPathComponent(path)
         guard fileURL.path.hasPrefix(rootURL.path) else {
-             throw WorkspaceError.accessDenied
+            throw WorkspaceError.accessDenied
         }
 
         // Ensure directory exists
-        try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
         try content.write(to: fileURL, atomically: true, encoding: .utf8)
     }
 
     public func listFiles(path: String) async throws -> [String] {
         let targetURL = rootURL.appendingPathComponent(path)
         guard targetURL.path.hasPrefix(rootURL.path) else {
-             throw WorkspaceError.accessDenied
+            throw WorkspaceError.accessDenied
         }
 
         // Recursive listing
@@ -59,7 +62,8 @@ public actor LocalWorkspace: WorkspaceProtocol {
 
         if let enumerator = FileManager.default.enumerator(
             at: rootURL, includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]) {
+            options: [.skipsHiddenFiles]
+        ) {
             while let fileURL = enumerator.nextObject() as? URL {
                 let resourceValues = try? fileURL.resourceValues(forKeys: [.isRegularFileKey])
                 if resourceValues?.isRegularFile == true {
@@ -78,7 +82,7 @@ public actor LocalWorkspace: WorkspaceProtocol {
     public func deleteFile(path: String) async throws {
         let fileURL = rootURL.appendingPathComponent(path)
         guard fileURL.path.hasPrefix(rootURL.path) else {
-             throw WorkspaceError.accessDenied
+            throw WorkspaceError.accessDenied
         }
 
         try FileManager.default.removeItem(at: fileURL)

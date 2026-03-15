@@ -8,6 +8,7 @@ import MonadClient
     import Darwin
 #endif
 
+// swiftlint:disable:next todo
 /// Shell command generation subcommand: `monad cmd find all TODO comments`
 struct Command: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
@@ -38,10 +39,33 @@ struct Command: AsyncParsableCommand {
             throw ExitCode.failure
         }
 
-        // Load local config
+        let client = try await buildClient()
+        let targetTimeline = try await resolveTimeline(client: client)
+
+        // Build command generation prompt
+        let systemInfo = gatherSystemInfo()
+        let prompt = buildCommandPrompt(task: taskText, systemInfo: systemInfo)
+
+        print(TerminalUI.dim("Analyzing request..."))
+        print("")
+
+        let fullResponse = try await streamResponse(client: client, timelineId: targetTimeline.id, message: prompt)
+        print("\n")
+
+        // Extract command and offer interactive loop
+        guard let command = extractCommand(from: fullResponse) else {
+            TerminalUI.printInfo("No command was extracted. Try rephrasing your request.")
+            return
+        }
+
+        try await commandLoop(command: command, client: client, timeline: targetTimeline)
+    }
+
+    // MARK: - Client & Timeline Setup
+
+    private func buildClient() async throws -> MonadClient {
         let localConfig = LocalConfigManager.shared.getConfig()
 
-        // Determine explicit URL
         let explicitURL: URL?
         if let serverFlag = server {
             explicitURL = URL(string: serverFlag)
@@ -57,47 +81,50 @@ struct Command: AsyncParsableCommand {
         )
 
         let client = MonadClient(configuration: config)
+        try await verifyServerHealth(client: client, baseURL: config.baseURL)
+        return client
+    }
 
-        // Check server health
+    private func verifyServerHealth(client: MonadClient, baseURL: URL) async throws {
         do {
             guard try await client.healthCheck() else {
                 throw MonadClientError.serverNotReachable
             }
         } catch {
             TerminalUI.printError(
-                "Could not connect to Monad Server at \(config.baseURL.absoluteString)")
+                "Could not connect to Monad Server at \(baseURL.absoluteString)"
+            )
             throw ExitCode.failure
         }
+    }
 
-        // Resolve timeline
-        let targetTimeline: Timeline
+    private func resolveTimeline(client: MonadClient) async throws -> Timeline {
+        let localConfig = LocalConfigManager.shared.getConfig()
+
         if let timelineId = timeline, let uuid = UUID(uuidString: timelineId) {
             let timelines = try await client.chat.listTimelines()
             guard let found = timelines.first(where: { $0.id == uuid }) else {
                 TerminalUI.printError("Timeline not found: \(timelineId)")
                 throw ExitCode.failure
             }
-            targetTimeline = found
-        } else if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
-            let timelines = try await client.chat.listTimelines()
-            if let found = timelines.first(where: { $0.id == uuid }) {
-                targetTimeline = found
-            } else {
-                targetTimeline = try await client.chat.createTimeline()
-            }
-        } else {
-            targetTimeline = try await client.chat.createTimeline()
+            return found
         }
 
-        // Build command generation prompt
-        let systemInfo = gatherSystemInfo()
-        let prompt = buildCommandPrompt(task: taskText, systemInfo: systemInfo)
+        if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
+            let timelines = try await client.chat.listTimelines()
+            if let found = timelines.first(where: { $0.id == uuid }) {
+                return found
+            }
+        }
 
-        print(TerminalUI.dim("Analyzing request..."))
-        print("")
+        return try await client.chat.createTimeline()
+    }
 
+    // MARK: - Streaming
+
+    private func streamResponse(client: MonadClient, timelineId: UUID, message: String) async throws -> String {
         var fullResponse = ""
-        let stream = try await client.chat.execute(timelineId: targetTimeline.id, message: prompt)
+        let stream = try await client.chat.execute(timelineId: timelineId, message: message)
 
         for try await delta in stream {
             if let content = delta.textContent {
@@ -106,15 +133,7 @@ struct Command: AsyncParsableCommand {
                 fflush(stdout)
             }
         }
-        print("\n")
-
-        // Extract command and offer interactive loop
-        guard let command = extractCommand(from: fullResponse) else {
-            TerminalUI.printInfo("No command was extracted. Try rephrasing your request.")
-            return
-        }
-
-        try await commandLoop(command: command, client: client, timeline: targetTimeline)
+        return fullResponse
     }
 
     // MARK: - Command Loop
@@ -123,17 +142,7 @@ struct Command: AsyncParsableCommand {
         var currentCommand = command
 
         while true {
-            print(TerminalUI.bold("Command:"))
-            print("  \(TerminalUI.cyan(currentCommand))")
-            print("")
-            print("Options:")
-            print("  \(TerminalUI.bold("[r]"))un       Execute the command")
-            print("  \(TerminalUI.bold("[e]"))dit      Describe changes to make")
-            print("  \(TerminalUI.bold("[c]"))opy      Copy to clipboard")
-            print("  \(TerminalUI.bold("[q]"))uit      Exit")
-            print("")
-            print("Choice: ", terminator: "")
-            fflush(stdout)
+            printCommandOptions(currentCommand)
 
             guard let input = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) else {
                 break
@@ -145,38 +154,8 @@ struct Command: AsyncParsableCommand {
                 return
 
             case "e", "edit":
-                print("Describe the changes: ", terminator: "")
-                fflush(stdout)
-                guard let feedback = readLine(), !feedback.isEmpty else {
-                    continue
-                }
-
-                let editPrompt = """
-                    Modify this command based on feedback:
-                    Current command: `\(currentCommand)`
-
-                    Feedback: \(feedback)
-
-                    Provide the updated command in ```bash...``` format.
-                    """
-
-                print("")
-                print(TerminalUI.dim("Updating command..."))
-                print("")
-
-                var editResponse = ""
-                let stream = try await client.chat.execute(timelineId: timeline.id, message: editPrompt)
-                for try await delta in stream {
-                    if let content = delta.textContent {
-                        editResponse += content
-                        print(content, terminator: "")
-                        fflush(stdout)
-                    }
-                }
-                print("\n")
-
-                if let newCommand = extractCommand(from: editResponse) {
-                    currentCommand = newCommand
+                if let updated = try await editCommand(currentCommand, client: client, timeline: timeline) {
+                    currentCommand = updated
                 }
                 continue
 
@@ -195,9 +174,55 @@ struct Command: AsyncParsableCommand {
         }
     }
 
-    // MARK: - Execution
+    private func printCommandOptions(_ command: String) {
+        print(TerminalUI.bold("Command:"))
+        print("  \(TerminalUI.cyan(command))")
+        print("")
+        print("Options:")
+        print("  \(TerminalUI.bold("[r]"))un       Execute the command")
+        print("  \(TerminalUI.bold("[e]"))dit      Describe changes to make")
+        print("  \(TerminalUI.bold("[c]"))opy      Copy to clipboard")
+        print("  \(TerminalUI.bold("[q]"))uit      Exit")
+        print("")
+        print("Choice: ", terminator: "")
+        fflush(stdout)
+    }
 
-    private func runCommand(_ command: String) async throws {
+    private func editCommand(
+        _ currentCommand: String,
+        client: MonadClient,
+        timeline: Timeline
+    ) async throws -> String? {
+        print("Describe the changes: ", terminator: "")
+        fflush(stdout)
+        guard let feedback = readLine(), !feedback.isEmpty else {
+            return nil
+        }
+
+        let editPrompt = """
+        Modify this command based on feedback:
+        Current command: `\(currentCommand)`
+
+        Feedback: \(feedback)
+
+        Provide the updated command in ```bash...``` format.
+        """
+
+        print("")
+        print(TerminalUI.dim("Updating command..."))
+        print("")
+
+        let editResponse = try await streamResponse(client: client, timelineId: timeline.id, message: editPrompt)
+        print("\n")
+
+        return extractCommand(from: editResponse)
+    }
+}
+
+// MARK: - Execution & Helpers
+
+private extension Command {
+    func runCommand(_ command: String) async throws {
         print("")
         print(TerminalUI.dim("$ \(command)"))
         print("")
@@ -233,7 +258,7 @@ struct Command: AsyncParsableCommand {
         }
     }
 
-    private func copyToClipboard(_ text: String) {
+    func copyToClipboard(_ text: String) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/pbcopy")
 
@@ -246,12 +271,10 @@ struct Command: AsyncParsableCommand {
         process.waitUntilExit()
     }
 
-    // MARK: - Helpers
-
-    private func gatherSystemInfo() -> String {
+    func gatherSystemInfo() -> String {
         var info: [String] = []
-        let os = ProcessInfo.processInfo.operatingSystemVersionString
-        info.append("OS: macOS \(os)")
+        let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
+        info.append("OS: macOS \(osVersion)")
         if let shell = ProcessInfo.processInfo.environment["SHELL"] {
             info.append("Shell: \(shell)")
         }
@@ -266,7 +289,7 @@ struct Command: AsyncParsableCommand {
         return info.joined(separator: "\n")
     }
 
-    private func buildCommandPrompt(task: String, systemInfo: String) -> String {
+    func buildCommandPrompt(task: String, systemInfo: String) -> String {
         """
         I need a shell command to: \(task)
 
@@ -282,19 +305,21 @@ struct Command: AsyncParsableCommand {
         """
     }
 
-    private func extractCommand(from response: String) -> String? {
+    func extractCommand(from response: String) -> String? {
         let patterns = [
             #"```(?:bash|sh|zsh)?\n?([\s\S]*?)```"#,
             #"`([^`]+)`"#
         ]
         for pattern in patterns {
             if let regex = try? NSRegularExpression(pattern: pattern, options: []),
-                let match = regex.firstMatch(
-                    in: response, range: NSRange(response.startIndex..., in: response)),
-                match.numberOfRanges > 1,
-                let range = Range(match.range(at: 1), in: response) {
+               let match = regex.firstMatch(
+                   in: response, range: NSRange(response.startIndex..., in: response)
+               ),
+               match.numberOfRanges > 1,
+               let range = Range(match.range(at: 1), in: response) {
                 let command = String(response[range]).trimmingCharacters(
-                    in: .whitespacesAndNewlines)
+                    in: .whitespacesAndNewlines
+                )
                 if !command.isEmpty && command.count < 500 {
                     return command
                 }

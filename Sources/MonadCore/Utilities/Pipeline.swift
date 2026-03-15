@@ -70,63 +70,75 @@ public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
     /// - Returns: A merged stream of all events from all stages.
     public func execute(_ context: Context) -> AsyncThrowingStream<Event, Error> {
         return AsyncThrowingStream { continuation in
-            // Use a detached task or ensure the closure is sending-safe.
-            // Since Context and Event are Sendable, and Pipeline is Sendable,
-            // we can safely execute this.
             let task = Task {
-                var executionError: Error?
+                let executionError = await runPrimaryStages(context: context, continuation: continuation)
+                let finalError = await runCleanupStages(
+                    context: context, continuation: continuation, priorError: executionError
+                )
 
-                // Stages execute serially — each stage's stream is fully consumed before the next
-                // begins. This is the safety contract that allows @unchecked Sendable contexts
-                // (e.g. TurnOutputs) to mutate shared state without locks.
-                for stage in stages {
-                    if Task.isCancelled { break }
-                    let startTime = CFAbsoluteTimeGetCurrent()
-                    logger?.debug("Starting pipeline stage: \(stage.id)")
-
-                    do {
-                        let stream = try await stage.process(context)
-                        for try await event in stream {
-                            continuation.yield(event)
-                        }
-                        let duration = CFAbsoluteTimeGetCurrent() - startTime
-                        logger?.debug("Completed pipeline stage: \(stage.id) in \(String(format: "%.3f", duration))s")
-                    } catch {
-                        let duration = CFAbsoluteTimeGetCurrent() - startTime
-                        logger?.error("Pipeline stage '\(stage.id)' failed after \(String(format: "%.3f", duration))s: \(error.localizedDescription)")
-                        executionError = PipelineError.stageFailed(id: stage.id, error: error)
-                        break
-                    }
-                }
-
-                // Execute cleanup stages regardless of success/failure
-                for stage in cleanupStages {
-                    let startTime = CFAbsoluteTimeGetCurrent()
-                    logger?.debug("Starting pipeline cleanup stage: \(stage.id)")
-
-                    do {
-                        let stream = try await stage.process(context)
-                        for try await event in stream {
-                            continuation.yield(event)
-                        }
-                        let duration = CFAbsoluteTimeGetCurrent() - startTime
-                        logger?.debug("Completed pipeline cleanup stage: \(stage.id) in \(String(format: "%.3f", duration))s")
-                    } catch {
-                        let duration = CFAbsoluteTimeGetCurrent() - startTime
-                        logger?.error("Pipeline cleanup stage '\(stage.id)' failed after \(String(format: "%.3f", duration))s: \(error.localizedDescription)")
-                        if executionError == nil {
-                            executionError = PipelineError.cleanupFailed(id: stage.id, error: error)
-                        }
-                    }
-                }
-
-                if let error = executionError {
+                if let error = finalError {
                     continuation.finish(throwing: error)
                 } else {
                     continuation.finish()
                 }
             }
             continuation.onTermination = { @Sendable _ in task.cancel() }
+        }
+    }
+
+    // MARK: - Execution Helpers
+
+    private func runPrimaryStages(
+        context: Context,
+        continuation: AsyncThrowingStream<Event, Error>.Continuation
+    ) async -> Error? {
+        for stage in stages {
+            if Task.isCancelled { break }
+            if let error = await runStage(stage, context: context, continuation: continuation, label: "pipeline") {
+                return error
+            }
+        }
+        return nil
+    }
+
+    private func runCleanupStages(
+        context: Context,
+        continuation: AsyncThrowingStream<Event, Error>.Continuation,
+        priorError: Error?
+    ) async -> Error? {
+        var finalError = priorError
+        for stage in cleanupStages {
+            if let error = await runStage(stage, context: context, continuation: continuation, label: "cleanup") {
+                if finalError == nil {
+                    finalError = PipelineError.cleanupFailed(id: stage.id, error: error)
+                }
+            }
+        }
+        return finalError
+    }
+
+    private func runStage(
+        _ stage: any PipelineStage<Context, Event>,
+        context: Context,
+        continuation: AsyncThrowingStream<Event, Error>.Continuation,
+        label: String
+    ) async -> Error? {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        logger?.debug("Starting \(label) stage: \(stage.id)")
+
+        do {
+            let stream = try await stage.process(context)
+            for try await event in stream {
+                continuation.yield(event)
+            }
+            let duration = CFAbsoluteTimeGetCurrent() - startTime
+            logger?.debug("Completed \(label) stage: \(stage.id) in \(String(format: "%.3f", duration))s")
+            return nil
+        } catch {
+            let duration = CFAbsoluteTimeGetCurrent() - startTime
+            let durationStr = String(format: "%.3f", duration)
+            logger?.error("\(label) stage '\(stage.id)' failed after \(durationStr)s: \(error.localizedDescription)")
+            return PipelineError.stageFailed(id: stage.id, error: error)
         }
     }
 }

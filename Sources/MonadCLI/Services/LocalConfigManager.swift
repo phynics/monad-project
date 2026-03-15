@@ -90,7 +90,8 @@ struct LocalConfigManager {
             logger.debug("Successfully saved local config to \(storageURL.path)")
         } catch {
             logger.error("Failed to save local config to \(storageURL.path): \(error)")
-            print(ANSIColors.colorize("Warning: Failed to save local config: \(error.localizedDescription)", color: ANSIColors.yellow))
+            let msg = "Warning: Failed to save local config: \(error.localizedDescription)"
+            print(ANSIColors.colorize(msg, color: ANSIColors.yellow))
         }
     }
 

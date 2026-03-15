@@ -1,6 +1,6 @@
-import MonadShared
 import Foundation
 import Logging
+import MonadShared
 import OpenAI
 
 /// Policy for vacuuming memories during archival
@@ -35,52 +35,54 @@ public actor TimelineArchiver {
         timelineId: UUID?,
         vacuumPolicy: MemoryVacuumPolicy = .run(threshold: 0.95)
     ) async throws -> UUID {
-        // 1. Title Generation
-        var title = "Archived Conversation"
-        if let firstUserMessage = messages.first(where: { $0.role == .user })?.content {
-            do {
-                title = try await generateTitle(for: firstUserMessage)
-            } catch {
-                logger.error("Failed to generate descriptive title: \(error.localizedDescription)")
-                title = String(firstUserMessage.prefix(40))
-            }
+        let title = await resolveTitle(from: messages)
+        let timeline = try await resolveTimeline(timelineId: timelineId, title: title)
+
+        try await indexAndSaveMessages(messages, timeline: timeline, title: title)
+
+        if case let .run(threshold) = vacuumPolicy {
+            _ = try await persistence.vacuumMemories(threshold: threshold)
         }
 
-        // 2. Resolve Session
-        let timeline: Timeline
+        return timeline.id
+    }
+
+    // MARK: - Helpers
+
+    private func resolveTitle(from messages: [Message]) async -> String {
+        guard let firstUserMessage = messages.first(where: { $0.role == .user })?.content else {
+            return "Archived Conversation"
+        }
+        do {
+            return try await generateTitle(for: firstUserMessage)
+        } catch {
+            logger.error("Failed to generate descriptive title: \(error.localizedDescription)")
+            return String(firstUserMessage.prefix(40))
+        }
+    }
+
+    private func resolveTimeline(timelineId: UUID?, title: String) async throws -> Timeline {
         if let sid = timelineId, let existing = try await persistence.fetchTimeline(id: sid) {
             var updated = existing
             updated.title = title
             updated.isArchived = true
             updated.updatedAt = Date()
             try await persistence.saveTimeline(updated)
-            timeline = updated
+            return updated
         } else {
             var newTimeline = Timeline(title: title)
             newTimeline.isArchived = true
             try await persistence.saveTimeline(newTimeline)
-            timeline = newTimeline
+            return newTimeline
         }
+    }
 
-        // 3. Index and Save Messages
+    private func indexAndSaveMessages(
+        _ messages: [Message], timeline: Timeline, title: String
+    ) async throws {
         for msg in messages {
-            // Heuristic: Index messages longer than 20 chars as memories
             if msg.content.count > 20 {
-                do {
-                    let tags = try await llmService.generateTags(for: msg.content)
-                    let embedding = try await embeddingService.generateEmbedding(for: msg.content)
-
-                    let memory = Memory(
-                        title: title,
-                        content: msg.content,
-                        tags: tags,
-                        embedding: embedding.map { Double($0) }
-                    )
-                    // Check similarity to avoid duplicate auto-generated memories
-                    _ = try await persistence.saveMemory(memory, policy: .preventSimilar(threshold: 0.92))
-                } catch {
-                    logger.error("Failed to index message as memory: \(error.localizedDescription)")
-                }
+                await indexMessageAsMemory(msg, title: title)
             }
 
             let conversationMsg = ConversationMessage(
@@ -91,24 +93,34 @@ public actor TimelineArchiver {
                 recalledMemories: "[]",
                 parentId: msg.parentId,
                 think: msg.think,
-                toolCalls: {
-                    if let calls = msg.toolCalls, let data = try? JSONEncoder().encode(calls) {
-                        return String(data: data, encoding: .utf8) ?? "[]"
-                    }
-                    return "[]"
-                }()
+                toolCalls: encodeToolCalls(msg.toolCalls)
             )
             try await persistence.saveMessage(conversationMsg)
         }
+    }
 
-        // 4. Update Summary? (Future improvement)
+    private func indexMessageAsMemory(_ msg: Message, title: String) async {
+        do {
+            let tags = try await llmService.generateTags(for: msg.content)
+            let embedding = try await embeddingService.generateEmbedding(for: msg.content)
 
-        // 5. Memory Vacuum (Cleanup redundancies)
-        if case let .run(threshold) = vacuumPolicy {
-            _ = try await persistence.vacuumMemories(threshold: threshold)
+            let memory = Memory(
+                title: title,
+                content: msg.content,
+                tags: tags,
+                embedding: embedding.map { Double($0) }
+            )
+            _ = try await persistence.saveMemory(memory, policy: .preventSimilar(threshold: 0.92))
+        } catch {
+            logger.error("Failed to index message as memory: \(error.localizedDescription)")
         }
+    }
 
-        return timeline.id
+    private func encodeToolCalls(_ toolCalls: [ToolCall]?) -> String {
+        guard let calls = toolCalls, let data = try? JSONEncoder().encode(calls) else {
+            return "[]"
+        }
+        return String(data: data, encoding: .utf8) ?? "[]"
     }
 
     private func generateTitle(for userMessage: String) async throws -> String {
@@ -118,7 +130,9 @@ public actor TimelineArchiver {
         Title:
         """
 
-        let response = try await llmService.sendMessage(prompt, responseFormat: nil as ChatQuery.ResponseFormat?, useUtilityModel: true)
+        let response = try await llmService.sendMessage(
+            prompt, responseFormat: nil as ChatQuery.ResponseFormat?, useUtilityModel: true
+        )
         return response.replacingOccurrences(of: "\"", with: "")
             .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }

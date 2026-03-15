@@ -36,10 +36,26 @@ struct Query: AsyncParsableCommand {
             throw ExitCode.failure
         }
 
-        // Load local config
+        let client = try await buildClient()
+        let targetTimeline = try await resolveTimeline(client: client)
+
+        // Stream the response
+        let stream = try await client.chat.execute(timelineId: targetTimeline.id, message: questionText)
+
+        for try await delta in stream {
+            if let content = delta.textContent {
+                print(content, terminator: "")
+                fflush(stdout)
+            }
+        }
+        print("")
+    }
+
+    // MARK: - Client & Timeline Setup
+
+    private func buildClient() async throws -> MonadClient {
         let localConfig = LocalConfigManager.shared.getConfig()
 
-        // Determine explicit URL
         let explicitURL: URL?
         if let serverFlag = server {
             explicitURL = URL(string: serverFlag)
@@ -56,46 +72,39 @@ struct Query: AsyncParsableCommand {
 
         let client = MonadClient(configuration: config)
 
-        // Check server health
         do {
             guard try await client.healthCheck() else {
                 throw MonadClientError.serverNotReachable
             }
         } catch {
             TerminalUI.printError(
-                "Could not connect to Monad Server at \(config.baseURL.absoluteString)")
+                "Could not connect to Monad Server at \(config.baseURL.absoluteString)"
+            )
             throw ExitCode.failure
         }
 
-        // Resolve timeline
-        let targetTimeline: Timeline
+        return client
+    }
+
+    private func resolveTimeline(client: MonadClient) async throws -> Timeline {
+        let localConfig = LocalConfigManager.shared.getConfig()
+
         if let timelineId = timeline, let uuid = UUID(uuidString: timelineId) {
             let timelines = try await client.chat.listTimelines()
             guard let found = timelines.first(where: { $0.id == uuid }) else {
                 TerminalUI.printError("Timeline not found: \(timelineId)")
                 throw ExitCode.failure
             }
-            targetTimeline = found
-        } else if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
+            return found
+        }
+
+        if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
             let timelines = try await client.chat.listTimelines()
             if let found = timelines.first(where: { $0.id == uuid }) {
-                targetTimeline = found
-            } else {
-                targetTimeline = try await client.chat.createTimeline()
-            }
-        } else {
-            targetTimeline = try await client.chat.createTimeline()
-        }
-
-        // Stream the response
-        let stream = try await client.chat.execute(timelineId: targetTimeline.id, message: questionText)
-
-        for try await delta in stream {
-            if let content = delta.textContent {
-                print(content, terminator: "")
-                fflush(stdout)
+                return found
             }
         }
-        print("")
+
+        return try await client.chat.createTimeline()
     }
 }

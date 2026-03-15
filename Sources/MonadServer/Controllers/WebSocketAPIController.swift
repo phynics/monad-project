@@ -1,13 +1,13 @@
-import MonadShared
 import Foundation
+import HTTPTypes
 import Hummingbird
 import HummingbirdWebSocket
 import Logging
+import MonadShared
 import NIOCore
-import HTTPTypes
 import ServiceLifecycle
 
-struct WebSocketAPIController<Context>: Sendable where Context: WebSocketRequestContext, Context: RequestContext {
+struct WebSocketAPIController<Context: WebSocketRequestContext & RequestContext>: Sendable {
     let connectionManager: WebSocketConnectionManager
 
     func addRoutes(to group: RouterGroup<Context>) {
@@ -16,7 +16,11 @@ struct WebSocketAPIController<Context>: Sendable where Context: WebSocketRequest
         })
     }
 
-    @Sendable func handle(inbound: WebSocketInboundStream, outbound: WebSocketOutboundWriter, context: WebSocketRouterContext<Context>) async {
+    @Sendable func handle(
+        inbound: WebSocketInboundStream,
+        outbound: WebSocketOutboundWriter,
+        context: WebSocketRouterContext<Context>
+    ) async {
         let request = context.request
         // Identify client
         // We expect `x-monad-client-id` header
@@ -40,7 +44,7 @@ struct WebSocketAPIController<Context>: Sendable where Context: WebSocketRequest
                 for try await frame in inbound {
                     switch frame.opcode {
                     case .text:
-                         let text = String(buffer: frame.data)
+                        let text = String(buffer: frame.data)
                         // Handle incoming message (RPC Response)
                         if let data = text.data(using: .utf8) {
                             do {

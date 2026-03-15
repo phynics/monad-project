@@ -98,7 +98,9 @@ public extension Tool {
             var logger: Logger {
                 Logger(label: "com.monad.shared.tools")
             }
-            logger.warning("Failed to decode parametersSchema for tool '\(id)' — using empty schema. Raw: \(parametersSchema)")
+            logger.warning(
+                "Failed to decode parametersSchema for tool '\(id)' — using empty schema. Raw: \(parametersSchema)"
+            )
             // Fallback to empty object if conversion fails
             schema = .object([:])
         }
@@ -153,7 +155,9 @@ public func formatToolsForPrompt(_ tools: [AnyTool]) async -> String {
     Rules:
     - Use tools only for missing context.
     - Create memories frequently via `create_memory`.
-    - Path Resolution: If a tool provenance indicates a specific workspace (e.g. `[Workspace: project-x]`), all file paths passed to it MUST be relative to that workspace root.
+    - Path Resolution: If a tool provenance indicates a specific workspace \
+    (e.g. `[Workspace: project-x]`), all file paths passed to it MUST be relative \
+    to that workspace root.
     - System Tools: Tools labeled `[System]` have global scope or session-specific sandbox scope.
     - Summarize the result if it is excessively long.
     - If a tool call fails, you can attempt to recover by correcting the parameters and trying again.

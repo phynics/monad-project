@@ -241,7 +241,11 @@ public struct UnconfiguredMemoryStore: MemoryStoreProtocol {
         fail()
     }
 
-    public func searchMemories(embedding _: [Double], limit _: Int, minSimilarity _: Double) async throws -> [(memory: Memory, similarity: Double)] {
+    public func searchMemories(
+        embedding _: [Double],
+        limit _: Int,
+        minSimilarity _: Double
+    ) async throws -> [(memory: Memory, similarity: Double)] {
         fail()
     }
 
@@ -350,7 +354,11 @@ public struct UnconfiguredToolPersistence: ToolPersistenceProtocol {
         fail()
     }
 
-    public func fetchToolSource(toolId _: String, workspaceIds _: [UUID], primaryWorkspaceId _: UUID?) async throws -> String? {
+    public func fetchToolSource(
+        toolId _: String,
+        workspaceIds _: [UUID],
+        primaryWorkspaceId _: UUID?
+    ) async throws -> String? {
         fail()
     }
 }

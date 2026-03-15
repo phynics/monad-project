@@ -1,9 +1,8 @@
-import MonadShared
 import Foundation
+import MonadShared
 
 /// Handles ranking of semantic search results
 public struct ContextRanker: Sendable {
-
     public init() {}
 
     /// Rank memories based on semantic similarity, tag matches, and time decay
@@ -19,11 +18,11 @@ public struct ContextRanker: Sendable {
     ) -> [SemanticSearchResult] {
         // Tag matches are explicit and highly relevant, give them a significant boost
         // A boost of 0.5 ensures they rank highly but don't strictly override strong semantic matches
-        let tagBoost: Double = 0.5
+        let tagBoost = 0.5
 
         // Time decay configuration
         // Half-life of 42 days: memories lose half their freshness boost every 42 days
-        let halfLifeDays: Double = 42.0
+        let halfLifeDays = 42.0
         let now = Date()
 
         var results: [SemanticSearchResult] = semantic.map {
@@ -37,17 +36,16 @@ public struct ContextRanker: Sendable {
         results = results.map { res in
             if tagIds.contains(res.memory.id) {
                 return SemanticSearchResult(
-                    memory: res.memory, similarity: (res.similarity ?? 0) + tagBoost)
+                    memory: res.memory, similarity: (res.similarity ?? 0) + tagBoost
+                )
             }
             return res
         }
 
         // Add tag results that aren't already included, with boost
-        for memory in tagBased {
-            if !existingIds.contains(memory.id) {
-                let sim = VectorMath.cosineSimilarity(queryEmbedding, memory.embeddingVector)
-                results.append(SemanticSearchResult(memory: memory, similarity: sim + tagBoost))
-            }
+        for memory in tagBased where !existingIds.contains(memory.id) {
+            let sim = VectorMath.cosineSimilarity(queryEmbedding, memory.embeddingVector)
+            results.append(SemanticSearchResult(memory: memory, similarity: sim + tagBoost))
         }
 
         // Apply time decay to all results

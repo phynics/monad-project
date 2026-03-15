@@ -1,7 +1,7 @@
 import Foundation
+import Logging
 import MonadClient
 import MonadShared
-import Logging
 
 struct StoredIdentity: Codable {
     let clientId: UUID
@@ -85,7 +85,8 @@ struct RegistrationManager {
                 try await client.workspace.syncWorkspaceTools(tools, workspaceId: existing.shellWorkspaceId)
                 return existing
             } catch {
-                logger.warning("Sync failed for existing workspace \(existing.shellWorkspaceId): \(error). Clearing identity for re-registration.")
+                // swiftlint:disable:next line_length
+                logger.warning("Sync failed for workspace \(existing.shellWorkspaceId): \(error). Clearing identity for re-registration.")
                 // Workspace no longer exists (e.g. database was reset). Clear the cached identity
                 // so we fall through and register fresh below.
                 try? FileManager.default.removeItem(at: storageURL)

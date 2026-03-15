@@ -19,10 +19,11 @@ public extension DatabaseSchema {
         }
 
         migrator.registerMigration("v2") { db in
-            // Add embedding column to memory table if it doesn't exist (it won't for users who ran v1 before it was added to baseline)
+            // Add embedding column to memory table if it doesn't exist
+            // (it won't for users who ran v1 before it was added to baseline)
             if try !db.columns(in: "memory").contains(where: { $0.name == "embedding" }) {
-                try db.alter(table: "memory") { t in
-                    t.add(column: "embedding", .text).notNull().defaults(to: "[]")
+                try db.alter(table: "memory") { table in
+                    table.add(column: "embedding", .text).notNull().defaults(to: "[]")
                 }
             }
         }

@@ -5,12 +5,22 @@ public extension MonadChatClient {
     // MARK: - Chat API
 
     /// Send a chat message (non-streaming)
-    func chat(timelineId: UUID, message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientTools: [ToolReference]? = nil) async throws -> ChatResponse {
+    func chat(
+        timelineId: UUID,
+        message: String,
+        toolOutputs: [ToolOutputSubmission]? = nil,
+        clientTools: [ToolReference]? = nil
+    ) async throws -> ChatResponse {
         var request = try await client.buildRequest(
             path: "/api/sessions/\(timelineId.uuidString)/chat", method: "POST"
         )
         request.httpBody = try await client.encode(
-            ChatRequest(message: message, toolOutputs: toolOutputs, clientId: client.configuration.clientId, clientTools: clientTools)
+            ChatRequest(
+                message: message,
+                toolOutputs: toolOutputs,
+                clientId: client.configuration.clientId,
+                clientTools: clientTools
+            )
         )
         return try await client.perform(request)
     }
@@ -24,9 +34,12 @@ public extension MonadChatClient {
     }
 
     /// Send a chat message with streaming response
-    func execute(timelineId: UUID, message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientTools: [ToolReference]? = nil) async throws -> AsyncThrowingStream<
-        ChatEvent, Error
-    > {
+    func execute(
+        timelineId: UUID,
+        message: String,
+        toolOutputs: [ToolOutputSubmission]? = nil,
+        clientTools: [ToolReference]? = nil
+    ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
         client.configuration.logger.debug("execute called for timeline \(timelineId)")
         var request = try await client.buildRequest(
             path: "/api/sessions/\(timelineId.uuidString)/chat/stream", method: "POST"

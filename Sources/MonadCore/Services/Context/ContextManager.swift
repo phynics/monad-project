@@ -9,10 +9,10 @@ public actor ContextManager {
     @Dependency(\.memoryStore) var memoryStore
     @Dependency(\.embeddingService) var embeddingService
 
-    private let workspace: (any WorkspaceProtocol)?
-    private let logger = Logger.module(named: "com.monad.ContextManager")
+    let workspace: (any WorkspaceProtocol)?
+    let logger = Logger.module(named: "com.monad.ContextManager")
 
-    private let ranker = ContextRanker()
+    let ranker = ContextRanker()
 
     public init(
         workspace: (any WorkspaceProtocol)? = nil
@@ -39,7 +39,13 @@ public actor ContextManager {
 
         var contextData: ContextData?
 
-        init(query: String, history: [Message], limit: Int, tagGenerator: (@Sendable (String) async throws -> [String])?, startTime: CFAbsoluteTime) {
+        init(
+            query: String,
+            history: [Message],
+            limit: Int,
+            tagGenerator: (@Sendable (String) async throws -> [String])?,
+            startTime: CFAbsoluteTime
+        ) {
             self.query = query
             self.history = history
             self.limit = limit
@@ -51,7 +57,9 @@ public actor ContextManager {
     private struct QueryAugmentationStage: PipelineStage {
         let manager: ContextManager
 
-        func process(_ context: ContextGatheringContext) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
+        func process(
+            _ context: ContextGatheringContext
+        ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
             return AsyncThrowingStream { continuation in
                 continuation.yield(.progress(.augmenting))
                 context.augmentedQuery = manager.buildAugmentedContext(query: context.query, history: context.history)
@@ -63,7 +71,9 @@ public actor ContextManager {
     private struct MemoryRetrievalStage: PipelineStage {
         let manager: ContextManager
 
-        func process(_ context: ContextGatheringContext) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
+        func process(
+            _ context: ContextGatheringContext
+        ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
             return AsyncThrowingStream { continuation in
                 let task = Task {
                     do {
@@ -94,7 +104,9 @@ public actor ContextManager {
     private struct NoteDiscoveryStage: PipelineStage {
         let manager: ContextManager
 
-        func process(_ context: ContextGatheringContext) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
+        func process(
+            _ context: ContextGatheringContext
+        ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
             return AsyncThrowingStream { continuation in
                 let task = Task {
                     continuation.yield(.progress(.discoveringNotes))
@@ -109,7 +121,9 @@ public actor ContextManager {
     private struct ContextAssemblyStage: PipelineStage {
         let logger: Logger
 
-        func process(_ context: ContextGatheringContext) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
+        func process(
+            _ context: ContextGatheringContext
+        ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
             let duration = CFAbsoluteTimeGetCurrent() - context.startTime
             logger.info("Context gathered in \(String(format: "%.3f", duration))s")
 
@@ -238,94 +252,9 @@ public actor ContextManager {
         logger.debug("Augmented tag context: \(augmented)")
         return augmented
     }
-
-    private func fetchRelevantMemories(
-        for query: String,
-        tagContext: String,
-        limit: Int,
-        tagGenerator: (@Sendable (String) async throws -> [String])?,
-        onProgress: (@Sendable (Message.ContextGatheringProgress) -> Void)?
-    ) async throws -> MemoryRetrievalResult {
-        // Validation
-        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return MemoryRetrievalResult(memories: [], tags: [], vector: [], semanticResults: [], tagResults: [])
-        }
-
-        // 1. Generate Tags (Fault tolerant)
-        var tags: [String] = []
-        if let generator = tagGenerator {
-            onProgress?(.tagging)
-            do {
-                tags = try await generator(tagContext)
-                logger.debug("Generated tags: \(tags)")
-            } catch {
-                logger.warning("Optional tag generation failed: \(ErrorKit.userFriendlyMessage(for: error))")
-                // Non-critical, continue with just embedding
-            }
-        }
-
-        // 2. Generate Embedding (Critical)
-        onProgress?(.embedding)
-        let embedding: [Float]
-        do {
-            embedding = try await embeddingService.generateEmbedding(for: query)
-        } catch {
-            throw ContextManagerError.embeddingFailed(error)
-        }
-
-        // Check cancellation
-        if Task.isCancelled {
-            return MemoryRetrievalResult(memories: [], tags: [], vector: [], semanticResults: [], tagResults: [])
-        }
-
-        // 3. Parallel Retrieval: Vector Search & Tag Search
-        onProgress?(.searching)
-
-        let searchTags = tags // Capture local copy for concurrency safety
-
-        // Convert Float embedding to Double for PersistenceService (GRDB compatibility)
-        let doubleEmbedding = embedding.map { Double($0) }
-
-        async let semanticTask = memoryStore.searchMemories(
-            embedding: doubleEmbedding,
-            limit: limit * 2, // Search for more to allow for tag-boosted re-ranking
-            minSimilarity: 0.35 // Slightly lower to catch more candidates for re-ranking
-        )
-
-        async let tagTask = memoryStore.searchMemories(matchingAnyTag: searchTags)
-
-        let (rawSemanticResults, tagResults) = try await (semanticTask, tagTask)
-        let semanticResults = rawSemanticResults.map {
-            SemanticSearchResult(memory: $0.memory, similarity: $0.similarity)
-        }
-
-        // 4. Combine and Rank
-        onProgress?(.ranking)
-
-        let finalResults = ranker.rankMemories(
-            semantic: semanticResults,
-            tagBased: tagResults,
-            queryEmbedding: doubleEmbedding
-        )
-
-        // Take top N based on limit
-        let topResults = Array(finalResults.prefix(limit))
-
-        logger.info(
-            "Recall performance: \(topResults.count) memories selected from \(semanticResults.count) semantic + \(tagResults.count) tag matches"
-        )
-
-        return MemoryRetrievalResult(
-            memories: topResults,
-            tags: tags,
-            vector: doubleEmbedding,
-            semanticResults: semanticResults,
-            tagResults: tagResults
-        )
-    }
 }
 
-private struct MemoryRetrievalResult {
+struct MemoryRetrievalResult {
     let memories: [SemanticSearchResult]
     let tags: [String]
     let vector: [Double]

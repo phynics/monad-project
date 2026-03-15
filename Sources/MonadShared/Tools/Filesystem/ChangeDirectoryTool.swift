@@ -28,8 +28,8 @@ public struct ChangeDirectoryTool: Tool, Sendable {
     }
 
     public var parametersSchema: [String: AnyCodable] {
-        ToolParameterSchema.object { b in
-            b.string("path", description: "The path to change to. Can be relative or absolute.", required: true)
+        ToolParameterSchema.object { builder in
+            builder.string("path", description: "The path to change to. Can be relative or absolute.", required: true)
         }.schema
     }
 

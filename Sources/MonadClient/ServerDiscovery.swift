@@ -9,25 +9,25 @@ public final class ServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServ
     private let logger: Logger
     private var onFound: ((URL) -> Void)?
 
-    // We use a dedicated thread for the RunLoop requirement of NetServiceBrowser
+    /// We use a dedicated thread for the RunLoop requirement of NetServiceBrowser
     private let discoveryThread: Thread
 
-    // To protect discoveredServices access
+    /// To protect discoveredServices access
     private let queue = DispatchQueue(label: "com.monad.client.discovery.state")
 
     public init(logger: Logger = Logger(label: "com.monad.client.discovery")) {
         self.logger = logger
 
-        self.discoveryThread = Thread {
+        discoveryThread = Thread {
             // Keep the run loop alive
             RunLoop.current.add(NSMachPort(), forMode: .default)
             RunLoop.current.run()
         }
-        self.discoveryThread.name = "com.monad.client.discovery"
-        self.discoveryThread.start()
+        discoveryThread.name = "com.monad.client.discovery"
+        discoveryThread.start()
 
         super.init()
-        self.browser.delegate = self
+        browser.delegate = self
     }
 
     /// Starts discovery and returns a stream of found server URLs.
@@ -51,21 +51,22 @@ public final class ServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServ
     }
 
     public func stop() {
-        self.perform {
+        perform {
             self.browser.stop()
         }
-        self.queue.sync {
+        queue.sync {
             self.discoveredServices.removeAll()
         }
     }
 
-    // Helper to run block on the discovery thread
+    /// Helper to run block on the discovery thread
     private func perform(_ block: @escaping @Sendable () -> Void) {
         // We can use perform(_:on:with:waitUntilDone:) but explicit bridging is tricky in pure swift sometimes.
         // Easier: NSObject.perform
-        self.perform(
-            #selector(runBlock(_:)), on: self.discoveryThread, with: BlockWrapper(block),
-            waitUntilDone: false)
+        perform(
+            #selector(runBlock(_:)), on: discoveryThread, with: BlockWrapper(block),
+            waitUntilDone: false
+        )
     }
 
     @objc private func runBlock(_ wrapper: BlockWrapper) {
@@ -75,12 +76,12 @@ public final class ServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServ
     // MARK: - NetServiceBrowserDelegate
 
     public func netServiceBrowser(
-        _ browser: NetServiceBrowser, didFind service: NetService, moreComing: Bool
+        _: NetServiceBrowser, didFind service: NetService, moreComing _: Bool
     ) {
         logger.debug("Found service: \(service.name)")
 
         // We must retain the service to resolve it
-        self.queue.sync {
+        queue.sync {
             self.discoveredServices.append(service)
         }
 
@@ -91,10 +92,11 @@ public final class ServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServ
     }
 
     public func netServiceBrowser(
-        _ browser: NetServiceBrowser, didRemove service: NetService, moreComing: Bool
+        _: NetServiceBrowser, didRemove service: NetService, moreComing _: Bool
     ) {
         logger.debug("Service removed: \(service.name)")
-        // Logic to remove from list if needed, but for discovery stream we might just ignore removals or need a more complex state.
+        // Logic to remove from list if needed, but for discovery stream we might just
+        // ignore removals or need a more complex state.
         // For 'Auto-Discovery' we typically just want "Give me one that works".
     }
 
@@ -109,7 +111,7 @@ public final class ServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServ
         let urlString = "http://\(host):\(port)"
         if let url = URL(string: urlString) {
             logger.info("Resolved server service to: \(url)")
-            self.onFound?(url)
+            onFound?(url)
         }
     }
 
@@ -118,7 +120,7 @@ public final class ServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServ
     }
 }
 
-// Wrapper Helper
+/// Wrapper Helper
 private final class BlockWrapper: NSObject {
     let block: () -> Void
     init(_ block: @escaping () -> Void) {

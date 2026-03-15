@@ -1,5 +1,6 @@
 import MonadShared
-/// Protocol for managing semantic memories and vector search.
+
+// Protocol for managing semantic memories and vector search.
 
 import Foundation
 
@@ -8,7 +9,9 @@ public protocol MemoryStoreProtocol: Sendable {
     func fetchMemory(id: UUID) async throws -> Memory?
     func fetchAllMemories() async throws -> [Memory]
     func searchMemories(query: String) async throws -> [Memory]
-    func searchMemories(embedding: [Double], limit: Int, minSimilarity: Double) async throws -> [(memory: Memory, similarity: Double)]
+    func searchMemories(
+        embedding: [Double], limit: Int, minSimilarity: Double
+    ) async throws -> [(memory: Memory, similarity: Double)]
     func searchMemories(matchingAnyTag tags: [String]) async throws -> [Memory]
     func deleteMemory(id: UUID) async throws
     func updateMemory(_ memory: Memory) async throws

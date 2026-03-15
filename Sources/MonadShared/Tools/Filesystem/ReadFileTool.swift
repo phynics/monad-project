@@ -31,8 +31,8 @@ public struct ReadFileTool: Tool, Sendable {
     }
 
     public var parametersSchema: [String: AnyCodable] {
-        ToolParameterSchema.object { b in
-            b.string("path", description: "The path to the file to read", required: true)
+        ToolParameterSchema.object { builder in
+            builder.string("path", description: "The path to the file to read", required: true)
         }.schema
     }
 
@@ -67,9 +67,10 @@ public struct ReadFileTool: Tool, Sendable {
             let attr = try fileManager.attributesOfItem(atPath: url.path)
             let size = attr[.size] as? Int64 ?? 0
 
-            if size > 1_000_000 {  // 1MB limit for raw cat
+            if size > 1_000_000 { // 1MB limit for raw cat
                 return .failure(
-                    "File is too large (\(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))). Please use document tools to load it as context."
+                    "File is too large (\(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))). " +
+                        "Please use document tools to load it as context."
                 )
             }
 

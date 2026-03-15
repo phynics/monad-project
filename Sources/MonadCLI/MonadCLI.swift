@@ -1,8 +1,8 @@
 import ArgumentParser
 import Foundation
+import Logging
 import MonadClient
 import MonadShared
-import Logging
 
 @main
 struct MonadCLI: AsyncParsableCommand {
@@ -59,17 +59,41 @@ struct Chat: AsyncParsableCommand {
     var timeline: String?
 
     func run() async throws {
-        // Initialize Logging
+        initializeLogging()
+
+        let buildResult = try await buildAndVerifyClient()
+        var client = buildResult.client
+        client = await registerClient(client, config: buildResult.config)
+
+        // Save successful configuration
+        LocalConfigManager.shared.updateServerURL(buildResult.config.baseURL.absoluteString)
+
+        try await validateConfiguration(client: client)
+
+        let finalTimeline = try await resolveAndPersistTimeline(client: client)
+
+        let restoredAgent = await restoreOrCreateAgent(client: client, timelineId: finalTimeline.id)
+
+        TerminalUI.printWelcome()
+
+        // Start REPL
+        let repl = ChatREPL(client: client, timeline: finalTimeline, agent: restoredAgent)
+        try await repl.run()
+    }
+
+    // MARK: - Setup Phases
+
+    private func initializeLogging() {
         LoggingSystem.bootstrap { label in
             var handler = MonadLogHandler(label: label)
             handler.logLevel = verbose ? .debug : .info
             return handler
         }
+    }
 
-        // Load local config
+    private func buildAndVerifyClient() async throws -> (client: MonadClient, config: ClientConfiguration) {
         let localConfig = LocalConfigManager.shared.getConfig()
 
-        // Determine explicit URL (Flag > Local Config)
         let explicitURL: URL?
         if let serverFlag = server {
             explicitURL = URL(string: serverFlag)
@@ -84,36 +108,40 @@ struct Chat: AsyncParsableCommand {
             verbose: verbose
         )
 
-        var client = MonadClient(configuration: config)
+        let client = MonadClient(configuration: config)
 
-        // Check server health
         do {
             guard try await client.healthCheck() else {
                 throw MonadClientError.serverNotReachable
             }
         } catch {
-            print("")
-            TerminalUI.printError(
-                "Could not connect to Monad Server at \(config.baseURL.absoluteString)"
-            )
-            print("")
-            print("  \(TerminalUI.bold("Troubleshooting:"))")
-            print("  1. Ensure the server is running:")
-            print("     \(TerminalUI.dim("make run-server"))")
-            print("  2. Check if the server is running on a different port")
-            print("  3. Verify your configuration with --server <url>")
-            print("")
-
-            if verbose {
-                print("  \(TerminalUI.dim("Error: \(error.localizedDescription)"))")
-                print("")
-            }
+            printConnectionError(baseURL: config.baseURL, error: error)
             throw ExitCode.failure
         }
 
-        // Register this client (idempotent — reuses stored identity on re-runs) and recreate the
-        // client with the resolved clientId so it's included in every chat request, allowing the
-        // server to look up and include client-side tools (e.g. ask_attach_pwd).
+        return (client, config)
+    }
+
+    private func printConnectionError(baseURL: URL, error: Error) {
+        print("")
+        TerminalUI.printError(
+            "Could not connect to Monad Server at \(baseURL.absoluteString)"
+        )
+        print("")
+        print("  \(TerminalUI.bold("Troubleshooting:"))")
+        print("  1. Ensure the server is running:")
+        print("     \(TerminalUI.dim("make run-server"))")
+        print("  2. Check if the server is running on a different port")
+        print("  3. Verify your configuration with --server <url>")
+        print("")
+
+        if verbose {
+            print("  \(TerminalUI.dim("Error: \(error.localizedDescription)"))")
+            print("")
+        }
+    }
+
+    private func registerClient(_ client: MonadClient, config: ClientConfiguration) async -> MonadClient {
         do {
             let identity = try await RegistrationManager.shared.ensureRegistered(client: client)
             let configWithId = ClientConfiguration(
@@ -123,16 +151,19 @@ struct Chat: AsyncParsableCommand {
                 timeout: config.timeout,
                 verbose: config.verbose
             )
-            client = MonadClient(configuration: configWithId)
+            return MonadClient(configuration: configWithId)
         } catch {
-            Logger.module(named: "registration").warning("Client registration failed: \(error.localizedDescription)")
-            TerminalUI.printWarning("Client registration failed. Some client-side tools may not be available.")
+            Logger.module(named: "registration").warning(
+                "Client registration failed: \(error.localizedDescription)"
+            )
+            TerminalUI.printWarning(
+                "Client registration failed. Some client-side tools may not be available."
+            )
+            return client
         }
+    }
 
-        // Save successful configuration
-        LocalConfigManager.shared.updateServerURL(config.baseURL.absoluteString)
-
-        // Check configuration validity
+    private func validateConfiguration(client: MonadClient) async throws {
         do {
             let config = try await client.getConfiguration()
             if !config.isValid {
@@ -143,26 +174,28 @@ struct Chat: AsyncParsableCommand {
             TerminalUI.printWarning("Configuration check failed: \(error.localizedDescription)")
             TerminalUI.printInfo("You can configure the CLI using the '/config' command in chat.")
         }
+    }
 
-        // Resulting timeline to use
+    private func resolveAndPersistTimeline(client: MonadClient) async throws -> Timeline {
+        let localConfig = LocalConfigManager.shared.getConfig()
         let cliTimelineManager = CLITimelineManager(client: client)
         let finalTimeline = try await cliTimelineManager.resolveTimeline(
             explicitId: timeline,
             localConfig: localConfig
         )
 
-        // Persist successful timeline ID and handle re-attachment
         LocalConfigManager.shared.updateLastSessionId(finalTimeline.id.uuidString)
         await cliTimelineManager.handleWorkspaceReattachment(
             timeline: finalTimeline, localConfig: localConfig
         )
 
-        TerminalUI.printWelcome()
+        return finalTimeline
+    }
 
-        // Restore last agent instance if available; fall back to auto-creating a default one
-        // so there is always an agent attached before entering the REPL.
-        var restoredAgent: AgentInstance?
+    private func restoreOrCreateAgent(client: MonadClient, timelineId: UUID) async -> AgentInstance? {
+        let localConfig = LocalConfigManager.shared.getConfig()
         let logger = Logger.module(named: "startup")
+        var restoredAgent: AgentInstance?
 
         if let agentIdStr = localConfig.lastAgentInstanceId,
            let agentId = UUID(uuidString: agentIdStr) {
@@ -175,16 +208,16 @@ struct Chat: AsyncParsableCommand {
 
         if restoredAgent == nil {
             do {
-                restoredAgent = try await ensureDefaultAgent(client: client, timelineId: finalTimeline.id)
+                restoredAgent = try await ensureDefaultAgent(client: client, timelineId: timelineId)
             } catch {
                 logger.error("Failed to ensure default agent: \(error.localizedDescription)")
-                TerminalUI.printWarning("Could not attach an agent to the timeline. AI responses may fail until an agent is attached.")
+                TerminalUI.printWarning(
+                    "Could not attach an agent to the timeline. AI responses may fail until an agent is attached."
+                )
             }
         }
 
-        // Start REPL
-        let repl = ChatREPL(client: client, timeline: finalTimeline, agent: restoredAgent)
-        try await repl.run()
+        return restoredAgent
     }
 }
 

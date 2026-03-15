@@ -5,7 +5,9 @@ import MonadShared
 public struct TimelinePeekTool: MonadShared.Tool, Sendable {
     public let id = "timeline_peek"
     public let name = "Timeline Peek"
-    public let description = "Read the most recent messages from a conversation timeline. Use this to observe what is happening in a timeline without attaching to it."
+    public let description =
+        "Read the most recent messages from a conversation timeline. " +
+        "Use this to observe what is happening in a timeline without attaching to it."
     public let requiresPermission = false
 
     private let messageStore: any MessageStoreProtocol

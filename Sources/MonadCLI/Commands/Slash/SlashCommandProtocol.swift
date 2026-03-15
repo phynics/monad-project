@@ -71,11 +71,9 @@ public actor SlashCommandRegistry {
         // Return unique commands, sorted by name (deduplicate by name)
         var seen = Set<String>()
         var result: [SlashCommand] = []
-        for cmd in commands.values {
-            if !seen.contains(cmd.name) {
-                seen.insert(cmd.name)
-                result.append(cmd)
-            }
+        for cmd in commands.values where !seen.contains(cmd.name) {
+            seen.insert(cmd.name)
+            result.append(cmd)
         }
         return result.sorted { $0.name < $1.name }
     }

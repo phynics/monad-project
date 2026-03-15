@@ -6,7 +6,12 @@ public struct ChatRequest: Codable, Sendable {
     public let clientId: UUID?
     public let clientTools: [ToolReference]?
 
-    public init(message: String, toolOutputs: [ToolOutputSubmission]? = nil, clientId: UUID? = nil, clientTools: [ToolReference]? = nil) {
+    public init(
+        message: String,
+        toolOutputs: [ToolOutputSubmission]? = nil,
+        clientId: UUID? = nil,
+        clientTools: [ToolReference]? = nil
+    ) {
         self.message = message
         self.toolOutputs = toolOutputs
         self.clientId = clientId

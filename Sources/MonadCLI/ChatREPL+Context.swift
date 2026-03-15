@@ -34,9 +34,9 @@ extension ChatREPL {
 
             if let targetId = displayId {
                 do {
-                    let ws = try await client.workspace.getWorkspace(targetId)
+                    let workspace = try await client.workspace.getWorkspace(targetId)
                     let icon = selectedWorkspaceId == nil ? "📂" : "🎯"
-                    wsSummary = "\(icon) \(ws.uri.description)"
+                    wsSummary = "\(icon) \(workspace.uri.description)"
 
                     if selectedWorkspaceId == nil && !timelineWS.attached.isEmpty {
                         wsSummary += " (+\(timelineWS.attached.count) attached)"
@@ -110,60 +110,15 @@ extension ChatREPL {
     func checkAndRestoreWorkspaces() async {
         do {
             let timelineWS = try await client.workspace.listTimelineWorkspaces(timelineId: timeline.id)
-            var workspacesToRestore: [WorkspaceReference] = []
-
-            if let primary = timelineWS.primary, primary.status == .missing, primary.hostType == .server {
-                workspacesToRestore.append(primary)
-            }
-
-            if let identity = RegistrationManager.shared.getIdentity() {
-                for ws in timelineWS.attached {
-                    if ws.hostType == .client, ws.ownerId == identity.clientId {
-                        if let url = URL(string: ws.uri.description), url.host == identity.hostname {
-                            let path = url.path
-                            if !FileManager.default.fileExists(atPath: path) {
-                                workspacesToRestore.append(ws)
-                            } else {
-                                LocalConfigManager.shared.saveClientWorkspace(
-                                    uri: ws.uri.description, id: ws.id.uuidString
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            let workspacesToRestore = collectMissingWorkspaces(from: timelineWS)
 
             guard !workspacesToRestore.isEmpty else { return }
 
-            print(TerminalUI.dim("------------------------------------------------"))
-            TerminalUI.printWarning("Missing Workspaces Detected:")
-            for ws in workspacesToRestore {
-                print(" - \(ws.uri.description) (\(ws.hostType == .server ? "Server" : "Client"))")
-            }
-            print("")
-            print("Do you want to restore these workspaces? [y/N] ", terminator: "")
-            fflush(stdout)
+            printMissingWorkspacesSummary(workspacesToRestore)
 
             if let input = lineReader.readLine(prompt: "", completion: nil)?
                 .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y" {
-                for ws in workspacesToRestore {
-                    do {
-                        if ws.hostType == .server {
-                            try await client.workspace.restoreWorkspace(timelineId: timeline.id, workspaceId: ws.id)
-                            TerminalUI.printSuccess("Restored server workspace: \(ws.uri.description)")
-                        } else {
-                            if let url = URL(string: ws.uri.description) {
-                                try FileManager.default.createDirectory(
-                                    at: url, withIntermediateDirectories: true
-                                )
-                                TerminalUI.printSuccess("Created local directory: \(url.path)")
-                            }
-                        }
-                    } catch {
-                        logger.error("Failed to restore workspace \(ws.uri.description): \(error)")
-                        TerminalUI.printError("Could not restore \(ws.uri.description): \(error.localizedDescription)")
-                    }
-                }
+                await restoreWorkspaces(workspacesToRestore)
             } else {
                 print("Skipping restoration.")
             }
@@ -173,6 +128,71 @@ extension ChatREPL {
         } catch {
             // Ignore errors here to not block startup, but log them
             logger.error("Workspace restoration check failed: \(error)")
+        }
+    }
+
+    private func collectMissingWorkspaces(
+        from timelineWS: (primary: WorkspaceReference?, attached: [WorkspaceReference])
+    ) -> [WorkspaceReference] {
+        var workspacesToRestore: [WorkspaceReference] = []
+
+        if let primary = timelineWS.primary, primary.status == .missing, primary.hostType == .server {
+            workspacesToRestore.append(primary)
+        }
+
+        if let identity = RegistrationManager.shared.getIdentity() {
+            for workspace in timelineWS.attached {
+                if workspace.hostType == .client, workspace.ownerId == identity.clientId {
+                    if let url = URL(string: workspace.uri.description), url.host == identity.hostname {
+                        let path = url.path
+                        if !FileManager.default.fileExists(atPath: path) {
+                            workspacesToRestore.append(workspace)
+                        } else {
+                            LocalConfigManager.shared.saveClientWorkspace(
+                                uri: workspace.uri.description, id: workspace.id.uuidString
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        return workspacesToRestore
+    }
+
+    private func printMissingWorkspacesSummary(_ workspacesToRestore: [WorkspaceReference]) {
+        print(TerminalUI.dim("------------------------------------------------"))
+        TerminalUI.printWarning("Missing Workspaces Detected:")
+        for workspace in workspacesToRestore {
+            print(" - \(workspace.uri.description) (\(workspace.hostType == .server ? "Server" : "Client"))")
+        }
+        print("")
+        print("Do you want to restore these workspaces? [y/N] ", terminator: "")
+        fflush(stdout)
+    }
+
+    private func restoreWorkspaces(_ workspacesToRestore: [WorkspaceReference]) async {
+        for workspace in workspacesToRestore {
+            do {
+                if workspace.hostType == .server {
+                    try await client.workspace.restoreWorkspace(
+                        timelineId: timeline.id, workspaceId: workspace.id
+                    )
+                    TerminalUI.printSuccess("Restored server workspace: \(workspace.uri.description)")
+                } else {
+                    if let url = URL(string: workspace.uri.description) {
+                        try FileManager.default.createDirectory(
+                            at: url, withIntermediateDirectories: true
+                        )
+                        TerminalUI.printSuccess("Created local directory: \(url.path)")
+                    }
+                }
+            } catch {
+                logger.error("Failed to restore workspace \(workspace.uri.description): \(error)")
+                TerminalUI.printError(
+                    "Could not restore \(workspace.uri.description): \(error.localizedDescription)"
+                )
+            }
         }
     }
 

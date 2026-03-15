@@ -2,12 +2,25 @@ import Foundation
 import MonadShared
 import OpenAI
 
+/// Accumulates parts of a streamed tool call.
+struct StreamedToolCall: Sendable {
+    var callId: String
+    var name: String
+    var args: String
+
+    init(callId: String = "", name: String = "", args: String = "") {
+        self.callId = callId
+        self.name = name
+        self.args = args
+    }
+}
+
 /// Actor-isolated mutable outputs for a single pipeline turn.
 /// Each stage writes into this via dedicated mutation methods; reads from outside use `await`.
 actor TurnOutputs {
     private(set) var fullResponse: String = ""
     private(set) var fullThinking: String = ""
-    private(set) var toolCallAccumulators: [Int: (id: String, name: String, args: String)] = [:]
+    private(set) var toolCallAccumulators: [Int: StreamedToolCall] = [:]
     private(set) var streamUsage: ChatResult.CompletionUsage?
     private(set) var turnDuration: TimeInterval = 0
     private(set) var tokensPerSecond: Double?
@@ -34,15 +47,15 @@ actor TurnOutputs {
     }
 
     func accumulateToolCall(index: Int, id: String?, name: String?, args: String?) {
-        var acc = toolCallAccumulators[index] ?? ("", "", "")
-        if let id { acc.id = id }
+        var acc = toolCallAccumulators[index] ?? StreamedToolCall()
+        if let id { acc.callId = id }
         if let name { acc.name += name }
         if let args { acc.args += args }
         toolCallAccumulators[index] = acc
     }
 
     func setToolCallAccumulator(index: Int, id: String, name: String, args: String) {
-        toolCallAccumulators[index] = (id: id, name: name, args: args)
+        toolCallAccumulators[index] = StreamedToolCall(callId: id, name: name, args: args)
     }
 
     func removeSentinelAndEmptyToolCalls(sentinel: String) {

@@ -14,15 +14,17 @@ struct PromptIntegrationTests {
         let history = [Message(content: "Hello", role: .user)]
 
         let prompt = await service.buildContext(
-            userQuery: "",
-            contextNotes: [],
-            memories: [],
-            chatHistory: history,
-            tools: [],
-            workspaces: [],
-            primaryWorkspace: nil,
-            clientName: nil,
-            systemInstructions: nil
+            LLMPromptRequest(
+                userQuery: "",
+                contextNotes: [],
+                memories: [],
+                chatHistory: history,
+                tools: [],
+                workspaces: [],
+                primaryWorkspace: nil,
+                clientName: nil,
+                systemInstructions: nil
+            )
         )
         let messages = await prompt.toMessages()
 
@@ -46,15 +48,17 @@ struct PromptIntegrationTests {
         let history = [Message(content: "Hello", role: .user)]
 
         let prompt = await service.buildContext(
-            userQuery: "World",
-            contextNotes: [],
-            memories: [],
-            chatHistory: history,
-            tools: [],
-            workspaces: [],
-            primaryWorkspace: nil,
-            clientName: nil,
-            systemInstructions: nil
+            LLMPromptRequest(
+                userQuery: "World",
+                contextNotes: [],
+                memories: [],
+                chatHistory: history,
+                tools: [],
+                workspaces: [],
+                primaryWorkspace: nil,
+                clientName: nil,
+                systemInstructions: nil
+            )
         )
         let messages = await prompt.toMessages()
 
@@ -98,15 +102,17 @@ struct PromptIntegrationTests {
         let query = "UNIQUE_QUERY_STRING"
 
         let prompt = await service.buildContext(
-            userQuery: query,
-            contextNotes: [],
-            memories: [],
-            chatHistory: history,
-            tools: [],
-            workspaces: [],
-            primaryWorkspace: nil,
-            clientName: nil,
-            systemInstructions: nil
+            LLMPromptRequest(
+                userQuery: query,
+                contextNotes: [],
+                memories: [],
+                chatHistory: history,
+                tools: [],
+                workspaces: [],
+                primaryWorkspace: nil,
+                clientName: nil,
+                systemInstructions: nil
+            )
         )
         let messages = await prompt.toMessages()
 

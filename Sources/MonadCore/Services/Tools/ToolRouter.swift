@@ -72,7 +72,6 @@ public actor ToolRouter {
         for call in calls {
             let toolRef = availableTools.first(where: { $0.id == call.name })?.toolReference
                 ?? ToolReference.known(id: call.name)
-            let toolDisplayName = ANSIColors.colorize(call.name, color: ANSIColors.brightCyan)
 
             continuation.yield(.toolProgress(
                 toolCallId: call.callId,
@@ -81,55 +80,71 @@ public actor ToolRouter {
 
             do {
                 let outcome = try await execute(
-                    tool: toolRef,
-                    arguments: call.arguments,
-                    timelineId: timelineId,
-                    availableTools: availableTools
+                    tool: toolRef, arguments: call.arguments,
+                    timelineId: timelineId, availableTools: availableTools
                 )
-                switch outcome {
-                case let .completed(output):
-                    let result = ToolResult.success(output)
-                    logger.info("Tool \(toolDisplayName) succeeded")
-                    continuation.yield(.toolCompleted(toolCallId: call.callId, status: .success(result)))
-                    try await messageStore.saveMessage(
-                        ConversationMessage(
-                            timelineId: timelineId,
-                            role: .tool,
-                            content: output,
-                            toolCallId: call.callId
-                        )
-                    )
-                    resolvedToolParams.append(
-                        .tool(.init(content: .textContent(.init(output)), toolCallId: call.callId))
-                    )
-
-                case .deferredToClient:
-                    logger.info("Tool \(toolDisplayName) deferred to client")
-                    hasDeferred = true
-                }
+                let param = try await handleOutcome(
+                    outcome, call: call, toolRef: toolRef,
+                    timelineId: timelineId, continuation: continuation
+                )
+                if let param { resolvedToolParams.append(param) }
+                if case .deferredToClient = outcome { hasDeferred = true }
             } catch {
-                let errorMsg = ErrorKit.userFriendlyMessage(for: error)
-                logger.error("Tool \(toolDisplayName) error: \(error.localizedDescription)")
-                let errorOutput = "Error: \(errorMsg)"
-                continuation.yield(.toolCompleted(
-                    toolCallId: call.callId,
-                    status: .failed(reference: toolRef, error: error.localizedDescription)
-                ))
-                try await messageStore.saveMessage(
-                    ConversationMessage(
-                        timelineId: timelineId,
-                        role: .tool,
-                        content: errorOutput,
-                        toolCallId: call.callId
-                    )
+                let param = try await handleToolError(
+                    error, call: call, toolRef: toolRef,
+                    timelineId: timelineId, continuation: continuation
                 )
-                resolvedToolParams.append(
-                    .tool(.init(content: .textContent(.init(errorOutput)), toolCallId: call.callId))
-                )
+                resolvedToolParams.append(param)
             }
         }
 
         return ToolHandlingResult(hasDeferred: hasDeferred, resolvedToolParams: resolvedToolParams)
+    }
+
+    // MARK: - Outcome Handling
+
+    private func handleOutcome(
+        _ outcome: ToolExecutionOutcome,
+        call: ParsedToolCall,
+        toolRef _: ToolReference,
+        timelineId: UUID,
+        continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
+    ) async throws -> ChatQuery.ChatCompletionMessageParam? {
+        let toolDisplayName = ANSIColors.colorize(call.name, color: ANSIColors.brightCyan)
+        switch outcome {
+        case let .completed(output):
+            logger.info("Tool \(toolDisplayName) succeeded")
+            continuation.yield(.toolCompleted(toolCallId: call.callId, status: .success(ToolResult.success(output))))
+            try await messageStore.saveMessage(
+                ConversationMessage(timelineId: timelineId, role: .tool, content: output, toolCallId: call.callId)
+            )
+            return .tool(.init(content: .textContent(.init(output)), toolCallId: call.callId))
+
+        case .deferredToClient:
+            logger.info("Tool \(toolDisplayName) deferred to client")
+            return nil
+        }
+    }
+
+    private func handleToolError(
+        _ error: Error,
+        call: ParsedToolCall,
+        toolRef: ToolReference,
+        timelineId: UUID,
+        continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
+    ) async throws -> ChatQuery.ChatCompletionMessageParam {
+        let toolDisplayName = ANSIColors.colorize(call.name, color: ANSIColors.brightCyan)
+        let errorMsg = ErrorKit.userFriendlyMessage(for: error)
+        logger.error("Tool \(toolDisplayName) error: \(error.localizedDescription)")
+        let errorOutput = "Error: \(errorMsg)"
+        continuation.yield(.toolCompleted(
+            toolCallId: call.callId,
+            status: .failed(reference: toolRef, error: error.localizedDescription)
+        ))
+        try await messageStore.saveMessage(
+            ConversationMessage(timelineId: timelineId, role: .tool, content: errorOutput, toolCallId: call.callId)
+        )
+        return .tool(.init(content: .textContent(.init(errorOutput)), toolCallId: call.callId))
     }
 
     // MARK: - Core Routing

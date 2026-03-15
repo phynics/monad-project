@@ -31,7 +31,9 @@ public struct ToolParameterSchema: Sendable {
             if isRequired { required.append(name) }
         }
 
-        public mutating func stringEnum(_ name: String, description: String, values: [String], required isRequired: Bool = false) {
+        public mutating func stringEnum(
+            _ name: String, description: String, values: [String], required isRequired: Bool = false
+        ) {
             properties[name] = [
                 "type": .string("string"),
                 "description": .string(description),

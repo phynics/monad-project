@@ -9,7 +9,9 @@ import MonadShared
 public struct TimelineSendTool: MonadShared.Tool, Sendable {
     public let id = "timeline_send"
     public let name = "Timeline Send"
-    public let description = "Post a message to another conversation timeline without attaching to it. The message is queued and will be visible to the next agent that processes that timeline."
+    public let description =
+        "Post a message to another conversation timeline without attaching to it. " +
+        "The message is queued and will be visible to the next agent that processes that timeline."
     public let requiresPermission = true
 
     private let messageStore: any MessageStoreProtocol

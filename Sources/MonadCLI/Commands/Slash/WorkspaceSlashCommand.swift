@@ -23,35 +23,44 @@ struct WorkspaceSlashCommand: SlashCommand {
                 TerminalUI.printError("Usage: /workspace select <id>")
             }
         case "attach":
-            if args.count > 1 {
-                if let uuid = UUID(uuidString: args[1]) {
-                    try await context.client.workspace.attachWorkspace(
-                        uuid, to: context.timeline.id
-                    )
-                    TerminalUI.printSuccess("Attached workspace \(uuid.uuidString).")
-                } else {
-                    // Try to match by URI/Name logic if needed, but UUID is safest for now
-                    TerminalUI.printError("Invalid UUID. Use 'monad workspace list' to see IDs.")
-                }
-            } else {
-                TerminalUI.printInfo("Interactively attaching workspace...")
-                try await interactiveAttach(context: context)
-            }
+            try await handleAttach(args: args, context: context)
         case "detach":
-            if args.count > 1 {
-                if let uuid = UUID(uuidString: args[1]) {
-                    try await context.client.workspace.detachWorkspace(uuid, from: context.timeline.id)
-                    TerminalUI.printSuccess("Detached workspace \(uuid.uuidString).")
-                } else {
-                    TerminalUI.printError("Invalid UUID")
-                }
-            } else {
-                TerminalUI.printError("Usage: /workspace detach <id>")
-            }
+            try await handleDetach(args: args, context: context)
         case "attach-pwd", "pwd":
             try await attachCurrentDirectory(context: context)
         default:
             try await showTimelineWorkspaces(context: context)
+        }
+    }
+
+    // MARK: - Attach / Detach Handlers
+
+    private func handleAttach(args: [String], context: ChatContext) async throws {
+        if args.count > 1 {
+            if let uuid = UUID(uuidString: args[1]) {
+                try await context.client.workspace.attachWorkspace(
+                    uuid, to: context.timeline.id
+                )
+                TerminalUI.printSuccess("Attached workspace \(uuid.uuidString).")
+            } else {
+                TerminalUI.printError("Invalid UUID. Use 'monad workspace list' to see IDs.")
+            }
+        } else {
+            TerminalUI.printInfo("Interactively attaching workspace...")
+            try await interactiveAttach(context: context)
+        }
+    }
+
+    private func handleDetach(args: [String], context: ChatContext) async throws {
+        guard args.count > 1 else {
+            TerminalUI.printError("Usage: /workspace detach <id>")
+            return
+        }
+        if let uuid = UUID(uuidString: args[1]) {
+            try await context.client.workspace.detachWorkspace(uuid, from: context.timeline.id)
+            TerminalUI.printSuccess("Detached workspace \(uuid.uuidString).")
+        } else {
+            TerminalUI.printError("Invalid UUID")
         }
     }
 
@@ -71,8 +80,8 @@ struct WorkspaceSlashCommand: SlashCommand {
             print("  \(TerminalUI.dim("No primary workspace"))")
         }
 
-        for ws in attachedWorkspaces {
-            printWorkspace(ws, marker: "●", color: "blue")
+        for workspace in attachedWorkspaces {
+            printWorkspace(workspace, marker: "●", color: "blue")
         }
 
         print("")
@@ -102,14 +111,14 @@ struct WorkspaceSlashCommand: SlashCommand {
             print("  \(TerminalUI.dim("No primary workspace"))")
         }
 
-        for ws in attachedWorkspaces {
-            printWorkspace(ws, marker: "●", color: "blue")
+        for workspace in attachedWorkspaces {
+            printWorkspace(workspace, marker: "●", color: "blue")
         }
 
         if !availableWorkspaces.isEmpty {
             print("\n\(TerminalUI.bold("Available Workspaces:"))")
-            for ws in availableWorkspaces {
-                printWorkspace(ws, marker: "○", color: "white")
+            for workspace in availableWorkspaces {
+                printWorkspace(workspace, marker: "○", color: "white")
             }
         }
 
@@ -118,7 +127,7 @@ struct WorkspaceSlashCommand: SlashCommand {
         print("")
     }
 
-    private func printWorkspace(_ ws: WorkspaceReference, marker: String, color: String) {
+    private func printWorkspace(_ workspace: WorkspaceReference, marker: String, color: String) {
         let markerStr: String
         switch color {
         case "green": markerStr = TerminalUI.green(marker)
@@ -126,13 +135,13 @@ struct WorkspaceSlashCommand: SlashCommand {
         default: markerStr = marker
         }
 
-        print("  \(markerStr) \(TerminalUI.bold(ws.uri.description))")
-        print("     ID: \(TerminalUI.dim(ws.id.uuidString))")
-        if let path = ws.rootPath {
+        print("  \(markerStr) \(TerminalUI.bold(workspace.uri.description))")
+        print("     ID: \(TerminalUI.dim(workspace.id.uuidString))")
+        if let path = workspace.rootPath {
             print("     Path: \(TerminalUI.dim(path))")
         }
-        if !ws.tools.isEmpty {
-            let toolNames = ws.tools.map { (ref: ToolReference) -> String in
+        if !workspace.tools.isEmpty {
+            let toolNames = workspace.tools.map { (ref: ToolReference) -> String in
                 switch ref {
                 case let .known(id): return id
                 case let .custom(def): return def.name
@@ -161,8 +170,8 @@ struct WorkspaceSlashCommand: SlashCommand {
         }
 
         print("\nAvailable Workspaces:")
-        for (idx, ws) in workspaces.enumerated() {
-            print("  \(idx + 1). \(ws.uri.description) (\(ws.id.uuidString.prefix(8)))")
+        for (idx, workspace) in workspaces.enumerated() {
+            print("  \(idx + 1). \(workspace.uri.description) (\(workspace.id.uuidString.prefix(8)))")
         }
         print("\nSelect workspace to attach (1-\(workspaces.count)): ", terminator: "")
 

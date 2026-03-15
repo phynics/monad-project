@@ -5,7 +5,9 @@ import MonadShared
 public struct TimelineListTool: MonadShared.Tool, Sendable {
     public let id = "timeline_list"
     public let name = "Timeline List"
-    public let description = "List all non-private conversation timelines. Use this to discover timelines you can peek at or send messages to."
+    public let description =
+        "List all non-private conversation timelines. " +
+        "Use this to discover timelines you can peek at or send messages to."
     public let requiresPermission = false
 
     private let timelineStore: any TimelinePersistenceProtocol
@@ -26,12 +28,12 @@ public struct TimelineListTool: MonadShared.Tool, Sendable {
         let timelines = try await timelineStore.fetchAllTimelines(includeArchived: false)
         let visible = timelines.filter { !$0.isPrivate }
 
-        let entries = visible.map { t -> [String: String] in
+        let entries = visible.map { timeline -> [String: String] in
             var entry: [String: String] = [
-                "id": t.id.uuidString,
-                "title": t.title
+                "id": timeline.id.uuidString,
+                "title": timeline.title
             ]
-            if let agentId = t.attachedAgentInstanceId {
+            if let agentId = timeline.attachedAgentInstanceId {
                 entry["attachedAgentId"] = agentId.uuidString
             }
             return entry

@@ -93,7 +93,8 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     }
 
     public func sendMessage(_ content: String, responseFormat _: ChatQuery.ResponseFormat?) async throws
-        -> String {
+        -> String
+    {
         if shouldThrowError {
             throw NSError(
                 domain: "MockError", code: 1,
@@ -166,25 +167,9 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         return nextResponse
     }
 
-    public func chatStreamWithContext(
-        userQuery _: String,
-        contextNotes _: [ContextFile],
-        memories _: [Memory],
-        chatHistory _: [Message],
-        tools _: [AnyTool],
-        workspaces _: [WorkspaceReference],
-        primaryWorkspace _: WorkspaceReference?,
-        clientName _: String?,
-        systemInstructions _: String?,
-        responseFormat: ChatQuery.ResponseFormat?,
-        useFastModel _: Bool
-    ) async -> (
-        stream: AsyncThrowingStream<ChatStreamResult, Error>,
-        rawPrompt: String,
-        structuredContext: [String: String]
-    ) {
-        let stream = await chatStream(messages: [], tools: nil, responseFormat: responseFormat)
-        return (stream, "mock prompt", [:])
+    public func chatStreamWithContext(_ request: LLMChatRequest) async -> LLMStreamResult {
+        let stream = await chatStream(messages: [], tools: nil, responseFormat: request.responseFormat)
+        return LLMStreamResult(stream: stream, rawPrompt: "mock prompt", structuredContext: [:])
     }
 
     public func chatStream(
@@ -200,34 +185,12 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         )
     }
 
-    public func buildPrompt(
-        userQuery _: String,
-        contextNotes _: [ContextFile],
-        memories _: [Memory],
-        chatHistory _: [Message],
-        tools _: [AnyTool],
-        workspaces _: [WorkspaceReference],
-        primaryWorkspace _: WorkspaceReference?,
-        clientName _: String?,
-        systemInstructions _: String?
-    ) async -> (
-        messages: [ChatQuery.ChatCompletionMessageParam],
-        rawPrompt: String,
-        structuredContext: [String: String]
-    ) {
-        return ([], "mock prompt", [:])
+    public func buildPrompt(_: LLMPromptRequest) async -> LLMPromptResult {
+        return LLMPromptResult(messages: [], rawPrompt: "mock prompt", structuredContext: [:])
     }
 
     public func buildContext(
-        userQuery _: String,
-        contextNotes _: [ContextFile],
-        memories _: [Memory],
-        chatHistory _: [Message],
-        tools _: [AnyTool],
-        workspaces _: [WorkspaceReference],
-        primaryWorkspace _: WorkspaceReference?,
-        clientName _: String?,
-        systemInstructions _: String?,
+        _: LLMPromptRequest,
         agentInstance _: AgentInstance?,
         timeline _: Timeline?,
         extensionSections _: [any ContextSection]
@@ -244,7 +207,8 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
     }
 
     public func evaluateRecallPerformance(transcript _: String, recalledMemories _: [Memory]) async throws
-        -> [String: Double] {
+        -> [String: Double]
+    {
         return [:]
     }
 

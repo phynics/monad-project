@@ -8,7 +8,8 @@ struct ConfigCommand: SlashCommand {
     let usage = "/config [show|set|provider|edit]"
 
     func run(args: [String], context: ChatContext) async throws {
-        let subcommand = args.first ?? "edit"  // Default to interactive edit if no args, or help? Legacy said "No subcommand: open interactive editor"
+        // Default to interactive edit if no args
+        let subcommand = args.first ?? "edit"
 
         switch subcommand {
         case "show", "view":
@@ -16,7 +17,8 @@ struct ConfigCommand: SlashCommand {
         case "set":
             if args.count >= 3 {
                 await setConfig(
-                    key: args[1], value: args.dropFirst(2).joined(separator: " "), context: context)
+                    key: args[1], value: args.dropFirst(2).joined(separator: " "), context: context
+                )
             } else if args.count == 2 {
                 await setConfigWithPrompt(key: args[1], context: context)
             } else {
@@ -27,7 +29,8 @@ struct ConfigCommand: SlashCommand {
                 await setProvider(args[1], context: context)
             } else {
                 TerminalUI.printError(
-                    "Usage: /config provider <openai|openrouter|ollama|compatible>")
+                    "Usage: /config provider <openai|openrouter|ollama|compatible>"
+                )
             }
         case "edit":
             await interactiveConfigEdit(context: context)
@@ -70,7 +73,8 @@ struct ConfigCommand: SlashCommand {
               /config provider openrouter
               /config set format json
 
-            """)
+            """
+        )
     }
 
     private func showConfig(context: ChatContext) async {
@@ -107,52 +111,78 @@ struct ConfigCommand: SlashCommand {
         return "\(prefix)...\(suffix)"
     }
 
+    // MARK: - Config Key Mapping
+
+    private static let configKeyMapping: [String: String] = [
+        "api-key": "apiKey", "apikey": "apiKey", "key": "apiKey",
+        "model": "model",
+        "utility-model": "utility", "utility": "utility",
+        "fast-model": "fast", "fast": "fast",
+        "endpoint": "endpoint", "url": "endpoint",
+        "memory-limit": "memory", "memory": "memory",
+        "document-limit": "document", "document": "document",
+        "tool-format": "format", "format": "format"
+    ]
+
+    private func applyConfigValue(
+        key: String,
+        value: String,
+        config: inout LLMConfiguration
+    ) -> Bool {
+        let normalizedKey = Self.configKeyMapping[key.lowercased()] ?? key.lowercased()
+
+        switch normalizedKey {
+        case "apiKey":
+            config.apiKey = value
+        case "model":
+            config.modelName = value
+        case "utility":
+            config.utilityModel = value
+        case "fast":
+            config.fastModel = value
+        case "endpoint":
+            config.endpoint = value
+        case "memory", "document":
+            return applyIntegerLimit(normalizedKey, value: value, config: &config)
+        case "format":
+            guard let format = parseToolFormat(value) else { return false }
+            config.toolFormat = format
+        default:
+            TerminalUI.printError("Unknown config key: \(key)")
+            return false
+        }
+        return true
+    }
+
+    private func applyIntegerLimit(_ key: String, value: String, config: inout LLMConfiguration) -> Bool {
+        guard let limit = Int(value) else {
+            TerminalUI.printError("Invalid number: \(value)")
+            return false
+        }
+        if key == "memory" {
+            config.memoryContextLimit = limit
+        } else {
+            config.documentContextLimit = limit
+        }
+        return true
+    }
+
+    private func parseToolFormat(_ value: String) -> ToolCallFormat? {
+        switch value.lowercased() {
+        case "openai", "native": return .openAI
+        case "json": return .json
+        case "xml": return .xml
+        default:
+            TerminalUI.printError("Unknown tool format: \(value)")
+            print("  Available: openai, native, json, xml")
+            return nil
+        }
+    }
+
     private func setConfig(key: String, value: String, context: ChatContext) async {
         do {
             var config = try await context.client.getConfiguration()
-
-            switch key.lowercased() {
-            case "api-key", "apikey", "key":
-                config.apiKey = value
-            case "model":
-                config.modelName = value
-            case "utility-model", "utility":
-                config.utilityModel = value
-            case "fast-model", "fast":
-                config.fastModel = value
-            case "endpoint", "url":
-                config.endpoint = value
-            case "memory-limit", "memory":
-                if let limit = Int(value) {
-                    config.memoryContextLimit = limit
-                } else {
-                    TerminalUI.printError("Invalid number: \(value)")
-                    return
-                }
-            case "document-limit", "document":
-                if let limit = Int(value) {
-                    config.documentContextLimit = limit
-                } else {
-                    TerminalUI.printError("Invalid number: \(value)")
-                    return
-                }
-            case "tool-format", "format":
-                let format: ToolCallFormat
-                switch value.lowercased() {
-                case "openai", "native": format = .openAI
-                case "json": format = .json
-                case "xml": format = .xml
-                default:
-                    TerminalUI.printError("Unknown tool format: \(value)")
-                    print("  Available: openai, native, json, xml")
-                    return
-                }
-                config.toolFormat = format
-            default:
-                TerminalUI.printError("Unknown config key: \(key)")
-                return
-            }
-
+            guard applyConfigValue(key: key, value: value, config: &config) else { return }
             try await context.client.updateConfiguration(config)
             TerminalUI.printSuccess("Updated \(key) = \(key.contains("key") ? "***" : value)")
         } catch {
@@ -191,8 +221,12 @@ struct ConfigCommand: SlashCommand {
             TerminalUI.printError("Failed to switch provider: \(error.localizedDescription)")
         }
     }
+}
 
-    private func interactiveConfigEdit(context: ChatContext) async {
+// MARK: - Interactive Config Editor
+
+private extension ConfigCommand {
+    func interactiveConfigEdit(context: ChatContext) async {
         do {
             var config = try await context.client.getConfiguration()
             guard var providerConfig = config.providers[config.activeProvider] else {
@@ -204,71 +238,7 @@ struct ConfigCommand: SlashCommand {
             print(TerminalUI.dim("Press Enter to keep current value, or type new value"))
             print("")
 
-            // Endpoint
-            print("Endpoint [\(providerConfig.endpoint)]: ", terminator: "")
-            if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
-                providerConfig.endpoint = input
-            }
-
-            // API Key
-            print("API Key [\(maskApiKey(providerConfig.apiKey))]: ", terminator: "")
-            if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
-                providerConfig.apiKey = input
-            }
-
-            // Model
-            print("Model [\(providerConfig.modelName)]: ", terminator: "")
-            if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
-                providerConfig.modelName = input
-            }
-
-            // Utility Model
-            let utilityDisplay =
-                providerConfig.utilityModel == providerConfig.modelName
-                ? "(same as model)" : providerConfig.utilityModel
-            print("Utility Model [\(utilityDisplay)]: ", terminator: "")
-            if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
-                providerConfig.utilityModel = input
-            }
-
-            // Fast Model
-            let fastDisplay =
-                providerConfig.fastModel == providerConfig.modelName
-                ? "(same as model)" : providerConfig.fastModel
-            print("Fast Model [\(fastDisplay)]: ", terminator: "")
-            if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
-                providerConfig.fastModel = input
-            }
-
-            // Memory Limit
-            print("Memory Limit [\(config.memoryContextLimit)]: ", terminator: "")
-            if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
-                if let limit = Int(input) {
-                    config.memoryContextLimit = limit
-                }
-            }
-
-            // Document Limit
-            print("Document Limit [\(config.documentContextLimit)]: ", terminator: "")
-            if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
-                if let limit = Int(input) {
-                    config.documentContextLimit = limit
-                }
-            }
-
-            // Tool Format
-            print("\nSelect Tool Calling Format:")
-            let toolFormats = ToolCallFormat.allCases
-            for (index, format) in toolFormats.enumerated() {
-                let isDefault = format == providerConfig.toolFormat ? " (current)" : ""
-                print("\(index + 1). \(format.rawValue)\(isDefault)")
-            }
-            print("Selection [1-\(toolFormats.count), Enter to skip]: ", terminator: "")
-            if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
-                if let idx = Int(input), idx >= 1 && idx <= toolFormats.count {
-                    providerConfig.toolFormat = toolFormats[idx - 1]
-                }
-            }
+            promptAndUpdateFields(config: &config, providerConfig: &providerConfig)
 
             // Save
             config.providers[config.activeProvider] = providerConfig
@@ -278,6 +248,81 @@ struct ConfigCommand: SlashCommand {
 
         } catch {
             TerminalUI.printError("Failed to update config: \(error.localizedDescription)")
+        }
+    }
+
+    func promptAndUpdateFields(
+        config: inout LLMConfiguration,
+        providerConfig: inout ProviderConfiguration
+    ) {
+        // Endpoint
+        print("Endpoint [\(providerConfig.endpoint)]: ", terminator: "")
+        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+            providerConfig.endpoint = input
+        }
+
+        // API Key
+        print("API Key [\(maskApiKey(providerConfig.apiKey))]: ", terminator: "")
+        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+            providerConfig.apiKey = input
+        }
+
+        // Model
+        print("Model [\(providerConfig.modelName)]: ", terminator: "")
+        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+            providerConfig.modelName = input
+        }
+
+        // Utility Model
+        let utilityDisplay =
+            providerConfig.utilityModel == providerConfig.modelName
+                ? "(same as model)" : providerConfig.utilityModel
+        print("Utility Model [\(utilityDisplay)]: ", terminator: "")
+        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+            providerConfig.utilityModel = input
+        }
+
+        // Fast Model
+        let fastDisplay =
+            providerConfig.fastModel == providerConfig.modelName
+                ? "(same as model)" : providerConfig.fastModel
+        print("Fast Model [\(fastDisplay)]: ", terminator: "")
+        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+            providerConfig.fastModel = input
+        }
+
+        // Memory Limit
+        print("Memory Limit [\(config.memoryContextLimit)]: ", terminator: "")
+        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+            if let limit = Int(input) {
+                config.memoryContextLimit = limit
+            }
+        }
+
+        // Document Limit
+        print("Document Limit [\(config.documentContextLimit)]: ", terminator: "")
+        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+            if let limit = Int(input) {
+                config.documentContextLimit = limit
+            }
+        }
+
+        // Tool Format
+        promptToolFormat(providerConfig: &providerConfig)
+    }
+
+    func promptToolFormat(providerConfig: inout ProviderConfiguration) {
+        print("\nSelect Tool Calling Format:")
+        let toolFormats = ToolCallFormat.allCases
+        for (index, format) in toolFormats.enumerated() {
+            let isDefault = format == providerConfig.toolFormat ? " (current)" : ""
+            print("\(index + 1). \(format.rawValue)\(isDefault)")
+        }
+        print("Selection [1-\(toolFormats.count), Enter to skip]: ", terminator: "")
+        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+            if let idx = Int(input), idx >= 1, idx <= toolFormats.count {
+                providerConfig.toolFormat = toolFormats[idx - 1]
+            }
         }
     }
 }

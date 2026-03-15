@@ -107,7 +107,7 @@ public enum AnyCodable: Codable, Sendable, Equatable, Hashable, CustomStringConv
 public func toJsonString(_ dict: [String: AnyCodable]) throws -> String {
     let anyDict = dict.mapValues { $0.value }
     let data = try JSONSerialization.data(withJSONObject: anyDict, options: [.sortedKeys])
-    return String(decoding: data, as: UTF8.self)
+    return String(bytes: data, encoding: .utf8) ?? "{}"
 }
 
 public extension Dictionary where Key == String, Value == AnyCodable {

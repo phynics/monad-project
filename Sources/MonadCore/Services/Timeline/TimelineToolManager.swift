@@ -1,6 +1,6 @@
 import Foundation
-import MonadShared
 import Logging
+import MonadShared
 
 /// Session-specific tool settings
 public actor TimelineToolManager {
@@ -25,17 +25,17 @@ public actor TimelineToolManager {
         self.availableTools = availableTools
         self.timelineContext = timelineContext
         // Enable all tools by default
-        self.enabledTools = Set(availableTools.map { $0.id })
+        enabledTools = Set(availableTools.map { $0.id })
     }
 
     /// Update available tools
     public func updateAvailableTools(_ tools: [AnyTool]) {
-        self.availableTools = tools
+        availableTools = tools
         // Keep enabledTools set in sync with available tools (don't remove enabled status if tool still exists)
         let newIds = Set(tools.map { $0.id })
-        self.enabledTools = self.enabledTools.intersection(newIds)
+        enabledTools = enabledTools.intersection(newIds)
         // Auto-enable new tools? Let's say yes for now to avoid breaking changes.
-        for id in newIds where !self.enabledTools.contains(id) {
+        for id in newIds where !enabledTools.contains(id) {
             self.enabledTools.insert(id)
         }
     }
@@ -63,15 +63,17 @@ public actor TimelineToolManager {
                 let refs = try await workspace.listTools()
                 for ref in refs {
                     switch ref {
-                    case .known(let toolId):
+                    case let .known(toolId):
                         // Tag the system tool with this workspace's provenance
                         if availableTools.contains(where: { $0.id == toolId }) {
                             newKnownProvenance[toolId] = provenanceTag
                         } else {
                             let logger = Logger(label: "com.monad.session-tool-manager")
-                            logger.warning("Workspace declared .known tool '\(toolId)' but it is not a registered system tool")
+                            logger.warning(
+                                "Workspace declared .known tool '\(toolId)' but it is not a registered system tool"
+                            )
                         }
-                    case .custom(let def):
+                    case let .custom(def):
                         let wrapper = WorkspaceToolWrapper(workspace: workspace, definition: def)
                         newTools[wrapper.id] = (tool: wrapper, provenance: provenanceTag)
                     }
@@ -82,8 +84,8 @@ public actor TimelineToolManager {
             }
         }
 
-        self.workspaceTools = newTools
-        self.knownToolProvenance = newKnownProvenance
+        workspaceTools = newTools
+        knownToolProvenance = newKnownProvenance
     }
 
     /// Get tools that are currently enabled, including context tools if a context is active

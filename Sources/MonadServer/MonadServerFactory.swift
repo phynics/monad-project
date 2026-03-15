@@ -1,5 +1,6 @@
 import Dependencies
 import Foundation
+import GRDB
 import Hummingbird
 import HummingbirdWebSocket
 import Logging
@@ -17,13 +18,85 @@ public struct MonadServerFactory {
         public let dependencies: DependencyValues
     }
 
+    /// Aggregates all initialized stores, services, and managers needed for server startup
+    private struct ServerComponents {
+        let databaseManager: DatabaseManager
+        let repositories: RepositorySet
+        let services: ServiceSet
+        let managers: ManagerSet
+        let orphanCleanup: OrphanCleanupService
+    }
+
+    private struct RepositorySet {
+        let agentInstanceStore: AgentInstanceDataRepository
+        let clientStore: ClientIdentityRepository
+        let agentTemplateStore: AgentTemplateRepository
+        let memoryStore: MemoryRepository
+        let messageStore: MessageRepository
+        let timelinePersistence: TimelineRepository
+        let toolPersistence: ToolDataRepository
+        let workspacePersistence: WorkspaceDataRepository
+    }
+
+    private struct ServiceSet {
+        let llmService: LLMService
+        let embeddingService: any EmbeddingServiceProtocol
+        let vectorStore: any VectorStoreProtocol
+        let keyValueStore: DatabaseKeyValueStore
+        let connectionManager: WebSocketConnectionManager
+    }
+
+    private struct ManagerSet {
+        let timelineManager: TimelineManager
+        let toolRouter: ToolRouter
+        let chatEngine: ChatEngine
+        let agentInstanceManager: AgentInstanceManager
+        let workspaceManager: WorkspaceManager
+    }
+
     public static func createServerContext(
         hostname: String = "127.0.0.1",
         port: Int = 8080,
         verbose: Bool = false,
         logger: Logger = Logger.module(named: "server")
     ) async throws -> ServerContext {
-        // Initialize Database Manager and Repositories
+        let components = try await initializeComponents(logger: logger)
+
+        let router = Router(context: AppRequestContext.self)
+        router.add(middleware: LogMiddleware())
+        router.add(middleware: ErrorMiddleware())
+
+        return try await withDependencies {
+            configureDependencies(&$0, from: components)
+        } operation: {
+            registerPublicRoutes(on: router)
+            let protected = registerProtectedGroup(on: router)
+            registerChatAndTimelineRoutes(
+                on: protected,
+                connectionManager: components.services.connectionManager,
+                verbose: verbose
+            )
+            registerResourceRoutes(
+                on: protected,
+                agentInstanceManager: components.managers.agentInstanceManager,
+                llmService: components.services.llmService
+            )
+
+            let serviceGroup = buildServiceGroup(
+                router: router, hostname: hostname, port: port,
+                orphanCleanup: components.orphanCleanup, logger: logger
+            )
+
+            return ServerContext(
+                serviceGroup: serviceGroup,
+                dependencies: DependencyValues._current
+            )
+        }
+    }
+
+    // MARK: - Component Initialization
+
+    private static func initializeComponents(logger: Logger) async throws -> ServerComponents {
         let databaseManager: DatabaseManager
         do {
             databaseManager = try DatabaseManager.create()
@@ -33,26 +106,49 @@ public struct MonadServerFactory {
             throw error
         }
 
-        let dbQueue = databaseManager.dbQueue
-        let agentInstanceStore = AgentInstanceDataRepository(dbQueue: dbQueue)
-        let clientStore = ClientIdentityRepository(dbQueue: dbQueue)
-        let agentTemplateStore = AgentTemplateRepository(dbQueue: dbQueue)
-        let memoryStore = MemoryRepository(dbQueue: dbQueue)
-        let messageStore = MessageRepository(dbQueue: dbQueue)
-        let timelinePersistence = TimelineRepository(dbQueue: dbQueue)
-        let toolPersistence = ToolDataRepository(dbQueue: dbQueue)
-        let workspacePersistence = WorkspaceDataRepository(dbQueue: dbQueue)
-        let keyValueStore = DatabaseKeyValueStore(dbQueue: dbQueue)
+        let repositories = initializeRepositories(dbQueue: databaseManager.dbQueue)
+        let services = try await initializeServices(
+            dbQueue: databaseManager.dbQueue, logger: logger
+        )
+        let workspaceRoot = try defaultWorkspacePath()
 
-        let router = Router(context: AppRequestContext.self)
+        let managers = initializeManagers(
+            workspaceRoot: workspaceRoot,
+            connectionManager: services.connectionManager
+        )
 
-        // Add Global Middleware
-        router.add(middleware: LogMiddleware())
-        router.add(middleware: ErrorMiddleware())
+        let orphanCleanup = OrphanCleanupService(workspaceRoot: workspaceRoot)
 
-        // Initialize Embedding Service
+        return ServerComponents(
+            databaseManager: databaseManager,
+            repositories: repositories,
+            services: services,
+            managers: managers,
+            orphanCleanup: orphanCleanup
+        )
+    }
+
+    private static func initializeRepositories(dbQueue: DatabaseQueue) -> RepositorySet {
+        RepositorySet(
+            agentInstanceStore: AgentInstanceDataRepository(dbQueue: dbQueue),
+            clientStore: ClientIdentityRepository(dbQueue: dbQueue),
+            agentTemplateStore: AgentTemplateRepository(dbQueue: dbQueue),
+            memoryStore: MemoryRepository(dbQueue: dbQueue),
+            messageStore: MessageRepository(dbQueue: dbQueue),
+            timelinePersistence: TimelineRepository(dbQueue: dbQueue),
+            toolPersistence: ToolDataRepository(dbQueue: dbQueue),
+            workspacePersistence: WorkspaceDataRepository(dbQueue: dbQueue)
+        )
+    }
+
+    private static func initializeServices(
+        dbQueue: DatabaseQueue,
+        logger: Logger
+    ) async throws -> ServiceSet {
         let embeddingService: any EmbeddingServiceProtocol
-        if let apiKey = ProcessInfo.processInfo.environment["MONAD_OPENAI_API_KEY"] ?? ProcessInfo.processInfo.environment["OPENAI_API_KEY"], !apiKey.isEmpty {
+        let envVars = ProcessInfo.processInfo.environment
+        if let apiKey = envVars["MONAD_OPENAI_API_KEY"] ?? envVars["OPENAI_API_KEY"],
+           !apiKey.isEmpty {
             embeddingService = OpenAIEmbeddingService(apiKey: apiKey)
             logger.info("Using OpenAI Embedding Service")
         } else {
@@ -60,7 +156,6 @@ public struct MonadServerFactory {
             logger.info("Using Local Embedding Service (OpenAI API Key not found)")
         }
 
-        // Initialize Vector Store
         var vectorStore: any VectorStoreProtocol
         do {
             vectorStore = try VectorStore()
@@ -71,7 +166,6 @@ public struct MonadServerFactory {
             vectorStore = MockVectorStore()
         }
 
-        // Initialize LLM Service
         let appSupportDir = try defaultWorkspacePath().deletingLastPathComponent()
         let configURL = appSupportDir.appendingPathComponent("config.json")
         let storage = ConfigurationStorage(configURL: configURL)
@@ -79,150 +173,67 @@ public struct MonadServerFactory {
         let llmService = LLMService(storage: storage)
         await llmService.loadConfiguration()
 
-        let workspaceRoot = try defaultWorkspacePath()
+        return ServiceSet(
+            llmService: llmService,
+            embeddingService: embeddingService,
+            vectorStore: vectorStore,
+            keyValueStore: DatabaseKeyValueStore(dbQueue: dbQueue),
+            connectionManager: WebSocketConnectionManager()
+        )
+    }
 
-        // Initialize WebSocket Manager
-        let connectionManager = WebSocketConnectionManager()
-
-        // Initialize Agent Workspace Service
+    private static func initializeManagers(
+        workspaceRoot: URL,
+        connectionManager: WebSocketConnectionManager
+    ) -> ManagerSet {
         let agentWorkspaceService = AgentWorkspaceService(workspaceRoot: workspaceRoot)
 
-        // Initialize Core Services
-        let timelineManager = TimelineManager(
-            workspaceRoot: workspaceRoot,
-            connectionManager: connectionManager,
-            workspaceCreator: WorkspaceFactory()
+        return ManagerSet(
+            timelineManager: TimelineManager(
+                workspaceRoot: workspaceRoot,
+                connectionManager: connectionManager,
+                workspaceCreator: WorkspaceFactory()
+            ),
+            toolRouter: ToolRouter(),
+            chatEngine: ChatEngine(),
+            agentInstanceManager: AgentInstanceManager(repository: agentWorkspaceService),
+            workspaceManager: WorkspaceManager(
+                repository: agentWorkspaceService,
+                connectionManager: connectionManager,
+                workspaceCreator: WorkspaceFactory()
+            )
         )
+    }
 
-        let agentInstanceManager = AgentInstanceManager(repository: agentWorkspaceService)
-        let toolRouter = ToolRouter()
-        let chatEngine = ChatEngine()
+    // MARK: - Dependency Configuration
 
-        let orphanCleanup = OrphanCleanupService(
-            workspaceRoot: workspaceRoot
-        )
+    private static func configureDependencies(
+        _ deps: inout DependencyValues,
+        from components: ServerComponents
+    ) {
+        let repos = components.repositories
+        deps.databaseManager = components.databaseManager
+        deps.agentInstanceStore = repos.agentInstanceStore
+        deps.clientStore = repos.clientStore
+        deps.agentTemplateStore = repos.agentTemplateStore
+        deps.memoryStore = repos.memoryStore
+        deps.messageStore = repos.messageStore
+        deps.timelinePersistence = repos.timelinePersistence
+        deps.toolPersistence = repos.toolPersistence
+        deps.workspacePersistence = repos.workspacePersistence
 
-        let workspaceManager = WorkspaceManager(
-            repository: agentWorkspaceService,
-            connectionManager: connectionManager,
-            workspaceCreator: WorkspaceFactory()
-        )
+        let svcs = components.services
+        deps.llmService = svcs.llmService
+        deps.embeddingService = svcs.embeddingService
+        deps.vectorStore = svcs.vectorStore
+        deps.keyValueStore = svcs.keyValueStore
 
-        return try await withDependencies {
-            $0.databaseManager = databaseManager
-            $0.agentInstanceStore = agentInstanceStore
-            $0.clientStore = clientStore
-            $0.agentTemplateStore = agentTemplateStore
-            $0.memoryStore = memoryStore
-            $0.messageStore = messageStore
-            $0.timelinePersistence = timelinePersistence
-            $0.toolPersistence = toolPersistence
-            $0.workspacePersistence = workspacePersistence
-
-            $0.llmService = llmService
-            $0.embeddingService = embeddingService
-            $0.vectorStore = vectorStore
-            $0.keyValueStore = keyValueStore
-            $0.timelineManager = timelineManager
-            $0.toolRouter = toolRouter
-            $0.chatEngine = chatEngine
-            $0.agentInstanceManager = agentInstanceManager
-            $0.workspaceManager = workspaceManager
-        } operation: {
-            // Public routes
-            router.get("/health") { _, _ -> String in
-                return "OK"
-            }
-
-            let startTime = Date()
-            let statusController = StatusAPIController<AppRequestContext>(
-                startTime: startTime
-            )
-            statusController.addRoutes(to: router)
-
-            router.get("/") { _, _ -> String in
-                return "Monad Server is running."
-            }
-
-            // API Key from environment or default
-            let apiKey = ProcessInfo.processInfo.environment["MONAD_API_KEY"] ?? "monad-secret"
-
-            // Protected routes
-            let protected = router.group("/api")
-                .add(middleware: AuthMiddleware(token: apiKey))
-
-            // WebSocket Route (Protected)
-            let wsController = WebSocketAPIController<AppRequestContext>(connectionManager: connectionManager)
-            wsController.addRoutes(to: protected)
-
-            protected.get("/test") { _, _ -> String in
-                return "Authenticated!"
-            }
-
-            let timelineController = TimelineAPIController<AppRequestContext>()
-            timelineController.addRoutes(to: protected.group("/sessions"))
-
-            let chatController = ChatAPIController<AppRequestContext>(verbose: verbose)
-            chatController.addRoutes(to: protected.group("/sessions"))
-
-            let memoryController = MemoryAPIController<AppRequestContext>()
-            memoryController.addRoutes(to: protected.group("/memories"))
-
-            let pruneController = PruneAPIController<AppRequestContext>()
-            pruneController.addRoutes(to: protected.group("/prune"))
-
-            let toolController = ToolAPIController<AppRequestContext>()
-            toolController.addRoutes(to: protected.group("/tools"))
-
-            let agentTemplateController = AgentTemplateAPIController<AppRequestContext>()
-            agentTemplateController.addRoutes(to: protected.group("/agentTemplates"))
-
-            let agentInstanceController = AgentInstanceAPIController<AppRequestContext>(
-                agentInstanceManager: agentInstanceManager
-            )
-            agentInstanceController.addRoutes(to: protected.group("/agents"))
-
-            let workspacesGroup = protected.group("/workspaces")
-
-            let workspaceAPIController = WorkspaceAPIController<AppRequestContext>()
-            workspaceAPIController.addRoutes(to: workspacesGroup)
-
-            let filesController = FilesAPIController<AppRequestContext>()
-            filesController.addRoutes(to: protected.group("/workspaces/:workspaceId/files"))
-
-            let clientController = ClientAPIController<AppRequestContext>()
-            clientController.addRoutes(to: protected.group("/clients"))
-
-            let configController = ConfigurationAPIController<AppRequestContext>(llmService: llmService)
-            configController.addRoutes(to: protected.group("/config"))
-
-            let app = Application(
-                router: router,
-                server: .http1WebSocketUpgrade(webSocketRouter: router, configuration: .init()),
-                configuration: .init(address: .hostname(hostname, port: port))
-            )
-
-            logger.info("Server starting on \(hostname):\(port)")
-
-            let bonjourAdvertiser = BonjourAdvertiser(port: port)
-
-            let serviceGroup = ServiceGroup(
-                configuration: ServiceGroupConfiguration(
-                    services: [
-                        .init(service: app),
-                        .init(service: orphanCleanup),
-                        .init(service: bonjourAdvertiser)
-                    ],
-                    gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
-                    logger: logger
-                )
-            )
-
-            return ServerContext(
-                serviceGroup: serviceGroup,
-                dependencies: DependencyValues._current
-            )
-        }
+        let mgrs = components.managers
+        deps.timelineManager = mgrs.timelineManager
+        deps.toolRouter = mgrs.toolRouter
+        deps.chatEngine = mgrs.chatEngine
+        deps.agentInstanceManager = mgrs.agentInstanceManager
+        deps.workspaceManager = mgrs.workspaceManager
     }
 
     /// Default workspace path

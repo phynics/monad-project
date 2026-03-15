@@ -21,60 +21,70 @@ actor PruneSlashCommand: SlashCommand {
 
         switch subcommand {
         case "memories":
-            if args.count > 1 {
-                // Support:
-                // /prune memories 30
-                // /prune memories olderThan 30
-                // /prune memories some query
-                if let days = Int(args[1]) {
-                    try await planPruneMemories(days: days, context: context)
-                } else if args[1].lowercased() == "olderthan", args.count > 2, let days = Int(args[2]) {
-                    try await planPruneMemories(days: days, context: context)
-                } else {
-                    let query = args.dropFirst().joined(separator: " ")
-                    try await planPruneMemories(query: query, context: context)
-                }
-            } else {
-                TerminalUI.printError("Usage: /prune memories <query|days|olderThan N>")
-            }
+            try await handleMemoriesSubcommand(args: args, context: context)
         case "memory":
-            if args.count > 1 {
-                if args[1].lowercased() == "olderthan" {
-                    if args.count > 2, let days = Int(args[2]) {
-                        try await planPruneMemories(days: days, context: context)
-                    } else {
-                        TerminalUI.printError("Usage: /prune memory olderThan <days>")
-                    }
-                } else {
-                    // ID match
-                    let idPrefix = args[1]
-                    try await planPruneSingleMemory(idPrefix: idPrefix, context: context)
-                }
-            } else {
-                TerminalUI.printError("Usage: /prune memory <id|olderThan>")
-            }
+            try await handleMemorySubcommand(args: args, context: context)
         case "timelines", "session":
-            if args.count > 1 {
-                let arg = args[1].lowercased()
-                let days: Int
-                if arg == "all" {
-                    days = 0
-                } else if let parsed = Int(arg) {
-                    days = parsed
-                } else {
-                    TerminalUI.printError("Usage: /prune timelines <older-than-days|all>")
-                    return
-                }
-                try await planPruneTimelines(days: days, context: context)
-            } else {
-                TerminalUI.printError("Usage: /prune timelines <older-than-days|all>")
-            }
+            try await handleTimelinesSubcommand(args: args, context: context)
         case "confirm":
             try await executePendingOperation(context: context)
         default:
             printUsage()
         }
     }
+
+    // MARK: - Subcommand Routing
+
+    private func handleMemoriesSubcommand(args: [String], context: ChatContext) async throws {
+        guard args.count > 1 else {
+            TerminalUI.printError("Usage: /prune memories <query|days|olderThan N>")
+            return
+        }
+        if let days = Int(args[1]) {
+            try await planPruneMemories(days: days, context: context)
+        } else if args[1].lowercased() == "olderthan", args.count > 2, let days = Int(args[2]) {
+            try await planPruneMemories(days: days, context: context)
+        } else {
+            let query = args.dropFirst().joined(separator: " ")
+            try await planPruneMemories(query: query, context: context)
+        }
+    }
+
+    private func handleMemorySubcommand(args: [String], context: ChatContext) async throws {
+        guard args.count > 1 else {
+            TerminalUI.printError("Usage: /prune memory <id|olderThan>")
+            return
+        }
+        if args[1].lowercased() == "olderthan" {
+            guard args.count > 2, let days = Int(args[2]) else {
+                TerminalUI.printError("Usage: /prune memory olderThan <days>")
+                return
+            }
+            try await planPruneMemories(days: days, context: context)
+        } else {
+            try await planPruneSingleMemory(idPrefix: args[1], context: context)
+        }
+    }
+
+    private func handleTimelinesSubcommand(args: [String], context: ChatContext) async throws {
+        guard args.count > 1 else {
+            TerminalUI.printError("Usage: /prune timelines <older-than-days|all>")
+            return
+        }
+        let arg = args[1].lowercased()
+        let days: Int
+        if arg == "all" {
+            days = 0
+        } else if let parsed = Int(arg) {
+            days = parsed
+        } else {
+            TerminalUI.printError("Usage: /prune timelines <older-than-days|all>")
+            return
+        }
+        try await planPruneTimelines(days: days, context: context)
+    }
+
+    // MARK: - Usage
 
     private func printUsage() {
         print(TerminalUI.bold("Prune Commands:"))
@@ -130,7 +140,8 @@ actor PruneSlashCommand: SlashCommand {
         // Exclude current timeline for count accuracy check
         let currentTimelineId = context.timeline.id
         let count = try await context.client.chat.pruneTimelines(
-            olderThanDays: days, excluding: [currentTimelineId], dryRun: true)
+            olderThanDays: days, excluding: [currentTimelineId], dryRun: true
+        )
 
         if count == 0 {
             TerminalUI.printInfo("No timelines found to prune.")
@@ -168,9 +179,9 @@ actor PruneSlashCommand: SlashCommand {
         if matches.count > 1 {
             TerminalUI.printWarning("Multiple memories match '\(idPrefix)':")
             for mem in matches.prefix(5) {
-                print(
-                    "  \(mem.id.uuidString.prefix(8)) - \(String(mem.content.prefix(50)).replacingOccurrences(of: "\n", with: " "))..."
-                )
+                let preview = String(mem.content.prefix(50))
+                    .replacingOccurrences(of: "\n", with: " ")
+                print("  \(mem.id.uuidString.prefix(8)) - \(preview)...")
             }
             TerminalUI.printInfo("Please provide a longer ID prefix.")
             pendingOperation = nil
@@ -201,24 +212,25 @@ actor PruneSlashCommand: SlashCommand {
         }
 
         switch operation {
-        case .memoriesQuery(let query):
+        case let .memoriesQuery(query):
             TerminalUI.printLoading("Deleting memories...")
             let count = try await context.client.chat.pruneMemories(query: query, dryRun: false)
             TerminalUI.printSuccess("Deleted \(count) memories.")
 
-        case .memoriesDays(let days):
+        case let .memoriesDays(days):
             TerminalUI.printLoading("Deleting memories...")
             let count = try await context.client.chat.pruneMemories(olderThanDays: days, dryRun: false)
             TerminalUI.printSuccess("Deleted \(count) memories.")
 
-        case .timelines(let days):
+        case let .timelines(days):
             TerminalUI.printLoading("Deleting timelines...")
             let currentTimelineId = context.timeline.id
             let count = try await context.client.chat.pruneTimelines(
-                olderThanDays: days, excluding: [currentTimelineId], dryRun: false)
+                olderThanDays: days, excluding: [currentTimelineId], dryRun: false
+            )
             TerminalUI.printSuccess("Deleted \(count) timelines.")
 
-        case .memory(let memory):
+        case let .memory(memory):
             TerminalUI.printLoading("Deleting memory...")
             try await context.client.chat.deleteMemory(memory.id)
             TerminalUI.printSuccess("Deleted memory \(memory.id.uuidString.prefix(8)).")

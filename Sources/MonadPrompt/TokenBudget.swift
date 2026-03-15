@@ -24,77 +24,70 @@ public struct TokenBudget: Sendable {
             return sections
         }
 
-        // We need to cut tokens.
-        // Allocation strategy:
-        // 1. Sort sections by priority (Highest first).
-        // 2. Allocate budget to high priority sections.
-        // 3. If a section doesn't fit:
-        //    - If .keep: Allocate anyway (blow budget? or consume remaining?)
-        //      -> We'll assume .keep MUST be kept. If it exceeds budget, we just go over.
-        //    - If .truncate: Give it remaining budget.
-        //    - If .drop: Drop it.
-        //    - If .summarize: Treat as drop for now (unless we have async summary size est, which we don't efficiently).
-
-        // Map original index to section for stability
         let indexedSections = sections.enumerated().map { (index: $0.offset, section: $0.element) }
         let sortedByPriority = indexedSections.sorted { $0.section.priority > $1.section.priority }
 
+        let decisions = allocateBudget(sortedByPriority: sortedByPriority, available: available)
+
+        return reconstructSections(indexedSections: indexedSections, decisions: decisions)
+    }
+
+    // MARK: - Budget Allocation
+
+    /// Allocate budget to sections sorted by priority, returning a decision per original index
+    private func allocateBudget(
+        sortedByPriority: [(index: Int, section: ContextSection)],
+        available: Int
+    ) -> [Int: SectionDecision] {
         var decisions: [Int: SectionDecision] = [:]
         var remainingBudget = available
-
-        // First pass: Allocate .keep sections regardless of budget (they are mandatory-ish)
-        // Wait, if we have 8000 tokens, and System (Keep, 1000) + User (Keep, 100) -> 1100.
-        // If we prioritize strict budget, we might need to error out if Keep exceeds budget?
-        // Let's assume .keep sections consume budget first.
-
-        // Revised Allocation:
-        // Iterate Priority High -> Low.
 
         for (index, section) in sortedByPriority {
             let size = section.estimatedTokens
 
             if size <= remainingBudget {
-                // It fits
                 decisions[index] = .keepOriginal
                 remainingBudget -= size
             } else {
-                // Doesn't fit completely
-                switch section.strategy {
-                case .keep:
-                    // Must keep. We go into debt if needed (or consume all remaining)
-                    // We'll consume all remaining and technically go over budget,
-                    // as we can't truncate .keep
-                    decisions[index] = .keepOriginal
-                    remainingBudget -= size
-
-                case .truncate:
-                    if remainingBudget > 0 {
-                        // Squeeze it in
-                        decisions[index] = .constrain(limit: remainingBudget)
-                        remainingBudget = 0
-                    } else {
-                        // No budget left
-                        decisions[index] = .drop
-                    }
-
-                case .summarize:
-                    // If we had a compressor and logic to "summarize to X", we'd use it.
-                    // For now, if full content doesn't fit, we drop.
-                    decisions[index] = .drop
-
-                case .drop:
-                    decisions[index] = .drop
-                }
+                decisions[index] = decideOverBudgetSection(section, remainingBudget: &remainingBudget)
             }
         }
 
-        // Second pass: Reconstruct in original order
+        return decisions
+    }
+
+    /// Decide what to do with a section that does not fully fit in the remaining budget
+    private func decideOverBudgetSection(
+        _ section: ContextSection,
+        remainingBudget: inout Int
+    ) -> SectionDecision {
+        switch section.strategy {
+        case .keep:
+            // Must keep — go into debt if needed
+            remainingBudget -= section.estimatedTokens
+            return .keepOriginal
+
+        case .truncate:
+            if remainingBudget > 0 {
+                let limit = remainingBudget
+                remainingBudget = 0
+                return .constrain(limit: limit)
+            }
+            return .drop
+
+        case .summarize, .drop:
+            return .drop
+        }
+    }
+
+    /// Reconstruct sections in original order based on allocation decisions
+    private func reconstructSections(
+        indexedSections: [(index: Int, section: ContextSection)],
+        decisions: [Int: SectionDecision]
+    ) -> [ContextSection] {
         var result: [ContextSection] = []
         for (index, section) in indexedSections {
-            guard let decision = decisions[index] else {
-                // Should not happen, but default to drop if missing
-                continue
-            }
+            guard let decision = decisions[index] else { continue }
 
             switch decision {
             case .keepOriginal:
@@ -102,10 +95,9 @@ public struct TokenBudget: Sendable {
             case let .constrain(limit):
                 result.append(section.constrained(to: limit))
             case .drop:
-                break // Skip
+                break
             }
         }
-
         return result
     }
 

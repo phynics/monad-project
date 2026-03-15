@@ -18,7 +18,7 @@ public protocol ToolDefinition {
 }
 
 /// Helper for converting tool definitions to OpenAI format
-public struct ToolConverter {
+public enum ToolConverter {
     public static func convert(_ tool: ToolDefinition.Type) -> ChatQuery.ChatCompletionToolParam {
         let function = ChatQuery.ChatCompletionToolParam.FunctionDefinition(
             name: tool.name,
@@ -53,12 +53,12 @@ public struct GetCurrentTimeTool: ToolDefinition {
         let params = ToolParameters(arguments)
         let timezone = try params.require("timezone", as: String.self)
 
-        guard let tz = TimeZone(identifier: timezone) else {
+        guard let timeZone = TimeZone(identifier: timezone) else {
             throw ToolError.invalidArgument("timezone", expected: "valid timezone identifier", got: timezone)
         }
 
         let formatter = DateFormatter()
-        formatter.timeZone = tz
+        formatter.timeZone = timeZone
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
 
         return formatter.string(from: Date())

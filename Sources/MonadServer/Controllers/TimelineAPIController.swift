@@ -210,7 +210,7 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         let idString = try context.parameters.require("id")
         let wsIdString = try context.parameters.require("wsId")
 
-        guard let _ = UUID(uuidString: idString), let wsId = UUID(uuidString: wsIdString) else {
+        guard UUID(uuidString: idString) != nil, let wsId = UUID(uuidString: wsIdString) else {
             throw HTTPError(.badRequest)
         }
 

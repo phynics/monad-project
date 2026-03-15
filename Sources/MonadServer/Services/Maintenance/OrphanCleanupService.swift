@@ -56,23 +56,24 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
             }
 
             var deletedCount = 0
-            for ws in workspaces {
-                if !referencedIds.contains(ws.id) {
-                    // Check if it's safe to delete (is it in the Monad Workspaces dir?)
-                    if let rootPath = ws.rootPath,
-                       rootPath.hasPrefix(workspaceRoot.path) || rootPath.contains("/.monad/workspaces/") || rootPath.contains("/Monad/Workspaces/") {
-                        // Delete DB Record
-                        try await workspaceStore.deleteWorkspace(id: ws.id)
+            for workspace in workspaces where !referencedIds.contains(workspace.id) {
+                // Check if it's safe to delete (is it in the Monad Workspaces dir?)
+                if let rootPath = workspace.rootPath,
+                   rootPath.hasPrefix(workspaceRoot.path)
+                   || rootPath.contains("/.monad/workspaces/")
+                   || rootPath.contains("/Monad/Workspaces/") {
+                    // Delete DB Record
+                    try await workspaceStore.deleteWorkspace(id: workspace.id)
 
-                        // Delete Filesystem
-                        if FileManager.default.fileExists(atPath: rootPath) {
-                            try? FileManager.default.removeItem(atPath: rootPath)
-                        }
-                        deletedCount += 1
-                        logger.info("Deleted orphaned workspace: \(ws.id) at \(rootPath)")
-                    } else {
-                        logger.warning("Skipping cleanup of user-managed workspace: \(ws.id) at \(ws.rootPath ?? "nil")")
+                    // Delete Filesystem
+                    if FileManager.default.fileExists(atPath: rootPath) {
+                        try? FileManager.default.removeItem(atPath: rootPath)
                     }
+                    deletedCount += 1
+                    logger.info("Deleted orphaned workspace: \(workspace.id) at \(rootPath)")
+                } else {
+                    let wsPath = workspace.rootPath ?? "nil"
+                    logger.warning("Skipping cleanup of user-managed workspace: \(workspace.id) at \(wsPath)")
                 }
             }
 

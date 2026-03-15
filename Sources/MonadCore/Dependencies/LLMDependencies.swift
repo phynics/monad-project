@@ -96,24 +96,8 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         fail()
     }
 
-    public func chatStreamWithContext(
-        userQuery _: String,
-        contextNotes _: [ContextFile],
-        memories _: [Memory],
-        chatHistory _: [Message],
-        tools _: [AnyTool],
-        workspaces _: [WorkspaceReference],
-        primaryWorkspace _: WorkspaceReference?,
-        clientName _: String?,
-        systemInstructions _: String?,
-        responseFormat _: ChatQuery.ResponseFormat?,
-        useFastModel _: Bool
-    ) async -> (
-        stream: AsyncThrowingStream<ChatStreamResult, any Error>,
-        rawPrompt: String,
-        structuredContext: [String: String]
-    ) {
-        return (AsyncThrowingStream { _ in }, "", [:])
+    public func chatStreamWithContext(_: LLMChatRequest) async -> LLMStreamResult {
+        return LLMStreamResult(stream: AsyncThrowingStream { _ in }, rawPrompt: "", structuredContext: [:])
     }
 
     public func chatStream(
@@ -124,34 +108,12 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         return AsyncThrowingStream { _ in }
     }
 
-    public func buildPrompt(
-        userQuery _: String,
-        contextNotes _: [ContextFile],
-        memories _: [Memory],
-        chatHistory _: [Message],
-        tools _: [AnyTool],
-        workspaces _: [WorkspaceReference],
-        primaryWorkspace _: WorkspaceReference?,
-        clientName _: String?,
-        systemInstructions _: String?
-    ) async -> (
-        messages: [ChatQuery.ChatCompletionMessageParam],
-        rawPrompt: String,
-        structuredContext: [String: String]
-    ) {
-        return ([], "", [:])
+    public func buildPrompt(_: LLMPromptRequest) async -> LLMPromptResult {
+        return LLMPromptResult(messages: [], rawPrompt: "", structuredContext: [:])
     }
 
     public func buildContext(
-        userQuery _: String,
-        contextNotes _: [ContextFile],
-        memories _: [Memory],
-        chatHistory _: [Message],
-        tools _: [AnyTool],
-        workspaces _: [WorkspaceReference],
-        primaryWorkspace _: WorkspaceReference?,
-        clientName _: String?,
-        systemInstructions _: String?,
+        _: LLMPromptRequest,
         agentInstance _: AgentInstance?,
         timeline _: Timeline?,
         extensionSections _: [any ContextSection]
@@ -175,7 +137,10 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         fail()
     }
 
-    public func evaluateRecallPerformance(transcript _: String, recalledMemories _: [Memory]) async throws -> [String: Double] {
+    public func evaluateRecallPerformance(
+        transcript _: String,
+        recalledMemories _: [Memory]
+    ) async throws -> [String: Double] {
         fail()
     }
 

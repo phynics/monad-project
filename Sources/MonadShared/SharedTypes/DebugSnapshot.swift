@@ -6,7 +6,8 @@ public struct DebugSnapshot: Codable, Sendable, Equatable {
     public let timestamp: Date
 
     /// The structured context sections that were assembled into the prompt
-    /// Keys are section IDs like "system_instructions", "context_notes", "memories", "chat_history", "tools", "user_query"
+    /// Keys are section IDs like "system_instructions", "context_notes",
+    /// "memories", "chat_history", "tools", "user_query"
     public let structuredContext: [String: String]
 
     /// Tool calls made during the ReAct loop

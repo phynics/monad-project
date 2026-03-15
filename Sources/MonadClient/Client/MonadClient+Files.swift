@@ -18,7 +18,7 @@ public extension MonadWorkspaceClient {
             path: "/api/workspaces/\(workspaceId.uuidString)/files/\(path)", method: "GET"
         )
         let (data, _) = try await client.performRaw(request)
-        return String(decoding: data, as: UTF8.self)
+        return String(bytes: data, encoding: .utf8) ?? ""
     }
 
     /// Write file content

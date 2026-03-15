@@ -50,14 +50,12 @@ public struct SSEStreamReader: Sendable {
     private func parseSSEMessage(_ message: String) -> ChatEvent? {
         let lines = message.split(separator: "\n", omittingEmptySubsequences: false)
 
-        for line in lines {
-            if line.hasPrefix("data: ") {
-                let data = String(line.dropFirst(6))
+        for line in lines where line.hasPrefix("data: ") {
+            let data = String(line.dropFirst(6))
 
-                // Try to parse JSON using the shared decoder (ISO 8601 dates)
-                if let jsonData = data.data(using: .utf8) {
-                    return try? SerializationUtils.jsonDecoder.decode(ChatEvent.self, from: jsonData)
-                }
+            // Try to parse JSON using the shared decoder (ISO 8601 dates)
+            if let jsonData = data.data(using: .utf8) {
+                return try? SerializationUtils.jsonDecoder.decode(ChatEvent.self, from: jsonData)
             }
         }
 

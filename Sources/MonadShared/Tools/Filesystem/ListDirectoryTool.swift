@@ -31,8 +31,8 @@ public struct ListDirectoryTool: Tool, Sendable {
     }
 
     public var parametersSchema: [String: AnyCodable] {
-        ToolParameterSchema.object { b in
-            b.string("path", description: "The path to the directory (defaults to current directory if omitted)")
+        ToolParameterSchema.object { builder in
+            builder.string("path", description: "The path to the directory (defaults to current directory if omitted)")
         }.schema
     }
 
@@ -75,7 +75,7 @@ public struct ListDirectoryTool: Tool, Sendable {
                 let typeMarker = isDir ? "[DIR]" : "[FILE]"
                 let sizeString =
                     isDir
-                    ? "" : ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)
+                        ? "" : ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)
 
                 return "\(typeMarker) \(name) \(sizeString)".trimmingCharacters(in: .whitespaces)
             }.sorted()

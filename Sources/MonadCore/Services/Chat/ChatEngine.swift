@@ -117,10 +117,13 @@ public final class ChatEngine: @unchecked Sendable {
         case continueWith([ChatQuery.ChatCompletionMessageParam])
     }
 
+    /// The heart of the agentic loop. Orchestrates multiple turns until the agent finishes
+    /// or reaches the max turn limit.
     private func runChatLoop(
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation,
         context: ChatTurnContext
     ) async {
+        // 1. Emit initial RAG context for frontend observability
         continuation.yield(.generationContext(ChatMetadata(
             memories: context.contextData.memories.map { $0.memory.id },
             files: context.contextData.notes.map { $0.name }
@@ -130,6 +133,7 @@ public final class ChatEngine: @unchecked Sendable {
         var turnCount = 0
         var priorOutput = ""
 
+        // 2. Main reasoning loop (ReAct loop)
         while turnCount < context.maxTurns {
             turnCount += 1
             let turnContext = context.forTurn(
@@ -137,10 +141,14 @@ public final class ChatEngine: @unchecked Sendable {
                 messages: loopMessages,
                 priorAccumulatedOutput: priorOutput
             )
+
+            // Execute one turn (LLM call + automatic server-side tool routing)
             let signal = await runOneTurn(continuation: continuation, context: turnContext)
             priorOutput = await turnContext.outputs.accumulatedRawOutput
+
             switch signal {
             case .stop:
+                // Turn finished without further internal actions required
                 var pluginMessages: [ChatQuery.ChatCompletionMessageParam] = []
                 let completedTurn = CompletedTurn(
                     timelineId: context.timelineId,
@@ -149,6 +157,8 @@ public final class ChatEngine: @unchecked Sendable {
                     fullResponse: priorOutput,
                     modelName: context.modelName
                 )
+
+                // 3. Post-turn plugin execution (e.g. autonomous reactions, background jobs)
                 do {
                     for plugin in chatTurnPlugins {
                         pluginMessages += try await plugin.afterTurn(completedTurn)
@@ -158,13 +168,17 @@ public final class ChatEngine: @unchecked Sendable {
                     continuation.finish(throwing: error)
                     return
                 }
+
+                // If plugins added context, resume the loop for a follow-up turn
                 if !pluginMessages.isEmpty, turnCount < context.maxTurns {
                     loopMessages += pluginMessages
                 } else {
                     continuation.finish()
                     return
                 }
+
             case let .continueWith(newMessages):
+                // A tool result or internal thought needs the LLM to process it in the next turn
                 loopMessages += newMessages
             }
         }
@@ -210,33 +224,50 @@ public final class ChatEngine: @unchecked Sendable {
         }
     }
 
+    /// Inspects the outputs of the previous turn and handles any requested tool calls.
+    ///
+    /// - If tools can be resolved on the server, they are executed immediately and the results
+    ///   are returned so the loop can continue (multi-step reasoning).
+    /// - If any tool requires client-side execution, the turn stops and defers to the client.
     private func handleToolCallsAfterTurn(
         context: ChatTurnContext,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
     ) async throws -> LoopContinuation {
+        // 1. Extract and parse streamed tool calls from the turn outputs
         let accumulators = await context.outputs.toolCallAccumulators
         guard !accumulators.isEmpty else { return .stop }
 
         let sortedCalls = accumulators.sorted(by: { $0.key < $1.key })
         let parsedCalls = sortedCalls.map { _, value in
-            ParsedToolCall(callId: value.id, name: value.name, argumentsJSON: value.args)
+            ParsedToolCall(callId: value.callId, name: value.name, argumentsJSON: value.args)
         }
+
+        // 2. Prepare the assistant's message (including the tool_calls definition)
+        // This is necessary to maintain valid conversation history for the next turn.
         let toolCallsParam = sortedCalls.map { _, value in
             ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam(
-                id: value.id, function: .init(arguments: value.args, name: value.name)
+                id: value.callId, function: .init(arguments: value.args, name: value.name)
             )
         }
         let fullResponse = await context.outputs.fullResponse
         let assistantParam = ChatQuery.ChatCompletionMessageParam.assistant(
             .init(content: .textContent(.init(fullResponse)), toolCalls: toolCallsParam)
         )
+
+        // 3. Route calls to the ToolRouter
+        // This executes server-side tools immediately and emits progress/completion events.
         let result = try await toolRouter.handlePendingToolCalls(
             timelineId: context.timelineId,
             calls: parsedCalls,
             availableTools: context.availableTools,
             continuation: continuation
         )
+
+        // 4. Decision: Can we keep going autonomously?
+        // If any tool was deferred to the client, we MUST stop and wait for a response.
         if result.hasDeferred { return .stop }
+
+        // If all tools were resolved locally, we continue the turn automatically with results added to history.
         return .continueWith([assistantParam] + result.resolvedToolParams)
     }
 

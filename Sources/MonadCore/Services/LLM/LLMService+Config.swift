@@ -1,13 +1,13 @@
-import MonadShared
 import Foundation
 import Logging
+import MonadShared
 import OpenAI
 
 extension LLMService {
     // MARK: - Internal Configuration Helpers
 
     /// Update LLM client with configuration
-    internal func updateClient(with config: LLMConfiguration) {
+    func updateClient(with config: LLMConfiguration) {
         Logger.module(named: "llm").debug("Updating clients for provider: \(config.provider.rawValue)")
 
         let components = parseEndpoint(config.endpoint)
@@ -16,104 +16,56 @@ extension LLMService {
 
         switch config.provider {
         case .ollama:
-            self.setClients(
-                main: OllamaClient(
-                    endpoint: config.endpoint,
-                    modelName: config.modelName,
-                    timeoutInterval: timeout,
-                    maxRetries: retries
+            setClients(
+                main: makeOllamaClient(config: config, timeout: timeout, retries: retries),
+                utility: makeOllamaClient(
+                    config: config, timeout: timeout, retries: retries, model: config.utilityModel
                 ),
-                utility: OllamaClient(
-                    endpoint: config.endpoint,
-                    modelName: config.utilityModel,
-                    timeoutInterval: timeout,
-                    maxRetries: retries
-                ),
-                fast: OllamaClient(
-                    endpoint: config.endpoint,
-                    modelName: config.fastModel,
-                    timeoutInterval: timeout,
-                    maxRetries: retries
+                fast: makeOllamaClient(
+                    config: config, timeout: timeout, retries: retries, model: config.fastModel
                 )
             )
 
         case .openRouter:
-            self.setClients(
-                main: OpenRouterClient(
-                    apiKey: config.apiKey,
-                    modelName: config.modelName,
-                    host: components.host,
-                    port: components.port,
-                    scheme: components.scheme,
-                    timeoutInterval: timeout,
-                    maxRetries: retries
+            setClients(
+                main: makeOpenRouterClient(config: config, components: components, timeout: timeout, retries: retries),
+                utility: makeOpenRouterClient(
+                    config: config, components: components, timeout: timeout, retries: retries,
+                    model: config.utilityModel
                 ),
-                utility: OpenRouterClient(
-                    apiKey: config.apiKey,
-                    modelName: config.utilityModel,
-                    host: components.host,
-                    port: components.port,
-                    scheme: components.scheme,
-                    timeoutInterval: timeout,
-                    maxRetries: retries
-                ),
-                fast: OpenRouterClient(
-                    apiKey: config.apiKey,
-                    modelName: config.fastModel,
-                    host: components.host,
-                    port: components.port,
-                    scheme: components.scheme,
-                    timeoutInterval: timeout,
-                    maxRetries: retries
+                fast: makeOpenRouterClient(
+                    config: config, components: components, timeout: timeout, retries: retries,
+                    model: config.fastModel
                 )
             )
 
         case .openAI, .openAICompatible:
-            self.setClients(
-                main: OpenAIClient(
-                    apiKey: config.apiKey,
-                    modelName: config.modelName,
-                    host: components.host,
-                    port: components.port,
-                    scheme: components.scheme,
-                    timeoutInterval: timeout,
-                    maxRetries: retries
+            setClients(
+                main: makeOpenAIClient(config: config, components: components, timeout: timeout, retries: retries),
+                utility: makeOpenAIClient(
+                    config: config, components: components, timeout: timeout, retries: retries,
+                    model: config.utilityModel
                 ),
-                utility: OpenAIClient(
-                    apiKey: config.apiKey,
-                    modelName: config.utilityModel,
-                    host: components.host,
-                    port: components.port,
-                    scheme: components.scheme,
-                    timeoutInterval: timeout,
-                    maxRetries: retries
-                ),
-                fast: OpenAIClient(
-                    apiKey: config.apiKey,
-                    modelName: config.fastModel,
-                    host: components.host,
-                    port: components.port,
-                    scheme: components.scheme,
-                    timeoutInterval: timeout,
-                    maxRetries: retries
+                fast: makeOpenAIClient(
+                    config: config, components: components, timeout: timeout, retries: retries,
+                    model: config.fastModel
                 )
             )
         }
     }
 
-    /// - Parameter endpoint: Full endpoint URL (e.g., "http://localhost:11434")
-    /// - Returns: Tuple with host, port, and scheme
-    internal func parseEndpoint(_ endpoint: String) -> (host: String, port: Int, scheme: String) {
+    /// Parse an endpoint URL into its host, port, and scheme components.
+    func parseEndpoint(_ endpoint: String) -> EndpointComponents {
         let cleanedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URL(string: cleanedEndpoint), let host = url.host else {
             Logger.module(named: "llm").error("Invalid endpoint URL: \(endpoint)")
-            return ("api.openai.com", 443, "https")
+            return EndpointComponents(host: "api.openai.com", port: 443, scheme: "https")
         }
 
         let scheme = url.scheme ?? "https"
         guard ["http", "https"].contains(scheme.lowercased()) else {
-             Logger.module(named: "llm").error("Unsupported scheme: \(scheme)")
-             return ("api.openai.com", 443, "https")
+            Logger.module(named: "llm").error("Unsupported scheme: \(scheme)")
+            return EndpointComponents(host: "api.openai.com", port: 443, scheme: "https")
         }
 
         let port: Int
@@ -123,6 +75,58 @@ extension LLMService {
             port = (scheme == "https") ? 443 : 80
         }
 
-        return (host, port, scheme)
+        return EndpointComponents(host: host, port: port, scheme: scheme)
+    }
+
+    // MARK: - Client Factories
+
+    private func makeOllamaClient(
+        config: LLMConfiguration,
+        timeout: TimeInterval,
+        retries: Int,
+        model: String? = nil
+    ) -> OllamaClient {
+        OllamaClient(
+            endpoint: config.endpoint,
+            modelName: model ?? config.modelName,
+            timeoutInterval: timeout,
+            maxRetries: retries
+        )
+    }
+
+    private func makeOpenRouterClient(
+        config: LLMConfiguration,
+        components: EndpointComponents,
+        timeout: TimeInterval,
+        retries: Int,
+        model: String? = nil
+    ) -> OpenRouterClient {
+        OpenRouterClient(
+            apiKey: config.apiKey,
+            modelName: model ?? config.modelName,
+            host: components.host,
+            port: components.port,
+            scheme: components.scheme,
+            timeoutInterval: timeout,
+            maxRetries: retries
+        )
+    }
+
+    private func makeOpenAIClient(
+        config: LLMConfiguration,
+        components: EndpointComponents,
+        timeout: TimeInterval,
+        retries: Int,
+        model: String? = nil
+    ) -> OpenAIClient {
+        OpenAIClient(
+            apiKey: config.apiKey,
+            modelName: model ?? config.modelName,
+            host: components.host,
+            port: components.port,
+            scheme: components.scheme,
+            timeoutInterval: timeout,
+            maxRetries: retries
+        )
     }
 }

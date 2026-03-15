@@ -27,8 +27,8 @@ public extension TimelineManager {
         try await timelineStore.saveTimeline(timeline)
 
         if let toolManager = toolManagers[timelineId] {
-            if let ws = try? await workspaceManager.getWorkspace(id: workspaceId) {
-                await toolManager.registerWorkspace(ws)
+            if let workspace = try? await workspaceManager.getWorkspace(id: workspaceId) {
+                await toolManager.registerWorkspace(workspace)
             }
         }
     }
@@ -71,13 +71,13 @@ public extension TimelineManager {
 
         var attached: [WorkspaceReference] = []
         for aid in attachedIds {
-            if var ws = try? await getWorkspace(aid) {
-                if ws.hostType == .server, let path = ws.rootPath {
+            if var workspace = try? await getWorkspace(aid) {
+                if workspace.hostType == .server, let path = workspace.rootPath {
                     if !FileManager.default.fileExists(atPath: path) {
-                        ws.status = .missing
+                        workspace.status = .missing
                     }
                 }
-                attached.append(ws)
+                attached.append(workspace)
             }
         }
 

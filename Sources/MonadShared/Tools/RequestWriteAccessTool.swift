@@ -7,7 +7,8 @@ public struct RequestWriteAccessTool: Tool {
     public let name = "Request Write Access"
     public let description =
         "Request permission from the user to modify files in the active workspace. " +
-        "Call this tool when you need to create, write, edit, or delete files but the workspace is currently in read-only mode."
+        "Call this tool when you need to create, write, edit, or delete files " +
+        "but the workspace is currently in read-only mode."
     public let requiresPermission = false
 
     public init() {}

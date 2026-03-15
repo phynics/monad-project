@@ -32,7 +32,8 @@ public enum DefaultInstructions {
 
         ## Workspace-Tool Relationship
         Tools are scoped to workspaces:
-        - Multiple workspaces can provide the same tool (e.g. both primary and user-attached workspaces provide filesystem tools).
+        - Multiple workspaces can provide the same tool \
+        (e.g. both primary and user-attached workspaces provide filesystem tools).
         - If a tool call includes a workspace target, it is executed on that workspace.
         - If no workspace target is specified, the primary workspace takes precedence.
         - If you need to write to a workspace that is currently read-only, use `request_write_access`.

@@ -35,15 +35,16 @@ private func resolvePath(_ input: String?, context: ChatContext) async throws ->
     // Check for workspace prefix: @ws_id/path
     if input.hasPrefix("@") {
         let components = input.dropFirst().split(
-            separator: "/", maxSplits: 1, omittingEmptySubsequences: false)
+            separator: "/", maxSplits: 1, omittingEmptySubsequences: false
+        )
         let wsRef = String(components[0])
         let path = components.count > 1 ? String(components[1]) : ""
 
         let allWorkspaces = try await context.client.workspace.listWorkspaces()
-        if let ws = allWorkspaces.first(where: {
+        if let workspace = allWorkspaces.first(where: {
             $0.id.uuidString.lowercased().hasPrefix(wsRef.lowercased())
         }) {
-            return ResolvedPath(workspaceId: ws.id, path: path, workspaceName: ws.uri.description)
+            return ResolvedPath(workspaceId: workspace.id, path: path, workspaceName: workspace.uri.description)
         }
         throw MonadClientError.unknown("Workspace '@\(wsRef)' not found.")
     }
@@ -52,7 +53,8 @@ private func resolvePath(_ input: String?, context: ChatContext) async throws ->
     if targetWorkspaceId == timelineWS.primary?.id && !input.contains("/") && !input.hasPrefix("Notes/")
         && !input.hasPrefix("Personas/") {
         return ResolvedPath(
-            workspaceId: targetWorkspaceId, path: "Notes/\(input)", workspaceName: wsName)
+            workspaceId: targetWorkspaceId, path: "Notes/\(input)", workspaceName: wsName
+        )
     }
 
     return ResolvedPath(workspaceId: targetWorkspaceId, path: input, workspaceName: wsName)
@@ -72,7 +74,7 @@ struct LsCommand: SlashCommand {
 
             let prefix =
                 resolved.path.hasSuffix("/") || resolved.path.isEmpty
-                ? resolved.path : "\(resolved.path)/"
+                    ? resolved.path : "\(resolved.path)/"
             let filtered = files.filter { $0.hasPrefix(prefix) }
 
             if filtered.isEmpty {
@@ -81,7 +83,7 @@ struct LsCommand: SlashCommand {
             }
 
             print("\n\(TerminalUI.bold("\(resolved.workspaceName):\(resolved.path)"))\n")
-            for file in filtered.prefix(50) {  // Cap at 50 explicitly
+            for file in filtered.prefix(50) { // Cap at 50 explicitly
                 let name = file.replacingOccurrences(of: prefix, with: "")
                 if !name.isEmpty {
                     print("  📄 \(name)")
@@ -110,7 +112,8 @@ struct CatCommand: SlashCommand {
         do {
             let resolved = try await resolvePath(pathInput, context: context)
             let content = try await context.client.workspace.getFileContent(
-                workspaceId: resolved.workspaceId, path: resolved.path)
+                workspaceId: resolved.workspaceId, path: resolved.path
+            )
             print("\n" + TerminalUI.renderMarkdown(content) + "\n")
         } catch {
             TerminalUI.printError("cat failed: \(error.localizedDescription)")
@@ -132,10 +135,12 @@ struct RmCommand: SlashCommand {
             let resolved = try await resolvePath(pathInput, context: context)
             print(
                 "Are you sure you want to delete \(resolved.workspaceName):\(resolved.path)? (y/n): ",
-                terminator: "")
+                terminator: ""
+            )
             if readLine()?.lowercased() == "y" {
                 try await context.client.workspace.deleteFile(
-                    workspaceId: resolved.workspaceId, path: resolved.path)
+                    workspaceId: resolved.workspaceId, path: resolved.path
+                )
                 TerminalUI.printSuccess("Deleted \(resolved.path)")
             }
         } catch {
@@ -163,7 +168,8 @@ struct WriteCommand: SlashCommand {
                 content += line + "\n"
             }
             try await context.client.workspace.writeFileContent(
-                workspaceId: resolved.workspaceId, path: resolved.path, content: content)
+                workspaceId: resolved.workspaceId, path: resolved.path, content: content
+            )
             TerminalUI.printSuccess("Wrote \(resolved.path)")
         } catch {
             TerminalUI.printError("write failed: \(error.localizedDescription)")
@@ -184,7 +190,8 @@ struct EditCommand: SlashCommand {
         do {
             let resolved = try await resolvePath(pathInput, context: context)
             let content = try await context.client.workspace.getFileContent(
-                workspaceId: resolved.workspaceId, path: resolved.path)
+                workspaceId: resolved.workspaceId, path: resolved.path
+            )
 
             let filename = URL(fileURLWithPath: resolved.path).lastPathComponent
             let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
@@ -201,7 +208,8 @@ struct EditCommand: SlashCommand {
             let updatedContent = try String(contentsOf: tempFile, encoding: .utf8)
             if updatedContent != content {
                 try await context.client.workspace.writeFileContent(
-                    workspaceId: resolved.workspaceId, path: resolved.path, content: updatedContent)
+                    workspaceId: resolved.workspaceId, path: resolved.path, content: updatedContent
+                )
                 TerminalUI.printSuccess("Updated \(resolved.path)")
             } else {
                 TerminalUI.printInfo("No changes made.")

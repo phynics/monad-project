@@ -1,6 +1,6 @@
-import MonadShared
 import Foundation
 import Logging
+import MonadShared
 import Observation
 import OpenAI
 
@@ -74,58 +74,9 @@ public final class StreamingCoordinator {
     public func processToolCalls(_ toolCalls: [Any]) {
         logger.debug("Received \(toolCalls.count) native tool call deltas")
         for toolCall in toolCalls {
-            // Use reflection to extract properties safely
-            let mirror = Mirror(reflecting: toolCall)
-            var name: String?
-            var arguments: String?
-            var index: Int?
+            let extracted = extractToolCallFields(from: toolCall)
 
-            for child in mirror.children {
-                switch child.label {
-                case "index":
-                    index = child.value as? Int
-                case "function":
-                    // Function is likely another struct we need to reflect on
-                    // Handle Optional unwrapping for function property
-                    var functionValue = child.value
-                    let functionMirror = Mirror(reflecting: functionValue)
-                    if functionMirror.displayStyle == .optional, let (_, some) = functionMirror.children.first {
-                        functionValue = some
-                    }
-
-                    let funcMirror = Mirror(reflecting: functionValue)
-                    for funcChild in funcMirror.children {
-                        switch funcChild.label {
-                        case "name":
-                            // Unwrap optional name if needed
-                            if let str = funcChild.value as? String {
-                                name = str
-                            } else {
-                                let nameMirror = Mirror(reflecting: funcChild.value)
-                                if nameMirror.displayStyle == .optional, let (_, some) = nameMirror.children.first {
-                                    name = some as? String
-                                }
-                            }
-                        case "arguments":
-                            // Unwrap optional arguments if needed
-                            if let str = funcChild.value as? String {
-                                arguments = str
-                            } else {
-                                let argsMirror = Mirror(reflecting: funcChild.value)
-                                if argsMirror.displayStyle == .optional, let (_, some) = argsMirror.children.first {
-                                    arguments = some as? String
-                                }
-                            }
-                        default:
-                            break
-                        }
-                    }
-                default:
-                    break
-                }
-            }
-
-            guard let idx = index else { continue }
+            guard let idx = extracted.index else { continue }
 
             // Initialize accumulator if needed
             if accumulatedToolCalls[idx] == nil {
@@ -133,15 +84,78 @@ public final class StreamingCoordinator {
                 currentToolCallIndex = idx
             }
 
-            // Accumulate parts
-            if let name = name {
+            if let name = extracted.name {
                 accumulatedToolCalls[idx]?.name += name
             }
 
-            if let arguments = arguments {
+            if let arguments = extracted.arguments {
                 accumulatedToolCalls[idx]?.arguments += arguments
             }
         }
+    }
+
+    // MARK: - Reflection Helpers
+
+    /// Fields extracted from a reflected tool call delta.
+    private struct ExtractedToolCallFields {
+        var index: Int?
+        var name: String?
+        var arguments: String?
+    }
+
+    /// Extracts tool call fields from an opaque value using Mirror reflection.
+    private func extractToolCallFields(from toolCall: Any) -> ExtractedToolCallFields {
+        let mirror = Mirror(reflecting: toolCall)
+        var fields = ExtractedToolCallFields()
+
+        for child in mirror.children {
+            switch child.label {
+            case "index":
+                fields.index = child.value as? Int
+            case "function":
+                let (extractedName, extractedArgs) = extractFunctionFields(from: child.value)
+                fields.name = extractedName
+                fields.arguments = extractedArgs
+            default:
+                break
+            }
+        }
+        return fields
+    }
+
+    /// Extracts name and arguments from a reflected function property.
+    private func extractFunctionFields(from value: Any) -> (name: String?, arguments: String?) {
+        var functionValue = value
+        let functionMirror = Mirror(reflecting: functionValue)
+        if functionMirror.displayStyle == .optional, let (_, some) = functionMirror.children.first {
+            functionValue = some
+        }
+
+        var name: String?
+        var arguments: String?
+
+        let funcMirror = Mirror(reflecting: functionValue)
+        for funcChild in funcMirror.children {
+            switch funcChild.label {
+            case "name":
+                name = unwrapOptionalString(funcChild.value)
+            case "arguments":
+                arguments = unwrapOptionalString(funcChild.value)
+            default:
+                break
+            }
+        }
+        return (name, arguments)
+    }
+
+    /// Unwraps a value that may be a String or Optional<String>.
+    private func unwrapOptionalString(_ value: Any) -> String? {
+        if let str = value as? String { return str }
+        let mirror = Mirror(reflecting: value)
+        if mirror.displayStyle == .optional, let (_, some) = mirror.children.first {
+            return some as? String
+        }
+        return nil
     }
 
     public func finalize(

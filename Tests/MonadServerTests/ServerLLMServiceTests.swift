@@ -6,7 +6,7 @@ import MonadTestSupport
 import OpenAI
 import Testing
 
-@Suite struct LLMServiceTests {
+@Suite struct ServerLLMServiceTests {
     @Test("Test LLMService Initialization and Config Load")
     func initialization() async throws {
         let defaults = try #require(UserDefaults(suiteName: "TestLLMService"))
@@ -85,7 +85,7 @@ import Testing
 
         let messages: [Message] = [
             Message(content: "Hello", role: .user),
-            Message(content: "Hi there", role: .assistant)
+            Message(content: "Hi there", role: .assistant),
         ]
 
         let title = try await service.generateTitle(for: messages)
@@ -136,25 +136,21 @@ import Testing
 
         mockClient.nextResponse = "Hello"
 
-        let (stream, prompt, _) = await service.chatStreamWithContext(
+        let chatRequest = LLMChatRequest(
             userQuery: "Hi",
-            contextNotes: [],
-            memories: [],
             chatHistory: [],
             tools: [],
             workspaces: [],
             primaryWorkspace: nil,
-            clientName: nil,
-            systemInstructions: nil as String?,
-            responseFormat: nil as ChatQuery.ResponseFormat?,
-            useFastModel: false
+            clientName: nil
         )
+        let result = await service.chatStreamWithContext(chatRequest)
 
-        #expect(!prompt.isEmpty)
+        #expect(!result.rawPrompt.isEmpty)
 
         var received = ""
-        for try await result in stream {
-            for choice in result.choices {
+        for try await streamResult in result.stream {
+            for choice in streamResult.choices {
                 if let content = choice.delta.content {
                     received += content
                 }

@@ -47,28 +47,11 @@ public actor ToolExecutor {
     /// Execute a single tool call. Always returns a `Message`; errors are surfaced as tool
     /// messages so the LLM can observe and recover from failures.
     public func execute(_ toolCall: ToolCall) async -> Message {
-        // Loop detection
-        let count = callCounts[toolCall, default: 0] + 1
-        callCounts[toolCall] = count
-
-        if count >= maxRepeatedCalls {
-            logger.warning("Loop detected for tool: \(toolCall.name)")
-            return Message(
-                content: "Error: Loop detected. Tool '\(toolCall.name)' has been called \(count) times with the exact same parameters. Please try a different approach or verify your logic.",
-                role: .tool,
-                think: nil
-            )
+        if let loopMessage = checkLoopDetection(toolCall) {
+            return loopMessage
         }
 
-        // Check for context auto-exit: if a context is active and this is NOT a context tool,
-        // deactivate the context before proceeding.
-        let isContextTool = await timelineContext.isContextTool(toolCall.name)
-        let isGatewayForActiveContext = await timelineContext.isActiveContextGateway(toolCall.name)
-
-        if await timelineContext.hasActiveContext && !isContextTool && !isGatewayForActiveContext {
-            logger.info("Non-context tool called, deactivating active context")
-            await timelineContext.deactivate()
-        }
+        await handleContextAutoExit(for: toolCall)
 
         guard let tool = await toolManager.getTool(id: toolCall.name) else {
             logger.error("Tool not found: \(toolCall.name)")
@@ -79,33 +62,47 @@ public actor ToolExecutor {
             )
         }
 
+        return await executeTool(tool, arguments: toolCall.arguments, name: toolCall.name)
+    }
+
+    // MARK: - Execute Helpers
+
+    private func checkLoopDetection(_ toolCall: ToolCall) -> Message? {
+        let count = callCounts[toolCall, default: 0] + 1
+        callCounts[toolCall] = count
+
+        guard count >= maxRepeatedCalls else { return nil }
+
+        logger.warning("Loop detected for tool: \(toolCall.name)")
+        return Message(
+            content: "Error: Loop detected. Tool '\(toolCall.name)' has been called \(count) times " +
+                "with the exact same parameters. Please try a different approach or verify your logic.",
+            role: .tool,
+            think: nil
+        )
+    }
+
+    private func handleContextAutoExit(for toolCall: ToolCall) async {
+        let isContextTool = await timelineContext.isContextTool(toolCall.name)
+        let isGateway = await timelineContext.isActiveContextGateway(toolCall.name)
+
+        if await timelineContext.hasActiveContext, !isContextTool, !isGateway {
+            logger.info("Non-context tool called, deactivating active context")
+            await timelineContext.deactivate()
+        }
+    }
+
+    private func executeTool(
+        _ tool: Tool, arguments: [String: AnyCodable], name: String
+    ) async -> Message {
         logger.info("Executing tool: \(tool.name)")
 
-        let anyArgs = toolCall.arguments.toAnyDictionary
+        let anyArgs = arguments.toAnyDictionary
 
         do {
             let result = try await tool.execute(parameters: anyArgs)
-
-            let responseContent: String
-            if result.success {
-                logger.info("Tool \(tool.name) executed successfully")
-                responseContent = result.output
-            } else {
-                let errorMsg = result.error ?? "Unknown error"
-                logger.error("Tool \(tool.name) failed: \(errorMsg)")
-                responseContent = "Error: \(errorMsg)"
-            }
-
-            // Append context state if a context is active and this is a context tool.
-            var finalContent = responseContent
-            if await timelineContext.hasActiveContext && isContextTool,
-               let context = await timelineContext.activeContext {
-                let contextState = await context.formatState()
-                if !contextState.isEmpty {
-                    finalContent += "\n\n---\n\(contextState)"
-                }
-            }
-
+            let responseContent = formatToolResult(result, toolName: tool.name)
+            let finalContent = await appendContextState(to: responseContent, toolName: name)
             return Message(content: finalContent, role: .tool, think: nil)
         } catch {
             let errMsg = ErrorKit.userFriendlyMessage(for: error)
@@ -116,6 +113,28 @@ public actor ToolExecutor {
                 think: nil
             )
         }
+    }
+
+    private func formatToolResult(_ result: ToolResult, toolName: String) -> String {
+        if result.success {
+            logger.info("Tool \(toolName) executed successfully")
+            return result.output
+        } else {
+            let errorMsg = result.error ?? "Unknown error"
+            logger.error("Tool \(toolName) failed: \(errorMsg)")
+            return "Error: \(errorMsg)"
+        }
+    }
+
+    private func appendContextState(to content: String, toolName: String) async -> String {
+        let isContextTool = await timelineContext.isContextTool(toolName)
+        guard await timelineContext.hasActiveContext && isContextTool,
+              let context = await timelineContext.activeContext
+        else { return content }
+
+        let contextState = await context.formatState()
+        guard !contextState.isEmpty else { return content }
+        return content + "\n\n---\n\(contextState)"
     }
 
     /// Execute multiple tool calls, sequentially when a context is active to avoid races,

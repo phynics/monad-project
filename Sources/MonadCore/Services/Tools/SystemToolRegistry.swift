@@ -1,5 +1,5 @@
-import MonadShared
 import Foundation
+import MonadShared
 import OpenAI
 
 /// Registry for built-in system tools within the Monad framework
@@ -31,7 +31,7 @@ public struct SystemToolRegistry: Sendable {
         )
         defs[webSearch.id] = webSearch
 
-        self.definitions = defs
+        definitions = defs
     }
 
     public func getDefinition(for id: String) -> WorkspaceToolDefinition? {
@@ -42,15 +42,14 @@ public struct SystemToolRegistry: Sendable {
     public func resolveToOpenAITool(_ ref: ToolReference) -> ChatQuery.ChatCompletionToolParam? {
         let def: WorkspaceToolDefinition
         switch ref {
-        case .known(let id):
+        case let .known(id):
             guard let definition = getDefinition(for: id) else { return nil }
             def = definition
-        case .custom(let definition):
+        case let .custom(definition):
             def = definition
         }
 
-        let properties = def.parametersSchema.reduce(into: [String: [String: Any]]()) {
-            dict, pair in
+        let properties = def.parametersSchema.reduce(into: [String: [String: Any]]()) { dict, pair in
             dict[pair.key] = [
                 "type": "string",
                 "description": String(describing: pair.value.value)
@@ -64,7 +63,7 @@ public struct SystemToolRegistry: Sendable {
 
         let schema: JSONSchema
         if let data = try? JSONSerialization.data(withJSONObject: schemaDict),
-            let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data) {
+           let decoded = try? JSONDecoder().decode(JSONSchema.self, from: data) {
             schema = decoded
         } else {
             schema = .object([:])

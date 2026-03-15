@@ -39,7 +39,9 @@ struct ToolCallExtractionStage: PipelineStage {
                 let updatedAccumulators = await context.outputs.toolCallAccumulators
                 for (index, value) in updatedAccumulators.sorted(by: { $0.key < $1.key }) {
                     eventsToYield.append(
-                        .toolCall(ToolCallDelta(index: index, id: value.id, name: value.name, arguments: value.args))
+                        .toolCall(ToolCallDelta(
+                            index: index, id: value.callId, name: value.name, arguments: value.args
+                        ))
                     )
                 }
             }

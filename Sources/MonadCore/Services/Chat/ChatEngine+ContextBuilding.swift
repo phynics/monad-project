@@ -119,7 +119,7 @@ extension ChatEngine {
             message: params.message
         )
 
-        let prompt = await llmService.buildContext(
+        let promptRequest = LLMPromptRequest(
             userQuery: params.message,
             contextNotes: params.contextData.notes,
             memories: params.contextData.memories.map { $0.memory },
@@ -128,7 +128,11 @@ extension ChatEngine {
             workspaces: params.workspaces,
             primaryWorkspace: params.primaryWorkspace,
             clientName: params.clientName,
-            systemInstructions: params.systemInstructions,
+            systemInstructions: params.systemInstructions
+        )
+
+        let prompt = await llmService.buildContext(
+            promptRequest,
             agentInstance: params.agentInstance,
             timeline: params.timeline,
             extensionSections: extensionSections

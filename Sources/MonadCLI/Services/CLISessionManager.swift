@@ -91,7 +91,17 @@ struct CLITimelineManager {
     func handleWorkspaceReattachment(timeline: Timeline, localConfig: LocalConfig) async {
         guard let workspaces = localConfig.clientWorkspaces, !workspaces.isEmpty else { return }
         guard let clientId = RegistrationManager.shared.getIdentity()?.clientId else { return }
+        guard promptForReattachment(workspaces: workspaces) else { return }
 
+        let allWorkspaces = await fetchAllWorkspaces()
+        let updatedWorkspaces = await reattachWorkspaces(
+            workspaces, allWorkspaces: allWorkspaces, clientId: clientId, timelineId: timeline.id
+        )
+
+        LocalConfigManager.shared.updateClientWorkspaces(updatedWorkspaces)
+    }
+
+    private func promptForReattachment(workspaces: [String: String]) -> Bool {
         print("")
         TerminalUI.printInfo("Found previously attached client-side workspaces:")
         for (uri, _) in workspaces {
@@ -101,41 +111,32 @@ struct CLITimelineManager {
         print("")
         print("Re-attach these workspaces? (y/n) [y]: ", terminator: "")
         let response = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? "y"
-        guard response == "y" || response == "" else { return }
+        return response == "y" || response == ""
+    }
 
-        let allWorkspacesResult: [WorkspaceReference]
+    private func fetchAllWorkspaces() async -> [WorkspaceReference] {
         do {
-            allWorkspacesResult = try await client.workspace.listWorkspaces()
+            return try await client.workspace.listWorkspaces()
         } catch {
             logger.error("Failed to list workspaces during re-attachment: \(error)")
-            allWorkspacesResult = []
+            return []
         }
-        let allWorkspaces = allWorkspacesResult
+    }
+
+    private func reattachWorkspaces(
+        _ workspaces: [String: String],
+        allWorkspaces: [WorkspaceReference],
+        clientId: UUID,
+        timelineId: UUID
+    ) async -> [String: String] {
         var updatedWorkspaces = workspaces
 
         for (uri, _) in workspaces {
             do {
-                // Find workspace by URI or recreate it — never attach by stale ID
-                let wsId: UUID
-                if let existing = allWorkspaces.first(where: { $0.uri.description == uri }) {
-                    wsId = existing.id
-                } else {
-                    guard let workspaceURI = WorkspaceURI(parsing: uri) else {
-                        logger.error("Failed to parse URI for re-attachment: \(uri)")
-                        continue
-                    }
-                    let rootPath = workspaceURI.path
-                    let newWs = try await client.workspace.createWorkspace(
-                        uri: workspaceURI,
-                        hostType: .client,
-                        ownerId: clientId,
-                        rootPath: rootPath,
-                        trustLevel: .readOnly
-                    )
-                    wsId = newWs.id
-                }
-
-                try await client.workspace.attachWorkspace(wsId, to: timeline.id)
+                let wsId = try await resolveOrCreateWorkspace(
+                    uri: uri, allWorkspaces: allWorkspaces, clientId: clientId
+                )
+                try await client.workspace.attachWorkspace(wsId, to: timelineId)
                 try await client.workspace.syncWorkspaceTools(
                     ClientConstants.readOnlyToolReferences, workspaceId: wsId
                 )
@@ -148,6 +149,28 @@ struct CLITimelineManager {
             }
         }
 
-        LocalConfigManager.shared.updateClientWorkspaces(updatedWorkspaces)
+        return updatedWorkspaces
+    }
+
+    private func resolveOrCreateWorkspace(
+        uri: String,
+        allWorkspaces: [WorkspaceReference],
+        clientId: UUID
+    ) async throws -> UUID {
+        if let existing = allWorkspaces.first(where: { $0.uri.description == uri }) {
+            return existing.id
+        }
+        guard let workspaceURI = WorkspaceURI(parsing: uri) else {
+            throw MonadClientError.unknown("Failed to parse URI for re-attachment: \(uri)")
+        }
+        let rootPath = workspaceURI.path
+        let newWs = try await client.workspace.createWorkspace(
+            uri: workspaceURI,
+            hostType: .client,
+            ownerId: clientId,
+            rootPath: rootPath,
+            trustLevel: .readOnly
+        )
+        return newWs.id
     }
 }
