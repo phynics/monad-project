@@ -15,13 +15,10 @@ public struct Timeline: Codable, Identifiable, Sendable {
     public var createdAt: Date
     public var updatedAt: Date
     public var isArchived: Bool
-    public var tags: String                      // JSON-encoded [String]
     public var workingDirectory: String?
-    public var primaryWorkspaceId: UUID?
-    public var attachedWorkspaceIds: String       // JSON-encoded [UUID]
+    public var attachedWorkspaceIds: [UUID]
     public var attachedAgentInstanceId: UUID?     // Agent driving this timeline
     public var isPrivate: Bool                   // True for agent internal timelines
-    public var ownerAgentInstanceId: UUID?       // Set when isPrivate == true
 }
 ```
 

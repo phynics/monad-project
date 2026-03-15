@@ -44,10 +44,11 @@ Contains the foundational library for all domain logic, data models, and busines
 - swift-dependencies (for DI)
 
 **Key Services:**
-- `ChatEngine` — Unified engine for chat and autonomous agents
+- `ChatEngine` — Unified engine for chat and autonomous agents (uses Pipeline pattern)
 - `TimelineManager` — Actor managing timeline lifecycle and components
 - `AgentInstanceManager` — Actor managing agent instance creation, attachment, and deletion
-- `ContextManager` — Actor for RAG and context gathering
+- `ContextManager` — Actor for RAG and context gathering (uses Pipeline pattern)
+- `Pipeline` — Generic asynchronous pipeline utility in `MonadCore/Utilities/Pipeline.swift`
 - `ToolRouter` — Actor routing tool execution to appropriate handler
 - `LLMService` — Multi-provider LLM client with streaming
 - `WorkspaceManager` — Actor managing workspace lifecycle
@@ -57,33 +58,36 @@ Contains the foundational library for all domain logic, data models, and busines
 **Models Organized Into:**
 ```
 Sources/MonadCore/Models/
-├── Chat/          APIRequests, APIResponseMetadata, ChatEvent, Message, ToolCall
-├── Configuration/ LLMConfiguration, LLMProvider, ProviderConfiguration, ToolCallFormat
 ├── Context/       ActiveMemory, ContextFile, DebugSnapshot
 ├── Database/      ConversationMessage, DatabaseBackup, Memory, SemanticSearchResult, Timeline
-├── Tools/         Tool, ToolReference, ToolError, ToolParameters, …
-│   ├── Filesystem/    7 filesystem tools (cd, find, inspect, ls, cat, grep, search)
+├── Tools/         ToolReference+OpenAI.swift
 │   └── ToolContext/  ContextTool, ToolContext, ToolTimelineContext
 └── Workspace/     WorkspaceAttachment, WorkspaceLock, WorkspaceProtocol,
                    WorkspaceReference, WorkspaceTool, WorkspaceToolDefinition
 
 Sources/MonadShared/SharedTypes/
-├── AgentInstance.swift   — Live agent entity (runtime, created from AgentTemplate)
-└── AgentTemplate.swift   — Agent template (static definition with systemPrompt, persona, seed files)
+├── AgentInstance.swift, AgentTemplate.swift
+├── ChatEvent.swift, Message.swift, ToolCall.swift
+├── LLMConfiguration.swift, ProviderConfiguration.swift, ToolCallFormat.swift
+├── WorkspaceReference.swift, WorkspaceURI.swift
+└── ToolOutputSubmission.swift, ToolResult.swift
 
-Sources/MonadCore/Stores/
-└── WorkspaceStore — Actor cache for hydrated WorkspaceProtocol instances
+Sources/MonadShared/Tools/
+└── Filesystem/    7 filesystem tools (cd, find, inspect, ls, cat, grep, search)
+
+Sources/MonadCore/Services/Workspace/
+└── WorkspaceManager.swift — Actor cache for hydrated WorkspaceProtocol instances
 ```
 
 **Key Model Notes:**
-- **`Timeline`** (formerly `ConversationSession`) — Persistent conversation record. Now includes `attachedAgentInstanceId`, `isPrivate`, and `ownerAgentInstanceId` for the agent system.
+- **`Timeline`** (formerly `ConversationSession`) — Persistent conversation record. Fields: `attachedAgentInstanceId`, `isPrivate`.
 - **`AgentInstance`** — Runtime agent entity in `MonadShared`. Has its own private workspace and private timeline. Created from an `AgentTemplate`.
-- **`AgentTemplate`** — Static agent template in `MonadShared`. Defines `systemPrompt`, `personaPrompt`, `guardrails`, and `workspaceFilesSeed`.
+- **`AgentTemplate`** — Static agent template in `MonadShared`. Defines `systemPrompt`, `personaPrompt`, `guardrailsPrompt`, and `workspaceFilesSeed`.
 - **`LLMConfiguration`** — Multi-provider config (replaces old monolithic `Configuration`)
 - **`Message`** — Includes optional `think` field for Chain of Thought reasoning
 - **`ToolReference`** — Enum: `.known(id)` or `.custom(definition)`
 - **`WorkspaceReference`** — Metadata about a workspace (ID, URI, host type, tools, trust level)
-- **`WorkspaceStore`** — Actor that eagerly loads all workspaces from persistence into memory; used by `FilesAPIController`
+- **`WorkspaceManager`** — Actor that caches hydrated workspaces; used by `FilesAPIController`
 
 ---
 
@@ -236,6 +240,22 @@ MonadServer → [MonadCore, MonadShared, MonadPrompt, MonadClient,
 ```
 
 **Key Design Principle:** No circular dependencies. Clean unidirectional flow.
+
+---
+
+## Pipeline Pattern
+
+MonadCore uses a generic asynchronous pipeline utility for orchestrating complex multi-stage processes. This decouples logic into discrete, testable stages.
+
+**Location:** `Sources/MonadCore/Utilities/Pipeline.swift`
+
+**Key Components:**
+- `Pipeline<Context, Event>` — The main coordinator class.
+- `PipelineStage<Context, Event>` — Protocol defining a single stage.
+
+**Usage in Codebase:**
+- **ChatEngine**: `processTurn` is decomposed into stages: `PromptBuildingStage`, `LLMStreamingStage`, `ToolCallExtractionStage`, `MessagePersistenceStage`.
+- **ContextManager**: The context gathering flow is implemented as a pipeline.
 
 ---
 
