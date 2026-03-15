@@ -67,6 +67,54 @@ import Foundation
         #expect(sim == 0.0)
     }
 
+    // MARK: - Optimized Cosine Similarity
+
+    @Test
+
+    func testOptimizedCosineSimilarity() {
+        let v1 = [1.0, 2.0, 3.0]
+        let v2 = [4.0, 5.0, 6.0]
+
+        let standardSim = VectorMath.cosineSimilarity(v1, v2)
+
+        let magA = VectorMath.magnitude(v1)
+        let optimizedSim = VectorMath.cosineSimilarity(v1, magnitudeA: magA, v2)
+
+        // Results should be identical
+        #expect(abs(standardSim - optimizedSim) < 0.000001)
+    }
+
+    @Test
+
+    func testOptimizedCosineSimilarityZeroMagnitude() {
+        let v1 = [0.0, 0.0]
+        let v2 = [0.0, 0.0]
+
+        let magA = VectorMath.magnitude(v1)
+        let sim = VectorMath.cosineSimilarity(v1, magnitudeA: magA, v2)
+        #expect(sim == 0.0)
+    }
+
+    // MARK: - Magnitude Calculation
+
+    @Test
+
+    func testMagnitudeCalculation() {
+        let v1 = [3.0, 4.0]
+        let expectedMagnitude = 5.0
+
+        let calculatedMagnitude = VectorMath.magnitude(v1)
+        #expect(calculatedMagnitude == expectedMagnitude)
+    }
+
+    @Test
+
+    func testMagnitudeEmptyVector() {
+        let v: [Double] = []
+        let mag = VectorMath.magnitude(v)
+        #expect(mag == 0.0)
+    }
+
     // MARK: - Normalization
 
     @Test
