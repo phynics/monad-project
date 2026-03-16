@@ -1,7 +1,7 @@
 import Foundation
 import MonadShared
 
-/// Debug command to display the raw context delivered to the LLM
+/// Debug command to display the turn snapshot for the last exchange
 struct DebugCommand: SlashCommand {
     let name = "debug"
     let aliases: [String] = []
@@ -10,7 +10,7 @@ struct DebugCommand: SlashCommand {
     let category: String? = "Utilities"
 
     func run(args _: [String], context: ChatContext) async throws {
-        guard let snapshot = await context.repl.getLastDebugSnapshot() else {
+        guard let snapshot = await context.repl.getLastTurnSnapshot() else {
             TerminalUI.printInfo("No debug data available yet. Please run a chat prompt first.")
             return
         }
@@ -18,28 +18,35 @@ struct DebugCommand: SlashCommand {
         printSnapshotHeader(snapshot)
         printRenderedPrompt(snapshot)
         printRawOutput(snapshot)
-        printStructuredContext(snapshot)
+        printContextSummary(snapshot)
         printToolCalls(snapshot)
         printToolResults(snapshot)
+        printMetrics(snapshot)
         print(TerminalUI.bold("═══════════════════"))
     }
 
     // MARK: - Section Printers
 
-    private func printSnapshotHeader(_ snapshot: DebugSnapshot) {
+    private func printSnapshotHeader(_ snapshot: TurnSnapshot) {
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .medium
         dateFormatter.timeStyle = .medium
 
         print("")
-        print(TerminalUI.bold("═══ Debug Snapshot ═══"))
+        print(TerminalUI.bold("═══ Turn Snapshot ═══"))
         print(TerminalUI.dim("Timestamp: \(dateFormatter.string(from: snapshot.timestamp))"))
-        print(TerminalUI.dim("Model: \(snapshot.model)"))
-        print(TerminalUI.dim("Turns: \(snapshot.turnCount)"))
+        print(TerminalUI.dim("Model: \(snapshot.modelName)"))
+        print(TerminalUI.dim("Turn: \(snapshot.turnCount)/\(snapshot.maxTurns)"))
+        if let agentId = snapshot.agentInstanceId {
+            print(TerminalUI.dim("Agent: \(agentId.uuidString.prefix(8))"))
+        }
+        if !snapshot.availableToolIds.isEmpty {
+            print(TerminalUI.dim("Tools: \(snapshot.availableToolIds.joined(separator: ", "))"))
+        }
         print("")
     }
 
-    private func printRenderedPrompt(_ snapshot: DebugSnapshot) {
+    private func printRenderedPrompt(_ snapshot: TurnSnapshot) {
         if let rendered = snapshot.renderedPrompt {
             print(TerminalUI.bold("─── Rendered Prompt ───"))
             print(TerminalUI.dim(rendered))
@@ -47,36 +54,24 @@ struct DebugCommand: SlashCommand {
         }
     }
 
-    private func printRawOutput(_ snapshot: DebugSnapshot) {
-        if let rawOutput = snapshot.rawOutput, !rawOutput.isEmpty {
+    private func printRawOutput(_ snapshot: TurnSnapshot) {
+        if !snapshot.rawOutput.isEmpty {
             print(TerminalUI.bold("─── Raw Output (Full Stream) ───"))
-            print(rawOutput)
+            print(snapshot.rawOutput)
             print("")
         }
     }
 
-    private func printStructuredContext(_ snapshot: DebugSnapshot) {
-        let sectionOrder = [
-            "system_instructions", "context_notes", "memories",
-            "tools", "chat_history", "user_query"
-        ]
-
-        let sortedKeys = snapshot.structuredContext.keys.sorted { lhs, rhs in
-            let lhsIdx = sectionOrder.firstIndex(of: lhs) ?? sectionOrder.count
-            let rhsIdx = sectionOrder.firstIndex(of: rhs) ?? sectionOrder.count
-            return lhsIdx < rhsIdx
-        }
-
-        for key in sortedKeys {
-            guard let content = snapshot.structuredContext[key] else { continue }
-            let displayName = key.replacingOccurrences(of: "_", with: " ").capitalized
-            print(TerminalUI.bold("─── \(displayName) ───"))
-            print(content)
+    private func printContextSummary(_ snapshot: TurnSnapshot) {
+        if let instructions = snapshot.systemInstructions {
+            print(TerminalUI.bold("─── System Instructions ───"))
+            let preview = instructions.count > 200 ? String(instructions.prefix(200)) + "…" : instructions
+            print(TerminalUI.dim(preview))
             print("")
         }
     }
 
-    private func printToolCalls(_ snapshot: DebugSnapshot) {
+    private func printToolCalls(_ snapshot: TurnSnapshot) {
         guard !snapshot.toolCalls.isEmpty else { return }
 
         print(TerminalUI.bold("─── Tool Calls ───"))
@@ -87,7 +82,7 @@ struct DebugCommand: SlashCommand {
         print("")
     }
 
-    private func printToolResults(_ snapshot: DebugSnapshot) {
+    private func printToolResults(_ snapshot: TurnSnapshot) {
         guard !snapshot.toolResults.isEmpty else { return }
 
         print(TerminalUI.bold("─── Tool Results ───"))
@@ -100,13 +95,32 @@ struct DebugCommand: SlashCommand {
         print("")
     }
 
+    private func printMetrics(_ snapshot: TurnSnapshot) {
+        print(TerminalUI.bold("─── Metrics ───"))
+        print(TerminalUI.dim("  Duration: \(String(format: "%.2fs", snapshot.turnDuration))"))
+        if let tps = snapshot.tokensPerSecond {
+            print(TerminalUI.dim("  Tokens/sec: \(String(format: "%.1f", tps))"))
+        }
+        if let prompt = snapshot.promptTokens {
+            print(TerminalUI.dim("  Prompt tokens: \(prompt)"))
+        }
+        if let completion = snapshot.completionTokens {
+            print(TerminalUI.dim("  Completion tokens: \(completion)"))
+        }
+        if let total = snapshot.totalTokens {
+            print(TerminalUI.dim("  Total tokens: \(total)"))
+        }
+        print("")
+    }
+
     private func printPrettyJSON(_ jsonString: String) {
         if let data = jsonString.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data),
            let pretty = try? JSONSerialization.data(
                withJSONObject: json, options: [.prettyPrinted, .sortedKeys]
            ),
-           let prettyStr = String(data: pretty, encoding: .utf8) {
+           let prettyStr = String(data: pretty, encoding: .utf8)
+        {
             for line in prettyStr.split(separator: "\n") {
                 print(TerminalUI.dim("    \(line)"))
             }

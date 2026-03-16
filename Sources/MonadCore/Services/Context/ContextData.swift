@@ -1,8 +1,8 @@
-import MonadShared
 import Foundation
+import MonadShared
 
 /// Structured context data
-public struct ContextData: Sendable {
+public struct ContextData: Sendable, Codable {
     public let notes: [ContextFile]
     public let memories: [SemanticSearchResult]
     public let generatedTags: [String]

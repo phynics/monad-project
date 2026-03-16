@@ -1,6 +1,6 @@
-import MonadShared
-import MonadCore
 import Foundation
+import MonadCore
+import MonadShared
 
 public final class MockMessageStore: MessageStoreProtocol, @unchecked Sendable {
     public var messages: [ConversationMessage] = []
@@ -19,7 +19,16 @@ public final class MockMessageStore: MessageStoreProtocol, @unchecked Sendable {
         messages.removeAll(where: { $0.timelineId == timelineId })
     }
 
-    public func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int {
+    public func pruneMessages(olderThan _: TimeInterval, dryRun _: Bool) async throws -> Int {
         return 0
+    }
+
+    public func fetchSnapshots(for timelineId: UUID) async throws -> [TurnSnapshot] {
+        messages
+            .filter { $0.timelineId == timelineId && $0.role == "assistant" }
+            .compactMap { msg in
+                guard let data = msg.snapshotData else { return nil }
+                return try? SerializationUtils.jsonDecoder.decode(TurnSnapshot.self, from: data)
+            }
     }
 }

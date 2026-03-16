@@ -97,7 +97,7 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
     }
 
     public func chatStreamWithContext(_: LLMChatRequest) async -> LLMStreamResult {
-        return LLMStreamResult(stream: AsyncThrowingStream { _ in }, rawPrompt: "", structuredContext: [:])
+        return LLMStreamResult(stream: AsyncThrowingStream { _ in }, rawPrompt: "")
     }
 
     public func chatStream(
@@ -109,7 +109,7 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
     }
 
     public func buildPrompt(_: LLMPromptRequest) async -> LLMPromptResult {
-        return LLMPromptResult(messages: [], rawPrompt: "", structuredContext: [:])
+        return LLMPromptResult(messages: [], rawPrompt: "")
     }
 
     public func buildContext(

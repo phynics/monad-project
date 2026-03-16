@@ -44,7 +44,7 @@ protocol ChatREPLController: Sendable {
     func setAgent(_ agent: AgentInstance?) async
     func getCurrentAgent() async -> AgentInstance?
     func refreshContext() async
-    func getLastDebugSnapshot() async -> DebugSnapshot?
+    func getLastTurnSnapshot() async -> TurnSnapshot?
     func cancelCurrentGeneration() async
 }
 

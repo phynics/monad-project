@@ -6,7 +6,7 @@ import MonadTestSupport
 import OpenAI
 import Testing
 
-@Suite final class ChatEngineStageTests {
+final class ChatEngineStageTests {
     private let logger = Logger(label: "test")
 
     @Test
@@ -62,7 +62,7 @@ import Testing
             systemInstructions: nil,
             availableTools: [],
             contextData: ContextData(),
-            structuredContext: [:],
+            remoteDepth: 0,
             currentMessages: [],
             turnCount: 1,
             outputs: outputs

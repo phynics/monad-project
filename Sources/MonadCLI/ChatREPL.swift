@@ -1,7 +1,7 @@
 import Foundation
+import Logging
 import MonadClient
 import MonadShared
-import Logging
 
 // Needed for fflush
 #if canImport(Glibc)
@@ -17,7 +17,7 @@ actor ChatREPL: ChatREPLController {
     var timeline: Timeline
     var running = true
     var selectedWorkspaceId: UUID?
-    var lastDebugSnapshot: DebugSnapshot?
+    var lastTurnSnapshot: TurnSnapshot?
     var lastServerStatus: Bool = true
 
     /// The currently attached agent instance (nil = no agent attached).

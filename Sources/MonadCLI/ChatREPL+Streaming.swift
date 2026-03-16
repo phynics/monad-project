@@ -177,8 +177,8 @@ extension ChatREPL {
         metadata: APIResponseMetadata,
         state: inout StreamState
     ) {
-        if let snapshotData = metadata.debugSnapshotData {
-            updateDebugSnapshot(snapshotData)
+        if let snapshotData = metadata.turnSnapshotData {
+            updateTurnSnapshot(snapshotData)
         }
         let tokens = metadata.totalTokens ?? 0
         let dur = String(format: "%.1fs", metadata.duration ?? 0)

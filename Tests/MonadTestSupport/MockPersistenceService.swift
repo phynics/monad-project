@@ -117,6 +117,10 @@ public final class MockPersistenceService: MemoryStoreProtocol, MessageStoreProt
         try await messagesMock.pruneMessages(olderThan: timeInterval, dryRun: dryRun)
     }
 
+    public func fetchSnapshots(for timelineId: UUID) async throws -> [TurnSnapshot] {
+        try await messagesMock.fetchSnapshots(for: timelineId)
+    }
+
     // MARK: - TimelinePersistenceProtocol
 
     public var timelines: [Timeline] {

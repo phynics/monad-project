@@ -3,7 +3,7 @@ import MonadShared
 import OpenAI
 
 /// Accumulates parts of a streamed tool call.
-struct StreamedToolCall: Sendable {
+struct StreamedToolCall {
     var callId: String
     var name: String
     var args: String
@@ -85,7 +85,7 @@ actor TurnOutputs {
 
 /// Immutable snapshot of a single chat turn as it moves through the pipeline.
 /// Mutable stage outputs are stored in `outputs`, a shared actor reference.
-struct ChatTurnContext: Sendable {
+struct ChatTurnContext {
     // Session-level fields — identical across all turns in a generation.
     let timelineId: UUID
     let agentInstanceId: UUID?
@@ -94,7 +94,7 @@ struct ChatTurnContext: Sendable {
     let systemInstructions: String?
     let availableTools: [AnyTool]
     let contextData: ContextData
-    let structuredContext: [String: String]
+    let remoteDepth: Int
 
     // Per-turn snapshot — different each iteration.
     let currentMessages: [ChatQuery.ChatCompletionMessageParam]
@@ -122,7 +122,7 @@ struct ChatTurnContext: Sendable {
             systemInstructions: systemInstructions,
             availableTools: availableTools,
             contextData: contextData,
-            structuredContext: structuredContext,
+            remoteDepth: remoteDepth,
             currentMessages: messages,
             turnCount: turnCount,
             outputs: TurnOutputs(priorAccumulatedOutput: priorAccumulatedOutput)

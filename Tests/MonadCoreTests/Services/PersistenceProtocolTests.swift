@@ -3,7 +3,6 @@ import Foundation
 @testable import MonadShared
 import Testing
 
-@Suite("Persistence Protocol Tests")
 struct PersistenceProtocolTests {
     /// This test verifies that we can define a mock that conforms to all new domain protocols
     /// effectively replacing the God protocol with composed requirements.
@@ -29,7 +28,8 @@ final class MockPersistenceStore:
     AgentTemplateStoreProtocol,
     WorkspacePersistenceProtocol,
     ToolPersistenceProtocol,
-    @unchecked Sendable {
+    @unchecked Sendable
+{
     /// MemoryStoreProtocol
     func saveMemory(_: Memory, policy _: MemorySavePolicy) async throws -> UUID {
         UUID()
@@ -79,6 +79,10 @@ final class MockPersistenceStore:
     func deleteMessages(for _: UUID) async throws {}
     func pruneMessages(olderThan _: TimeInterval, dryRun _: Bool) async throws -> Int {
         0
+    }
+
+    func fetchSnapshots(for _: UUID) async throws -> [TurnSnapshot] {
+        []
     }
 
     // TimelinePersistenceProtocol

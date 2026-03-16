@@ -36,18 +36,18 @@ public enum ClientConstants {
                 parametersSchema: [:],
                 contextInjection: "This tool does absolutely nothing but tests context injection."
             )
-        )
+        ),
     ]
 
     public static let readWriteToolReferences: [ToolReference] = [
         // Placeholder for future write tools
         .known(id: "write_file"),
         .known(id: "edit_file"),
-        .known(id: "delete_file")
+        .known(id: "delete_file"),
     ]
 }
 
 // MARK: - Re-exports for CLI consumers
 
-public typealias DebugSnapshot = MonadShared.DebugSnapshot
+public typealias TurnSnapshot = MonadShared.TurnSnapshot
 public typealias SerializationUtils = MonadShared.SerializationUtils

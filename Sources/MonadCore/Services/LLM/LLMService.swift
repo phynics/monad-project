@@ -57,7 +57,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
             "model": configuration.modelName,
             "provider": configuration.endpoint.contains("openai")
                 ? "openai"
-                : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom")
+                : (configuration.endpoint.contains("openrouter") ? "openrouter" : "custom"),
         ]
     }
 
@@ -299,15 +299,10 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     }
 
     public func buildPrompt(_ request: LLMPromptRequest) async -> LLMPromptResult {
-        // Use the new builder locally
         let prompt = await buildContext(request)
-
-        // Convert using the extension
         let messages = await prompt.toMessages()
         let raw = await prompt.render()
-        let ctx = await prompt.structuredContext()
-
-        return LLMPromptResult(messages: messages, rawPrompt: raw, structuredContext: ctx)
+        return LLMPromptResult(messages: messages, rawPrompt: raw)
     }
 }
 

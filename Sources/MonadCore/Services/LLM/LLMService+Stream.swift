@@ -11,7 +11,7 @@ public extension LLMService {
             let stream = AsyncThrowingStream<ChatStreamResult, Error> { continuation in
                 continuation.finish(throwing: LLMServiceError.notConfigured)
             }
-            return LLMStreamResult(stream: stream, rawPrompt: "Error: Not configured", structuredContext: [:])
+            return LLMStreamResult(stream: stream, rawPrompt: "Error: Not configured")
         }
 
         let promptRequest = LLMPromptRequest(
@@ -30,7 +30,6 @@ public extension LLMService {
         // Convert to OpenAI format
         let messages = await prompt.toMessages()
         let rawPrompt = await prompt.render()
-        let structuredContext = await prompt.structuredContext()
 
         // Delegate to client for streaming
         let toolParams = request.tools.isEmpty ? nil : request.tools.map { $0.toToolParam() }
@@ -38,7 +37,7 @@ public extension LLMService {
             messages: messages, tools: toolParams, responseFormat: request.responseFormat
         )
 
-        return LLMStreamResult(stream: stream, rawPrompt: rawPrompt, structuredContext: structuredContext)
+        return LLMStreamResult(stream: stream, rawPrompt: rawPrompt)
     }
 
     /// Stream chat responses (low-level API)

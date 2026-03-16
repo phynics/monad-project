@@ -1,8 +1,8 @@
+import Foundation
 import GRDB
+import Logging
 import MonadCore
 import MonadShared
-import Foundation
-import Logging
 
 public actor MessageRepository: MessageStoreProtocol {
     private let dbQueue: DatabaseQueue
@@ -36,15 +36,32 @@ public actor MessageRepository: MessageStoreProtocol {
         }
     }
 
+    public func fetchSnapshots(for timelineId: UUID) async throws -> [TurnSnapshot] {
+        let messages = try await dbQueue.read { db in
+            try ConversationMessage
+                .filter(Column("timelineId") == timelineId)
+                .filter(Column("role") == "assistant")
+                .filter(Column("snapshotData") != nil)
+                .order(Column("timestamp"))
+                .fetchAll(db)
+        }
+        return messages.compactMap { msg in
+            guard let data = msg.snapshotData else { return nil }
+            return try? SerializationUtils.jsonDecoder.decode(TurnSnapshot.self, from: data)
+        }
+    }
+
     public func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws
-        -> Int {
+        -> Int
+    {
         try await dbQueue.write { database in
             let cutoffDate = Date().addingTimeInterval(-timeInterval)
             let query =
                 ConversationMessage
-                .filter(Column("timestamp") < cutoffDate)
-                .filter(
-                    sql: "timelineId IN (SELECT id FROM timeline WHERE isArchived = 0)")
+                    .filter(Column("timestamp") < cutoffDate)
+                    .filter(
+                        sql: "timelineId IN (SELECT id FROM timeline WHERE isArchived = 0)"
+                    )
 
             if dryRun {
                 return try query.fetchCount(database)

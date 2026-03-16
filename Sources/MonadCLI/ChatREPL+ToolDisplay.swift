@@ -52,7 +52,7 @@ extension ChatREPL {
         return joined.count > 120 ? String(joined.prefix(120)) + "…" : joined
     }
 
-    func updateDebugSnapshot(_ data: Data) {
-        lastDebugSnapshot = try? SerializationUtils.jsonDecoder.decode(DebugSnapshot.self, from: data)
+    func updateTurnSnapshot(_ data: Data) {
+        lastTurnSnapshot = try? SerializationUtils.jsonDecoder.decode(TurnSnapshot.self, from: data)
     }
 }

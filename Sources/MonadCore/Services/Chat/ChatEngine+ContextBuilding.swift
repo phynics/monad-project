@@ -104,7 +104,8 @@ extension ChatEngine {
         }
         var clientName: String?
         if let ownerId = primaryWorkspaceOwnerId,
-           let client = try? await clientStore.fetchClient(id: ownerId) {
+           let client = try? await clientStore.fetchClient(id: ownerId)
+        {
             clientName = client.displayName
         }
         return ResolvedEntities(timeline: timeline, agentInstance: agentInstance, clientName: clientName)
@@ -112,7 +113,7 @@ extension ChatEngine {
 
     func buildPrompt(
         _ params: BuildPromptParams
-    ) async -> (messages: [ChatQuery.ChatCompletionMessageParam], structuredContext: [String: String]) {
+    ) async -> [ChatQuery.ChatCompletionMessageParam] {
         let extensionSections = await timelineManager.gatherExtensionSections(
             timelineId: params.timelineId,
             agentInstanceId: params.agentInstance?.id,
@@ -138,9 +139,6 @@ extension ChatEngine {
             extensionSections: extensionSections
         )
 
-        let messages = await prompt.toMessages()
-        let structuredContext = await prompt.structuredContext()
-
-        return (messages, structuredContext)
+        return await prompt.toMessages()
     }
 }

@@ -4,11 +4,13 @@ import MonadShared
 public extension TimelineManager {
     // MARK: - Tool Management
 
+    // swiftlint:disable:next function_parameter_count
     internal func createToolManager(
         for session: Timeline,
         jailRoot: String,
         toolContextTimeline: ToolTimelineContext,
-        parentId _: UUID? = nil
+        parentId _: UUID? = nil,
+        remoteDepth: Int = 0
     ) async -> TimelineToolManager {
         let currentWD = session.workingDirectory ?? jailRoot
 
@@ -29,7 +31,7 @@ public extension TimelineManager {
 
             // Timeline Observation Tools (always available)
             AnyTool(TimelineListTool(timelineStore: timelineStore)),
-            AnyTool(TimelinePeekTool(messageStore: messageStore, timelineStore: timelineStore))
+            AnyTool(TimelinePeekTool(messageStore: messageStore, timelineStore: timelineStore)),
         ]
 
         // Timeline Send: only available when an agent is attached (needs sender identity)
@@ -37,7 +39,8 @@ public extension TimelineManager {
             availableTools.append(AnyTool(TimelineSendTool(
                 messageStore: messageStore,
                 timelineStore: timelineStore,
-                agentInstanceId: agentId
+                agentInstanceId: agentId,
+                currentRemoteDepth: remoteDepth
             )))
         }
 
@@ -62,7 +65,8 @@ public extension TimelineManager {
     }
 
     func findWorkspaceForTool(_ tool: ToolReference, in workspaceIds: [UUID]) async throws
-        -> UUID? {
+        -> UUID?
+    {
         return try await toolPersistence.findWorkspaceId(forToolId: tool.toolId, in: workspaceIds)
     }
 

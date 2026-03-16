@@ -17,14 +17,17 @@ public struct TimelineSendTool: MonadShared.Tool, Sendable {
     private let messageStore: any MessageStoreProtocol
     private let timelineStore: any TimelinePersistenceProtocol
     private let agentInstanceId: UUID
+    private let currentRemoteDepth: Int
     public init(
         messageStore: any MessageStoreProtocol,
         timelineStore: any TimelinePersistenceProtocol,
-        agentInstanceId: UUID
+        agentInstanceId: UUID,
+        currentRemoteDepth: Int = 0
     ) {
         self.messageStore = messageStore
         self.timelineStore = timelineStore
         self.agentInstanceId = agentInstanceId
+        self.currentRemoteDepth = currentRemoteDepth
     }
 
     public var parametersSchema: [String: AnyCodable] {
@@ -54,6 +57,14 @@ public struct TimelineSendTool: MonadShared.Tool, Sendable {
             return .failure("Invalid timeline_id: \(timelineIdStr)")
         }
 
+        let nextDepth = currentRemoteDepth + 1
+        if nextDepth > ChatEngine.Constants.maxRemoteDepth {
+            return .failure(
+                "Remote depth limit exceeded (\(nextDepth) > \(ChatEngine.Constants.maxRemoteDepth)). " +
+                    "Cross-agent send chains are limited to \(ChatEngine.Constants.maxRemoteDepth) hops to prevent infinite recursion."
+            )
+        }
+
         // Validate target timeline exists and is accessible
         guard let timeline = try? await timelineStore.fetchTimeline(id: timelineId) else {
             return .failure("Timeline not found: \(timelineIdStr)")
@@ -67,7 +78,7 @@ public struct TimelineSendTool: MonadShared.Tool, Sendable {
             role: .system,
             content: "[Agent \(agentInstanceId.uuidString.prefix(8))]: \(messageContent)",
             agentInstanceId: agentInstanceId,
-            remoteDepth: 1
+            remoteDepth: nextDepth
         )
         try await messageStore.saveMessage(msg)
 

@@ -18,6 +18,7 @@ public final class ChatEngine: @unchecked Sendable {
         public static let historyTokenBuffer = 4000
         public static let sentinelToolName = "tool_call"
         public static let defaultMaxTurns = 5
+        public static let maxRemoteDepth = 3
     }
 
     @Dependency(\.timelineManager) var timelineManager
@@ -62,7 +63,9 @@ public final class ChatEngine: @unchecked Sendable {
 
         try await saveConversationSteps(timelineId: timelineId, message: message, toolOutputs: toolOutputs)
 
-        let history = try await timelineManager.getHistory(for: timelineId)
+        let conversationMessages = try await messageStore.fetchMessages(for: timelineId)
+        let history = conversationMessages.map { $0.toMessage() }
+        let currentRemoteDepth = conversationMessages.map(\.remoteDepth).max() ?? 0
         let contextData = await fetchContext(contextManager: contextManager, message: message, history: history)
 
         let workspaceResult = await timelineManager.getWorkspaces(for: timelineId)
@@ -85,7 +88,7 @@ public final class ChatEngine: @unchecked Sendable {
             clientName: entities.clientName,
             systemInstructions: systemInstructions
         )
-        let (initialMessages, structuredContext) = await buildPrompt(params)
+        let initialMessages = await buildPrompt(params)
         let modelName = await llmService.configuration.modelName
 
         let context = ChatTurnContext(
@@ -96,7 +99,7 @@ public final class ChatEngine: @unchecked Sendable {
             systemInstructions: systemInstructions,
             availableTools: tools,
             contextData: contextData,
-            structuredContext: structuredContext,
+            remoteDepth: currentRemoteDepth,
             currentMessages: initialMessages,
             turnCount: 0,
             outputs: TurnOutputs()

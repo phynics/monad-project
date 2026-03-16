@@ -36,8 +36,8 @@ extension ChatREPL {
         selectedWorkspaceId
     }
 
-    func getLastDebugSnapshot() -> DebugSnapshot? {
-        lastDebugSnapshot
+    func getLastTurnSnapshot() -> TurnSnapshot? {
+        lastTurnSnapshot
     }
 
     func refreshContext() async {

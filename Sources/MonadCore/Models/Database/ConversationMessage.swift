@@ -21,6 +21,9 @@ public struct ConversationMessage: Codable, Identifiable, Sendable {
     /// Depth counter for cross-agent `timeline_send` recursion guard. Default 0.
     public var remoteDepth: Int
 
+    /// Serialized `TurnSnapshot` JSON for audit trail. Only set on assistant messages.
+    public var snapshotData: Data?
+
     public init(
         id: UUID = UUID(),
         timelineId: UUID,
@@ -33,7 +36,8 @@ public struct ConversationMessage: Codable, Identifiable, Sendable {
         toolCalls: String = "[]",
         toolCallId: String? = nil,
         agentInstanceId: UUID? = nil,
-        remoteDepth: Int = 0
+        remoteDepth: Int = 0,
+        snapshotData: Data? = nil
     ) {
         self.id = id
         self.timelineId = timelineId
@@ -47,6 +51,7 @@ public struct ConversationMessage: Codable, Identifiable, Sendable {
         self.toolCallId = toolCallId
         self.agentInstanceId = agentInstanceId
         self.remoteDepth = remoteDepth
+        self.snapshotData = snapshotData
     }
 
     public var messageRole: Message.MessageRole {

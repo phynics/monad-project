@@ -50,16 +50,13 @@ public struct LLMChatRequest: Sendable {
 public struct LLMStreamResult: Sendable {
     public let stream: AsyncThrowingStream<ChatStreamResult, Error>
     public let rawPrompt: String
-    public let structuredContext: [String: String]
 
     public init(
         stream: AsyncThrowingStream<ChatStreamResult, Error>,
-        rawPrompt: String,
-        structuredContext: [String: String]
+        rawPrompt: String
     ) {
         self.stream = stream
         self.rawPrompt = rawPrompt
-        self.structuredContext = structuredContext
     }
 }
 
@@ -67,16 +64,13 @@ public struct LLMStreamResult: Sendable {
 public struct LLMPromptResult: Sendable {
     public let messages: [ChatQuery.ChatCompletionMessageParam]
     public let rawPrompt: String
-    public let structuredContext: [String: String]
 
     public init(
         messages: [ChatQuery.ChatCompletionMessageParam],
-        rawPrompt: String,
-        structuredContext: [String: String]
+        rawPrompt: String
     ) {
         self.messages = messages
         self.rawPrompt = rawPrompt
-        self.structuredContext = structuredContext
     }
 }
 

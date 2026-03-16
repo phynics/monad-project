@@ -18,13 +18,21 @@ struct MessagePersistenceStage: PipelineStage {
     func process(_ context: ChatTurnContext) async throws -> AsyncThrowingStream<ChatEvent, Error> {
         let hasPendingToolCalls = await !context.outputs.toolCallAccumulators.isEmpty
         let toolCallsJSON = await buildToolCallsJSON(from: context, hasPendingToolCalls: hasPendingToolCalls)
-        let recalledMemories = buildRecalledMemories(from: context, hasPendingToolCalls: hasPendingToolCalls)
 
         let fullResponse = await context.outputs.fullResponse
         let fullThinking = await context.outputs.fullThinking
         let streamUsage = await context.outputs.streamUsage
         let turnDuration = await context.outputs.turnDuration
         let tokensPerSecond = await context.outputs.tokensPerSecond
+
+        let recalledMemories: String
+        if hasPendingToolCalls {
+            recalledMemories = "[]"
+        } else {
+            let memories = context.contextData.memories.map { $0.memory }
+            recalledMemories = (try? SerializationUtils.jsonEncoder.encode(memories))
+                .flatMap { String(bytes: $0, encoding: .utf8) } ?? "[]"
+        }
 
         let assistantMsg = ConversationMessage(
             timelineId: context.timelineId,
@@ -37,7 +45,7 @@ struct MessagePersistenceStage: PipelineStage {
         )
         try await messageStore.saveMessage(assistantMsg)
 
-        let snapshot = await buildDebugSnapshot(from: context, hasPendingToolCalls: hasPendingToolCalls)
+        let snapshot = await buildTurnSnapshot(from: context)
         let snapshotData = try? SerializationUtils.jsonEncoder.encode(snapshot)
 
         return AsyncThrowingStream { continuation in
@@ -51,7 +59,7 @@ struct MessagePersistenceStage: PipelineStage {
                         totalTokens: streamUsage?.totalTokens,
                         duration: turnDuration,
                         tokensPerSecond: tokensPerSecond,
-                        debugSnapshotData: snapshotData
+                        turnSnapshotData: snapshotData
                     )
                 ))
             }
@@ -71,25 +79,35 @@ struct MessagePersistenceStage: PipelineStage {
             .flatMap { String(bytes: $0, encoding: .utf8) } ?? "[]"
     }
 
-    private func buildRecalledMemories(from context: ChatTurnContext, hasPendingToolCalls: Bool) -> String {
-        guard !hasPendingToolCalls else { return "[]" }
-        let memories = context.contextData.memories.map { $0.memory }
-        return (try? SerializationUtils.jsonEncoder.encode(memories))
-            .flatMap { String(bytes: $0, encoding: .utf8) } ?? "[]"
-    }
-
-    private func buildDebugSnapshot(from context: ChatTurnContext, hasPendingToolCalls _: Bool) async -> DebugSnapshot {
+    private func buildTurnSnapshot(from context: ChatTurnContext) async -> TurnSnapshot {
         let debugToolCalls = await context.outputs.debugToolCalls
         let debugToolResults = await context.outputs.debugToolResults
         let accumulatedRawOutput = await context.outputs.accumulatedRawOutput
-        return DebugSnapshot(
-            structuredContext: context.structuredContext,
+        let fullResponse = await context.outputs.fullResponse
+        let fullThinking = await context.outputs.fullThinking
+        let turnDuration = await context.outputs.turnDuration
+        let tokensPerSecond = await context.outputs.tokensPerSecond
+        let streamUsage = await context.outputs.streamUsage
+
+        return TurnSnapshot(
+            timelineId: context.timelineId,
+            agentInstanceId: context.agentInstanceId,
+            modelName: context.modelName,
+            turnCount: context.turnCount,
+            maxTurns: context.maxTurns,
+            systemInstructions: context.systemInstructions,
+            availableToolIds: context.availableTools.map { $0.id },
+            renderedPrompt: ChatEngine.renderMessagesStatic(context.currentMessages),
+            fullResponse: fullResponse,
+            fullThinking: fullThinking,
+            rawOutput: accumulatedRawOutput,
             toolCalls: debugToolCalls,
             toolResults: debugToolResults,
-            renderedPrompt: ChatEngine.renderMessagesStatic(context.currentMessages),
-            rawOutput: accumulatedRawOutput,
-            model: context.modelName,
-            turnCount: context.turnCount
+            turnDuration: turnDuration,
+            tokensPerSecond: tokensPerSecond,
+            promptTokens: streamUsage?.promptTokens,
+            completionTokens: streamUsage?.completionTokens,
+            totalTokens: streamUsage?.totalTokens
         )
     }
 }

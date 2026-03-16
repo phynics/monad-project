@@ -299,6 +299,10 @@ public struct UnconfiguredMessageStore: MessageStoreProtocol {
     public func pruneMessages(olderThan _: TimeInterval, dryRun _: Bool) async throws -> Int {
         fail()
     }
+
+    public func fetchSnapshots(for _: UUID) async throws -> [TurnSnapshot] {
+        fail()
+    }
 }
 
 public struct UnconfiguredTimelinePersistence: TimelinePersistenceProtocol {

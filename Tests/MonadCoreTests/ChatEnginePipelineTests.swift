@@ -31,7 +31,7 @@ private func makeContext(
         systemInstructions: nil,
         availableTools: [],
         contextData: ContextData(),
-        structuredContext: [:],
+        remoteDepth: 0,
         currentMessages: currentMessages,
         turnCount: 1,
         outputs: outputs
@@ -48,7 +48,7 @@ private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws
 
 // MARK: - MessagePersistenceStage Tests
 
-@Suite final class MessagePersistenceStageBehavior {
+final class MessagePersistenceStageBehavior {
     @Test
     func completedEventEmittedOnFinalTurn() async throws {
         let store = MockPersistenceService()
@@ -77,7 +77,7 @@ private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws
     }
 
     @Test
-    func debugSnapshotCapturesRenderedPromptOnFinalTurn() async throws {
+    func turnSnapshotCapturesRenderedPromptOnFinalTurn() async throws {
         let store = MockPersistenceService()
         let stage = MessagePersistenceStage(messageStore: store, logger: testLogger)
         let context = await makeContext(
@@ -89,8 +89,8 @@ private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws
         let events = try await drain(await stage.process(context))
 
         let completed = events.compactMap { $0.completedMessage }.first
-        let data = try #require(completed?.metadata.debugSnapshotData)
-        let snapshot = try SerializationUtils.jsonDecoder.decode(DebugSnapshot.self, from: data)
+        let data = try #require(completed?.metadata.turnSnapshotData)
+        let snapshot = try SerializationUtils.jsonDecoder.decode(TurnSnapshot.self, from: data)
         #expect(snapshot.renderedPrompt != nil)
         #expect(snapshot.renderedPrompt?.isEmpty == false)
         #expect(snapshot.rawOutput == "done")
@@ -99,7 +99,7 @@ private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws
 
 // MARK: - ToolCallExtractionStage Tests
 
-@Suite final class ToolCallExtractionStageBehavior {
+final class ToolCallExtractionStageBehavior {
     @Test
     func sentinelCallsFiltered() async throws {
         let stage = ToolCallExtractionStage(logger: testLogger)
@@ -147,7 +147,7 @@ private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws
 
 // MARK: - LLMStreamingStage Tests
 
-@Suite final class LLMStreamingStageBehavior {
+final class LLMStreamingStageBehavior {
     @Test
     func thinkingAndContentSeparated() async throws {
         let mockService = MockLLMService()
@@ -172,7 +172,7 @@ private func drain(_ stream: AsyncThrowingStream<ChatEvent, Error>) async throws
         let mockService = MockLLMService()
         mockService.mockClient.nextResponse = ""
         mockService.mockClient.nextToolCalls = [[
-            MockToolCall(id: "tc-1", name: "my_tool", arguments: "{\"x\": 1}")
+            MockToolCall(id: "tc-1", name: "my_tool", arguments: "{\"x\": 1}"),
         ]]
         let stage = LLMStreamingStage(llmService: mockService, logger: testLogger)
         let context = await makeContext()

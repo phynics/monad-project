@@ -87,6 +87,7 @@ extension DatabaseSchema {
             table.column("toolCallId", .text)
             table.column("agentInstanceId", .blob)
             table.column("remoteDepth", .integer).notNull().defaults(to: 0)
+            table.column("snapshotData", .blob)
         }
 
         // Indexes for timeline

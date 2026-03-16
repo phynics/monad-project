@@ -1,5 +1,6 @@
 import MonadShared
-/// Protocol for managing chat history and message persistence.
+
+// Protocol for managing chat history and message persistence.
 
 import Foundation
 
@@ -8,4 +9,5 @@ public protocol MessageStoreProtocol: Sendable {
     func fetchMessages(for timelineId: UUID) async throws -> [ConversationMessage]
     func deleteMessages(for timelineId: UUID) async throws
     func pruneMessages(olderThan timeInterval: TimeInterval, dryRun: Bool) async throws -> Int
+    func fetchSnapshots(for timelineId: UUID) async throws -> [TurnSnapshot]
 }

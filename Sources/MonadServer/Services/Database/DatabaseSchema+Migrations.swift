@@ -36,5 +36,13 @@ public extension DatabaseSchema {
             )
             """)
         }
+
+        migrator.registerMigration("v4") { db in
+            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "snapshotData" }) {
+                try db.alter(table: "conversationMessage") { table in
+                    table.add(column: "snapshotData", .blob)
+                }
+            }
+        }
     }
 }

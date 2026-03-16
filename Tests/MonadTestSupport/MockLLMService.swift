@@ -169,7 +169,7 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
 
     public func chatStreamWithContext(_ request: LLMChatRequest) async -> LLMStreamResult {
         let stream = await chatStream(messages: [], tools: nil, responseFormat: request.responseFormat)
-        return LLMStreamResult(stream: stream, rawPrompt: "mock prompt", structuredContext: [:])
+        return LLMStreamResult(stream: stream, rawPrompt: "mock prompt")
     }
 
     public func chatStream(
@@ -186,7 +186,7 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
     }
 
     public func buildPrompt(_: LLMPromptRequest) async -> LLMPromptResult {
-        return LLMPromptResult(messages: [], rawPrompt: "mock prompt", structuredContext: [:])
+        return LLMPromptResult(messages: [], rawPrompt: "mock prompt")
     }
 
     public func buildContext(
