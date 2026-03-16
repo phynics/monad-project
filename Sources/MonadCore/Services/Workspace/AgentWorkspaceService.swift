@@ -6,7 +6,7 @@ import MonadShared
 ///
 /// Handles workspace CRUD (delegating to `workspacePersistence`) and agent-specific
 /// provisioning: creating sandboxed directories and seeding them from ``AgentTemplate`` files.
-public actor AgentWorkspaceService {
+public actor AgentWorkspaceService: AgentWorkspaceServiceProtocol {
     @Dependency(\.workspacePersistence) private var persistenceService
     private let workspaceRoot: URL
 
@@ -18,9 +18,9 @@ public actor AgentWorkspaceService {
     public func createWorkspace(
         uri: WorkspaceURI,
         hostType: WorkspaceReference.WorkspaceHostType,
-        ownerId: UUID? = nil,
-        rootPath: String? = nil,
-        metadata: [String: AnyCodable] = [:]
+        ownerId: UUID?,
+        rootPath: String?,
+        metadata: [String: AnyCodable]
     ) async throws -> WorkspaceReference {
         let workspace = WorkspaceReference(
             uri: uri,
@@ -36,8 +36,8 @@ public actor AgentWorkspaceService {
     /// Creates a new agent workspace and seeds it with template files.
     public func createAgentWorkspace(
         instanceId: UUID,
-        template: AgentTemplate? = nil,
-        metadata: [String: AnyCodable] = [:]
+        template: AgentTemplate?,
+        metadata: [String: AnyCodable]
     ) async throws -> WorkspaceReference {
         // 1. Create workspace directory
         let agentWorkspaceURL = workspaceRoot
@@ -68,13 +68,14 @@ public actor AgentWorkspaceService {
         return try await createWorkspace(
             uri: .agentWorkspace(instanceId),
             hostType: .server,
+            ownerId: nil,
             rootPath: agentWorkspaceURL.path,
             metadata: metadata
         )
     }
 
     /// Fetches a workspace by its unique identifier.
-    public func getWorkspace(id: UUID, includeTools: Bool = true) async throws -> WorkspaceReference? {
+    public func getWorkspace(id: UUID, includeTools: Bool) async throws -> WorkspaceReference? {
         return try await persistenceService.fetchWorkspace(id: id, includeTools: includeTools)
     }
 
@@ -84,7 +85,7 @@ public actor AgentWorkspaceService {
     }
 
     /// Deletes a workspace.
-    public func deleteWorkspace(id: UUID, deleteDirectory: Bool = false) async throws {
+    public func deleteWorkspace(id: UUID, deleteDirectory: Bool) async throws {
         if deleteDirectory,
            let workspace = try await getWorkspace(id: id, includeTools: false),
            let rootPath = workspace.rootPath {

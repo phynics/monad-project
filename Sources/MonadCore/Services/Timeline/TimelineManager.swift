@@ -41,7 +41,7 @@ public actor TimelineManager {
     let vectorStore: (any VectorStoreProtocol)?
     let workspaceRoot: URL
     let connectionManager: (any ClientConnectionManagerProtocol)?
-    public let workspaceManager: WorkspaceManager
+    public let workspaceManager: any WorkspaceManagerProtocol
     let sectionProviders: [any PromptSectionProviding]
 
     /// Initializes a new `TimelineManager`.

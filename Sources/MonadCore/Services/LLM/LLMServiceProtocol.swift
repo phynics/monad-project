@@ -149,7 +149,9 @@ public protocol LLMServiceProtocol: HealthCheckable {
     func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]?,
-        responseFormat: ChatQuery.ResponseFormat?
+        responseFormat: ChatQuery.ResponseFormat?,
+        useUtilityModel: Bool,
+        useFastModel: Bool
     ) async -> AsyncThrowingStream<ChatStreamResult, Error>
 
     // Utilities
@@ -158,4 +160,22 @@ public protocol LLMServiceProtocol: HealthCheckable {
     func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws
         -> [String: Double]
     func fetchAvailableModels() async throws -> [String]?
+}
+
+extension LLMServiceProtocol {
+    public func chatStream(
+        messages: [ChatQuery.ChatCompletionMessageParam],
+        tools: [ChatQuery.ChatCompletionToolParam]? = nil,
+        responseFormat: ChatQuery.ResponseFormat? = nil,
+        useUtilityModel: Bool = false,
+        useFastModel: Bool = false
+    ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
+        await chatStream(
+            messages: messages,
+            tools: tools,
+            responseFormat: responseFormat,
+            useUtilityModel: useUtilityModel,
+            useFastModel: useFastModel
+        )
+    }
 }

@@ -39,7 +39,7 @@ public struct MonadServerFactory {
     }
 
     private struct ServiceSet {
-        let llmService: LLMService
+        let llmService: any LLMServiceProtocol
         let embeddingService: any EmbeddingServiceProtocol
         let vectorStore: any VectorStoreProtocol
         let keyValueStore: DatabaseKeyValueStore
@@ -50,8 +50,8 @@ public struct MonadServerFactory {
         let timelineManager: TimelineManager
         let toolRouter: ToolRouter
         let chatEngine: ChatEngine
-        let agentInstanceManager: AgentInstanceManager
-        let workspaceManager: WorkspaceManager
+        let agentInstanceManager: any AgentInstanceManagerProtocol
+        let workspaceManager: any WorkspaceManagerProtocol
     }
 
     public static func createServerContext(

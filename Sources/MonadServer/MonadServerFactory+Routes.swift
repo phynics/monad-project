@@ -56,8 +56,8 @@ extension MonadServerFactory {
 
     static func registerResourceRoutes(
         on protected: RouterGroup<AppRequestContext>,
-        agentInstanceManager: AgentInstanceManager,
-        llmService: LLMService
+        agentInstanceManager: any AgentInstanceManagerProtocol,
+        llmService: any LLMServiceProtocol
     ) {
         let memoryController = MemoryAPIController<AppRequestContext>()
         memoryController.addRoutes(to: protected.group("/memories"))

@@ -7,8 +7,8 @@ import MonadShared
 /// WorkspaceManager is responsible for resolving WorkspaceReferences into concrete
 /// WorkspaceProtocol implementations, maintaining a cache of active workspaces,
 /// and coordinating their lifecycle (creation, health checks, and shutdown).
-public actor WorkspaceManager {
-    private let repository: AgentWorkspaceService
+public actor WorkspaceManager: WorkspaceManagerProtocol {
+    private let repository: any AgentWorkspaceServiceProtocol
     private let connectionManager: (any ClientConnectionManagerProtocol)?
     private let workspaceCreator: any WorkspaceCreating
 
@@ -16,7 +16,7 @@ public actor WorkspaceManager {
     private var activeWorkspaces: [UUID: any WorkspaceProtocol] = [:]
 
     public init(
-        repository: AgentWorkspaceService,
+        repository: any AgentWorkspaceServiceProtocol,
         connectionManager: (any ClientConnectionManagerProtocol)? = nil,
         workspaceCreator: any WorkspaceCreating
     ) {
@@ -54,7 +54,7 @@ public actor WorkspaceManager {
     }
 
     /// Closes and removes a workspace from the active cache.
-    public func closeWorkspace(id: UUID) {
+    public func closeWorkspace(id: UUID) async {
         activeWorkspaces.removeValue(forKey: id)
     }
 

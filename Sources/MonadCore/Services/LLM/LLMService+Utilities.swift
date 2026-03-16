@@ -3,13 +3,9 @@ import Logging
 import MonadShared
 import OpenAI
 
-public extension LLMService {
+public extension LLMServiceProtocol {
     /// Generate tags/keywords for a given text using the LLM
     func generateTags(for text: String) async throws -> [String] {
-        guard let client = getUtilityClient() ?? getClient() else {
-            return []
-        }
-
         let prompt = """
         Extract 3-5 relevant keywords or tags from the following text.
         Return ONLY a JSON object with a key "tags" containing an array of strings.
@@ -19,7 +15,7 @@ public extension LLMService {
         """
 
         do {
-            let response = try await client.sendMessage(prompt, responseFormat: .jsonObject)
+            let response = try await self.sendMessage(prompt, responseFormat: .jsonObject, useUtilityModel: true)
 
             // Clean up response (some models might still include markdown)
             var cleanJson = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
@@ -31,12 +27,8 @@ public extension LLMService {
             }
             cleanJson = cleanJson.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
-            struct TagResponse: Codable {
-                let tags: [String]
-            }
-
             guard let data = cleanJson.data(using: String.Encoding.utf8),
-                  let tagResponse = try? JSONDecoder().decode(TagResponse.self, from: data)
+                  let tagResponse = try? JSONDecoder().decode(LLMTagResponse.self, from: data)
             else {
                 Logger.module(named: "llm").warning("Failed to parse tags from LLM response: \(response)")
                 return []
@@ -51,7 +43,7 @@ public extension LLMService {
 
     /// Generate a concise title for a conversation
     func generateTitle(for messages: [Message]) async throws -> String {
-        guard let client = getUtilityClient() ?? getClient(), !messages.isEmpty else {
+        guard !messages.isEmpty else {
             return "New Conversation"
         }
 
@@ -68,7 +60,7 @@ public extension LLMService {
         """
 
         do {
-            let response = try await client.sendMessage(prompt, responseFormat: nil)
+            let response = try await self.sendMessage(prompt, responseFormat: nil, useUtilityModel: true)
             let title = response.trimmingCharacters(in: .whitespacesAndNewlines)
                 .replacingOccurrences(of: "\"", with: "")
 
@@ -88,7 +80,7 @@ public extension LLMService {
         transcript: String,
         recalledMemories: [Memory]
     ) async throws -> [String: Double] {
-        guard let client = getUtilityClient() ?? getClient(), !recalledMemories.isEmpty else {
+        guard !recalledMemories.isEmpty else {
             return [:]
         }
 
@@ -118,7 +110,7 @@ public extension LLMService {
         """
 
         do {
-            let response = try await client.sendMessage(prompt, responseFormat: .jsonObject)
+            let response = try await self.sendMessage(prompt, responseFormat: .jsonObject, useUtilityModel: true)
 
             // Clean up response
             var cleanJson = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
@@ -141,8 +133,12 @@ public extension LLMService {
 
             return scores
         } catch {
-            logger.error("Failed to evaluate recall: \(error.localizedDescription)")
+            Logger.module(named: "llm").error("Failed to evaluate recall: \(error.localizedDescription)")
             return [:]
         }
     }
+}
+
+private struct LLMTagResponse: Codable {
+    let tags: [String]
 }

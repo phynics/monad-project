@@ -5,20 +5,20 @@ import MonadShared
 // MARK: - Dependency Keys
 
 public enum AgentWorkspaceServiceKey: DependencyKey {
-    public static var liveValue: AgentWorkspaceService {
+    public static var liveValue: any AgentWorkspaceServiceProtocol {
         preconditionFailure(
             "AgentWorkspaceService requires an explicit workspaceRoot. " +
                 "Configure it via MonadServerFactory or your test setup."
         )
     }
 
-    public static let testValue = AgentWorkspaceService(
+    public static let testValue: any AgentWorkspaceServiceProtocol = AgentWorkspaceService(
         workspaceRoot: FileManager.default.temporaryDirectory
     )
 }
 
 public enum WorkspaceManagerKey: DependencyKey {
-    public static var liveValue: WorkspaceManager {
+    public static var liveValue: any WorkspaceManagerProtocol {
         @Dependency(\.agentWorkspaceService) var service
         return WorkspaceManager(
             repository: service,
@@ -42,7 +42,7 @@ public enum ChatEngineKey: DependencyKey {
 }
 
 public enum AgentInstanceManagerKey: DependencyKey {
-    public static var liveValue: AgentInstanceManager {
+    public static var liveValue: any AgentInstanceManagerProtocol {
         @Dependency(\.agentWorkspaceService) var service
         return AgentInstanceManager(repository: service)
     }
@@ -56,12 +56,12 @@ public enum ChatTurnPluginsKey: DependencyKey {
 // MARK: - Dependency Values
 
 public extension DependencyValues {
-    var agentWorkspaceService: AgentWorkspaceService {
+    var agentWorkspaceService: any AgentWorkspaceServiceProtocol {
         get { self[AgentWorkspaceServiceKey.self] }
         set { self[AgentWorkspaceServiceKey.self] = newValue }
     }
 
-    var workspaceManager: WorkspaceManager {
+    var workspaceManager: any WorkspaceManagerProtocol {
         get { self[WorkspaceManagerKey.self] }
         set { self[WorkspaceManagerKey.self] = newValue }
     }
@@ -81,7 +81,7 @@ public extension DependencyValues {
         set { self[ChatEngineKey.self] = newValue }
     }
 
-    var agentInstanceManager: AgentInstanceManager {
+    var agentInstanceManager: any AgentInstanceManagerProtocol {
         get { self[AgentInstanceManagerKey.self] }
         set { self[AgentInstanceManagerKey.self] = newValue }
     }

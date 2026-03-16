@@ -12,16 +12,16 @@ import MonadShared
 /// - One agent can attach to multiple timelines simultaneously.
 /// - `attach` is idempotent: re-attaching the same agent to the same timeline is a no-op.
 /// - If `attachedAgentInstanceId` references a deleted agent, it is nulled on access.
-public actor AgentInstanceManager {
+public actor AgentInstanceManager: AgentInstanceManagerProtocol {
     @Dependency(\.agentInstanceStore) private var instanceStore
     @Dependency(\.timelinePersistence) private var timelineStore
     @Dependency(\.messageStore) private var messageStore
     @Dependency(\.workspacePersistence) private var workspaceStore
 
-    private let repository: AgentWorkspaceService
+    private let repository: any AgentWorkspaceServiceProtocol
     private let logger = Logger.module(named: "agent-instance-manager")
 
-    public init(repository: AgentWorkspaceService) {
+    public init(repository: any AgentWorkspaceServiceProtocol) {
         self.repository = repository
     }
 
@@ -34,7 +34,7 @@ public actor AgentInstanceManager {
     ///   - description: Purpose description.
     /// - Returns: The created `AgentInstance`.
     public func createInstance(
-        from template: AgentTemplate? = nil,
+        from template: AgentTemplate?,
         name: String,
         description: String
     ) async throws -> AgentInstance {
@@ -210,7 +210,7 @@ public actor AgentInstanceManager {
 
     /// Deletes an agent instance and optionally force-detaches it from all timelines.
     /// - Parameter force: If false, throws if the agent is still attached to any timelines.
-    public func deleteInstance(id: UUID, force: Bool = false) async throws {
+    public func deleteInstance(id: UUID, force: Bool) async throws {
         guard let instance = try await instanceStore.fetchAgentInstance(id: id) else {
             throw AgentInstanceError.instanceNotFound(id)
         }

@@ -17,9 +17,9 @@ import NIOCore
 /// - `DELETE /:id/attach/:timelineId`     — detach from a timeline
 /// - `GET /:id/timelines`                 — list timelines attached to this agent
 public struct AgentInstanceAPIController<Context: RequestContext>: Sendable {
-    public let agentInstanceManager: AgentInstanceManager
+    public let agentInstanceManager: any AgentInstanceManagerProtocol
 
-    public init(agentInstanceManager: AgentInstanceManager) {
+    public init(agentInstanceManager: any AgentInstanceManagerProtocol) {
         self.agentInstanceManager = agentInstanceManager
     }
 
