@@ -1,9 +1,0 @@
-- [ ] Wakeup triggers: `metadata.wakeupTriggers` — `onPrivateMessage`, `onSchedule (cron)`, `onMention`
-- [ ] Cross-agent capability advertisement via `metadata.capabilities: [String]`
-- [ ] Private timeline summarization — long-term agent memory via existing `isSummary` mechanism
-- [ ] `remoteDepth` enforcement for cross-agent send recursion guard
-- [ ] `remoteDepth` enforcement for cross-agent send recursion guard
-- [ ] **Unified Audit Trail**: Refactor `ChatTurnContext` to generate its own serializable snapshots.
-    - Capturing raw `ContextData` snapshots (memories, notes used) alongside rendered strings.
-    - Unifying persistence (`messageStore`) and real-time telemetry (`ChatEvent`) data sources.
-    - Supporting "flight recorder" style replay for debugging agent logic.
