@@ -1,7 +1,6 @@
 import Dependencies
 import Foundation
 import MonadCore
-@testable import MonadPrompt
 import MonadShared
 import OpenAI
 
@@ -183,19 +182,6 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         return await mockClient.chatStream(
             messages: messages, tools: tools, responseFormat: responseFormat
         )
-    }
-
-    public func buildPrompt(_: LLMPromptRequest) async -> LLMPromptResult {
-        return LLMPromptResult(messages: [], rawPrompt: "mock prompt")
-    }
-
-    public func buildContext(
-        _: LLMPromptRequest,
-        agentInstance _: AgentInstance?,
-        timeline _: Timeline?,
-        extensionSections _: [any ContextSection]
-    ) async -> Prompt {
-        return Prompt(sections: [])
     }
 
     public func generateTags(for _: String) async throws -> [String] {

@@ -1,6 +1,5 @@
 import Dependencies
 import Foundation
-import MonadPrompt
 import MonadShared
 import OpenAI
 
@@ -106,19 +105,6 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         responseFormat _: ChatQuery.ResponseFormat?
     ) async -> AsyncThrowingStream<ChatStreamResult, any Error> {
         return AsyncThrowingStream { _ in }
-    }
-
-    public func buildPrompt(_: LLMPromptRequest) async -> LLMPromptResult {
-        return LLMPromptResult(messages: [], rawPrompt: "")
-    }
-
-    public func buildContext(
-        _: LLMPromptRequest,
-        agentInstance _: AgentInstance?,
-        timeline _: Timeline?,
-        extensionSections _: [any ContextSection]
-    ) async -> Prompt {
-        fail()
     }
 
     public func getClient() async -> (any LLMClientProtocol)? {

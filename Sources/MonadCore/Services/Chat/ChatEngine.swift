@@ -200,14 +200,10 @@ public final class ChatEngine: @unchecked Sendable {
         let turnLabel = ANSIColors.colorize("\(context.turnCount)", color: ANSIColors.brightYellow)
         logger.info("Starting turn \(turnLabel) for timeline \(sid)")
 
-        if Task.isCancelled {
-            continuation.yield(.generationCancelled())
-            continuation.finish()
-            return .stop
-        }
-
         do {
+            try Task.checkCancellation()
             try await processTurn(context: context, continuation: continuation)
+            return try await handleToolCallsAfterTurn(context: context, continuation: continuation)
         } catch is CancellationError {
             continuation.yield(.generationCancelled())
             continuation.finish()
@@ -217,61 +213,26 @@ public final class ChatEngine: @unchecked Sendable {
             continuation.finish(throwing: error)
             return .stop
         }
-
-        do {
-            return try await handleToolCallsAfterTurn(context: context, continuation: continuation)
-        } catch {
-            logger.error("Tool execution error on turn \(context.turnCount): \(error)")
-            continuation.finish(throwing: error)
-            return .stop
-        }
     }
 
-    /// Inspects the outputs of the previous turn and handles any requested tool calls.
-    ///
-    /// - If tools can be resolved on the server, they are executed immediately and the results
-    ///   are returned so the loop can continue (multi-step reasoning).
-    /// - If any tool requires client-side execution, the turn stops and defers to the client.
+    /// Delegates tool call handling to the ToolRouter and maps the result to a loop decision.
     private func handleToolCallsAfterTurn(
         context: ChatTurnContext,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
     ) async throws -> LoopContinuation {
-        // 1. Extract and parse streamed tool calls from the turn outputs
-        let accumulators = await context.outputs.toolCallAccumulators
-        guard !accumulators.isEmpty else { return .stop }
-
-        let sortedCalls = accumulators.sorted(by: { $0.key < $1.key })
-        let parsedCalls = sortedCalls.map { _, value in
-            ParsedToolCall(callId: value.callId, name: value.name, argumentsJSON: value.args)
-        }
-
-        // 2. Prepare the assistant's message (including the tool_calls definition)
-        // This is necessary to maintain valid conversation history for the next turn.
-        let toolCallsParam = sortedCalls.map { _, value in
-            ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam(
-                id: value.callId, function: .init(arguments: value.args, name: value.name)
-            )
-        }
-        let fullResponse = await context.outputs.fullResponse
-        let assistantParam = ChatQuery.ChatCompletionMessageParam.assistant(
-            .init(content: .textContent(.init(fullResponse)), toolCalls: toolCallsParam)
-        )
-
-        // 3. Route calls to the ToolRouter
-        // This executes server-side tools immediately and emits progress/completion events.
-        let result = try await toolRouter.handlePendingToolCalls(
+        let result = try await toolRouter.processToolCalls(
+            outputs: context.outputs,
             timelineId: context.timelineId,
-            calls: parsedCalls,
             availableTools: context.availableTools,
             continuation: continuation
         )
 
-        // 4. Decision: Can we keep going autonomously?
-        // If any tool was deferred to the client, we MUST stop and wait for a response.
-        if result.hasDeferred { return .stop }
-
-        // If all tools were resolved locally, we continue the turn automatically with results added to history.
-        return .continueWith([assistantParam] + result.resolvedToolParams)
+        switch result {
+        case .noToolCalls, .deferredToClient:
+            return .stop
+        case let .continueWith(messages):
+            return .continueWith(messages)
+        }
     }
 
     private func processTurn(

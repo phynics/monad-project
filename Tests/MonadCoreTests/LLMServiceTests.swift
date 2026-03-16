@@ -5,7 +5,7 @@ import MonadTestSupport
 import OpenAI
 import Testing
 
-@Suite @MainActor
+@MainActor
 struct LLMServiceTests {
     private let llmService: LLMService
 
@@ -30,14 +30,14 @@ struct LLMServiceTests {
     @Test("Test prompt building logic and structure")
     func promptBuilding() async {
         let contextFiles = [
-            ContextFile(name: "Test Note", content: "Note Content", source: "note")
+            ContextFile(name: "Test Note", content: "Note Content", source: "note"),
         ]
         let history = [
             Message(content: "Previous user message", role: .user),
-            Message(content: "Previous assistant message", role: .assistant)
+            Message(content: "Previous assistant message", role: .assistant),
         ]
 
-        let prompt = await llmService.buildContext(
+        let prompt = PromptBuilder.buildContext(
             LLMPromptRequest(
                 userQuery: "Current question",
                 contextNotes: contextFiles,
@@ -116,7 +116,7 @@ struct LLMServiceTests {
 
     @Test("Test prompt building with empty context")
     func promptBuildingEmptyContext() async {
-        let prompt = await llmService.buildContext(
+        let prompt = PromptBuilder.buildContext(
             LLMPromptRequest(
                 userQuery: "Hello",
                 contextNotes: [],
@@ -147,7 +147,7 @@ struct LLMServiceTests {
     }
 
     @Test("Test history optimization (truncation)")
-    func promptTruncation() async {
+    func promptTruncation() {
         // Create a large history that should be truncated
         // make sure it exceeds the limit we pass
         let limit = 100
@@ -161,7 +161,7 @@ struct LLMServiceTests {
         }
 
         // Call optimizeHistory directly
-        let optimized = await llmService.optimizeHistory(largeHistory, availableTokens: limit)
+        let optimized = PromptBuilder.optimizeHistory(largeHistory, availableTokens: limit)
 
         // Should have fewer messages than total history
         #expect(optimized.count < largeHistory.count)
@@ -195,7 +195,7 @@ struct LLMServiceTests {
 
         let messages = [
             Message(content: "How do I use SwiftUI?", role: .user),
-            Message(content: "You use it by declaring views.", role: .assistant)
+            Message(content: "You use it by declaring views.", role: .assistant),
         ]
 
         let title = try await service.generateTitle(for: messages)

@@ -2,7 +2,6 @@ import Dependencies
 import ErrorKit
 import Foundation
 import Logging
-import MonadPrompt
 import MonadShared
 import Observation
 import OpenAI
@@ -36,13 +35,6 @@ extension OllamaClient: LLMClientProtocol {}
 
 /// Service for managing LLM interactions with configuration support
 public actor LLMService: LLMServiceProtocol, HealthCheckable {
-    // MARK: - Constants
-
-    private enum Constants {
-        static let maxHistoryTokens = 120_000
-        static let historyTokenBuffer = 4000
-    }
-
     public private(set) var configuration: LLMConfiguration = .openAI
     public private(set) var isConfigured: Bool = false
 
@@ -224,85 +216,6 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
             throw LLMServiceError.notConfigured
         }
         return try await client.sendMessage(content, responseFormat: responseFormat)
-    }
-
-    public func buildContext(
-        _ request: LLMPromptRequest,
-        agentInstance: AgentInstance? = nil,
-        timeline: Timeline? = nil,
-        extensionSections: [any ContextSection] = []
-    ) async -> Prompt {
-        let instructions = request.systemInstructions ?? DefaultInstructions.system()
-
-        var sections: [any ContextSection] = []
-
-        sections.append(SystemInstructions(instructions))
-
-        if let agent = agentInstance {
-            sections.append(AgentContext(agent, timelineTitle: timeline?.title))
-        }
-
-        sections.append(ContextNotes(request.contextNotes))
-        sections.append(Memories(request.memories))
-        sections.append(Tools(request.tools))
-        sections.append(WorkspacesContext(
-            workspaces: request.workspaces,
-            primaryWorkspace: request.primaryWorkspace,
-            clientName: request.clientName
-        ))
-
-        if let timeline {
-            sections.append(TimelineContext(timeline))
-        }
-
-        sections.append(ChatHistory(
-            optimizeHistory(
-                request.chatHistory,
-                availableTokens: Constants.maxHistoryTokens - Constants.historyTokenBuffer
-            )
-        ))
-        sections.append(UserQuery(request.userQuery))
-        sections += extensionSections
-
-        return Prompt(sections: sections)
-    }
-
-    func optimizeHistory(
-        _ messages: [Message],
-        availableTokens: Int
-    ) -> [Message] {
-        var result: [Message] = []
-        var usedTokens = 0
-
-        // Keep most recent messages
-        for message in messages.reversed() {
-            let tokens = TokenEstimator.estimate(text: message.content)
-            if usedTokens + tokens <= availableTokens {
-                result.insert(message, at: 0)
-                usedTokens += tokens
-            } else {
-                // Add summary if we truncated
-                if result.count < messages.count {
-                    let skippedCount = messages.count - result.count
-                    let summary = Message(
-                        content: "[System: History truncated. \(skippedCount) earlier messages hidden. " +
-                            "Use `view_chat_history` tool to retrieve them.]",
-                        role: .system,
-                        isSummary: true
-                    )
-                    result.insert(summary, at: 0)
-                }
-                break
-            }
-        }
-        return result
-    }
-
-    public func buildPrompt(_ request: LLMPromptRequest) async -> LLMPromptResult {
-        let prompt = await buildContext(request)
-        let messages = await prompt.toMessages()
-        let raw = await prompt.render()
-        return LLMPromptResult(messages: messages, rawPrompt: raw)
     }
 }
 

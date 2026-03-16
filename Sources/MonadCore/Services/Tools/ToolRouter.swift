@@ -38,6 +38,17 @@ public struct ToolHandlingResult: Sendable {
     public let resolvedToolParams: [ChatQuery.ChatCompletionMessageParam]
 }
 
+/// Result of processing tool calls from a completed LLM turn.
+/// Includes the assistant message (with tool call definitions) and resolved tool results.
+public enum ToolTurnResult: Sendable {
+    /// No tool calls were produced — the turn is complete.
+    case noToolCalls
+    /// All tool calls were resolved server-side; continue the loop with these messages.
+    case continueWith([ChatQuery.ChatCompletionMessageParam])
+    /// At least one tool call was deferred to the client — stop and wait.
+    case deferredToClient
+}
+
 // MARK: - ToolRouter
 
 /// Routes tool execution requests to the appropriate handler (local or remote).
@@ -53,7 +64,53 @@ public actor ToolRouter {
 
     public init() {}
 
-    // MARK: - Batch Handling (Primary API)
+    // MARK: - Turn-Level API
+
+    /// Processes tool calls from a completed LLM turn.
+    ///
+    /// Extracts streamed tool call accumulators from `TurnOutputs`, constructs the assistant
+    /// message (with tool call definitions for conversation history), executes server-side tools,
+    /// and returns a decision for the chat loop.
+    func processToolCalls(
+        outputs: TurnOutputs,
+        timelineId: UUID,
+        availableTools: [AnyTool],
+        continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
+    ) async throws -> ToolTurnResult {
+        let accumulators = await outputs.toolCallAccumulators
+        guard !accumulators.isEmpty else { return .noToolCalls }
+
+        let sortedCalls = accumulators.sorted(by: { $0.key < $1.key })
+
+        // Parse into routable tool calls
+        let parsedCalls = sortedCalls.map { _, value in
+            ParsedToolCall(callId: value.callId, name: value.name, argumentsJSON: value.args)
+        }
+
+        // Build the assistant message with tool_calls for conversation history
+        let toolCallsParam = sortedCalls.map { _, value in
+            ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam(
+                id: value.callId, function: .init(arguments: value.args, name: value.name)
+            )
+        }
+        let fullResponse = await outputs.fullResponse
+        let assistantParam = ChatQuery.ChatCompletionMessageParam.assistant(
+            .init(content: .textContent(.init(fullResponse)), toolCalls: toolCallsParam)
+        )
+
+        // Route and execute
+        let result = try await handlePendingToolCalls(
+            timelineId: timelineId,
+            calls: parsedCalls,
+            availableTools: availableTools,
+            continuation: continuation
+        )
+
+        if result.hasDeferred { return .deferredToClient }
+        return .continueWith([assistantParam] + result.resolvedToolParams)
+    }
+
+    // MARK: - Batch Handling
 
     /// Handles all tool calls produced in an LLM turn.
     ///

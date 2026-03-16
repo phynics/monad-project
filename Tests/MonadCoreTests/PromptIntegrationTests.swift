@@ -2,18 +2,16 @@ import Foundation
 import MonadCore
 import MonadPrompt
 import MonadShared
-import MonadTestSupport
 import OpenAI
 import Testing
 
-@Suite @MainActor
+@MainActor
 struct PromptIntegrationTests {
     @Test("testEmptyUserQueryDoesNotAppendMessage")
     func emptyUserQueryDoesNotAppendMessage() async {
-        let service = LLMService(storage: MockConfigurationService())
         let history = [Message(content: "Hello", role: .user)]
 
-        let prompt = await service.buildContext(
+        let prompt = PromptBuilder.buildContext(
             LLMPromptRequest(
                 userQuery: "",
                 contextNotes: [],
@@ -37,17 +35,17 @@ struct PromptIntegrationTests {
         #expect(userMessages.count == 1)
 
         if let first = userMessages.first, case let .user(params) = first,
-           case let .string(content) = params.content {
+           case let .string(content) = params.content
+        {
             #expect(content == "Hello")
         }
     }
 
     @Test("testNonEmptyUserQueryAppendsMessage")
     func nonEmptyUserQueryAppendsMessage() async {
-        let service = LLMService(storage: MockConfigurationService())
         let history = [Message(content: "Hello", role: .user)]
 
-        let prompt = await service.buildContext(
+        let prompt = PromptBuilder.buildContext(
             LLMPromptRequest(
                 userQuery: "World",
                 contextNotes: [],
@@ -97,11 +95,10 @@ struct PromptIntegrationTests {
 
     @Test("userQueryPreventsLeakageIntoSystem")
     func userQueryPreventsLeakageIntoSystem() async {
-        let service = LLMService(storage: MockConfigurationService())
         let history = [Message(content: "Hi", role: .user)]
         let query = "UNIQUE_QUERY_STRING"
 
-        let prompt = await service.buildContext(
+        let prompt = PromptBuilder.buildContext(
             LLMPromptRequest(
                 userQuery: query,
                 contextNotes: [],

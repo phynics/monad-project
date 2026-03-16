@@ -25,7 +25,7 @@ public extension LLMService {
             clientName: request.clientName,
             systemInstructions: request.systemInstructions
         )
-        let prompt = await buildContext(promptRequest)
+        let prompt = PromptBuilder.buildContext(promptRequest)
 
         // Convert to OpenAI format
         let messages = await prompt.toMessages()

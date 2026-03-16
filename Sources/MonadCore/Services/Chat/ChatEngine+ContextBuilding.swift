@@ -132,7 +132,7 @@ extension ChatEngine {
             systemInstructions: params.systemInstructions
         )
 
-        let prompt = await llmService.buildContext(
+        let prompt = PromptBuilder.buildContext(
             promptRequest,
             agentInstance: params.agentInstance,
             timeline: params.timeline,

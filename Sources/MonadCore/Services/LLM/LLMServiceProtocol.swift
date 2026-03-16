@@ -152,38 +152,10 @@ public protocol LLMServiceProtocol: HealthCheckable {
         responseFormat: ChatQuery.ResponseFormat?
     ) async -> AsyncThrowingStream<ChatStreamResult, Error>
 
-    func buildPrompt(_ request: LLMPromptRequest) async -> LLMPromptResult
-
-    /// Build a prompt object using the new ContextBuilder system
-    func buildContext(
-        _ request: LLMPromptRequest,
-        agentInstance: AgentInstance?,
-        timeline: Timeline?,
-        extensionSections: [any ContextSection]
-    ) async -> Prompt
-
     // Utilities
     func generateTags(for text: String) async throws -> [String]
     func generateTitle(for messages: [Message]) async throws -> String
     func evaluateRecallPerformance(transcript: String, recalledMemories: [Memory]) async throws
         -> [String: Double]
     func fetchAvailableModels() async throws -> [String]?
-}
-
-// MARK: - Default Implementations
-
-public extension LLMServiceProtocol {
-    /// Convenience overload with no extension sections.
-    func buildContext(
-        _ request: LLMPromptRequest,
-        agentInstance: AgentInstance? = nil,
-        timeline: Timeline? = nil
-    ) async -> Prompt {
-        await buildContext(
-            request,
-            agentInstance: agentInstance,
-            timeline: timeline,
-            extensionSections: []
-        )
-    }
 }
