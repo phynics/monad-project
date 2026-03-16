@@ -56,7 +56,7 @@ public actor OllamaClient {
         let logger = self.logger
 
         return AsyncThrowingStream { continuation in
-            Task {
+            Task { [self] in
                 let hasYielded = Mutex(false)
 
                 do {
@@ -250,7 +250,7 @@ public actor OllamaClient {
             "object": "chat.completion.chunk",
             "created": Int(Date().timeIntervalSince1970),
             "model": response.model,
-            "choices": [["index": 0, "delta": delta, "finish_reason": nil as String?]]
+            "choices": [["index": 0, "delta": delta, "finish_reason": (nil as String?) as Any]]
         ]
 
         return decodeChunk(jsonDict, context: "intermediate")

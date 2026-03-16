@@ -60,8 +60,7 @@ public struct StreamingParser {
     // MARK: - Pipe-Delimited Marker Stripping
 
     // Known LLM formatting token markers to strip from streaming output.
-    // swiftlint:disable:next force_try
-    private static let pipeMarkerPattern = try! NSRegularExpression(
+    private let pipeMarkerPattern = try! NSRegularExpression(
         pattern: #"<\|[a-z_]+\|>"#,
         options: []
     )
@@ -69,7 +68,7 @@ public struct StreamingParser {
     /// Removes pipe-delimited markers like `<|tool_call_begin|>` from the buffer.
     private mutating func stripPipeDelimitedMarkers() {
         let range = NSRange(buffer.startIndex..., in: buffer)
-        let cleaned = Self.pipeMarkerPattern.stringByReplacingMatches(
+        let cleaned = pipeMarkerPattern.stringByReplacingMatches(
             in: buffer, options: [], range: range, withTemplate: ""
         )
         if cleaned != buffer {

@@ -33,18 +33,6 @@ struct MockComplexTool: Tool, @unchecked Sendable {
     }
 }
 
-// Mock structures to simulate OpenAI library objects
-struct MockToolCallDelta {
-    let index: Int
-    let id: String?
-    let function: MockFunctionDelta?
-}
-
-struct MockFunctionDelta {
-    let name: String?
-    let arguments: String?
-}
-
 @Suite("Tool Call Regression Tests")
 @MainActor
 struct ToolCallRegressionTests {
@@ -55,24 +43,27 @@ struct ToolCallRegressionTests {
         coordinator.startStreaming()
 
         // Chunk 1: Tool call start
-        let chunk1 = MockToolCallDelta(
+        let chunk1 = ToolCallDelta(
             index: 0,
             id: "call_123",
-            function: MockFunctionDelta(name: "complex_tool", arguments: "")
+            name: "complex_tool",
+            arguments: ""
         )
 
         // Chunk 2: Arguments part 1
-        let chunk2 = MockToolCallDelta(
+        let chunk2 = ToolCallDelta(
             index: 0,
             id: nil,
-            function: MockFunctionDelta(name: nil, arguments: "{\"tags\": [\"tag1\", \"tag2\"], ")
+            name: nil,
+            arguments: "{\"tags\": [\"tag1\", \"tag2\"], "
         )
 
         // Chunk 3: Arguments part 2
-        let chunk3 = MockToolCallDelta(
+        let chunk3 = ToolCallDelta(
             index: 0,
             id: nil,
-            function: MockFunctionDelta(name: nil, arguments: "\"user\": {\"name\": \"Alice\", \"age\": 30}}")
+            name: nil,
+            arguments: "\"user\": {\"name\": \"Alice\", \"age\": 30}}"
         )
 
         // Process chunks (wrapped in array as processToolCalls expects)

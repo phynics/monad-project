@@ -22,13 +22,13 @@ public actor ContextManager {
 
     // MARK: - Pipeline Types
 
-    private final class ContextGatheringContext: @unchecked Sendable {
+    private actor ContextGatheringContext {
         let query: String
         let history: [Message]
         let limit: Int
         let tagGenerator: (@Sendable (String) async throws -> [String])?
 
-        var startTime: CFAbsoluteTime = 0
+        let startTime: CFAbsoluteTime
         var augmentedQuery: String = ""
         var notes: [ContextFile] = []
         var memories: [SemanticSearchResult] = []
@@ -52,6 +52,62 @@ public actor ContextManager {
             self.tagGenerator = tagGenerator
             self.startTime = startTime
         }
+
+        func getAugmentedQuery() -> String {
+            augmentedQuery
+        }
+
+        func getQuery() -> String {
+            query
+        }
+
+        func getHistory() -> [Message] {
+            history
+        }
+
+        func getLimit() -> Int {
+            limit
+        }
+
+        func getTagGenerator() -> (@Sendable (String) async throws -> [String])? {
+            tagGenerator
+        }
+
+        func getStartTime() -> CFAbsoluteTime {
+            startTime
+        }
+
+        func getResults() -> (notes: [ContextFile], memories: [SemanticSearchResult], tags: [String], vector: [Double], semanticResults: [SemanticSearchResult], tagResults: [Memory]) {
+            (notes, memories, generatedTags, queryVector, semanticResults, tagResults)
+        }
+
+        func getContextData() -> ContextData? {
+            contextData
+        }
+
+        func setAugmentedQuery(_ query: String) {
+            augmentedQuery = query
+        }
+
+        func setResults(
+            notes: [ContextFile] = [],
+            memories: [SemanticSearchResult] = [],
+            tags: [String] = [],
+            vector: [Double] = [],
+            semanticResults: [SemanticSearchResult] = [],
+            tagResults: [Memory] = []
+        ) {
+            if !notes.isEmpty { self.notes = notes }
+            if !memories.isEmpty { self.memories = memories }
+            if !tags.isEmpty { self.generatedTags = tags }
+            if !vector.isEmpty { self.queryVector = vector }
+            if !semanticResults.isEmpty { self.semanticResults = semanticResults }
+            if !tagResults.isEmpty { self.tagResults = tagResults }
+        }
+
+        func setContextData(_ data: ContextData) {
+            self.contextData = data
+        }
     }
 
     private struct QueryAugmentationStage: PipelineStage {
@@ -60,9 +116,13 @@ public actor ContextManager {
         func process(
             _ context: ContextGatheringContext
         ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
+            let query = await context.getQuery()
+            let history = await context.getHistory()
+            let augmented = manager.buildAugmentedContext(query: query, history: history)
+            await context.setAugmentedQuery(augmented)
+
             return AsyncThrowingStream { continuation in
                 continuation.yield(.progress(.augmenting))
-                context.augmentedQuery = manager.buildAugmentedContext(query: context.query, history: context.history)
                 continuation.finish()
             }
         }
@@ -74,23 +134,30 @@ public actor ContextManager {
         func process(
             _ context: ContextGatheringContext
         ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
+            let query = await context.getQuery()
+            let augmentedQuery = await context.getAugmentedQuery()
+            let limit = await context.getLimit()
+            let tagGenerator = await context.getTagGenerator()
+
             return AsyncThrowingStream { continuation in
                 let task = Task {
                     do {
                         let memoriesData = try await manager.fetchRelevantMemories(
-                            for: context.query,
-                            tagContext: context.augmentedQuery,
-                            limit: context.limit,
-                            tagGenerator: context.tagGenerator,
+                            for: query,
+                            tagContext: augmentedQuery,
+                            limit: limit,
+                            tagGenerator: tagGenerator,
                             onProgress: { progress in
                                 continuation.yield(.progress(progress))
                             }
                         )
-                        context.memories = memoriesData.memories
-                        context.generatedTags = memoriesData.tags
-                        context.queryVector = memoriesData.vector
-                        context.semanticResults = memoriesData.semanticResults
-                        context.tagResults = memoriesData.tagResults
+                        await context.setResults(
+                            memories: memoriesData.memories,
+                            tags: memoriesData.tags,
+                            vector: memoriesData.vector,
+                            semanticResults: memoriesData.semanticResults,
+                            tagResults: memoriesData.tagResults
+                        )
                         continuation.finish()
                     } catch {
                         continuation.finish(throwing: error)
@@ -110,7 +177,8 @@ public actor ContextManager {
             return AsyncThrowingStream { continuation in
                 let task = Task {
                     continuation.yield(.progress(.discoveringNotes))
-                    context.notes = (try? await manager.fetchAllNotes()) ?? []
+                    let notes = (try? await manager.fetchAllNotes()) ?? []
+                    await context.setResults(notes: notes)
                     continuation.finish()
                 }
                 continuation.onTermination = { @Sendable _ in task.cancel() }
@@ -124,19 +192,23 @@ public actor ContextManager {
         func process(
             _ context: ContextGatheringContext
         ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
-            let duration = CFAbsoluteTimeGetCurrent() - context.startTime
+            let startTime = await context.getStartTime()
+            let duration = CFAbsoluteTimeGetCurrent() - startTime
             logger.info("Context gathered in \(String(format: "%.3f", duration))s")
 
-            context.contextData = ContextData(
-                notes: context.notes,
-                memories: context.memories,
-                generatedTags: context.generatedTags,
-                queryVector: context.queryVector,
-                augmentedQuery: context.augmentedQuery,
-                semanticResults: context.semanticResults,
-                tagResults: context.tagResults,
+            let results = await context.getResults()
+            let augmentedQuery = await context.getAugmentedQuery()
+            let data = ContextData(
+                notes: results.notes,
+                memories: results.memories,
+                generatedTags: results.tags,
+                queryVector: results.vector,
+                augmentedQuery: augmentedQuery,
+                semanticResults: results.semanticResults,
+                tagResults: results.tagResults,
                 executionTime: duration
             )
+            await context.setContextData(data)
             return AsyncThrowingStream { $0.finish() }
         }
     }
@@ -187,7 +259,7 @@ public actor ContextManager {
                         continuation.yield(event)
                     }
 
-                    if let data = context.contextData {
+                    if let data = await context.contextData {
                         continuation.yield(.progress(.complete))
                         continuation.yield(.complete(data))
                     }

@@ -10,7 +10,7 @@ import OpenAI
 ///
 /// The engine orchestrates the entire lifecycle of a chat turn, including context gathering,
 /// LLM interaction, tool execution, and state persistence.
-public final class ChatEngine: @unchecked Sendable {
+public struct ChatEngine: Sendable {
     // MARK: - Constants
 
     public enum Constants {

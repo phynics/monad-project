@@ -29,7 +29,7 @@ struct LLMStreamingStage: PipelineStage {
                         await handleToolCallDeltas(result, context: context, continuation: continuation)
                     }
 
-                    flushRemainingBuffer(&parser, context: context, continuation: continuation)
+                    await flushRemainingBuffer(&parser, context: context, continuation: continuation)
 
                     await context.outputs.finalizeTurn(startTime: turnStartTime)
 
@@ -113,15 +113,15 @@ struct LLMStreamingStage: PipelineStage {
         _ parser: inout StreamingParser,
         context: ChatTurnContext,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
-    ) {
+    ) async {
         guard !parser.buffer.isEmpty else { return }
         if parser.isThinking {
             let buffer = parser.buffer
-            Task { await context.outputs.appendThinking(buffer) }
+            await context.outputs.appendThinking(buffer)
             continuation.yield(.thinking(parser.buffer))
         } else {
             let buffer = parser.buffer
-            Task { await context.outputs.appendResponse(buffer) }
+            await context.outputs.appendResponse(buffer)
             continuation.yield(.generation(parser.buffer))
         }
     }
