@@ -2,19 +2,18 @@ import ErrorKit
 import MonadShared
 import Foundation
 
-public enum VectorStoreError: Throwable {
+public enum VectorStoreError: MonadError {
     case countMismatch
     case dimensionMismatch
     case initializationFailed(String)
 
-    public var errorDescription: String? {
+    public var errorDomain: String { MonadErrorDomain.vector }
+
+    public var errorCode: Int {
         switch self {
-        case .countMismatch:
-            return "Count mismatch."
-        case .dimensionMismatch:
-            return "Dimension mismatch."
-        case let .initializationFailed(reason):
-            return "Initialization failed: \(reason)"
+        case .countMismatch: return 7001
+        case .dimensionMismatch: return 7002
+        case .initializationFailed: return 7003
         }
     }
 

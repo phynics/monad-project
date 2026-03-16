@@ -93,31 +93,33 @@ public struct RPCResponse: Codable, Sendable {
 }
 
 /// Error type for RPC failures
-public enum RPCError: Throwable {
+public enum RPCError: MonadError {
     case timeout
     case connectionLost
     case invalidResponse
     case remoteError(String)
 
-    public var errorDescription: String? {
+    public var errorDomain: String { MonadErrorDomain.rpc }
+
+    public var errorCode: Int {
         switch self {
-        case .timeout: return "RPC request timed out"
-        case .connectionLost: return "Connection to client lost"
-        case .invalidResponse: return "Received invalid response from client"
-        case .remoteError(let msg): return "Remote error: \(msg)"
+        case .timeout: return 1101
+        case .connectionLost: return 1102
+        case .invalidResponse: return 1103
+        case .remoteError: return 1104
         }
     }
 
     public var userFriendlyMessage: String {
         switch self {
         case .timeout:
-            return "The request to the client machine timed out. It might be overloaded or offline."
+            return "The request to the remote tool timed out."
         case .connectionLost:
-            return "The connection to the client machine was lost."
+            return "The connection to the client providing the tool was lost."
         case .invalidResponse:
-            return "The client machine returned an invalid response."
-        case .remoteError(let msg):
-            return "An error occurred on the client machine: \(msg)"
+            return "The client providing the tool returned an invalid response."
+        case let .remoteError(msg):
+            return "The remote tool execution failed: \(msg)"
         }
     }
 }

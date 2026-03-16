@@ -2,13 +2,14 @@ import ErrorKit
 import MonadShared
 import Foundation
 
-public enum WorkspaceToolError: Throwable {
+public enum WorkspaceToolError: MonadError {
     case missingDefinition
 
-    public var errorDescription: String? {
+    public var errorDomain: String { MonadErrorDomain.workspace }
+
+    public var errorCode: Int {
         switch self {
-        case .missingDefinition:
-            return "Missing workspace tool definition."
+        case .missingDefinition: return 3101
         }
     }
 

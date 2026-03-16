@@ -6,13 +6,14 @@ import MonadShared
 
 // MARK: - Persistence Error
 
-public enum PersistenceError: Throwable {
+public enum PersistenceError: MonadError {
     case invalidUUIDFormat(String)
 
-    public var errorDescription: String? {
+    public var errorDomain: String { MonadErrorDomain.persistence }
+
+    public var errorCode: Int {
         switch self {
-        case let .invalidUUIDFormat(value):
-            return "Invalid UUID format: \(value)"
+        case .invalidUUIDFormat: return 1201
         }
     }
 

@@ -2,7 +2,7 @@ import ErrorKit
 import Foundation
 
 /// Errors related to tool execution and routing
-public enum ToolError: Throwable, Sendable, Equatable {
+public enum ToolError: MonadError, Sendable, Equatable {
     case missingArgument(String)
     case invalidArgument(String, expected: String, got: String)
     case executionFailed(String)
@@ -11,22 +11,17 @@ public enum ToolError: Throwable, Sendable, Equatable {
     case clientNotConnected
     case clientToolsDisallowedOnPrivateTimeline
 
-    public var errorDescription: String? {
+    public var errorDomain: String { MonadErrorDomain.tool }
+
+    public var errorCode: Int {
         switch self {
-        case let .missingArgument(arg):
-            return "Missing required argument: \(arg)"
-        case let .invalidArgument(arg, expected, got):
-            return "Invalid argument '\(arg)': expected \(expected), got \(got)"
-        case let .executionFailed(message):
-            return "Tool execution failed: \(message)"
-        case let .toolNotFound(name):
-            return "Tool not found: \(name)"
-        case let .workspaceNotFound(id):
-            return "Workspace not found: \(id)"
-        case .clientNotConnected:
-            return "Client is not connected"
-        case .clientToolsDisallowedOnPrivateTimeline:
-            return "Client-side tools cannot be used on private (agent-owned) timelines"
+        case .missingArgument: return 201
+        case .invalidArgument: return 202
+        case .executionFailed: return 203
+        case .toolNotFound: return 204
+        case .workspaceNotFound: return 205
+        case .clientNotConnected: return 206
+        case .clientToolsDisallowedOnPrivateTimeline: return 207
         }
     }
 

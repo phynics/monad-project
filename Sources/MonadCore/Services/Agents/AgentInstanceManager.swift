@@ -250,7 +250,7 @@ public actor AgentInstanceManager: AgentInstanceManagerProtocol {
 
 // MARK: - Errors
 
-public enum AgentInstanceError: Throwable, Sendable {
+public enum AgentInstanceError: MonadError, Sendable {
     case instanceNotFound(UUID)
     case timelineNotFound(UUID)
     case differentAgentAlreadyAttached(UUID)
@@ -259,6 +259,21 @@ public enum AgentInstanceError: Throwable, Sendable {
     case descriptionEmpty
     case cannotAttachToPrivateTimeline(UUID)
     case cannotDetachFromOwnPrivateTimeline(UUID)
+
+    public var errorDomain: String { MonadErrorDomain.agent }
+
+    public var errorCode: Int {
+        switch self {
+        case .instanceNotFound: return 5001
+        case .timelineNotFound: return 5002
+        case .differentAgentAlreadyAttached: return 5003
+        case .hasAttachedTimelines: return 5004
+        case .nameTooShort: return 5005
+        case .descriptionEmpty: return 5006
+        case .cannotAttachToPrivateTimeline: return 5007
+        case .cannotDetachFromOwnPrivateTimeline: return 5008
+        }
+    }
 
     public var errorDescription: String? {
         switch self {

@@ -4,16 +4,16 @@ import ErrorKit
 /// Utility to safely resolve paths within a jail directory
 public enum PathSanitizer {
     /// Errors related to path sanitization
-    public enum PathError: Throwable {
+    public enum PathError: MonadError {
         case accessDenied(String)
         case invalidPath(String)
 
-        public var errorDescription: String? {
+        public var errorDomain: String { MonadErrorDomain.filesystem }
+
+        public var errorCode: Int {
             switch self {
-            case .accessDenied(let path):
-                return "Access denied: Path '\(path)' is outside the allowed root directory."
-            case .invalidPath(let path):
-                return "Invalid path: '\(path)'"
+            case .accessDenied: return 101
+            case .invalidPath: return 102
             }
         }
 

@@ -3,16 +3,18 @@ import Foundation
 import MonadShared
 
 /// Error types specific to ContextManager
-public enum ContextManagerError: Throwable {
+public enum ContextManagerError: MonadError {
     /// Embedding generation failed
     case embeddingFailed(Error)
     /// Database retrieval failed
     case persistenceFailed(Error)
 
-    public var errorDescription: String? {
+    public var errorDomain: String { MonadErrorDomain.context }
+
+    public var errorCode: Int {
         switch self {
-        case let .embeddingFailed(error): return "Embedding failed: \(error.localizedDescription)"
-        case let .persistenceFailed(error): return "Database error: \(error.localizedDescription)"
+        case .embeddingFailed: return 2001
+        case .persistenceFailed: return 2002
         }
     }
 

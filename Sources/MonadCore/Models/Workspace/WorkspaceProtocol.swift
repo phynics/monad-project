@@ -32,25 +32,22 @@ public protocol WorkspaceProtocol: Sendable {
     func healthCheck() async -> Bool
 }
 
-public enum WorkspaceError: Throwable, Sendable {
+public enum WorkspaceError: MonadError, Sendable {
     case invalidWorkspaceType
     case accessDenied
     case toolExecutionNotSupported
     case workspaceNotFound
     case connectionFailed
 
-    public var errorDescription: String? {
+    public var errorDomain: String { MonadErrorDomain.workspace }
+
+    public var errorCode: Int {
         switch self {
-        case .invalidWorkspaceType:
-            return "Invalid workspace type."
-        case .accessDenied:
-            return "Access denied."
-        case .toolExecutionNotSupported:
-            return "Tool execution not supported."
-        case .workspaceNotFound:
-            return "Workspace not found."
-        case .connectionFailed:
-            return "Connection failed."
+        case .invalidWorkspaceType: return 3001
+        case .accessDenied: return 3002
+        case .toolExecutionNotSupported: return 3003
+        case .workspaceNotFound: return 3004
+        case .connectionFailed: return 3005
         }
     }
 

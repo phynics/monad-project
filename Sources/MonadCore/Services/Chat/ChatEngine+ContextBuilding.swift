@@ -5,9 +5,18 @@ import MonadShared
 import OpenAI
 
 /// Errors thrown by `ChatEngine` during setup and execution.
-public enum ChatEngineError: Throwable {
+public enum ChatEngineError: MonadError {
     case llmServiceNotConfigured
     case missingInput
+
+    public var errorDomain: String { MonadErrorDomain.chat }
+
+    public var errorCode: Int {
+        switch self {
+        case .llmServiceNotConfigured: return 9001
+        case .missingInput: return 9002
+        }
+    }
 
     public var userFriendlyMessage: String {
         switch self {

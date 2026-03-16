@@ -221,10 +221,20 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
 
 // MARK: - Error Types
 
-public enum LLMServiceError: Throwable, Equatable {
+public enum LLMServiceError: MonadError, Equatable {
     case notConfigured
     case invalidConfiguration
     case networkError(String)
+
+    public var errorDomain: String { MonadErrorDomain.llm }
+
+    public var errorCode: Int {
+        switch self {
+        case .notConfigured: return 1001
+        case .invalidConfiguration: return 1002
+        case .networkError: return 1003
+        }
+    }
 
     public var userFriendlyMessage: String {
         switch self {

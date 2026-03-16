@@ -138,13 +138,14 @@ public actor TimelineManager {
     }
 }
 
-public enum TimelineError: Throwable {
+public enum TimelineError: MonadError {
     case timelineNotFound
 
-    public var errorDescription: String? {
+    public var errorDomain: String { MonadErrorDomain.timeline }
+
+    public var errorCode: Int {
         switch self {
-        case .timelineNotFound:
-            return "Timeline not found."
+        case .timelineNotFound: return 6001
         }
     }
 

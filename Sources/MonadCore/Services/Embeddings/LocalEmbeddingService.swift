@@ -34,19 +34,18 @@ public final class LocalEmbeddingService: EmbeddingServiceProtocol {
     }
 }
 
-public enum EmbeddingError: Throwable {
+public enum EmbeddingError: MonadError {
     case modelUnavailable
     case generationFailed
     case platformNotSupported
 
-    public var errorDescription: String? {
+    public var errorDomain: String { MonadErrorDomain.embedding }
+
+    public var errorCode: Int {
         switch self {
-        case .modelUnavailable:
-            return "NaturalLanguage embedding model is unavailable."
-        case .generationFailed:
-            return "Failed to generate embedding vector."
-        case .platformNotSupported:
-            return "Local embeddings are only supported on Apple platforms (macOS, iOS, etc)."
+        case .modelUnavailable: return 8001
+        case .generationFailed: return 8002
+        case .platformNotSupported: return 8003
         }
     }
 

@@ -51,7 +51,7 @@ public typealias AnyCodable = MonadShared.AnyCodable
 // MARK: - Error Models
 
 /// Errors that can occur when communicating with the server
-public enum MonadClientError: Throwable {
+public enum MonadClientError: MonadError {
     case invalidURL
     case networkError(Error)
     case httpError(statusCode: Int, message: String?)
@@ -61,24 +61,18 @@ public enum MonadClientError: Throwable {
     case notFound
     case unknown(String)
 
-    public var errorDescription: String? {
+    public var errorDomain: String { MonadErrorDomain.client }
+
+    public var errorCode: Int {
         switch self {
-        case .invalidURL:
-            return "Invalid URL"
-        case let .networkError(error):
-            return "Network error: \(error.localizedDescription)"
-        case let .httpError(statusCode, message):
-            return "HTTP \(statusCode): \(message ?? "Unknown error")"
-        case let .decodingError(error):
-            return "Failed to decode response: \(error.localizedDescription)"
-        case .serverNotReachable:
-            return "Server is not reachable"
-        case .unauthorized:
-            return "Unauthorized - check your API key"
-        case .notFound:
-            return "Resource not found"
-        case let .unknown(message):
-            return message
+        case .invalidURL: return 1001
+        case .networkError: return 1002
+        case .httpError(let statusCode, _): return 2000 + statusCode
+        case .decodingError: return 1003
+        case .serverNotReachable: return 1004
+        case .unauthorized: return 1005
+        case .notFound: return 1006
+        case .unknown: return 1007
         }
     }
 

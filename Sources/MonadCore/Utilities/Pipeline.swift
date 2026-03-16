@@ -110,7 +110,7 @@ public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
         for stage in cleanupStages {
             if let error = await runStage(stage, context: context, continuation: continuation, label: "cleanup") {
                 if finalError == nil {
-                    finalError = PipelineError.cleanupFailed(id: stage.id, error: error)
+                    finalError = PipelineError.cleanupFailed(id: stage.id, underlyingError: error)
                 }
             }
         }
@@ -138,22 +138,31 @@ public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
             let duration = CFAbsoluteTimeGetCurrent() - startTime
             let durationStr = String(format: "%.3f", duration)
             logger?.error("\(label) stage '\(stage.id)' failed after \(durationStr)s: \(error.localizedDescription)")
-            return PipelineError.stageFailed(id: stage.id, error: error)
+            return PipelineError.stageFailed(id: stage.id, underlyingError: error)
         }
     }
 }
 
 /// Errors that can occur during pipeline execution.
-public enum PipelineError: Throwable {
-    case stageFailed(id: String, error: Error)
-    case cleanupFailed(id: String, error: Error)
+public enum PipelineError: MonadError {
+    case stageFailed(id: String, underlyingError: Error)
+    case cleanupFailed(id: String, underlyingError: Error)
+
+    public var errorDomain: String { MonadErrorDomain.pipeline }
+
+    public var errorCode: Int {
+        switch self {
+        case .stageFailed: return 4001
+        case .cleanupFailed: return 4002
+        }
+    }
 
     public var userFriendlyMessage: String {
         switch self {
-        case let .stageFailed(id, error):
-            return "Pipeline stage '\(id)' failed: \(ErrorKit.userFriendlyMessage(for: error))"
-        case let .cleanupFailed(id, error):
-            return "Pipeline cleanup stage '\(id)' failed: \(ErrorKit.userFriendlyMessage(for: error))"
+        case let .stageFailed(id, underlyingError):
+            return "Pipeline stage '\(id)' failed: \(ErrorKit.userFriendlyMessage(for: underlyingError))"
+        case let .cleanupFailed(id, underlyingError):
+            return "Pipeline cleanup stage '\(id)' failed: \(ErrorKit.userFriendlyMessage(for: underlyingError))"
         }
     }
 }
