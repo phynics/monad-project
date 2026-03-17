@@ -12,7 +12,6 @@ private let testLogger = Logger(label: "test.pipeline")
 
 private func makeContext(
     fullResponse: String = "",
-    accumulatedRawOutput: String = "",
     toolCallAccumulators: [Int: (id: String, name: String, args: String)] = [:],
     currentMessages: [ChatQuery.ChatCompletionMessageParam] = []
 ) async -> ChatTurnContext {
@@ -83,7 +82,6 @@ final class MessagePersistenceStageBehavior {
         let stage = MessagePersistenceStage(messageStore: store, logger: testLogger)
         let context = await makeContext(
             fullResponse: "done",
-            accumulatedRawOutput: "done",
             currentMessages: [.user(.init(content: .string("query")))]
         )
 
@@ -92,9 +90,7 @@ final class MessagePersistenceStageBehavior {
         let completed = events.compactMap { $0.completedMessage }.first
         let data = try #require(completed?.metadata.turnSnapshotData)
         let snapshot = try SerializationUtils.jsonDecoder.decode(TurnSnapshot.self, from: data)
-        #expect(snapshot.renderedPrompt != nil)
-        #expect(snapshot.renderedPrompt?.isEmpty == false)
-        #expect(snapshot.rawOutput == "done")
+        #expect(snapshot.fullResponse == "done")
     }
 }
 

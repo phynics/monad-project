@@ -5,7 +5,7 @@ import MonadShared
 struct DebugCommand: SlashCommand {
     let name = "debug"
     let aliases: [String] = []
-    let description = "Show the rendered prompt and raw LLM output for the last exchange"
+    let description = "Show turn metadata, tool activity, and metrics for the last exchange"
     let usage = "/debug"
     let category: String? = "Utilities"
 
@@ -16,8 +16,6 @@ struct DebugCommand: SlashCommand {
         }
 
         printSnapshotHeader(snapshot)
-        printRenderedPrompt(snapshot)
-        printRawOutput(snapshot)
         printContextSummary(snapshot)
         printToolCalls(snapshot)
         printToolResults(snapshot)
@@ -44,22 +42,6 @@ struct DebugCommand: SlashCommand {
             print(TerminalUI.dim("Tools: \(snapshot.availableToolIds.joined(separator: ", "))"))
         }
         print("")
-    }
-
-    private func printRenderedPrompt(_ snapshot: TurnSnapshot) {
-        if let rendered = snapshot.renderedPrompt {
-            print(TerminalUI.bold("─── Rendered Prompt ───"))
-            print(TerminalUI.dim(rendered))
-            print("")
-        }
-    }
-
-    private func printRawOutput(_ snapshot: TurnSnapshot) {
-        if !snapshot.rawOutput.isEmpty {
-            print(TerminalUI.bold("─── Raw Output (Full Stream) ───"))
-            print(snapshot.rawOutput)
-            print("")
-        }
     }
 
     private func printContextSummary(_ snapshot: TurnSnapshot) {

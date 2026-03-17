@@ -45,13 +45,9 @@ public struct TurnSnapshot: Codable, Sendable, Equatable {
     /// Tool metadata (tool objects aren't Codable, so we store IDs)
     public let availableToolIds: [String]
 
-    /// Prompt sent to LLM
-    public let renderedPrompt: String?
-
     // LLM outputs
     public let fullResponse: String
     public let fullThinking: String
-    public let rawOutput: String
 
     // Tool activity
     public let toolCalls: [ToolCallRecord]
@@ -73,10 +69,8 @@ public struct TurnSnapshot: Codable, Sendable, Equatable {
         maxTurns: Int,
         systemInstructions: String? = nil,
         availableToolIds: [String] = [],
-        renderedPrompt: String? = nil,
         fullResponse: String = "",
         fullThinking: String = "",
-        rawOutput: String = "",
         toolCalls: [ToolCallRecord] = [],
         toolResults: [ToolResultRecord] = [],
         turnDuration: TimeInterval = 0,
@@ -93,10 +87,8 @@ public struct TurnSnapshot: Codable, Sendable, Equatable {
         self.maxTurns = maxTurns
         self.systemInstructions = systemInstructions
         self.availableToolIds = availableToolIds
-        self.renderedPrompt = renderedPrompt
         self.fullResponse = fullResponse
         self.fullThinking = fullThinking
-        self.rawOutput = rawOutput
         self.toolCalls = toolCalls
         self.toolResults = toolResults
         self.turnDuration = turnDuration
