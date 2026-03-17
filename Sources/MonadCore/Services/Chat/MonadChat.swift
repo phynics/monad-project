@@ -19,6 +19,33 @@ public struct MonadChat: Sendable {
         self.messageStore = messageStore
     }
 
+    /// Execute a chat turn with default settings and no tools.
+    /// - Parameters:
+    ///   - timelineId: The unique identifier for the chat session.
+    ///   - message: The user's input message.
+    ///   - systemInstructions: Optional system instructions to override the default.
+    ///   - agentInstanceId: Optional identifier for the agent instance.
+    ///   - maxTurns: Maximum number of LLM turns before stopping. Defaults to 5.
+    /// - Returns: An asynchronous stream of chat events.
+    public func execute(
+        timelineId: UUID,
+        message: String,
+        systemInstructions: String? = nil,
+        agentInstanceId: UUID? = nil,
+        maxTurns: Int = ChatEngine.Constants.defaultMaxTurns
+    ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
+        try await execute(
+            timelineId: timelineId,
+            message: message,
+            tools: [],
+            toolOutputs: nil,
+            contextManager: nil,
+            systemInstructions: systemInstructions,
+            agentInstanceId: agentInstanceId,
+            maxTurns: maxTurns
+        )
+    }
+
     /// Execute a chat turn and return a stream of deltas.
     /// - Parameters:
     ///   - timelineId: The unique identifier for the chat session.
