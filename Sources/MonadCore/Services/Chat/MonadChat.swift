@@ -7,7 +7,7 @@ import MonadShared
 public struct MonadChat: Sendable {
     private let llmService: any LLMServiceProtocol
     private let messageStore: any MessageStoreProtocol
-    private let chatEngine = ChatEngine()
+    private var chatEngine = ChatEngine()
 
     /// Initializes a new `MonadChat` instance with the required dependencies.
     ///
@@ -17,6 +17,15 @@ public struct MonadChat: Sendable {
     public init(llmService: any LLMServiceProtocol, messageStore: any MessageStoreProtocol) {
         self.llmService = llmService
         self.messageStore = messageStore
+    }
+
+    /// Adds a custom stage to the chat execution pipeline.
+    /// - Parameter stage: The custom pipeline stage to add.
+    /// - Returns: A new instance of `MonadChat` with the stage added.
+    public func addStage(_ stage: any PipelineStage<ChatTurnContext, ChatEvent>) -> MonadChat {
+        var copy = self
+        copy.chatEngine.additionalStages.append(stage)
+        return copy
     }
 
     /// Execute a chat turn with default settings and no tools.

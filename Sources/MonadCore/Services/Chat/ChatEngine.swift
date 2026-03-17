@@ -31,6 +31,8 @@ public struct ChatEngine: Sendable {
 
     let logger = Logger.module(named: "com.monad.chat-engine")
 
+    public var additionalStages: [any PipelineStage<ChatTurnContext, ChatEvent>] = []
+
     public init() {}
 
     // MARK: - Public API
@@ -212,10 +214,14 @@ public struct ChatEngine: Sendable {
         context: ChatTurnContext,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
     ) async throws {
-        let pipeline = Pipeline<ChatTurnContext, ChatEvent>()
+        var pipeline = Pipeline<ChatTurnContext, ChatEvent>()
             .add(LLMStreamingStage(llmService: llmService, logger: logger))
             .add(ToolCallExtractionStage(logger: logger))
             .add(MessagePersistenceStage(messageStore: messageStore, logger: logger))
+
+        for stage in additionalStages {
+            pipeline = pipeline.add(stage)
+        }
 
         let stream = pipeline.execute(context)
         for try await event in stream {
