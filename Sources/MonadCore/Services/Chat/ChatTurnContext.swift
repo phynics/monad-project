@@ -29,21 +29,21 @@ public actor TurnOutputs {
 
     public init() {}
 
-    // MARK: - Mutation Methods
+    // MARK: - Mutation Methods (internal — only built-in stages should mutate)
 
-    public func setStreamUsage(_ usage: ChatResult.CompletionUsage) {
+    func setStreamUsage(_ usage: ChatResult.CompletionUsage) {
         streamUsage = usage
     }
 
-    public func appendThinking(_ chunk: String) {
+    func appendThinking(_ chunk: String) {
         fullThinking += chunk
     }
 
-    public func appendResponse(_ chunk: String) {
+    func appendResponse(_ chunk: String) {
         fullResponse += chunk
     }
 
-    public func accumulateToolCall(index: Int, id: String?, name: String?, args: String?) {
+    func accumulateToolCall(index: Int, id: String?, name: String?, args: String?) {
         var acc = toolCallAccumulators[index] ?? StreamedToolCall()
         if let id { acc.callId = id }
         if let name { acc.name += name }
@@ -51,26 +51,26 @@ public actor TurnOutputs {
         toolCallAccumulators[index] = acc
     }
 
-    public func setToolCallAccumulator(index: Int, id: String, name: String, args: String) {
+    func setToolCallAccumulator(index: Int, id: String, name: String, args: String) {
         toolCallAccumulators[index] = StreamedToolCall(callId: id, name: name, args: args)
     }
 
-    public func removeSentinelAndEmptyToolCalls(sentinel: String) {
+    func removeSentinelAndEmptyToolCalls(sentinel: String) {
         toolCallAccumulators = toolCallAccumulators.filter { _, value in
             !value.name.isEmpty && value.name != sentinel
         }
     }
 
-    public func addDebugToolCall(_ record: ToolCallRecord) {
+    func addDebugToolCall(_ record: ToolCallRecord) {
         debugToolCalls.append(record)
     }
 
-    public func addDebugToolResult(_ record: ToolResultRecord) {
+    func addDebugToolResult(_ record: ToolResultRecord) {
         debugToolResults.append(record)
     }
 
     /// Finalizes the turn: computes timing and throughput metrics.
-    public func finalizeTurn(startTime: Date) {
+    func finalizeTurn(startTime: Date) {
         turnDuration = Date().timeIntervalSince(startTime)
         let completionTokens = streamUsage?.completionTokens
             ?? TokenEstimator.estimate(text: fullResponse + fullThinking)
@@ -97,7 +97,7 @@ public struct ChatTurnContext: Sendable {
 
     /// Mutable stage outputs shared via actor reference across struct copies.
     public let outputs: TurnOutputs
-    
+
     public init(
         timelineId: UUID,
         agentInstanceId: UUID?,

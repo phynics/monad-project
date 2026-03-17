@@ -49,7 +49,6 @@ public struct MonadServerFactory {
     private struct ManagerSet {
         let timelineManager: TimelineManager
         let toolRouter: ToolRouter
-        let chatEngine: ChatEngine
         let agentInstanceManager: any AgentInstanceManagerProtocol
         let workspaceManager: any WorkspaceManagerProtocol
     }
@@ -66,6 +65,21 @@ public struct MonadServerFactory {
         router.add(middleware: LogMiddleware())
         router.add(middleware: ErrorMiddleware())
 
+        let coreChat = MonadCoreChat(
+            llmService: components.services.llmService,
+            messageStore: components.repositories.messageStore,
+            timelineManager: components.managers.timelineManager,
+            toolRouter: components.managers.toolRouter,
+            agentInstanceStore: components.repositories.agentInstanceStore,
+            clientStore: components.repositories.clientStore,
+            timelinePersistence: components.repositories.timelinePersistence,
+            workspacePersistence: components.repositories.workspacePersistence,
+            memoryStore: components.repositories.memoryStore,
+            toolPersistence: components.repositories.toolPersistence,
+            agentTemplateStore: components.repositories.agentTemplateStore,
+            embeddingService: components.services.embeddingService
+        )
+
         return try await withDependencies {
             configureDependencies(&$0, from: components)
         } operation: {
@@ -74,6 +88,7 @@ public struct MonadServerFactory {
             registerChatAndTimelineRoutes(
                 on: protected,
                 connectionManager: components.services.connectionManager,
+                chat: coreChat,
                 verbose: verbose
             )
             registerResourceRoutes(
@@ -148,7 +163,8 @@ public struct MonadServerFactory {
         let embeddingService: any EmbeddingServiceProtocol
         let envVars = ProcessInfo.processInfo.environment
         if let apiKey = envVars["MONAD_OPENAI_API_KEY"] ?? envVars["OPENAI_API_KEY"],
-           !apiKey.isEmpty {
+           !apiKey.isEmpty
+        {
             embeddingService = OpenAIEmbeddingService(apiKey: apiKey)
             logger.info("Using OpenAI Embedding Service")
         } else {
@@ -195,7 +211,6 @@ public struct MonadServerFactory {
                 workspaceCreator: WorkspaceFactory()
             ),
             toolRouter: ToolRouter(),
-            chatEngine: ChatEngine(),
             agentInstanceManager: AgentInstanceManager(repository: agentWorkspaceService),
             workspaceManager: WorkspaceManager(
                 repository: agentWorkspaceService,
@@ -231,7 +246,6 @@ public struct MonadServerFactory {
         let mgrs = components.managers
         deps.timelineManager = mgrs.timelineManager
         deps.toolRouter = mgrs.toolRouter
-        deps.chatEngine = mgrs.chatEngine
         deps.agentInstanceManager = mgrs.agentInstanceManager
         deps.workspaceManager = mgrs.workspaceManager
     }

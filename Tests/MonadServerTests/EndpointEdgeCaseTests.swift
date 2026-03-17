@@ -10,7 +10,7 @@ import MonadTestSupport
 import NIOCore
 import Testing
 
-@Suite struct EndpointEdgeCaseTests {
+struct EndpointEdgeCaseTests {
     @Test("Chat with non-existent session (404)")
     func chatNoSession() async throws {
         let persistence = MockPersistenceService()
@@ -21,11 +21,12 @@ import Testing
         try await TestDependencies()
             .withMocks(persistence: persistence, llm: llm, embedding: embedding)
             .withOrchestration(workspaceRoot: workspaceRoot)
-            .run {
+            .run { mocks in
                 let router = Router()
                 router.add(middleware: ErrorMiddleware())
                 let protected = router.group("/api").add(middleware: AuthMiddleware())
-                ChatAPIController<BasicRequestContext>().addRoutes(to: protected.group("/sessions"))
+                ChatAPIController<BasicRequestContext>(chat: mocks.buildCoreChat())
+                    .addRoutes(to: protected.group("/sessions"))
 
                 let app = Application(router: router)
 
@@ -55,11 +56,12 @@ import Testing
         try await TestDependencies()
             .withMocks(persistence: persistence, llm: llm, embedding: embedding)
             .withOrchestration(workspaceRoot: workspaceRoot)
-            .run {
+            .run { mocks in
                 let router = Router()
                 router.add(middleware: ErrorMiddleware())
                 let protected = router.group("/api").add(middleware: AuthMiddleware())
-                ChatAPIController<BasicRequestContext>().addRoutes(to: protected.group("/sessions"))
+                ChatAPIController<BasicRequestContext>(chat: mocks.buildCoreChat())
+                    .addRoutes(to: protected.group("/sessions"))
 
                 let app = Application(router: router)
 

@@ -9,7 +9,7 @@ import MonadTestSupport
 import NIOCore
 import Testing
 
-@Suite struct ChatControllerTests {
+struct ChatControllerTests {
     @Test("Test Chat Endpoint")
     func chatEndpoint() async throws {
         // Setup Deps
@@ -23,7 +23,7 @@ import Testing
         try await TestDependencies()
             .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
             .withOrchestration(workspaceRoot: workspace.root)
-            .run {
+            .run { mocks in
                 @Dependency(\.timelineManager) var timelineManager
 
                 let session = try await timelineManager.createTimeline()
@@ -38,7 +38,7 @@ import Testing
                 await timelineManager.deleteTimeline(id: session.id)
 
                 let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>()
+                let controller = ChatAPIController<BasicRequestContext>(chat: mocks.buildCoreChat())
                 controller.addRoutes(to: router.group("/sessions"))
                 let app = Application(router: router)
 
@@ -68,7 +68,7 @@ import Testing
         try await TestDependencies()
             .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
             .withOrchestration(workspaceRoot: workspace.root)
-            .run {
+            .run { mocks in
                 @Dependency(\.timelineManager) var timelineManager
 
                 let session = try await timelineManager.createTimeline()
@@ -83,7 +83,7 @@ import Testing
                 await timelineManager.deleteTimeline(id: session.id)
 
                 let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>()
+                let controller = ChatAPIController<BasicRequestContext>(chat: mocks.buildCoreChat())
                 controller.addRoutes(to: router.group("/sessions"))
                 let app = Application(router: router)
 

@@ -42,6 +42,7 @@ extension MonadServerFactory {
     static func registerChatAndTimelineRoutes(
         on protected: RouterGroup<AppRequestContext>,
         connectionManager: WebSocketConnectionManager,
+        chat: MonadCoreChat,
         verbose: Bool
     ) {
         let wsController = WebSocketAPIController<AppRequestContext>(connectionManager: connectionManager)
@@ -50,7 +51,7 @@ extension MonadServerFactory {
         let timelineController = TimelineAPIController<AppRequestContext>()
         timelineController.addRoutes(to: protected.group("/sessions"))
 
-        let chatController = ChatAPIController<AppRequestContext>(verbose: verbose)
+        let chatController = ChatAPIController<AppRequestContext>(chat: chat, verbose: verbose)
         chatController.addRoutes(to: protected.group("/sessions"))
     }
 
@@ -113,7 +114,7 @@ extension MonadServerFactory {
                 services: [
                     .init(service: app),
                     .init(service: orphanCleanup),
-                    .init(service: bonjourAdvertiser)
+                    .init(service: bonjourAdvertiser),
                 ],
                 gracefulShutdownSignals: [UnixSignal.sigterm, UnixSignal.sigint],
                 logger: logger

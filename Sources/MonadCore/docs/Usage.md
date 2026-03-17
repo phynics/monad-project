@@ -38,23 +38,34 @@ try await manager.attach(agentId: instance.id, to: timelineId)
 
 ## 2. Executing a Chat Turn
 
-The `ChatEngine` is the main entry point for running chat turns. It orchestrates the interaction between the user, the agent, and the LLM.
+`MonadCoreChat` is the main entry point for running chat turns. It orchestrates the interaction between the user, the agent, and the LLM.
 
 ### Running a Chat Stream
 
-The `execute` method returns an `AsyncThrowingStream<ChatEvent, Error>`. This allows you to process real-time updates as the agent "thinks" and responds.
+The `run` method returns an `AsyncThrowingStream<ChatEvent, Error>`. This allows you to process real-time updates as the agent "thinks" and responds.
 
 ```swift
 import MonadCore
 import MonadShared
-import Dependencies
 
-@Dependency(\.chatEngine) var chatEngine
+let chat = MonadCoreChat(
+    llmService: myLLM,
+    messageStore: myMessageStore,
+    timelineManager: myTimelineManager,
+    toolRouter: myToolRouter,
+    agentInstanceStore: myAgentInstanceStore,
+    clientStore: myClientStore,
+    timelinePersistence: myTimelinePersistence,
+    workspacePersistence: myWorkspacePersistence,
+    memoryStore: myMemoryStore,
+    toolPersistence: myToolPersistence,
+    agentTemplateStore: myAgentTemplateStore,
+    embeddingService: myEmbeddingService
+)
 
-let stream = try await chatEngine.execute(
+let stream = try await chat.run(
     timelineId: timelineId,
     message: "What are the latest trends in Swift concurrency?",
-    tools: [], // Array of [AnyTool]
     agentInstanceId: instance.id // The agent we created earlier
 )
 
@@ -94,7 +105,7 @@ let toolOutputs = [
     ToolOutputSubmission(callId: "call_123", output: "File contents...")
 ]
 
-let stream = try await chatEngine.execute(
+let stream = try await chat.run(
     timelineId: timelineId,
     message: "", // Empty message as we're continuing from a tool call
     tools: tools,

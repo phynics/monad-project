@@ -1,97 +1,104 @@
 import Foundation
-import XCTest
-import Dependencies
 @testable import MonadCore
 @testable import MonadShared
 import MonadTestSupport
+import Testing
 
-final class MonadChatTests: XCTestCase {
-    func testBasicExecution() async throws {
+struct MonadCoreChatTests {
+    @Test
+    func basicExecution() async throws {
         let mockLLM = MockLLMService()
-        let mockStore = MockMessageStore()
         let mockPersistence = MockPersistenceService()
-        
+
         let timelineId = UUID()
         let message = "Hello, Morty!"
-        
+
         try await mockPersistence.saveTimeline(Timeline(id: timelineId, title: "Test"))
-        
-        let chat = MonadChat(llmService: mockLLM, messageStore: mockStore)
-        
-        // Use the new fluent execute method, providing required test dependencies
-        let stream = try await withDependencies {
-            $0.timelinePersistence = mockPersistence
-            $0.workspacePersistence = mockPersistence
-            $0.memoryStore = mockPersistence
-            $0.agentTemplateStore = mockPersistence
-            $0.clientStore = mockPersistence
-            $0.toolPersistence = mockPersistence
-            $0.agentInstanceStore = mockPersistence
-            $0.timelineManager = TimelineManager(workspaceRoot: URL(fileURLWithPath: "/tmp/monad-test"), workspaceCreator: MockWorkspaceCreator())
-            $0.toolRouter = ToolRouter()
-        } operation: {
-            try await chat.execute(
-                timelineId: timelineId,
-                message: message
-            )
-        }
-        
-        XCTAssertNotNil(stream)
+
+        let chat = makeChat(llmService: mockLLM, persistence: mockPersistence)
+
+        let stream = try await chat.run(
+            timelineId: timelineId,
+            message: message
+        )
+
+        #expect(stream != nil)
     }
 
-    actor MockStageRunTracker {
-        var didRun = false
-        func setRun() { didRun = true }
-    }
-
-    struct MockCustomStage: PipelineStage {
-        let tracker: MockStageRunTracker
-        var id: String { "MockCustomStage" }
-        
-        func process(_ context: ChatTurnContext) async throws -> AsyncThrowingStream<ChatEvent, Error> {
-            await tracker.setRun()
-            return AsyncThrowingStream { continuation in
-                continuation.finish()
-            }
-        }
-    }
-
-    func testCustomPipelineStage() async throws {
+    @Test
+    func customPipelineStage() async throws {
         let mockLLM = MockLLMService()
-        let mockStore = MockMessageStore()
         let mockPersistence = MockPersistenceService()
-        
+
         let timelineId = UUID()
         let message = "Hello, custom stage!"
-        
+
         try await mockPersistence.saveTimeline(Timeline(id: timelineId, title: "Test"))
-        
+
         let tracker = MockStageRunTracker()
         let customStage = MockCustomStage(tracker: tracker)
-        
-        let chat = MonadChat(llmService: mockLLM, messageStore: mockStore)
+
+        let chat = makeChat(llmService: mockLLM, persistence: mockPersistence)
             .addStage(customStage)
-        
-        let stream = try await withDependencies {
-            $0.timelinePersistence = mockPersistence
-            $0.workspacePersistence = mockPersistence
-            $0.memoryStore = mockPersistence
-            $0.agentTemplateStore = mockPersistence
-            $0.clientStore = mockPersistence
-            $0.toolPersistence = mockPersistence
-            $0.agentInstanceStore = mockPersistence
-            $0.timelineManager = TimelineManager(workspaceRoot: URL(fileURLWithPath: "/tmp/monad-test"), workspaceCreator: MockWorkspaceCreator())
-            $0.toolRouter = ToolRouter()
-        } operation: {
-            try await chat.execute(
-                timelineId: timelineId,
-                message: message
-            )
+
+        let stream = try await chat.run(
+            timelineId: timelineId,
+            message: message
+        )
+
+        for try await _ in stream {
+            // Drain the stream; any thrown errors will propagate
         }
-        
-        for try await _ in stream {}
-        
+
         let didRun = await tracker.didRun
-        XCTAssertTrue(didRun, "Custom stage should have been executed")
+        #expect(didRun, "Custom stage should have been executed")
+    }
+
+    // MARK: - Helpers
+
+    private func makeChat(
+        llmService: any LLMServiceProtocol,
+        persistence: MockPersistenceService
+    ) -> MonadCoreChat {
+        MonadCoreChat(
+            llmService: llmService,
+            messageStore: persistence,
+            timelineManager: TimelineManager(
+                workspaceRoot: URL(fileURLWithPath: "/tmp/monad-test"),
+                workspaceCreator: MockWorkspaceCreator()
+            ),
+            toolRouter: ToolRouter(),
+            agentInstanceStore: persistence,
+            clientStore: persistence,
+            timelinePersistence: persistence,
+            workspacePersistence: persistence,
+            memoryStore: persistence,
+            toolPersistence: persistence,
+            agentTemplateStore: persistence,
+            embeddingService: MockEmbeddingService()
+        )
+    }
+}
+
+// MARK: - Test Helpers
+
+private actor MockStageRunTracker {
+    var didRun = false
+    func setRun() {
+        didRun = true
+    }
+}
+
+private struct MockCustomStage: PipelineStage {
+    let tracker: MockStageRunTracker
+    var id: String {
+        "MockCustomStage"
+    }
+
+    func process(_: ChatTurnContext) async throws -> AsyncThrowingStream<ChatEvent, Error> {
+        await tracker.setRun()
+        return AsyncThrowingStream { continuation in
+            continuation.finish()
+        }
     }
 }

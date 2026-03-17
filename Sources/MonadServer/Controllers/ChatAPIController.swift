@@ -10,11 +10,12 @@ import OpenAI
 
 public struct ChatAPIController<Context: RequestContext>: Sendable {
     @Dependency(\.timelineManager) var timelineManager: TimelineManager
-    @Dependency(\.chatEngine) var chatEngine: ChatEngine
     @Dependency(\.toolRouter) var toolRouter: ToolRouter
+    private let chat: MonadCoreChat
     public let verbose: Bool
 
-    public init(verbose: Bool = false) {
+    public init(chat: MonadCoreChat, verbose: Bool = false) {
+        self.chat = chat
         self.verbose = verbose
     }
 
@@ -45,7 +46,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         let systemInstructions = await timelineManager.getAgentSystemInstructions(for: id)
         let availableTools = await resolveTools(timelineId: id, clientTools: chatRequest.clientTools)
 
-        let stream = try await chatEngine.execute(
+        let stream = try await chat.run(
             timelineId: id,
             message: chatRequest.message,
             tools: availableTools,
@@ -77,12 +78,12 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         let sid = ANSIColors.colorize(id.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
         Logger.module(named: "chat").info("Streaming chat in timeline \(sid)")
 
-        let chatEngineStream = try await prepareAndExecuteChat(
+        let chatStream = try await prepareAndExecuteChat(
             timelineId: id, chatRequest: chatRequest, sid: sid
         )
 
         let sseStream = buildSSEStream(
-            from: chatEngineStream, timelineId: id
+            from: chatStream, timelineId: id
         )
 
         return buildSSEResponse(body: sseStream)
@@ -107,7 +108,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         let toolCountStr = ANSIColors.colorize("\(availableTools.count)", color: ANSIColors.green)
         Logger.module(named: "chat").info("Resolved \(toolCountStr) tools for timeline \(sid)")
 
-        return try await chatEngine.execute(
+        return try await chat.run(
             timelineId: timelineId,
             message: chatRequest.message,
             tools: availableTools,
@@ -118,13 +119,13 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     }
 
     private func buildSSEStream(
-        from chatEngineStream: AsyncThrowingStream<ChatEvent, Error>,
+        from chatStream: AsyncThrowingStream<ChatEvent, Error>,
         timelineId: UUID
     ) -> AsyncStream<ByteBuffer> {
         AsyncStream<ByteBuffer> { continuation in
             let task = Task {
                 do {
-                    for try await event in chatEngineStream {
+                    for try await event in chatStream {
                         if Task.isCancelled { throw CancellationError() }
                         yieldSSEEvent(event, to: continuation)
                     }

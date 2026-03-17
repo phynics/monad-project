@@ -22,6 +22,26 @@ import MonadShared
             self.llm = llm
             self.embedding = embedding
         }
+
+        /// Builds a `MonadCoreChat` from the mock services in this context.
+        /// Must be called inside a `withDependencies` scope that has a `TimelineManager` configured.
+        public func buildCoreChat() -> MonadCoreChat {
+            @Dependency(\.timelineManager) var timelineManager
+            return MonadCoreChat(
+                llmService: llm,
+                messageStore: persistence,
+                timelineManager: timelineManager,
+                toolRouter: ToolRouter(),
+                agentInstanceStore: persistence,
+                clientStore: persistence,
+                timelinePersistence: persistence,
+                workspacePersistence: persistence,
+                memoryStore: persistence,
+                toolPersistence: persistence,
+                agentTemplateStore: persistence,
+                embeddingService: embedding
+            )
+        }
     }
 
     // MARK: - TestDependencies
@@ -94,20 +114,10 @@ import MonadShared
             return copy
         }
 
-        /// Adds a `ChatEngine` dependency.
-        public func withChatEngine() -> TestDependencies {
-            var copy = self
-            copy.overrides.append { deps in
-                deps.chatEngine = ChatEngine()
-            }
-            return copy
-        }
-
-        /// Adds `TimelineManager`, `ToolRouter`, and `ChatEngine` in one call.
+        /// Adds `TimelineManager` and `ToolRouter` in one call.
         public func withOrchestration(workspaceRoot: URL) -> TestDependencies {
             withTimelineManager(workspaceRoot: workspaceRoot)
                 .withToolRouter()
-                .withChatEngine()
         }
 
         /// Adds an arbitrary dependency override.

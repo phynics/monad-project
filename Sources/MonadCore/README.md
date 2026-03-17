@@ -10,8 +10,8 @@ MonadCore is the core orchestration library for the Monad platform. It provides 
 
 ## Key Components
 
-### ChatEngine
-The central orchestrator that handles the entire lifecycle of a chat turn, including context gathering, LLM interaction, tool execution, and state persistence.
+### MonadCoreChat
+The interface boundary for MonadCore. Accepts all required services as init parameters and internally orchestrates the chat lifecycle — context gathering, LLM interaction, tool execution, and state persistence.
 
 ### AgentInstance
 Represents a live, persistent agent entity. Each instance has its own private workspace (long-term memory) and private timeline (internal monologue).
@@ -26,14 +26,25 @@ To get started with MonadCore, refer to the [Usage Guide](docs/Usage.md).
 ```swift
 import MonadCore
 import MonadShared
-import Dependencies
 
-@Dependency(\.chatEngine) var chatEngine
+let chat = MonadCoreChat(
+    llmService: myLLM,
+    messageStore: myMessageStore,
+    timelineManager: myTimelineManager,
+    toolRouter: myToolRouter,
+    agentInstanceStore: myAgentInstanceStore,
+    clientStore: myClientStore,
+    timelinePersistence: myTimelinePersistence,
+    workspacePersistence: myWorkspacePersistence,
+    memoryStore: myMemoryStore,
+    toolPersistence: myToolPersistence,
+    agentTemplateStore: myAgentTemplateStore,
+    embeddingService: myEmbeddingService
+)
 
-let stream = try await chatEngine.execute(
+let stream = try await chat.run(
     timelineId: timelineId,
-    message: "Hello!",
-    tools: []
+    message: "Hello!"
 )
 
 for try await event in stream {

@@ -37,10 +37,6 @@ public enum ToolRouterKey: DependencyKey {
     public static let liveValue = ToolRouter()
 }
 
-public enum ChatEngineKey: DependencyKey {
-    public static let liveValue = ChatEngine()
-}
-
 public enum AgentInstanceManagerKey: DependencyKey {
     public static var liveValue: any AgentInstanceManagerProtocol {
         @Dependency(\.agentWorkspaceService) var service
@@ -74,11 +70,6 @@ public extension DependencyValues {
     var toolRouter: ToolRouter {
         get { self[ToolRouterKey.self] }
         set { self[ToolRouterKey.self] = newValue }
-    }
-
-    var chatEngine: ChatEngine {
-        get { self[ChatEngineKey.self] }
-        set { self[ChatEngineKey.self] = newValue }
     }
 
     var agentInstanceManager: any AgentInstanceManagerProtocol {

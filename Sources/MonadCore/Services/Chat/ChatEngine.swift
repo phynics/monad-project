@@ -31,7 +31,7 @@ public struct ChatEngine: Sendable {
 
     let logger = Logger.module(named: "com.monad.chat-engine")
 
-    public var additionalStages: [any PipelineStage<ChatTurnContext, ChatEvent>] = []
+    var additionalStages: [any PipelineStage<ChatTurnContext, ChatEvent>] = []
 
     public init() {}
 

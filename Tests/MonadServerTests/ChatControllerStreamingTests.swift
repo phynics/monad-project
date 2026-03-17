@@ -10,7 +10,7 @@ import NIOCore
 import OpenAI
 import Testing
 
-@Suite struct ChatControllerStreamingTests {
+struct ChatControllerStreamingTests {
     @Test("Test Chat Streaming Endpoint")
     func chatStreamingEndpoint() async throws {
         // Setup Deps
@@ -24,7 +24,7 @@ import Testing
         try await TestDependencies()
             .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
             .withOrchestration(workspaceRoot: workspace.root)
-            .run {
+            .run { mocks in
                 @Dependency(\.timelineManager) var timelineManager
 
                 // Create Session
@@ -46,7 +46,7 @@ import Testing
 
                 // Setup App
                 let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>()
+                let controller = ChatAPIController<BasicRequestContext>(chat: mocks.buildCoreChat())
                 controller.addRoutes(to: router.group("/sessions"))
 
                 let app = Application(router: router)
@@ -87,7 +87,7 @@ import Testing
             .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
             .withOrchestration(workspaceRoot: workspace.root)
             .with { $0.continuousClock = ContinuousClock() }
-            .run {
+            .run { mocks in
                 @Dependency(\.timelineManager) var timelineManager
 
                 let session = try await timelineManager.createTimeline()
@@ -107,7 +107,7 @@ import Testing
                 await timelineManager.deleteTimeline(id: session.id)
 
                 let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>()
+                let controller = ChatAPIController<BasicRequestContext>(chat: mocks.buildCoreChat())
                 controller.addRoutes(to: router.group("/sessions"))
                 let app = Application(router: router)
                 let chatRequest = ChatRequest(message: "Wait for it")
@@ -154,7 +154,7 @@ import Testing
         try await TestDependencies()
             .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
             .withOrchestration(workspaceRoot: workspace.root)
-            .run {
+            .run { mocks in
                 @Dependency(\.timelineManager) var timelineManager
 
                 // Create Session
@@ -162,7 +162,7 @@ import Testing
 
                 // Setup App
                 let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>()
+                let controller = ChatAPIController<BasicRequestContext>(chat: mocks.buildCoreChat())
                 controller.addRoutes(to: router.group("/sessions"))
 
                 let app = Application(router: router)
