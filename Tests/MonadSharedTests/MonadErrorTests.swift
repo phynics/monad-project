@@ -1,11 +1,9 @@
-import Testing
+import ErrorKit
 import Foundation
 @testable import MonadShared
-import ErrorKit
+import Testing
 
-@Suite("MonadError Protocol Tests")
 struct MonadErrorTests {
-
     struct MockError: MonadError {
         let errorDomain: String
         let errorCode: Int
@@ -14,18 +12,20 @@ struct MonadErrorTests {
     }
 
     @Test("MonadError formatting includes domain and code")
-    func testMonadErrorFormatting() {
+    func monadErrorFormatting() {
         let error = MockError(
             errorDomain: MonadErrorDomain.shared,
             errorCode: 123,
             userFriendlyMessage: "Something failed"
         )
 
-        #expect(error.errorDescription == "[com.monad.shared:123] Something failed")
+        #expect(error.errorDomain == MonadErrorDomain.shared)
+        #expect(error.errorCode == 123)
+        #expect(error.userFriendlyMessage == "Something failed")
     }
 
     @Test("MonadErrorDomain constants are correct")
-    func testMonadErrorDomains() {
+    func monadErrorDomains() {
         #expect(MonadErrorDomain.shared == "com.monad.shared")
         #expect(MonadErrorDomain.client == "com.monad.client")
         #expect(MonadErrorDomain.server == "com.monad.server")

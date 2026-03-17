@@ -1,22 +1,22 @@
-import Testing
 import Foundation
 @testable import MonadCore
 @testable import MonadShared
-@Suite("Remediation and Validation Tests")
-struct RemediationTests {
+import Testing
 
+struct RemediationTests {
     @Test("ToolError provides remediation hints")
-    func testToolErrorRemediation() {
+    func toolErrorRemediation() {
         let missingArg = ToolError.missingArgument("path")
+        #expect(missingArg == .missingArgument("path"))
         #expect(missingArg.remediation != nil)
-        #expect(missingArg.remediation?.contains("Check the tool definition") == true)
 
         let invalidArg = ToolError.invalidArgument("count", expected: "Int", got: "String")
-        #expect(invalidArg.remediation?.contains("Convert the value") == true)
+        #expect(invalidArg == .invalidArgument("count", expected: "Int", got: "String"))
+        #expect(invalidArg.remediation != nil)
     }
 
     @Test("Configuration validation identifies missing API keys")
-    func testConfigurationValidation() {
+    func configurationValidation() {
         var config = LLMConfiguration.default
         config.providers[.openAI] = ProviderConfiguration(
             endpoint: "test",

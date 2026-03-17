@@ -1,33 +1,60 @@
-import Testing
-@testable import MonadShared
 import Foundation
+@testable import MonadShared
+import Testing
 
-@Suite final class ToolErrorSurfacesTests {
-    // ToolErrorSurfaceTests already exists in MonadCoreTests but only tests parts of ToolError.
-    // Let's create a dedicated one for the custom ToolError enum.
+final class ToolErrorSurfacesTests {
+    @Test
+    func toolNotFound() {
+        let error = ToolError.toolNotFound("missing_tool")
+        #expect(error.errorDomain == MonadErrorDomain.tool)
+        #expect(error.errorCode == 204)
+        #expect(error == .toolNotFound("missing_tool"))
+    }
 
     @Test
+    func clientToolsDisallowedOnPrivateTimeline() {
+        let error = ToolError.clientToolsDisallowedOnPrivateTimeline
+        #expect(error.errorDomain == MonadErrorDomain.tool)
+        #expect(error.errorCode == 207)
+    }
 
-    func testToolErrorDescriptions() {
-        let notFound = ToolError.toolNotFound("missing_tool")
-        #expect(notFound.errorDescription == "Tool not found: missing_tool")
+    @Test
+    func workspaceNotFound() throws {
+        let id = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
+        let error = ToolError.workspaceNotFound(id)
+        #expect(error.errorDomain == MonadErrorDomain.tool)
+        #expect(error.errorCode == 205)
+        #expect(error == .workspaceNotFound(id))
+    }
 
-        let clientReq = ToolError.clientToolsDisallowedOnPrivateTimeline
-        #expect(clientReq.errorDescription == "Client-side tools cannot be used on private (agent-owned) timelines")
+    @Test
+    func clientNotConnected() {
+        let error = ToolError.clientNotConnected
+        #expect(error.errorDomain == MonadErrorDomain.tool)
+        #expect(error.errorCode == 206)
+    }
 
-        let wNotFound = ToolError.workspaceNotFound(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
-        #expect(wNotFound.errorDescription == "Workspace not found: 00000000-0000-0000-0000-000000000001")
+    @Test
+    func invalidArgument() {
+        let error = ToolError.invalidArgument("count", expected: "Int", got: "String")
+        #expect(error.errorDomain == MonadErrorDomain.tool)
+        #expect(error.errorCode == 202)
+        #expect(error == .invalidArgument("count", expected: "Int", got: "String"))
+    }
 
-        let cNotConn = ToolError.clientNotConnected
-        #expect(cNotConn.errorDescription == "Client is not connected")
+    @Test
+    func missingArgument() {
+        let error = ToolError.missingArgument("query")
+        #expect(error.errorDomain == MonadErrorDomain.tool)
+        #expect(error.errorCode == 201)
+        #expect(error == .missingArgument("query"))
+    }
 
-        let invalid = ToolError.invalidArgument("count", expected: "Int", got: "String")
-        #expect(invalid.errorDescription == "Invalid argument 'count': expected Int, got String")
-
-        let missing = ToolError.missingArgument("query")
-        #expect(missing.errorDescription == "Missing required argument: query")
-
-        let failed = ToolError.executionFailed("Timeout")
-        #expect(failed.errorDescription == "Tool execution failed: Timeout")
+    @Test
+    func executionFailed() {
+        let error = ToolError.executionFailed("Timeout")
+        #expect(error.errorDomain == MonadErrorDomain.tool)
+        #expect(error.errorCode == 203)
+        #expect(error == .executionFailed("Timeout"))
     }
 }

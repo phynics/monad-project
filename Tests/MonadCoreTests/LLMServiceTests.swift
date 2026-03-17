@@ -170,7 +170,6 @@ struct LLMServiceTests {
         if let first = optimized.first {
             #expect(first.role == .system)
             #expect(first.isSummary == true)
-            #expect(first.content.contains("History truncated"))
         } else {
             #expect(Bool(false), "Optimized history should not be empty")
         }

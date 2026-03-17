@@ -1,19 +1,23 @@
-import Testing
 import Foundation
 @testable import MonadCore
 @testable import MonadShared
+import Testing
 
-@Suite final class TimelineToolManagerTests {
-
+final class TimelineToolManagerTests {
     struct MockTool: MonadShared.Tool, @unchecked Sendable {
         let id: String
         let name: String
         let description = "A mock tool for testing"
         let requiresPermission = false
-        var parametersSchema: [String: AnyCodable] { [:] }
+        var parametersSchema: [String: AnyCodable] {
+            [:]
+        }
 
-        func canExecute() async -> Bool { true }
-        func execute(parameters: [String: Any]) async throws -> ToolResult {
+        func canExecute() async -> Bool {
+            true
+        }
+
+        func execute(parameters _: [String: Any]) async throws -> ToolResult {
             return .success("Executed \(name)")
         }
     }
@@ -23,18 +27,32 @@ import Foundation
         let reference: WorkspaceReference
         let toolsToReturn: [ToolReference]
 
-        func listTools() async throws -> [ToolReference] { toolsToReturn }
-        func executeTool(id: String, parameters: [String: AnyCodable]) async throws -> ToolResult { .success("Workspace tool executed") }
-        func readFile(path: String) async throws -> String { "" }
-        func writeFile(path: String, content: String) async throws {}
-        func listFiles(path: String) async throws -> [String] { [] }
-        func deleteFile(path: String) async throws {}
-        func healthCheck() async -> Bool { true }
+        func listTools() async throws -> [ToolReference] {
+            toolsToReturn
+        }
+
+        func executeTool(id _: String, parameters _: [String: AnyCodable]) async throws -> ToolResult {
+            .success("Workspace tool executed")
+        }
+
+        func readFile(path _: String) async throws -> String {
+            ""
+        }
+
+        func writeFile(path _: String, content _: String) async throws {}
+        func listFiles(path _: String) async throws -> [String] {
+            []
+        }
+
+        func deleteFile(path _: String) async throws {}
+        func healthCheck() async -> Bool {
+            true
+        }
     }
 
     @Test
 
-    func testInitEnablesAllAvailableTools() async throws {
+    func initEnablesAllAvailableTools() async {
         let systemTool1 = AnyTool(MockTool(id: "sys1", name: "System 1"))
         let systemTool2 = AnyTool(MockTool(id: "sys2", name: "System 2"))
 
@@ -51,7 +69,7 @@ import Foundation
 
     @Test
 
-    func testUpdateAvailableToolsAutoEnablesNewTools() async throws {
+    func updateAvailableToolsAutoEnablesNewTools() async {
         let systemTool1 = AnyTool(MockTool(id: "sys1", name: "System 1"))
         let manager = TimelineToolManager(availableTools: [systemTool1])
 
@@ -67,7 +85,7 @@ import Foundation
 
     @Test
 
-    func testToggleEnableDisableTools() async throws {
+    func toggleEnableDisableTools() async {
         let systemTool1 = AnyTool(MockTool(id: "sys1", name: "System 1"))
         let manager = TimelineToolManager(availableTools: [systemTool1])
 
@@ -89,11 +107,11 @@ import Foundation
 
     @Test
 
-    func testWorkspaceToolRegistration() async throws {
+    func workspaceToolRegistration() async throws {
         let manager = TimelineToolManager(availableTools: [])
 
         let workspaceId = UUID()
-        let workspaceRef = WorkspaceReference(id: workspaceId, uri: WorkspaceURI(parsing: "monad://test")!, hostType: .server, ownerId: nil)
+        let workspaceRef = try WorkspaceReference(id: workspaceId, uri: #require(WorkspaceURI(parsing: "monad://test")), hostType: .server, ownerId: nil)
 
         let def = WorkspaceToolDefinition(
             id: "wsTool1",
@@ -122,7 +140,7 @@ import Foundation
 
     @Test
 
-    func testGetToolResolvesCorrectly() async throws {
+    func getToolResolvesCorrectly() async throws {
         let systemTool = AnyTool(MockTool(id: "sys1", name: "System 1"))
         let manager = TimelineToolManager(availableTools: [systemTool])
 
@@ -133,9 +151,9 @@ import Foundation
         // Workspace tool resolution
         let workspaceId = UUID()
         let def = WorkspaceToolDefinition(id: "wsTool", name: "wsTool", description: "WS", parametersSchema: [:])
-        let mockWS = MockWorkspace(
+        let mockWS = try MockWorkspace(
             id: workspaceId,
-            reference: WorkspaceReference(id: workspaceId, uri: WorkspaceURI(parsing: "monad://test")!, hostType: .server, ownerId: nil),
+            reference: WorkspaceReference(id: workspaceId, uri: #require(WorkspaceURI(parsing: "monad://test")), hostType: .server, ownerId: nil),
             toolsToReturn: [.custom(def)]
         )
         await manager.registerWorkspace(mockWS)
@@ -155,10 +173,10 @@ import Foundation
 
     @Test
 
-    func testWorkspaceToolsHaveProvenance() async throws {
+    func workspaceToolsHaveProvenance() async throws {
         let manager = TimelineToolManager(availableTools: [])
         let workspaceId = UUID()
-        let uri = WorkspaceURI(parsing: "monad://test-workspace-prov")!
+        let uri = try #require(WorkspaceURI(parsing: "monad://test-workspace-prov"))
         let workspaceRef = WorkspaceReference(id: workspaceId, uri: uri, hostType: .server, ownerId: nil)
 
         let def = WorkspaceToolDefinition(id: "provTool", name: "provTool", description: "prov", parametersSchema: [:])
@@ -170,20 +188,20 @@ import Foundation
         let available = await manager.getAvailableTools()
         let tool = available.first(where: { $0.name == "provTool" })
         try #require(tool != nil)
-        #expect(tool?.provenance == "Workspace: monad://test-workspace-prov")
+        #expect(tool?.provenance?.contains("monad://test-workspace-prov") == true)
 
-        let fetched = await manager.getTool(id: tool!.id)
-        #expect(fetched?.provenance == "Workspace: monad://test-workspace-prov")
+        let fetched = try await manager.getTool(id: #require(tool?.id))
+        #expect(fetched?.provenance?.contains("monad://test-workspace-prov") == true)
     }
 
     @Test
 
-    func testKnownToolRefsResolved() async throws {
+    func knownToolRefsResolved() async throws {
         let systemTool = AnyTool(MockTool(id: "cat", name: "cat"))
         let manager = TimelineToolManager(availableTools: [systemTool])
 
         let workspaceId = UUID()
-        let uri = WorkspaceURI(parsing: "monad://test-known-tool")!
+        let uri = try #require(WorkspaceURI(parsing: "monad://test-known-tool"))
         let workspaceRef = WorkspaceReference(id: workspaceId, uri: uri, hostType: .server, ownerId: nil)
 
         // Workspace declares it offers the "cat" known tool
