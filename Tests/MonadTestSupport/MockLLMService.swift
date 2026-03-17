@@ -174,7 +174,9 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
     public func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]?,
-        responseFormat: ChatQuery.ResponseFormat?
+        responseFormat: ChatQuery.ResponseFormat?,
+        useUtilityModel: Bool,
+        useFastModel: Bool
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
         if let stubbed = stubbedStream {
             return stubbed

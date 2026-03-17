@@ -16,13 +16,14 @@ private func makeContext(
     toolCallAccumulators: [Int: (id: String, name: String, args: String)] = [:],
     currentMessages: [ChatQuery.ChatCompletionMessageParam] = []
 ) async -> ChatTurnContext {
-    let outputs = TurnOutputs(priorAccumulatedOutput: accumulatedRawOutput)
+    let outputs = TurnOutputs()
     for chunk in fullResponse {
         await outputs.appendResponse(String(chunk))
     }
     for (index, acc) in toolCallAccumulators {
         await outputs.setToolCallAccumulator(index: index, id: acc.id, name: acc.name, args: acc.args)
     }
+
     return ChatTurnContext(
         timelineId: UUID(),
         agentInstanceId: nil,

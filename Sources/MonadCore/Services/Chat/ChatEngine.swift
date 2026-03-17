@@ -61,48 +61,15 @@ public struct ChatEngine: Sendable {
 
         guard await llmService.isConfigured else { throw ChatEngineError.llmServiceNotConfigured }
 
-        try await saveConversationSteps(timelineId: timelineId, message: message, toolOutputs: toolOutputs)
-
-        let conversationMessages = try await messageStore.fetchMessages(for: timelineId)
-        let history = conversationMessages.map { $0.toMessage() }
-        let currentRemoteDepth = conversationMessages.map(\.remoteDepth).max() ?? 0
-        let contextData = await fetchContext(contextManager: contextManager, message: message, history: history)
-
-        let workspaceResult = await timelineManager.getWorkspaces(for: timelineId)
-        let entities = await resolveEntities(
+        let context = try await prepareSession(
             timelineId: timelineId,
-            agentInstanceId: agentInstanceId,
-            primaryWorkspaceOwnerId: workspaceResult?.primary?.ownerId
-        )
-
-        let params = BuildPromptParams(
-            timelineId: timelineId,
-            timeline: entities.timeline,
-            agentInstance: entities.agentInstance,
             message: message,
-            contextData: contextData,
-            history: history,
-            availableTools: tools,
-            workspaces: workspaceResult?.attached ?? [],
-            primaryWorkspace: workspaceResult?.primary,
-            clientName: entities.clientName,
-            systemInstructions: systemInstructions
-        )
-        let initialMessages = await buildPrompt(params)
-        let modelName = await llmService.configuration.modelName
-
-        let context = ChatTurnContext(
-            timelineId: timelineId,
-            agentInstanceId: agentInstanceId,
-            modelName: modelName,
-            maxTurns: maxTurns,
+            tools: tools,
+            toolOutputs: toolOutputs,
+            contextManager: contextManager,
             systemInstructions: systemInstructions,
-            availableTools: tools,
-            contextData: contextData,
-            remoteDepth: currentRemoteDepth,
-            currentMessages: initialMessages,
-            turnCount: 0,
-            outputs: TurnOutputs()
+            agentInstanceId: agentInstanceId,
+            maxTurns: maxTurns
         )
 
         return AsyncThrowingStream<ChatEvent, Error> { continuation in
@@ -141,13 +108,17 @@ public struct ChatEngine: Sendable {
             turnCount += 1
             let turnContext = context.forTurn(
                 turnCount: turnCount,
-                messages: loopMessages,
-                priorAccumulatedOutput: priorOutput
+                messages: loopMessages
             )
 
             // Execute one turn (LLM call + automatic server-side tool routing)
             let signal = await runOneTurn(continuation: continuation, context: turnContext)
-            priorOutput = await turnContext.outputs.accumulatedRawOutput
+
+            // Accumulate thinking and response manually from the current turn
+            let currentThinking = await turnContext.outputs.fullThinking
+            let currentResponse = await turnContext.outputs.fullResponse
+            priorOutput += currentThinking
+            priorOutput += currentResponse
 
             switch signal {
             case .stop:
@@ -202,7 +173,9 @@ public struct ChatEngine: Sendable {
 
         do {
             try Task.checkCancellation()
+            logger.trace("Turn \(turnLabel): starting pipeline for \(sid)")
             try await processTurn(context: context, continuation: continuation)
+            logger.trace("Turn \(turnLabel): pipeline complete for \(sid)")
             return try await handleToolCallsAfterTurn(context: context, continuation: continuation)
         } catch is CancellationError {
             continuation.yield(.generationCancelled())

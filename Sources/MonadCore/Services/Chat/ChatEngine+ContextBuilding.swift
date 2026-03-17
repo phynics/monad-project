@@ -28,30 +28,90 @@ public enum ChatEngineError: MonadError {
     }
 }
 
-/// Resolved entity snapshot used to assemble the prompt.
-struct ResolvedEntities {
-    let timeline: Timeline?
-    let agentInstance: AgentInstance?
-    let clientName: String?
-}
-
-/// Input parameters for prompt assembly, passed to `buildPrompt`.
-struct BuildPromptParams {
-    let timelineId: UUID
-    let timeline: Timeline?
-    let agentInstance: AgentInstance?
-    let message: String
-    let contextData: ContextData
-    let history: [Message]
-    let availableTools: [AnyTool]
-    let workspaces: [WorkspaceReference]
-    let primaryWorkspace: WorkspaceReference?
-    let clientName: String?
-    let systemInstructions: String?
-}
-
 extension ChatEngine {
-    func saveConversationSteps(
+    /// Consolidates all pre-turn logic: saving inputs, gathering context, resolving entities,
+    /// and building the initial prompt.
+    func prepareSession(
+        timelineId: UUID,
+        message: String,
+        tools: [AnyTool],
+        toolOutputs: [ToolOutputSubmission]?,
+        contextManager: ContextManager?,
+        systemInstructions: String?,
+        agentInstanceId: UUID?,
+        maxTurns: Int
+    ) async throws -> ChatTurnContext {
+        // 1. Save new inputs (user message or tool outputs from client)
+        try await saveConversationSteps(timelineId: timelineId, message: message, toolOutputs: toolOutputs)
+
+        // 2. Load conversation history and context
+        let conversationMessages = try await messageStore.fetchMessages(for: timelineId)
+        let history = conversationMessages.map { $0.toMessage() }
+        let currentRemoteDepth = conversationMessages.map(\.remoteDepth).max() ?? 0
+        let contextData = await fetchContext(contextManager: contextManager, message: message, history: history)
+
+        // 3. Resolve workspaces and session entities
+        let workspaceResult = await timelineManager.getWorkspaces(for: timelineId)
+        let timeline = await timelineManager.getTimeline(id: timelineId)
+        
+        var agentInstance: AgentInstance?
+        if let agentId = agentInstanceId {
+            agentInstance = try? await agentInstanceStore.fetchAgentInstance(id: agentId)
+        }
+        
+        var clientName: String?
+        if let ownerId = workspaceResult?.primary?.ownerId,
+           let client = try? await clientStore.fetchClient(id: ownerId)
+        {
+            clientName = client.displayName
+        }
+
+        // 4. Build the initial prompt messages
+        let extensionSections = await timelineManager.gatherExtensionSections(
+            timelineId: timelineId,
+            agentInstanceId: agentInstance?.id,
+            message: message
+        )
+
+        let promptRequest = LLMPromptRequest(
+            userQuery: message,
+            contextNotes: contextData.notes,
+            memories: contextData.memories.map { $0.memory },
+            chatHistory: history,
+            tools: tools,
+            workspaces: workspaceResult?.attached ?? [],
+            primaryWorkspace: workspaceResult?.primary,
+            clientName: clientName,
+            systemInstructions: systemInstructions
+        )
+
+        let initialMessages = await PromptBuilder.buildContext(
+            promptRequest,
+            agentInstance: agentInstance,
+            timeline: timeline,
+            extensionSections: extensionSections
+        ).toMessages()
+
+        let modelName = await llmService.configuration.modelName
+
+        return ChatTurnContext(
+            timelineId: timelineId,
+            agentInstanceId: agentInstanceId,
+            modelName: modelName,
+            maxTurns: maxTurns,
+            systemInstructions: systemInstructions,
+            availableTools: tools,
+            contextData: contextData,
+            remoteDepth: currentRemoteDepth,
+            currentMessages: initialMessages,
+            turnCount: 0,
+            outputs: TurnOutputs()
+        )
+    }
+
+    // MARK: - Internal Preparation Steps
+
+    private func saveConversationSteps(
         timelineId: UUID,
         message: String,
         toolOutputs: [ToolOutputSubmission]?
@@ -76,7 +136,7 @@ extension ChatEngine {
         }
     }
 
-    func fetchContext(
+    private func fetchContext(
         contextManager: ContextManager?,
         message: String,
         history: [Message]
@@ -99,55 +159,5 @@ extension ChatEngine {
             logger.warning("Failed to gather context: \(error)")
         }
         return ContextData()
-    }
-
-    func resolveEntities(
-        timelineId: UUID,
-        agentInstanceId: UUID?,
-        primaryWorkspaceOwnerId: UUID?
-    ) async -> ResolvedEntities {
-        let timeline = await timelineManager.getTimeline(id: timelineId)
-        var agentInstance: AgentInstance?
-        if let agentId = agentInstanceId {
-            agentInstance = try? await agentInstanceStore.fetchAgentInstance(id: agentId)
-        }
-        var clientName: String?
-        if let ownerId = primaryWorkspaceOwnerId,
-           let client = try? await clientStore.fetchClient(id: ownerId)
-        {
-            clientName = client.displayName
-        }
-        return ResolvedEntities(timeline: timeline, agentInstance: agentInstance, clientName: clientName)
-    }
-
-    func buildPrompt(
-        _ params: BuildPromptParams
-    ) async -> [ChatQuery.ChatCompletionMessageParam] {
-        let extensionSections = await timelineManager.gatherExtensionSections(
-            timelineId: params.timelineId,
-            agentInstanceId: params.agentInstance?.id,
-            message: params.message
-        )
-
-        let promptRequest = LLMPromptRequest(
-            userQuery: params.message,
-            contextNotes: params.contextData.notes,
-            memories: params.contextData.memories.map { $0.memory },
-            chatHistory: params.history,
-            tools: params.availableTools,
-            workspaces: params.workspaces,
-            primaryWorkspace: params.primaryWorkspace,
-            clientName: params.clientName,
-            systemInstructions: params.systemInstructions
-        )
-
-        let prompt = PromptBuilder.buildContext(
-            promptRequest,
-            agentInstance: params.agentInstance,
-            timeline: params.timeline,
-            extensionSections: extensionSections
-        )
-
-        return await prompt.toMessages()
     }
 }

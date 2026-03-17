@@ -194,7 +194,7 @@ public protocol ToolReferenceProviding {
 /// let tool: AnyTool = AnyTool(myReadFileTool)
 /// let result = try await tool.execute(parameters: ["path": "/tmp/file.txt"])
 /// ```
-public struct AnyTool: Tool {
+public struct AnyTool: Tool, Sendable {
     private let wrapped: any Tool
 
     /// Optional metadata about where the tool originated (e.g. workspace name).

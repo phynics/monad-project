@@ -24,13 +24,10 @@ actor TurnOutputs {
     private(set) var streamUsage: ChatResult.CompletionUsage?
     private(set) var turnDuration: TimeInterval = 0
     private(set) var tokensPerSecond: Double?
-    private(set) var accumulatedRawOutput: String
     private(set) var debugToolCalls: [ToolCallRecord] = []
     private(set) var debugToolResults: [ToolResultRecord] = []
 
-    init(priorAccumulatedOutput: String = "") {
-        accumulatedRawOutput = priorAccumulatedOutput
-    }
+    init() {}
 
     // MARK: - Mutation Methods
 
@@ -72,10 +69,8 @@ actor TurnOutputs {
         debugToolResults.append(record)
     }
 
-    /// Finalizes the turn: accumulates raw output and computes timing/throughput metrics.
+    /// Finalizes the turn: computes timing and throughput metrics.
     func finalizeTurn(startTime: Date) {
-        accumulatedRawOutput += fullThinking
-        accumulatedRawOutput += fullResponse
         turnDuration = Date().timeIntervalSince(startTime)
         let completionTokens = streamUsage?.completionTokens
             ?? TokenEstimator.estimate(text: fullResponse + fullThinking)
@@ -85,8 +80,8 @@ actor TurnOutputs {
 
 /// Immutable snapshot of a single chat turn as it moves through the pipeline.
 /// Mutable stage outputs are stored in `outputs`, a shared actor reference.
-struct ChatTurnContext {
-    // Session-level fields — identical across all turns in a generation.
+struct ChatTurnContext: Sendable {
+    // Session-level configuration (constant across turns)
     let timelineId: UUID
     let agentInstanceId: UUID?
     let modelName: String
@@ -96,23 +91,22 @@ struct ChatTurnContext {
     let contextData: ContextData
     let remoteDepth: Int
 
-    // Per-turn snapshot — different each iteration.
+    // Per-turn snapshot (changes each iteration)
     let currentMessages: [ChatQuery.ChatCompletionMessageParam]
     let turnCount: Int
-
-    /// Tool parameters derived from availableTools — not stored redundantly.
-    var toolParams: [ChatQuery.ChatCompletionToolParam] {
-        availableTools.map { $0.toToolParam() }
-    }
 
     /// Mutable stage outputs shared via actor reference across struct copies.
     let outputs: TurnOutputs
 
-    /// Creates a new per-turn context from this session template.
+    /// Tool parameters derived from availableTools.
+    var toolParams: [ChatQuery.ChatCompletionToolParam] {
+        availableTools.map { $0.toToolParam() }
+    }
+
+    /// Creates a new snapshot for the next turn while keeping the same session config.
     func forTurn(
         turnCount: Int,
-        messages: [ChatQuery.ChatCompletionMessageParam],
-        priorAccumulatedOutput: String
+        messages: [ChatQuery.ChatCompletionMessageParam]
     ) -> ChatTurnContext {
         ChatTurnContext(
             timelineId: timelineId,
@@ -125,7 +119,7 @@ struct ChatTurnContext {
             remoteDepth: remoteDepth,
             currentMessages: messages,
             turnCount: turnCount,
-            outputs: TurnOutputs(priorAccumulatedOutput: priorAccumulatedOutput)
+            outputs: TurnOutputs()
         )
     }
 }

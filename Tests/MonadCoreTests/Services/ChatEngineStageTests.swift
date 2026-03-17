@@ -53,7 +53,6 @@ final class ChatEngineStageTests {
     // MARK: - Helpers
 
     private func createTestContext() -> ChatTurnContext {
-        let outputs = TurnOutputs()
         return ChatTurnContext(
             timelineId: UUID(),
             agentInstanceId: nil,
@@ -65,7 +64,7 @@ final class ChatEngineStageTests {
             remoteDepth: 0,
             currentMessages: [],
             turnCount: 1,
-            outputs: outputs
+            outputs: TurnOutputs()
         )
     }
 }

@@ -82,7 +82,6 @@ struct MessagePersistenceStage: PipelineStage {
     private func buildTurnSnapshot(from context: ChatTurnContext) async -> TurnSnapshot {
         let debugToolCalls = await context.outputs.debugToolCalls
         let debugToolResults = await context.outputs.debugToolResults
-        let accumulatedRawOutput = await context.outputs.accumulatedRawOutput
         let fullResponse = await context.outputs.fullResponse
         let fullThinking = await context.outputs.fullThinking
         let turnDuration = await context.outputs.turnDuration
@@ -100,7 +99,7 @@ struct MessagePersistenceStage: PipelineStage {
             renderedPrompt: ChatEngine.renderMessagesStatic(context.currentMessages),
             fullResponse: fullResponse,
             fullThinking: fullThinking,
-            rawOutput: accumulatedRawOutput,
+            rawOutput: fullThinking + fullResponse,
             toolCalls: debugToolCalls,
             toolResults: debugToolResults,
             turnDuration: turnDuration,

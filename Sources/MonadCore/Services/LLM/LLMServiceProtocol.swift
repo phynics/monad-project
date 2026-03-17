@@ -125,7 +125,7 @@ public struct EndpointComponents: Sendable {
 // MARK: - Protocol
 
 /// Protocol for LLM Service to enable mocking and isolation
-public protocol LLMServiceProtocol: HealthCheckable {
+public protocol LLMServiceProtocol: HealthCheckable, Sendable {
     var isConfigured: Bool { get async }
     var configuration: LLMConfiguration { get async }
 
