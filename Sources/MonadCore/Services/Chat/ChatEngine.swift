@@ -228,30 +228,54 @@ public struct ChatEngine: Sendable {
     static func renderMessagesStatic(_ messages: [ChatQuery.ChatCompletionMessageParam]) -> String {
         var output = ""
         for message in messages {
+            let role: String
+            var content: String = ""
+
             switch message {
             case let .system(param):
-                output += "─── [SYSTEM] ───\n\(param.content)\n\n"
-            case let .user(param):
-                output += "─── [USER] ───\n\(param.content)\n\n"
-            case let .assistant(param):
-                var content = ""
-                if let contentValue = param.content {
-                    content = "\(contentValue)"
+                role = "SYSTEM"
+                if case let .textContent(text) = param.content {
+                    content = text
                 }
-                output += "─── [ASSISTANT] ───\n\(content)\n"
-                if let toolCalls = param.toolCalls {
-                    for call in toolCalls {
-                        output += "Call: \(call.function.name)(\(call.function.arguments))\n"
+            case let .user(param):
+                role = "USER"
+                if case let .string(text) = param.content {
+                    content = text
+                }
+            case let .assistant(param):
+                role = "ASSISTANT"
+                if let contentWrap = param.content {
+                    if case let .textContent(text) = contentWrap {
+                        content = text
                     }
                 }
-                output += "\n"
+                if let toolCalls = param.toolCalls {
+                    for call in toolCalls {
+                        if !content.isEmpty { content += "\n" }
+                        content += "Call: \(call.function.name)(\(call.function.arguments))"
+                    }
+                }
             case let .tool(param):
-                output += "─── [TOOL: \(param.toolCallId)] ───\n\(param.content)\n\n"
+                role = "TOOL"
+                if case let .textContent(text) = param.content {
+                    content = text
+                }
             case let .developer(param):
-                output += "─── [DEVELOPER] ───\n\(param.content)\n\n"
+                role = "DEVELOPER"
+                if case let .textContent(text) = param.content {
+                    content = text
+                }
             @unknown default:
-                output += "─── [UNKNOWN] ───\n\(message)\n\n"
+                role = "UNKNOWN"
+                content = "\(message)"
             }
+
+            let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+            output += "─── [\(role)] ───\n"
+            if !trimmedContent.isEmpty {
+                output += "\(trimmedContent)\n"
+            }
+            output += "\n"
         }
         return output
     }
