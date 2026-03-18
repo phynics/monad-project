@@ -52,6 +52,31 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         set { providers[activeProvider]?.maxRetries = newValue }
     }
 
+    public var temperature: Double? {
+        get { providers[activeProvider]?.temperature }
+        set { providers[activeProvider]?.temperature = newValue }
+    }
+
+    public var maxTokens: Int? {
+        get { providers[activeProvider]?.maxTokens }
+        set { providers[activeProvider]?.maxTokens = newValue }
+    }
+
+    public var topP: Double? {
+        get { providers[activeProvider]?.topP }
+        set { providers[activeProvider]?.topP = newValue }
+    }
+
+    public var frequencyPenalty: Double? {
+        get { providers[activeProvider]?.frequencyPenalty }
+        set { providers[activeProvider]?.frequencyPenalty = newValue }
+    }
+
+    public var presencePenalty: Double? {
+        get { providers[activeProvider]?.presencePenalty }
+        set { providers[activeProvider]?.presencePenalty = newValue }
+    }
+
     public var provider: LLMProvider {
         get { activeProvider }
         set { activeProvider = newValue }
@@ -108,7 +133,12 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         memoryContextLimit: Int = 5,
         documentContextLimit: Int = 5,
         timeoutInterval: TimeInterval = 60.0,
-        maxRetries: Int = 3
+        maxRetries: Int = 3,
+        temperature: Double? = nil,
+        maxTokens: Int? = nil,
+        topP: Double? = nil,
+        frequencyPenalty: Double? = nil,
+        presencePenalty: Double? = nil
     ) {
         activeProvider = provider
         self.memoryContextLimit = memoryContextLimit
@@ -130,7 +160,12 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
             fastModel: fastModel,
             toolFormat: toolFormat,
             timeoutInterval: timeoutInterval,
-            maxRetries: maxRetries
+            maxRetries: maxRetries,
+            temperature: temperature,
+            maxTokens: maxTokens,
+            topP: topP,
+            frequencyPenalty: frequencyPenalty,
+            presencePenalty: presencePenalty
         )
 
         providers = initialProviders

@@ -10,13 +10,22 @@ extension LLMService {
     func updateClient(with config: LLMConfiguration) {
         Logger.module(named: "llm").debug("Updating clients for provider: \(config.provider.rawValue)")
 
+        let clients = Self.makeClients(with: config)
+        setClients(main: clients.main, utility: clients.utility, fast: clients.fast)
+    }
+
+    /// Static version of client creation for use in init
+    static func makeClients(with config: LLMConfiguration) -> (
+        main: (any LLMClientProtocol)?, utility: (any LLMClientProtocol)?,
+        fast: (any LLMClientProtocol)?
+    ) {
         let components = parseEndpoint(config.endpoint)
         let timeout = config.timeoutInterval
         let retries = config.maxRetries
 
         switch config.provider {
         case .ollama:
-            setClients(
+            return (
                 main: makeOllamaClient(config: config, timeout: timeout, retries: retries),
                 utility: makeOllamaClient(
                     config: config, timeout: timeout, retries: retries, model: config.utilityModel
@@ -27,8 +36,10 @@ extension LLMService {
             )
 
         case .openRouter:
-            setClients(
-                main: makeOpenRouterClient(config: config, components: components, timeout: timeout, retries: retries),
+            return (
+                main: makeOpenRouterClient(
+                    config: config, components: components, timeout: timeout, retries: retries
+                ),
                 utility: makeOpenRouterClient(
                     config: config, components: components, timeout: timeout, retries: retries,
                     model: config.utilityModel
@@ -40,8 +51,10 @@ extension LLMService {
             )
 
         case .openAI, .openAICompatible:
-            setClients(
-                main: makeOpenAIClient(config: config, components: components, timeout: timeout, retries: retries),
+            return (
+                main: makeOpenAIClient(
+                    config: config, components: components, timeout: timeout, retries: retries
+                ),
                 utility: makeOpenAIClient(
                     config: config, components: components, timeout: timeout, retries: retries,
                     model: config.utilityModel
@@ -55,7 +68,7 @@ extension LLMService {
     }
 
     /// Parse an endpoint URL into its host, port, and scheme components.
-    func parseEndpoint(_ endpoint: String) -> EndpointComponents {
+    static func parseEndpoint(_ endpoint: String) -> EndpointComponents {
         let cleanedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URL(string: cleanedEndpoint), let host = url.host else {
             Logger.module(named: "llm").error("Invalid endpoint URL: \(endpoint)")
@@ -80,7 +93,7 @@ extension LLMService {
 
     // MARK: - Client Factories
 
-    private func makeOllamaClient(
+    static private func makeOllamaClient(
         config: LLMConfiguration,
         timeout: TimeInterval,
         retries: Int,
@@ -94,7 +107,7 @@ extension LLMService {
         )
     }
 
-    private func makeOpenRouterClient(
+    static private func makeOpenRouterClient(
         config: LLMConfiguration,
         components: EndpointComponents,
         timeout: TimeInterval,
@@ -112,7 +125,7 @@ extension LLMService {
         )
     }
 
-    private func makeOpenAIClient(
+    static private func makeOpenAIClient(
         config: LLMConfiguration,
         components: EndpointComponents,
         timeout: TimeInterval,

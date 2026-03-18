@@ -75,6 +75,67 @@ import Foundation
         #expect(config.toolFormat == .json)
     }
 
+    @Test
+
+    func testLLMParametersCodable() throws {
+        var config = ProviderConfiguration(
+            endpoint: "http://localhost:11434/api",
+            apiKey: "",
+            modelName: "llama3",
+            utilityModel: "llama3",
+            fastModel: "llama3",
+            toolFormat: .json
+        )
+        
+        config.temperature = 0.7
+        config.maxTokens = 1000
+        config.topP = 0.9
+        config.frequencyPenalty = 0.5
+        config.presencePenalty = 0.3
+        
+        try assertCodable(config)
+        
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        let data = try encoder.encode(config)
+        let decoded = try decoder.decode(ProviderConfiguration.self, from: data)
+        
+        #expect(decoded.temperature == 0.7)
+        #expect(decoded.maxTokens == 1000)
+        #expect(decoded.topP == 0.9)
+        #expect(decoded.frequencyPenalty == 0.5)
+        #expect(decoded.presencePenalty == 0.3)
+    }
+
+    @Test
+
+    func testLLMConfigurationProxyParameters() throws {
+        var config = LLMConfiguration.default
+        
+        config.temperature = 0.8
+        config.maxTokens = 2000
+        config.topP = 0.95
+        config.frequencyPenalty = 0.1
+        config.presencePenalty = 0.2
+        
+        #expect(config.providers[config.activeProvider]?.temperature == 0.8)
+        #expect(config.providers[config.activeProvider]?.maxTokens == 2000)
+        #expect(config.providers[config.activeProvider]?.topP == 0.95)
+        #expect(config.providers[config.activeProvider]?.frequencyPenalty == 0.1)
+        #expect(config.providers[config.activeProvider]?.presencePenalty == 0.2)
+        
+        // Test legacy init with parameters
+        let legacyConfig = LLMConfiguration(
+            modelName: "test-model",
+            temperature: 0.5,
+            maxTokens: 500
+        )
+        
+        #expect(legacyConfig.temperature == 0.5)
+        #expect(legacyConfig.maxTokens == 500)
+        #expect(legacyConfig.topP == nil)
+    }
+
     // MARK: - ToolCallFormat
 
     @Test
