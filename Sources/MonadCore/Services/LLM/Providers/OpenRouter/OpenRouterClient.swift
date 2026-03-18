@@ -68,7 +68,8 @@ public actor OpenRouterClient {
     public func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]? = nil,
-        responseFormat: ChatQuery.ResponseFormat? = nil
+        responseFormat: ChatQuery.ResponseFormat? = nil,
+        generationParameters: GenerationParameters? = nil
     ) -> AsyncThrowingStream<ChatStreamResult, Error> {
         let endpoint = self.endpoint
         let apiKey = self.apiKey
@@ -91,11 +92,21 @@ public actor OpenRouterClient {
                         },
                         operation: {
                             let request = self.buildChatRequest(
-                                chatURL: chatURL, apiKey: apiKey,
+                                chatURL: chatURL,
+                                apiKey: apiKey,
                                 query: ChatQuery(
-                                    messages: messages, model: modelName,
-                                    responseFormat: responseFormat, tools: tools,
-                                    stream: true, streamOptions: .init(includeUsage: true)
+                                    messages: messages,
+                                    model: modelName,
+                                    frequencyPenalty: generationParameters?.frequencyPenalty,
+                                    maxCompletionTokens: generationParameters?.maxTokens,
+                                    presencePenalty: generationParameters?.presencePenalty,
+                                    responseFormat: responseFormat,
+                                    seed: generationParameters?.seed,
+                                    temperature: generationParameters?.temperature,
+                                    tools: tools,
+                                    topP: generationParameters?.topP,
+                                    stream: true,
+                                    streamOptions: .init(includeUsage: true)
                                 )
                             )
                             try await self.streamChatResponse(
@@ -195,7 +206,9 @@ public actor OpenRouterClient {
 
     /// Send a single message (collects all content from stream)
     public func sendMessage(
-        _ content: String, responseFormat: ChatQuery.ResponseFormat? = nil
+        _ content: String,
+        responseFormat: ChatQuery.ResponseFormat? = nil,
+        generationParameters: GenerationParameters? = nil
     ) async throws -> String {
         let maxRetries = self.maxRetries
 
@@ -205,7 +218,12 @@ public actor OpenRouterClient {
             ]
 
             var fullContent = ""
-            for try await result in await self.chatStream(messages: messages, responseFormat: responseFormat) {
+            let stream = await self.chatStream(
+                messages: messages,
+                responseFormat: responseFormat,
+                generationParameters: generationParameters
+            )
+            for try await result in stream {
                 if let delta = result.choices.first?.delta.content {
                     fullContent += delta
                 }
@@ -244,6 +262,3 @@ public actor OpenRouterClient {
         }
     }
 }
-
-/// Conform to the internal protocol
-extension OpenRouterClient: LLMClientProtocol {}

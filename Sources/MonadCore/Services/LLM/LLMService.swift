@@ -11,11 +11,15 @@ public protocol LLMClientProtocol: Sendable {
     func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]?,
-        responseFormat: ChatQuery.ResponseFormat?
+        responseFormat: ChatQuery.ResponseFormat?,
+        generationParameters: GenerationParameters?
     ) async -> AsyncThrowingStream<ChatStreamResult, Error>
 
-    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat?) async throws
-        -> String
+    func sendMessage(
+        _ content: String,
+        responseFormat: ChatQuery.ResponseFormat?,
+        generationParameters: GenerationParameters?
+    ) async throws -> String
 
     /// Optional: Fetch available models from the service. Returns nil if not supported.
     func fetchAvailableModels() async throws -> [String]?
@@ -32,6 +36,9 @@ extension OpenAIClient: LLMClientProtocol {}
 
 /// Conform OllamaClient
 extension OllamaClient: LLMClientProtocol {}
+
+/// Conform OpenRouterClient
+extension OpenRouterClient: LLMClientProtocol {}
 
 /// Service for managing LLM interactions with configuration support
 public actor LLMService: LLMServiceProtocol, HealthCheckable {
@@ -216,11 +223,14 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     }
 
     public func sendMessage(_ content: String) async throws -> String {
-        try await sendMessage(content, responseFormat: nil, useUtilityModel: false)
+        try await sendMessage(content, responseFormat: nil, generationParameters: nil, useUtilityModel: false)
     }
 
     public func sendMessage(
-        _ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool
+        _ content: String,
+        responseFormat: ChatQuery.ResponseFormat?,
+        generationParameters: GenerationParameters?,
+        useUtilityModel: Bool
     ) async throws -> String {
         let selectedClient: (any LLMClientProtocol)?
         if useUtilityModel {
@@ -232,7 +242,15 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
         guard let client = selectedClient else {
             throw LLMServiceError.notConfigured
         }
-        return try await client.sendMessage(content, responseFormat: responseFormat)
+
+        // Use provided parameters or default from configuration
+        let params = generationParameters ?? configuration.generationParameters
+
+        return try await client.sendMessage(
+            content,
+            responseFormat: responseFormat,
+            generationParameters: params
+        )
     }
 }
 

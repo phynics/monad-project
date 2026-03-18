@@ -14,7 +14,8 @@ public extension LLMServiceProtocol {
             workspaces: request.workspaces,
             primaryWorkspace: request.primaryWorkspace,
             clientName: request.clientName,
-            systemInstructions: request.systemInstructions
+            systemInstructions: request.systemInstructions,
+            generationParameters: request.generationParameters
         )
         let prompt = PromptBuilder.buildContext(promptRequest)
 
@@ -28,6 +29,7 @@ public extension LLMServiceProtocol {
             messages: messages,
             tools: toolParams,
             responseFormat: request.responseFormat,
+            generationParameters: request.generationParameters,
             useUtilityModel: false,
             useFastModel: request.useFastModel
         )
@@ -42,6 +44,7 @@ extension LLMService {
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]?,
         responseFormat: ChatQuery.ResponseFormat?,
+        generationParameters: GenerationParameters?,
         useUtilityModel: Bool,
         useFastModel: Bool
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
@@ -60,8 +63,14 @@ extension LLMService {
             }
         }
 
+        // Use provided parameters or default from configuration
+        let params = generationParameters ?? configuration.generationParameters
+
         return await client.chatStream(
-            messages: messages, tools: tools, responseFormat: responseFormat
+            messages: messages,
+            tools: tools,
+            responseFormat: responseFormat,
+            generationParameters: params
         )
     }
 }

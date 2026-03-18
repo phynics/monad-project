@@ -15,7 +15,12 @@ public extension LLMServiceProtocol {
         """
 
         do {
-            let response = try await self.sendMessage(prompt, responseFormat: .jsonObject, useUtilityModel: true)
+            let response = try await self.sendMessage(
+                prompt,
+                responseFormat: .jsonObject,
+                generationParameters: nil,
+                useUtilityModel: true
+            )
 
             // Clean up response (some models might still include markdown)
             var cleanJson = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
@@ -60,8 +65,13 @@ public extension LLMServiceProtocol {
         """
 
         do {
-            let response = try await self.sendMessage(prompt, responseFormat: nil, useUtilityModel: true)
-            let title = response.trimmingCharacters(in: .whitespacesAndNewlines)
+            let response = try await self.sendMessage(
+                prompt,
+                responseFormat: nil,
+                generationParameters: nil,
+                useUtilityModel: true
+            )
+            let title = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
                 .replacingOccurrences(of: "\"", with: "")
 
             return title.isEmpty ? "New Conversation" : title
@@ -110,7 +120,12 @@ public extension LLMServiceProtocol {
         """
 
         do {
-            let response = try await self.sendMessage(prompt, responseFormat: .jsonObject, useUtilityModel: true)
+            let response = try await self.sendMessage(
+                prompt,
+                responseFormat: .jsonObject,
+                generationParameters: nil,
+                useUtilityModel: true
+            )
 
             // Clean up response
             var cleanJson = response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)

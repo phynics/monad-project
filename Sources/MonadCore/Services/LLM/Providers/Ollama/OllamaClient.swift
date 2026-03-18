@@ -47,7 +47,8 @@ public actor OllamaClient {
     public func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]? = nil,
-        responseFormat: ChatQuery.ResponseFormat? = nil
+        responseFormat: ChatQuery.ResponseFormat? = nil,
+        generationParameters: GenerationParameters? = nil
     ) -> AsyncThrowingStream<ChatStreamResult, Error> {
         logger.debug("Ollama chat stream started for model: \(modelName)")
 
@@ -67,7 +68,10 @@ public actor OllamaClient {
                         },
                         operation: {
                             let request = try await self.buildRequest(
-                                messages: messages, tools: tools, responseFormat: responseFormat
+                                messages: messages,
+                                tools: tools,
+                                responseFormat: responseFormat,
+                                generationParameters: generationParameters
                             )
                             try await self.streamResponse(
                                 request: request, hasYielded: hasYielded,
@@ -146,7 +150,8 @@ public actor OllamaClient {
     private func buildRequest(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]?,
-        responseFormat: ChatQuery.ResponseFormat?
+        responseFormat: ChatQuery.ResponseFormat?,
+        generationParameters: GenerationParameters?
     ) throws -> URLRequest {
         var request = URLRequest(url: endpoint.chatURL)
         request.httpMethod = "POST"
@@ -171,7 +176,8 @@ public actor OllamaClient {
             messages: ollamaMessages,
             stream: true,
             format: format,
-            tools: tools?.map { OllamaTool(from: $0) }
+            tools: tools?.map { OllamaTool(from: $0) },
+            options: OllamaOptions(from: generationParameters)
         )
 
         request.httpBody = try JSONEncoder().encode(payload)
@@ -269,7 +275,9 @@ public actor OllamaClient {
 
     /// Simple helper
     public func sendMessage(
-        _ content: String, responseFormat: ChatQuery.ResponseFormat? = nil
+        _ content: String,
+        responseFormat: ChatQuery.ResponseFormat? = nil,
+        generationParameters: GenerationParameters? = nil
     ) async throws -> String {
         let maxRetries = self.maxRetries
         return try await RetryPolicy.retry(maxRetries: maxRetries) {
@@ -278,7 +286,12 @@ public actor OllamaClient {
             ]
 
             var fullContent = ""
-            for try await result in await self.chatStream(messages: messages, responseFormat: responseFormat) {
+            let stream = await self.chatStream(
+                messages: messages,
+                responseFormat: responseFormat,
+                generationParameters: generationParameters
+            )
+            for try await result in stream {
                 if let delta = result.choices.first?.delta.content {
                     fullContent += delta
                 }

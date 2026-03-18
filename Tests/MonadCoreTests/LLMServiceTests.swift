@@ -208,4 +208,42 @@ struct LLMServiceTests {
             }
         }
     }
+
+    @Test("Test generation parameters passing")
+    func generationParametersPassing() async throws {
+        let mockClient = MockLLMClient()
+        mockClient.nextResponse = "Response"
+
+        let service = LLMService(storage: MockConfigurationService(), client: mockClient)
+
+        // Case 1: Custom parameters passed
+        let customParams = GenerationParameters(temperature: 0.5, maxTokens: 100)
+        _ = try await service.sendMessage("Hello", responseFormat: nil, generationParameters: customParams, useUtilityModel: false)
+
+        #expect(mockClient.lastParameters?.temperature == 0.5)
+        #expect(mockClient.lastParameters?.maxTokens == 100)
+
+        // Case 2: No parameters passed, should use configuration defaults
+        let config = LLMConfiguration(
+            activeProvider: .openAI,
+            providers: [
+                .openAI: ProviderConfiguration(
+                    endpoint: "https://api.openai.com",
+                    apiKey: "key",
+                    modelName: "gpt-4o",
+                    utilityModel: "gpt-4o-mini",
+                    fastModel: "gpt-4o-mini",
+                    toolFormat: .openAI,
+                    temperature: 0.8,
+                    maxTokens: 500
+                )
+            ]
+        )
+        try await service.updateConfiguration(config)
+        await service.setClients(main: mockClient, utility: nil, fast: nil)
+
+        _ = try await service.sendMessage("Hello")
+        #expect(mockClient.lastParameters?.temperature == 0.8)
+        #expect(mockClient.lastParameters?.maxTokens == 500)
+    }
 }

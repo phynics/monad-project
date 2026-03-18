@@ -17,6 +17,7 @@ public struct LLMChatRequest: Sendable {
     public let clientName: String?
     public let systemInstructions: String?
     public let responseFormat: ChatQuery.ResponseFormat?
+    public let generationParameters: GenerationParameters?
     public let useFastModel: Bool
 
     public init(
@@ -30,6 +31,7 @@ public struct LLMChatRequest: Sendable {
         clientName: String?,
         systemInstructions: String? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil,
+        generationParameters: GenerationParameters? = nil,
         useFastModel: Bool = false
     ) {
         self.userQuery = userQuery
@@ -42,6 +44,7 @@ public struct LLMChatRequest: Sendable {
         self.clientName = clientName
         self.systemInstructions = systemInstructions
         self.responseFormat = responseFormat
+        self.generationParameters = generationParameters
         self.useFastModel = useFastModel
     }
 }
@@ -85,6 +88,7 @@ public struct LLMPromptRequest: Sendable {
     public let primaryWorkspace: WorkspaceReference?
     public let clientName: String?
     public let systemInstructions: String?
+    public let generationParameters: GenerationParameters?
 
     public init(
         userQuery: String,
@@ -95,7 +99,8 @@ public struct LLMPromptRequest: Sendable {
         workspaces: [WorkspaceReference],
         primaryWorkspace: WorkspaceReference?,
         clientName: String?,
-        systemInstructions: String? = nil
+        systemInstructions: String? = nil,
+        generationParameters: GenerationParameters? = nil
     ) {
         self.userQuery = userQuery
         self.contextNotes = contextNotes
@@ -106,6 +111,7 @@ public struct LLMPromptRequest: Sendable {
         self.primaryWorkspace = primaryWorkspace
         self.clientName = clientName
         self.systemInstructions = systemInstructions
+        self.generationParameters = generationParameters
     }
 }
 
@@ -140,7 +146,10 @@ public protocol LLMServiceProtocol: HealthCheckable, Sendable {
     // Core LLM Interaction
     func sendMessage(_ content: String) async throws -> String
     func sendMessage(
-        _ content: String, responseFormat: ChatQuery.ResponseFormat?, useUtilityModel: Bool
+        _ content: String,
+        responseFormat: ChatQuery.ResponseFormat?,
+        generationParameters: GenerationParameters?,
+        useUtilityModel: Bool
     ) async throws -> String
 
     func chatStreamWithContext(_ request: LLMChatRequest) async -> LLMStreamResult
@@ -150,6 +159,7 @@ public protocol LLMServiceProtocol: HealthCheckable, Sendable {
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]?,
         responseFormat: ChatQuery.ResponseFormat?,
+        generationParameters: GenerationParameters?,
         useUtilityModel: Bool,
         useFastModel: Bool
     ) async -> AsyncThrowingStream<ChatStreamResult, Error>
@@ -167,6 +177,7 @@ extension LLMServiceProtocol {
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil,
+        generationParameters: GenerationParameters? = nil,
         useUtilityModel: Bool = false,
         useFastModel: Bool = false
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
@@ -174,6 +185,7 @@ extension LLMServiceProtocol {
             messages: messages,
             tools: tools,
             responseFormat: responseFormat,
+            generationParameters: generationParameters,
             useUtilityModel: useUtilityModel,
             useFastModel: useFastModel
         )

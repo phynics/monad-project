@@ -131,7 +131,10 @@ public actor TimelineArchiver {
         """
 
         let response = try await llmService.sendMessage(
-            prompt, responseFormat: nil as ChatQuery.ResponseFormat?, useUtilityModel: true
+            prompt,
+            responseFormat: nil as ChatQuery.ResponseFormat?,
+            generationParameters: nil,
+            useUtilityModel: true
         )
         return response.replacingOccurrences(of: "\"", with: "")
             .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)

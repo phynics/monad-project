@@ -16,6 +16,16 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
     public var frequencyPenalty: Double?
     public var presencePenalty: Double?
 
+    public var generationParameters: GenerationParameters {
+        GenerationParameters(
+            temperature: temperature,
+            maxTokens: maxTokens,
+            topP: topP,
+            frequencyPenalty: frequencyPenalty,
+            presencePenalty: presencePenalty
+        )
+    }
+
     public init(
         endpoint: String,
         apiKey: String,

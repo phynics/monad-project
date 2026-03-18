@@ -10,6 +10,34 @@ struct OllamaChatRequest: Codable {
     let stream: Bool
     let format: String?
     let tools: [OllamaTool]?
+    let options: OllamaOptions?
+}
+
+struct OllamaOptions: Codable {
+    let temperature: Double?
+    let numPredict: Int?
+    let topP: Double?
+    let repeatPenalty: Double?
+    let presencePenalty: Double?
+    let seed: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case temperature
+        case numPredict = "num_predict"
+        case topP = "top_p"
+        case repeatPenalty = "repeat_penalty"
+        case presencePenalty = "presence_penalty"
+        case seed
+    }
+
+    init(from params: GenerationParameters?) {
+        self.temperature = params?.temperature
+        self.numPredict = params?.maxTokens
+        self.topP = params?.topP
+        self.repeatPenalty = params?.frequencyPenalty
+        self.presencePenalty = params?.presencePenalty
+        self.seed = params?.seed
+    }
 }
 
 struct OllamaTool: Codable {

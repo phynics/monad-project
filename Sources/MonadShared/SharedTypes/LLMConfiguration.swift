@@ -77,6 +77,10 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         set { providers[activeProvider]?.presencePenalty = newValue }
     }
 
+    public var generationParameters: GenerationParameters {
+        providers[activeProvider]?.generationParameters ?? GenerationParameters()
+    }
+
     public var provider: LLMProvider {
         get { activeProvider }
         set { activeProvider = newValue }

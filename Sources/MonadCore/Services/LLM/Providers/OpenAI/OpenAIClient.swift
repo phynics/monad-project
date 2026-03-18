@@ -38,7 +38,8 @@ public actor OpenAIClient {
     public func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]? = nil,
-        responseFormat: ChatQuery.ResponseFormat? = nil
+        responseFormat: ChatQuery.ResponseFormat? = nil,
+        generationParameters: GenerationParameters? = nil
     ) -> AsyncThrowingStream<ChatStreamResult, Error> {
         // Capture dependencies locally to avoid actor isolation issues in the stream closure
         let client = self.client
@@ -49,10 +50,17 @@ public actor OpenAIClient {
         let query = ChatQuery(
             messages: messages,
             model: modelName,
+            frequencyPenalty: generationParameters?.frequencyPenalty,
+            maxCompletionTokens: generationParameters?.maxTokens,
             parallelToolCalls: tools != nil ? false : nil,
+            presencePenalty: generationParameters?.presencePenalty,
             responseFormat: responseFormat,
+            seed: generationParameters?.seed,
+            temperature: generationParameters?.temperature,
             toolChoice: tools != nil ? .auto : nil,
             tools: tools,
+            topP: generationParameters?.topP,
+            stream: true,
             streamOptions: .init(includeUsage: true)
         )
 
@@ -109,7 +117,11 @@ public actor OpenAIClient {
 
 public extension OpenAIClient {
     /// Simple helper to send a user message via stream (collects all content)
-    func sendMessage(_ content: String, responseFormat: ChatQuery.ResponseFormat? = nil) async throws -> String {
+    func sendMessage(
+        _ content: String,
+        responseFormat: ChatQuery.ResponseFormat? = nil,
+        generationParameters: GenerationParameters? = nil
+    ) async throws -> String {
         // We wrap the entire operation in retry because for a non-streaming result,
         // we can retry even if it failed midway (as we discard the partial result).
         // Capture maxRetries to avoid actor isolation issues in closure
@@ -125,7 +137,12 @@ public extension OpenAIClient {
             // because we are collecting it. However, chatStream's internal retry logic
             // stops retrying if it yielded. So if chatStream throws mid-stream,
             // THIS retry block will catch it and retry the whole thing.
-            for try await result in await self.chatStream(messages: messages, responseFormat: responseFormat) {
+            let stream = await self.chatStream(
+                messages: messages,
+                responseFormat: responseFormat,
+                generationParameters: generationParameters
+            )
+            for try await result in stream {
                 if let delta = result.choices.first?.delta.content {
                     fullContent += delta
                 }

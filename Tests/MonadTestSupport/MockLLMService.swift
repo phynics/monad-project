@@ -8,6 +8,7 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     public var nextResponse: String = ""
     public var nextResponses: [String] = []
     public var lastMessages: [ChatQuery.ChatCompletionMessageParam] = []
+    public var lastParameters: GenerationParameters? = nil
     public var shouldThrowError: Bool = false
 
     /// Typed tool calls for stream simulation.
@@ -25,9 +26,11 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     public func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools _: [ChatQuery.ChatCompletionToolParam]?,
-        responseFormat _: ChatQuery.ResponseFormat?
+        responseFormat _: ChatQuery.ResponseFormat?,
+        generationParameters: GenerationParameters?
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
         lastMessages = messages
+        lastParameters = generationParameters
 
         if shouldThrowError {
             return AsyncThrowingStream { continuation in
@@ -91,9 +94,11 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
         }
     }
 
-    public func sendMessage(_ content: String, responseFormat _: ChatQuery.ResponseFormat?) async throws
-        -> String
-    {
+    public func sendMessage(
+        _ content: String,
+        responseFormat _: ChatQuery.ResponseFormat?,
+        generationParameters: GenerationParameters?
+    ) async throws -> String {
         if shouldThrowError {
             throw NSError(
                 domain: "MockError", code: 1,
@@ -101,6 +106,7 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
             )
         }
         lastMessages = [.user(.init(content: .string(content)))]
+        lastParameters = generationParameters
         return nextResponse
     }
 }
@@ -161,13 +167,21 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
     }
 
     public func sendMessage(
-        _: String, responseFormat _: ChatQuery.ResponseFormat?, useUtilityModel _: Bool
+        _: String,
+        responseFormat _: ChatQuery.ResponseFormat?,
+        generationParameters _: GenerationParameters?,
+        useUtilityModel _: Bool
     ) async throws -> String {
         return nextResponse
     }
 
     public func chatStreamWithContext(_ request: LLMChatRequest) async -> LLMStreamResult {
-        let stream = await chatStream(messages: [], tools: nil, responseFormat: request.responseFormat)
+        let stream = await chatStream(
+            messages: [],
+            tools: nil,
+            responseFormat: request.responseFormat,
+            generationParameters: request.generationParameters
+        )
         return LLMStreamResult(stream: stream, rawPrompt: "mock prompt")
     }
 
@@ -175,6 +189,7 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]?,
         responseFormat: ChatQuery.ResponseFormat?,
+        generationParameters: GenerationParameters?,
         useUtilityModel: Bool,
         useFastModel: Bool
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
@@ -182,7 +197,10 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
             return stubbed
         }
         return await mockClient.chatStream(
-            messages: messages, tools: tools, responseFormat: responseFormat
+            messages: messages,
+            tools: tools,
+            responseFormat: responseFormat,
+            generationParameters: generationParameters
         )
     }
 

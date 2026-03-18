@@ -90,6 +90,7 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
     public func sendMessage(
         _: String,
         responseFormat _: ChatQuery.ResponseFormat?,
+        generationParameters _: GenerationParameters?,
         useUtilityModel _: Bool
     ) async throws -> String {
         fail()
@@ -102,7 +103,10 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
     public func chatStream(
         messages _: [ChatQuery.ChatCompletionMessageParam],
         tools _: [ChatQuery.ChatCompletionToolParam]?,
-        responseFormat _: ChatQuery.ResponseFormat?
+        responseFormat _: ChatQuery.ResponseFormat?,
+        generationParameters _: GenerationParameters?,
+        useUtilityModel _: Bool,
+        useFastModel _: Bool
     ) async -> AsyncThrowingStream<ChatStreamResult, any Error> {
         return AsyncThrowingStream { _ in }
     }
