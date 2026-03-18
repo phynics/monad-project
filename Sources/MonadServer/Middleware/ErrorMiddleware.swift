@@ -31,7 +31,7 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
                 request: request,
                 context: context
             )
-        } catch let error as MonadCore.TimelineError {
+        } catch let error as TimelineError {
             let classification = classifyTimelineError(error)
             return try buildErrorResponse(
                 code: classification.code,
@@ -78,7 +78,7 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
         }
     }
 
-    private func classifyTimelineError(_ error: MonadCore.TimelineError) -> ErrorClassification {
+    private func classifyTimelineError(_ error: TimelineError) -> ErrorClassification {
         switch error {
         case .timelineNotFound:
             return ErrorClassification(status: .notFound, code: "session_not_found")

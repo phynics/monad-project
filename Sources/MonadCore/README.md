@@ -10,7 +10,7 @@ MonadCore is the core orchestration library for the Monad platform. It provides 
 
 ## Key Components
 
-### MonadCoreChat
+### MonadCore (Chat Facade)
 The interface boundary for MonadCore. Accepts all required services as init parameters and internally orchestrates the chat lifecycle — context gathering, LLM interaction, tool execution, and state persistence.
 
 ### AgentInstance
@@ -27,19 +27,24 @@ To get started with MonadCore, refer to the [Usage Guide](docs/Usage.md).
 import MonadCore
 import MonadShared
 
-let chat = MonadCoreChat(
+// Minimal — all stores default to in-memory:
+let chat = MonadCore(llmService: myLLM)
+
+// Production — with grouped persistence:
+let chat = MonadCore(
     llmService: myLLM,
-    messageStore: myMessageStore,
-    timelineManager: myTimelineManager,
-    toolRouter: myToolRouter,
-    agentInstanceStore: myAgentInstanceStore,
-    clientStore: myClientStore,
-    timelinePersistence: myTimelinePersistence,
-    workspacePersistence: myWorkspacePersistence,
-    memoryStore: myMemoryStore,
-    toolPersistence: myToolPersistence,
-    agentTemplateStore: myAgentTemplateStore,
-    embeddingService: myEmbeddingService
+    persistence: .init(
+        messageStore: myMessageStore,
+        timelinePersistence: myTimelinePersistence,
+        workspacePersistence: myWorkspacePersistence,
+        memoryStore: myMemoryStore,
+        toolPersistence: myToolPersistence,
+        agentInstanceStore: myAgentInstanceStore,
+        clientStore: myClientStore,
+        agentTemplateStore: myAgentTemplateStore
+    ),
+    embeddingService: myEmbeddingService,
+    timelineManager: myTimelineManager
 )
 
 let stream = try await chat.run(

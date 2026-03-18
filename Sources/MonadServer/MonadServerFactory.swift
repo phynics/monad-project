@@ -65,19 +65,21 @@ public struct MonadServerFactory {
         router.add(middleware: LogMiddleware())
         router.add(middleware: ErrorMiddleware())
 
-        let coreChat = MonadCoreChat(
+        let coreChat = MonadCore(
             llmService: components.services.llmService,
-            messageStore: components.repositories.messageStore,
+            persistence: .init(
+                messageStore: components.repositories.messageStore,
+                timelinePersistence: components.repositories.timelinePersistence,
+                workspacePersistence: components.repositories.workspacePersistence,
+                memoryStore: components.repositories.memoryStore,
+                toolPersistence: components.repositories.toolPersistence,
+                agentInstanceStore: components.repositories.agentInstanceStore,
+                clientStore: components.repositories.clientStore,
+                agentTemplateStore: components.repositories.agentTemplateStore
+            ),
+            embeddingService: components.services.embeddingService,
             timelineManager: components.managers.timelineManager,
-            toolRouter: components.managers.toolRouter,
-            agentInstanceStore: components.repositories.agentInstanceStore,
-            clientStore: components.repositories.clientStore,
-            timelinePersistence: components.repositories.timelinePersistence,
-            workspacePersistence: components.repositories.workspacePersistence,
-            memoryStore: components.repositories.memoryStore,
-            toolPersistence: components.repositories.toolPersistence,
-            agentTemplateStore: components.repositories.agentTemplateStore,
-            embeddingService: components.services.embeddingService
+            toolRouter: components.managers.toolRouter
         )
 
         return try await withDependencies {

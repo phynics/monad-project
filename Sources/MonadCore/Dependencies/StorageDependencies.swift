@@ -10,43 +10,43 @@ public enum DatabaseManagerKey: DependencyKey {
 }
 
 public enum AgentInstanceStoreKey: DependencyKey {
-    public static let liveValue: any AgentInstanceStoreProtocol = UnconfiguredAgentInstanceStore()
-    public static let testValue: any AgentInstanceStoreProtocol = UnconfiguredAgentInstanceStore()
+    public static let liveValue: any AgentInstanceStoreProtocol = InMemoryAgentInstanceStore()
+    public static let testValue: any AgentInstanceStoreProtocol = InMemoryAgentInstanceStore()
 }
 
 public enum ClientStoreKey: DependencyKey {
-    public static let liveValue: any ClientStoreProtocol = UnconfiguredClientStore()
-    public static let testValue: any ClientStoreProtocol = UnconfiguredClientStore()
+    public static let liveValue: any ClientStoreProtocol = InMemoryClientStore()
+    public static let testValue: any ClientStoreProtocol = InMemoryClientStore()
 }
 
 public enum AgentTemplateStoreKey: DependencyKey {
-    public static let liveValue: any AgentTemplateStoreProtocol = UnconfiguredAgentTemplateStore()
-    public static let testValue: any AgentTemplateStoreProtocol = UnconfiguredAgentTemplateStore()
+    public static let liveValue: any AgentTemplateStoreProtocol = InMemoryAgentTemplateStore()
+    public static let testValue: any AgentTemplateStoreProtocol = InMemoryAgentTemplateStore()
 }
 
 public enum MemoryStoreKey: DependencyKey {
-    public static let liveValue: any MemoryStoreProtocol = UnconfiguredMemoryStore()
-    public static let testValue: any MemoryStoreProtocol = UnconfiguredMemoryStore()
+    public static let liveValue: any MemoryStoreProtocol = InMemoryMemoryStore()
+    public static let testValue: any MemoryStoreProtocol = InMemoryMemoryStore()
 }
 
 public enum MessageStoreKey: DependencyKey {
-    public static let liveValue: any MessageStoreProtocol = UnconfiguredMessageStore()
-    public static let testValue: any MessageStoreProtocol = UnconfiguredMessageStore()
+    public static let liveValue: any MessageStoreProtocol = InMemoryMessageStore()
+    public static let testValue: any MessageStoreProtocol = InMemoryMessageStore()
 }
 
 public enum TimelinePersistenceKey: DependencyKey {
-    public static let liveValue: any TimelinePersistenceProtocol = UnconfiguredTimelinePersistence()
-    public static let testValue: any TimelinePersistenceProtocol = UnconfiguredTimelinePersistence()
+    public static let liveValue: any TimelinePersistenceProtocol = InMemoryTimelinePersistence()
+    public static let testValue: any TimelinePersistenceProtocol = InMemoryTimelinePersistence()
 }
 
 public enum ToolPersistenceKey: DependencyKey {
-    public static let liveValue: any ToolPersistenceProtocol = UnconfiguredToolPersistence()
-    public static let testValue: any ToolPersistenceProtocol = UnconfiguredToolPersistence()
+    public static let liveValue: any ToolPersistenceProtocol = InMemoryToolPersistence()
+    public static let testValue: any ToolPersistenceProtocol = InMemoryToolPersistence()
 }
 
 public enum WorkspacePersistenceKey: DependencyKey {
-    public static let liveValue: any WorkspacePersistenceProtocol = UnconfiguredWorkspacePersistence()
-    public static let testValue: any WorkspacePersistenceProtocol = UnconfiguredWorkspacePersistence()
+    public static let liveValue: any WorkspacePersistenceProtocol = InMemoryWorkspacePersistence()
+    public static let testValue: any WorkspacePersistenceProtocol = InMemoryWorkspacePersistence()
 }
 
 public enum VectorStoreKey: DependencyKey {

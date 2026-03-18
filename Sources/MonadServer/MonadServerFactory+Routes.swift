@@ -42,7 +42,7 @@ extension MonadServerFactory {
     static func registerChatAndTimelineRoutes(
         on protected: RouterGroup<AppRequestContext>,
         connectionManager: WebSocketConnectionManager,
-        chat: MonadCoreChat,
+        chat: MonadCore,
         verbose: Bool
     ) {
         let wsController = WebSocketAPIController<AppRequestContext>(connectionManager: connectionManager)

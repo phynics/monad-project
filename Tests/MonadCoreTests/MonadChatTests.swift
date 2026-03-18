@@ -4,7 +4,7 @@ import Foundation
 import MonadTestSupport
 import Testing
 
-struct MonadCoreChatTests {
+struct MonadCoreTests {
     @Test
     func basicExecution() async throws {
         let mockLLM = MockLLMService()
@@ -59,23 +59,19 @@ struct MonadCoreChatTests {
     private func makeChat(
         llmService: any LLMServiceProtocol,
         persistence: MockPersistenceService
-    ) -> MonadCoreChat {
-        MonadCoreChat(
+    ) -> MonadCore {
+        MonadCore(
             llmService: llmService,
-            messageStore: persistence,
-            timelineManager: TimelineManager(
-                workspaceRoot: URL(fileURLWithPath: "/tmp/monad-test"),
-                workspaceCreator: MockWorkspaceCreator()
-            ),
-            toolRouter: ToolRouter(),
-            agentInstanceStore: persistence,
-            clientStore: persistence,
-            timelinePersistence: persistence,
-            workspacePersistence: persistence,
-            memoryStore: persistence,
-            toolPersistence: persistence,
-            agentTemplateStore: persistence,
-            embeddingService: MockEmbeddingService()
+            persistence: .init(
+                messageStore: persistence,
+                timelinePersistence: persistence,
+                workspacePersistence: persistence,
+                memoryStore: persistence,
+                toolPersistence: persistence,
+                agentInstanceStore: persistence,
+                clientStore: persistence,
+                agentTemplateStore: persistence
+            )
         )
     }
 }

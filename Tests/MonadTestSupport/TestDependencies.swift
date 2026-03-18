@@ -23,23 +23,24 @@ import MonadShared
             self.embedding = embedding
         }
 
-        /// Builds a `MonadCoreChat` from the mock services in this context.
+        /// Builds a `MonadCore` from the mock services in this context.
         /// Must be called inside a `withDependencies` scope that has a `TimelineManager` configured.
-        public func buildCoreChat() -> MonadCoreChat {
+        public func buildCoreChat() -> MonadCore {
             @Dependency(\.timelineManager) var timelineManager
-            return MonadCoreChat(
+            return MonadCore(
                 llmService: llm,
-                messageStore: persistence,
-                timelineManager: timelineManager,
-                toolRouter: ToolRouter(),
-                agentInstanceStore: persistence,
-                clientStore: persistence,
-                timelinePersistence: persistence,
-                workspacePersistence: persistence,
-                memoryStore: persistence,
-                toolPersistence: persistence,
-                agentTemplateStore: persistence,
-                embeddingService: embedding
+                persistence: .init(
+                    messageStore: persistence,
+                    timelinePersistence: persistence,
+                    workspacePersistence: persistence,
+                    memoryStore: persistence,
+                    toolPersistence: persistence,
+                    agentInstanceStore: persistence,
+                    clientStore: persistence,
+                    agentTemplateStore: persistence
+                ),
+                embeddingService: embedding,
+                timelineManager: timelineManager
             )
         }
     }

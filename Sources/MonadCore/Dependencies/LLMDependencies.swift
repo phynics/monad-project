@@ -11,8 +11,8 @@ public enum LLMServiceKey: DependencyKey {
 }
 
 public enum EmbeddingServiceKey: DependencyKey {
-    public static let liveValue: any EmbeddingServiceProtocol = UnconfiguredEmbeddingService()
-    public static let testValue: any EmbeddingServiceProtocol = UnconfiguredEmbeddingService()
+    public static let liveValue: any EmbeddingServiceProtocol = NoOpEmbeddingService()
+    public static let testValue: any EmbeddingServiceProtocol = NoOpEmbeddingService()
 }
 
 // MARK: - Dependency Values

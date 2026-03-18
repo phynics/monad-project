@@ -11,10 +11,10 @@ import OpenAI
 public struct ChatAPIController<Context: RequestContext>: Sendable {
     @Dependency(\.timelineManager) var timelineManager: TimelineManager
     @Dependency(\.toolRouter) var toolRouter: ToolRouter
-    private let chat: MonadCoreChat
+    private let chat: MonadCore
     public let verbose: Bool
 
-    public init(chat: MonadCoreChat, verbose: Bool = false) {
+    public init(chat: MonadCore, verbose: Bool = false) {
         self.chat = chat
         self.verbose = verbose
     }
