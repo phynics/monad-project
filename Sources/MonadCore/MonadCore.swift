@@ -43,6 +43,7 @@ public struct MonadCore: Sendable {
     private let agentInstanceStore: any AgentInstanceStoreProtocol
     private let clientStore: any ClientStoreProtocol
     private var chatTurnPlugins: [any ChatTurnPlugin]
+    private let defaultGenerationParameters: GenerationParameters?
 
     // MARK: - Transitive dependencies (TimelineManager, ContextManager)
 
@@ -59,7 +60,10 @@ public struct MonadCore: Sendable {
 
     /// A simplified initializer for common use cases.
     /// Provides sensible in-memory defaults for all stores.
-    public init(llmService: any LLMServiceProtocol = UnconfiguredLLMService()) {
+    public init(
+        llmService: any LLMServiceProtocol = UnconfiguredLLMService(),
+        generationParameters: GenerationParameters? = nil
+    ) {
         self.init(
             llmService: llmService,
             messageStore: nil,
@@ -74,7 +78,8 @@ public struct MonadCore: Sendable {
             agentTemplateStore: nil,
             embeddingService: nil,
             workspaceRoot: nil,
-            chatTurnPlugins: []
+            chatTurnPlugins: [],
+            generationParameters: generationParameters
         )
     }
 
@@ -82,20 +87,30 @@ public struct MonadCore: Sendable {
     /// - Parameters:
     ///   - openAIKey: Your OpenAI API key.
     ///   - model: The model to use (defaults to gpt-4o).
-    public init(openAIKey: String, model: String = "gpt-4o") {
+    ///   - generationParameters: Optional default parameters for generation.
+    public init(
+        openAIKey: String,
+        model: String = "gpt-4o",
+        generationParameters: GenerationParameters? = nil
+    ) {
         let config = LLMConfiguration(modelName: model, apiKey: openAIKey, provider: .openAI)
         let llm = LLMService(configuration: config)
-        self.init(llmService: llm)
+        self.init(llmService: llm, generationParameters: generationParameters)
     }
 
     /// Convenience initializer for Ollama with defaults.
     /// - Parameters:
     ///   - ollamaModel: The model name in Ollama (e.g. "llama3").
     ///   - endpoint: The Ollama server endpoint (defaults to local).
-    public init(ollamaModel: String, endpoint: String = "http://localhost:11434") {
+    ///   - generationParameters: Optional default parameters for generation.
+    public init(
+        ollamaModel: String,
+        endpoint: String = "http://localhost:11434",
+        generationParameters: GenerationParameters? = nil
+    ) {
         let config = LLMConfiguration(endpoint: endpoint, modelName: ollamaModel, provider: .ollama)
         let llm = LLMService(configuration: config)
-        self.init(llmService: llm)
+        self.init(llmService: llm, generationParameters: generationParameters)
     }
 
     /// Initializes with all services required by the chat subsystem.
@@ -115,6 +130,7 @@ public struct MonadCore: Sendable {
     ///   - embeddingService: Embedding provider for context/memory search. Defaults to no-op if nil.
     ///   - workspaceRoot: Root directory for auto-constructed TimelineManager. Defaults to temp directory.
     ///   - chatTurnPlugins: Post-turn plugins (e.g. autonomous reactions).
+    ///   - generationParameters: Optional default parameters for generation.
     public init(
         llmService: any LLMServiceProtocol,
         messageStore: (any MessageStoreProtocol)? = nil,
@@ -129,7 +145,8 @@ public struct MonadCore: Sendable {
         agentTemplateStore: (any AgentTemplateStoreProtocol)? = nil,
         embeddingService: (any EmbeddingServiceProtocol)? = nil,
         workspaceRoot: URL? = nil,
-        chatTurnPlugins: [any ChatTurnPlugin] = []
+        chatTurnPlugins: [any ChatTurnPlugin] = [],
+        generationParameters: GenerationParameters? = nil
     ) {
         self.llmService = llmService
         self.messageStore = messageStore ?? InMemoryMessageStore()
@@ -142,6 +159,7 @@ public struct MonadCore: Sendable {
         self.agentTemplateStore = agentTemplateStore ?? InMemoryAgentTemplateStore()
         self.embeddingService = embeddingService ?? NoOpEmbeddingService()
         self.chatTurnPlugins = chatTurnPlugins
+        self.defaultGenerationParameters = generationParameters
 
         let resolvedWorkspaceRoot = workspaceRoot ?? FileManager.default.temporaryDirectory
             .appendingPathComponent("monad-workspaces", isDirectory: true)
@@ -183,6 +201,7 @@ public struct MonadCore: Sendable {
     ///   - systemInstructions: Optional system instructions to override the default.
     ///   - agentInstanceId: Optional identifier for the agent instance.
     ///   - maxTurns: Maximum number of LLM turns before stopping. Defaults to 5.
+    ///   - generationParameters: Optional parameters for generation (overrides defaults).
     /// - Returns: An asynchronous stream of chat events.
     public func run(
         timelineId: UUID,
@@ -192,7 +211,8 @@ public struct MonadCore: Sendable {
         contextManager: ContextManager? = nil,
         systemInstructions: String? = nil,
         agentInstanceId: UUID? = nil,
-        maxTurns: Int = ChatEngine.Constants.defaultMaxTurns
+        maxTurns: Int = ChatEngine.Constants.defaultMaxTurns,
+        generationParameters: GenerationParameters? = nil
     ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
         try await withDependencies {
             // Direct ChatEngine deps
@@ -219,7 +239,8 @@ public struct MonadCore: Sendable {
                 contextManager: contextManager,
                 systemInstructions: systemInstructions,
                 agentInstanceId: agentInstanceId,
-                maxTurns: maxTurns
+                maxTurns: maxTurns,
+                generationParameters: generationParameters ?? self.defaultGenerationParameters
             )
         }
     }
@@ -272,6 +293,7 @@ public extension MonadCore {
     ///   - toolRouter: Tool routing. Auto-constructed if nil.
     ///   - workspaceRoot: Root directory for workspaces. Defaults to temp directory.
     ///   - chatTurnPlugins: Post-turn plugins. Defaults to none.
+    ///   - generationParameters: Optional default parameters for generation.
     init(
         llmService: any LLMServiceProtocol,
         persistence: PersistenceConfiguration,
@@ -279,7 +301,8 @@ public extension MonadCore {
         timelineManager: TimelineManager? = nil,
         toolRouter: ToolRouter? = nil,
         workspaceRoot: URL? = nil,
-        chatTurnPlugins: [any ChatTurnPlugin] = []
+        chatTurnPlugins: [any ChatTurnPlugin] = [],
+        generationParameters: GenerationParameters? = nil
     ) {
         self.init(
             llmService: llmService,
@@ -295,7 +318,8 @@ public extension MonadCore {
             agentTemplateStore: persistence.agentTemplateStore,
             embeddingService: embeddingService,
             workspaceRoot: workspaceRoot,
-            chatTurnPlugins: chatTurnPlugins
+            chatTurnPlugins: chatTurnPlugins,
+            generationParameters: generationParameters
         )
     }
 }

@@ -12,7 +12,8 @@ struct LLMStreamingStage: PipelineStage {
         let streamData = await llmService.chatStream(
             messages: context.currentMessages,
             tools: context.toolParams.isEmpty ? nil : context.toolParams,
-            responseFormat: nil
+            responseFormat: nil,
+            generationParameters: context.generationParameters
         )
 
         return AsyncThrowingStream { continuation in

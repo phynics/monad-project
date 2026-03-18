@@ -56,7 +56,8 @@ public struct ChatEngine: Sendable {
         contextManager: ContextManager? = nil,
         systemInstructions: String? = nil,
         agentInstanceId: UUID? = nil,
-        maxTurns: Int = Constants.defaultMaxTurns
+        maxTurns: Int = Constants.defaultMaxTurns,
+        generationParameters: GenerationParameters? = nil
     ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
         let sid = ANSIColors.colorize(timelineId.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
         logger.info("Starting chat stream for timeline \(sid)")
@@ -71,7 +72,8 @@ public struct ChatEngine: Sendable {
             contextManager: contextManager,
             systemInstructions: systemInstructions,
             agentInstanceId: agentInstanceId,
-            maxTurns: maxTurns
+            maxTurns: maxTurns,
+            generationParameters: generationParameters
         )
 
         return AsyncThrowingStream<ChatEvent, Error> { continuation in

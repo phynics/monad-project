@@ -90,6 +90,7 @@ public struct ChatTurnContext: Sendable {
     public let availableTools: [AnyTool]
     public let contextData: ContextData
     public let remoteDepth: Int
+    public let generationParameters: GenerationParameters?
 
     // Per-turn snapshot (changes each iteration)
     public let currentMessages: [ChatQuery.ChatCompletionMessageParam]
@@ -107,6 +108,7 @@ public struct ChatTurnContext: Sendable {
         availableTools: [AnyTool],
         contextData: ContextData,
         remoteDepth: Int,
+        generationParameters: GenerationParameters? = nil,
         currentMessages: [ChatQuery.ChatCompletionMessageParam],
         turnCount: Int,
         outputs: TurnOutputs = TurnOutputs()
@@ -119,6 +121,7 @@ public struct ChatTurnContext: Sendable {
         self.availableTools = availableTools
         self.contextData = contextData
         self.remoteDepth = remoteDepth
+        self.generationParameters = generationParameters
         self.currentMessages = currentMessages
         self.turnCount = turnCount
         self.outputs = outputs
@@ -143,6 +146,7 @@ public struct ChatTurnContext: Sendable {
             availableTools: availableTools,
             contextData: contextData,
             remoteDepth: remoteDepth,
+            generationParameters: generationParameters,
             currentMessages: messages,
             turnCount: turnCount,
             outputs: TurnOutputs()

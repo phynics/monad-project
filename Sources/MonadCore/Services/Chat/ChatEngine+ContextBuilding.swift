@@ -39,7 +39,8 @@ extension ChatEngine {
         contextManager: ContextManager?,
         systemInstructions: String?,
         agentInstanceId: UUID?,
-        maxTurns: Int
+        maxTurns: Int,
+        generationParameters: GenerationParameters?
     ) async throws -> ChatTurnContext {
         // 1. Save new inputs (user message or tool outputs from client)
         try await saveConversationSteps(timelineId: timelineId, message: message, toolOutputs: toolOutputs)
@@ -82,7 +83,8 @@ extension ChatEngine {
             workspaces: workspaceResult?.attached ?? [],
             primaryWorkspace: workspaceResult?.primary,
             clientName: clientName,
-            systemInstructions: systemInstructions
+            systemInstructions: systemInstructions,
+            generationParameters: generationParameters
         )
 
         let initialMessages = await PromptBuilder.buildContext(
@@ -103,6 +105,7 @@ extension ChatEngine {
             availableTools: tools,
             contextData: contextData,
             remoteDepth: currentRemoteDepth,
+            generationParameters: generationParameters,
             currentMessages: initialMessages,
             turnCount: 0,
             outputs: TurnOutputs()
