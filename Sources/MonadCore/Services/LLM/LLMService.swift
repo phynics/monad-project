@@ -108,6 +108,23 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
 
     // MARK: - Initialization
 
+    /// Initializes with a direct configuration using in-memory storage.
+    public init(configuration: LLMConfiguration) {
+        self.storage = InMemoryConfigurationService(config: configuration)
+        self.configuration = configuration
+        self.isConfigured = configuration.isValid
+        if configuration.isValid {
+            let clients = Self.makeClients(with: configuration)
+            self.client = clients.main
+            self.utilityClient = clients.utility
+            self.fastClient = clients.fast
+        } else {
+            self.client = nil
+            self.utilityClient = nil
+            self.fastClient = nil
+        }
+    }
+
     public init(
         storage: any ConfigurationServiceProtocol,
         client: (any LLMClientProtocol)? = nil,

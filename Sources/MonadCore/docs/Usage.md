@@ -36,9 +36,45 @@ let timelineId = UUID() // Your existing timeline ID
 try await manager.attach(agentId: instance.id, to: timelineId)
 ```
 
-## 2. Executing a Chat Turn
+## 2. Initialization and Execution
 
-`MonadCoreChat` is the main entry point for running chat turns. It orchestrates the interaction between the user, the agent, and the LLM.
+### Simplified Initialization (Prototyping)
+
+The easiest way to get started is by providing your OpenAI API key or an Ollama model. This uses in-memory stores for everything.
+
+```swift
+import MonadCore
+
+// For OpenAI
+let chat = MonadCoreChat(openAIKey: "sk-...")
+
+// For Ollama
+let chat = MonadCoreChat(ollamaModel: "llama3")
+```
+
+### Full Initialization (Production)
+
+For production, you should provide persistent stores and specific service configurations.
+
+```swift
+import MonadCore
+import MonadShared
+
+let chat = MonadCoreChat(
+    llmService: myLLM,
+    messageStore: myMessageStore,
+    timelineManager: myTimelineManager,
+    toolRouter: myToolRouter,
+    agentInstanceStore: myAgentInstanceStore,
+    clientStore: myClientStore,
+    timelinePersistence: myTimelinePersistence,
+    workspacePersistence: myWorkspacePersistence,
+    memoryStore: myMemoryStore,
+    toolPersistence: myToolPersistence,
+    agentTemplateStore: myAgentTemplateStore,
+    embeddingService: myEmbeddingService
+)
+```
 
 ### Running a Chat Stream
 
