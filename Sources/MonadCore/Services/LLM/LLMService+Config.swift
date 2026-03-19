@@ -93,7 +93,7 @@ extension LLMService {
 
     // MARK: - Client Factories
 
-    static private func makeOllamaClient(
+    private static func makeOllamaClient(
         config: LLMConfiguration,
         timeout: TimeInterval,
         retries: Int,
@@ -107,7 +107,7 @@ extension LLMService {
         )
     }
 
-    static private func makeOpenRouterClient(
+    private static func makeOpenRouterClient(
         config: LLMConfiguration,
         components: EndpointComponents,
         timeout: TimeInterval,
@@ -125,7 +125,7 @@ extension LLMService {
         )
     }
 
-    static private func makeOpenAIClient(
+    private static func makeOpenAIClient(
         config: LLMConfiguration,
         components: EndpointComponents,
         timeout: TimeInterval,

@@ -1,10 +1,9 @@
-import Testing
+import Foundation
 @testable import MonadCore
 @testable import MonadShared
-import Foundation
+import Testing
 
-@Suite final class LLMConfigurationModelsTests {
-
+final class LLMConfigurationModelsTests {
     // MARK: - Test Helpers
 
     private func assertCodable<T: Codable & Equatable>(_ value: T) throws {
@@ -17,8 +16,7 @@ import Foundation
     }
 
     @Test
-
-    func testLLMConfigurationCodable() throws {
+    func lLMConfigurationCodable() throws {
         let config = LLMConfiguration(
             activeProvider: .openRouter,
             providers: [
@@ -29,15 +27,14 @@ import Foundation
                     utilityModel: "gpt-4o-mini",
                     fastModel: "gpt-4o-mini",
                     toolFormat: .openAI
-                )
+                ),
             ]
         )
         try assertCodable(config)
     }
 
     @Test
-
-    func testLLMConfigurationDefault() {
+    func lLMConfigurationDefault() {
         let config = LLMConfiguration.default
         #expect(config.activeProvider == .openAI)
     }
@@ -45,8 +42,7 @@ import Foundation
     // MARK: - LLMProvider
 
     @Test
-
-    func testLLMProviderCodableAndStr() throws {
+    func lLMProviderCodableAndStr() throws {
         let p1 = LLMProvider.openAI
         try assertCodable(p1)
         #expect(p1.rawValue == "OpenAI")
@@ -61,8 +57,7 @@ import Foundation
     // MARK: - ProviderConfiguration
 
     @Test
-
-    func testProviderConfigurationCodable() throws {
+    func providerConfigurationCodable() throws {
         let config = ProviderConfiguration(
             endpoint: "http://localhost:11434/api",
             apiKey: "",
@@ -76,8 +71,7 @@ import Foundation
     }
 
     @Test
-
-    func testLLMParametersCodable() throws {
+    func lLMParametersCodable() throws {
         var config = ProviderConfiguration(
             endpoint: "http://localhost:11434/api",
             apiKey: "",
@@ -86,51 +80,54 @@ import Foundation
             fastModel: "llama3",
             toolFormat: .json
         )
-        
+
         config.temperature = 0.7
         config.maxTokens = 1000
         config.topP = 0.9
         config.frequencyPenalty = 0.5
         config.presencePenalty = 0.3
-        
+        config.seed = 42
+
         try assertCodable(config)
-        
+
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
         let data = try encoder.encode(config)
         let decoded = try decoder.decode(ProviderConfiguration.self, from: data)
-        
+
         #expect(decoded.temperature == 0.7)
         #expect(decoded.maxTokens == 1000)
         #expect(decoded.topP == 0.9)
         #expect(decoded.frequencyPenalty == 0.5)
         #expect(decoded.presencePenalty == 0.3)
+        #expect(decoded.seed == 42)
     }
 
     @Test
-
-    func testLLMConfigurationProxyParameters() throws {
+    func lLMConfigurationProxyParameters() {
         var config = LLMConfiguration.default
-        
+
         config.temperature = 0.8
         config.maxTokens = 2000
         config.topP = 0.95
         config.frequencyPenalty = 0.1
         config.presencePenalty = 0.2
-        
+        config.seed = 42
+
         #expect(config.providers[config.activeProvider]?.temperature == 0.8)
         #expect(config.providers[config.activeProvider]?.maxTokens == 2000)
         #expect(config.providers[config.activeProvider]?.topP == 0.95)
         #expect(config.providers[config.activeProvider]?.frequencyPenalty == 0.1)
         #expect(config.providers[config.activeProvider]?.presencePenalty == 0.2)
-        
+        #expect(config.providers[config.activeProvider]?.seed == 42)
+
         // Test legacy init with parameters
         let legacyConfig = LLMConfiguration(
             modelName: "test-model",
             temperature: 0.5,
             maxTokens: 500
         )
-        
+
         #expect(legacyConfig.temperature == 0.5)
         #expect(legacyConfig.maxTokens == 500)
         #expect(legacyConfig.topP == nil)
@@ -139,8 +136,7 @@ import Foundation
     // MARK: - ToolCallFormat
 
     @Test
-
-    func testToolCallFormatCodable() throws {
+    func toolCallFormatCodable() throws {
         let f1 = ToolCallFormat.openAI
         try assertCodable(f1)
 

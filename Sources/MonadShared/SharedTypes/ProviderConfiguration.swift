@@ -15,6 +15,7 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
     public var topP: Double?
     public var frequencyPenalty: Double?
     public var presencePenalty: Double?
+    public var seed: Int?
 
     public var generationParameters: GenerationParameters {
         GenerationParameters(
@@ -22,7 +23,8 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
             maxTokens: maxTokens,
             topP: topP,
             frequencyPenalty: frequencyPenalty,
-            presencePenalty: presencePenalty
+            presencePenalty: presencePenalty,
+            seed: seed
         )
     }
 
@@ -39,7 +41,8 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
         maxTokens: Int? = nil,
         topP: Double? = nil,
         frequencyPenalty: Double? = nil,
-        presencePenalty: Double? = nil
+        presencePenalty: Double? = nil,
+        seed: Int? = nil
     ) {
         self.endpoint = endpoint
         self.apiKey = apiKey
@@ -54,6 +57,7 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
         self.topP = topP
         self.frequencyPenalty = frequencyPenalty
         self.presencePenalty = presencePenalty
+        self.seed = seed
     }
 
     public init(from decoder: Decoder) throws {
@@ -72,6 +76,7 @@ public struct ProviderConfiguration: Codable, Sendable, Equatable {
         topP = try container.decodeIfPresent(Double.self, forKey: .topP)
         frequencyPenalty = try container.decodeIfPresent(Double.self, forKey: .frequencyPenalty)
         presencePenalty = try container.decodeIfPresent(Double.self, forKey: .presencePenalty)
+        seed = try container.decodeIfPresent(Int.self, forKey: .seed)
     }
 
     public static func defaultFor(_ provider: LLMProvider) -> ProviderConfiguration {

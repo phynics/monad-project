@@ -1,5 +1,5 @@
-import Foundation
 import ErrorKit
+import Foundation
 
 /// Configuration for LLM service
 public struct LLMConfiguration: Codable, Sendable, Equatable {
@@ -77,6 +77,11 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         set { providers[activeProvider]?.presencePenalty = newValue }
     }
 
+    public var seed: Int? {
+        get { providers[activeProvider]?.seed }
+        set { providers[activeProvider]?.seed = newValue }
+    }
+
     public var generationParameters: GenerationParameters {
         providers[activeProvider]?.generationParameters ?? GenerationParameters()
     }
@@ -142,7 +147,8 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
         maxTokens: Int? = nil,
         topP: Double? = nil,
         frequencyPenalty: Double? = nil,
-        presencePenalty: Double? = nil
+        presencePenalty: Double? = nil,
+        seed: Int? = nil
     ) {
         activeProvider = provider
         self.memoryContextLimit = memoryContextLimit
@@ -169,7 +175,8 @@ public struct LLMConfiguration: Codable, Sendable, Equatable {
             maxTokens: maxTokens,
             topP: topP,
             frequencyPenalty: frequencyPenalty,
-            presencePenalty: presencePenalty
+            presencePenalty: presencePenalty,
+            seed: seed
         )
 
         providers = initialProviders

@@ -31,12 +31,13 @@ struct OllamaOptions: Codable {
     }
 
     init(from params: GenerationParameters?) {
-        self.temperature = params?.temperature
-        self.numPredict = params?.maxTokens
-        self.topP = params?.topP
-        self.repeatPenalty = params?.frequencyPenalty
-        self.presencePenalty = params?.presencePenalty
-        self.seed = params?.seed
+        temperature = params?.temperature
+        numPredict = params?.maxTokens
+        topP = params?.topP
+        // Ollama's repeat_penalty differs from OpenAI's frequency_penalty but is the closest approximation
+        repeatPenalty = params?.frequencyPenalty
+        presencePenalty = params?.presencePenalty
+        seed = params?.seed
     }
 }
 
