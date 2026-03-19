@@ -102,9 +102,8 @@ struct PromptAssemblyTests {
         
         // Define a custom stage
         struct CustomStage: PromptAssemblyStage {
-            func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
+            func execute(_ context: PromptAssemblyContext) async throws {
                 await context.append(MockSection(id: "custom"))
-                return AsyncThrowingStream { $0.finish() }
             }
         }
         
@@ -137,9 +136,8 @@ struct PromptAssemblyTests {
     @Test("PromptBuilder uses override pipeline in buildContext")
     func promptBuilder_usesOverridePipeline() async throws {
         struct CustomStage: PromptAssemblyStage {
-            func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
+            func execute(_ context: PromptAssemblyContext) async throws {
                 await context.append(PromptAssemblyTests.MockSection(id: "override_assembly"))
-                return AsyncThrowingStream { $0.finish() }
             }
         }
         

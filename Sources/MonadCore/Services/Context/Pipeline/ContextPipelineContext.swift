@@ -52,10 +52,23 @@ public actor ContextPipelineContext {
         self.startTime = startTime
     }
 
-    /// Returns the gathered results.
-    /// - Returns: A tuple containing notes, memories, tags, query vector, and raw search results.
-    public func getResults() -> (notes: [ContextFile], memories: [SemanticSearchResult], tags: [String], vector: [Double], semanticResults: [SemanticSearchResult], tagResults: [Memory]) {
-        (notes, memories, generatedTags, queryVector, semanticResults, tagResults)
+    /// Assembles and sets the final context data object.
+    /// - Parameter executionTime: The total time taken to gather context.
+    /// - Returns: The final context data.
+    @discardableResult
+    public func finalize(executionTime: TimeInterval) -> ContextData {
+        let data = ContextData(
+            notes: notes,
+            memories: memories,
+            generatedTags: generatedTags,
+            queryVector: queryVector,
+            augmentedQuery: augmentedQuery,
+            semanticResults: semanticResults,
+            tagResults: tagResults,
+            executionTime: executionTime
+        )
+        self.contextData = data
+        return data
     }
 
     /// Sets the augmented version of the search query.
@@ -86,11 +99,5 @@ public actor ContextPipelineContext {
         if let vector { queryVector = vector }
         if let semanticResults { self.semanticResults = semanticResults }
         if let tagResults { self.tagResults = tagResults }
-    }
-
-    /// Sets the final context data object.
-    /// - Parameter data: The assembled context data.
-    public func setContextData(_ data: ContextData) {
-        contextData = data
     }
 }

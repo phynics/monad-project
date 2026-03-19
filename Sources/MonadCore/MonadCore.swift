@@ -66,19 +66,7 @@ public struct MonadCore: Sendable {
     ) {
         self.init(
             llmService: llmService,
-            messageStore: nil,
-            timelineManager: nil,
-            toolRouter: nil,
-            agentInstanceStore: nil,
-            clientStore: nil,
-            timelinePersistence: nil,
-            workspacePersistence: nil,
-            memoryStore: nil,
-            toolPersistence: nil,
-            agentTemplateStore: nil,
-            embeddingService: nil,
-            workspaceRoot: nil,
-            chatTurnPlugins: [],
+            persistence: .inMemory(),
             generationParameters: generationParameters
         )
     }
@@ -286,6 +274,20 @@ public extension MonadCore {
             self.agentInstanceStore = agentInstanceStore
             self.clientStore = clientStore
             self.agentTemplateStore = agentTemplateStore
+        }
+
+        /// Provides a configuration with sensible in-memory defaults for all stores.
+        public static func inMemory() -> PersistenceConfiguration {
+            PersistenceConfiguration(
+                messageStore: InMemoryMessageStore(),
+                timelinePersistence: InMemoryTimelinePersistence(),
+                workspacePersistence: InMemoryWorkspacePersistence(),
+                memoryStore: InMemoryMemoryStore(),
+                toolPersistence: InMemoryToolPersistence(),
+                agentInstanceStore: InMemoryAgentInstanceStore(),
+                clientStore: InMemoryClientStore(),
+                agentTemplateStore: InMemoryAgentTemplateStore()
+            )
         }
     }
 

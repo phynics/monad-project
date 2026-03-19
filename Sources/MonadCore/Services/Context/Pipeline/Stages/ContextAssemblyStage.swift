@@ -23,19 +23,7 @@ public struct ContextAssemblyStage: PipelineStage {
         let duration = CFAbsoluteTimeGetCurrent() - startTime
         logger.info("Context gathered in \(String(format: "%.3f", duration))s")
 
-        let results = await context.getResults()
-        let augmentedQuery = await context.augmentedQuery
-        let data = ContextData(
-            notes: results.notes,
-            memories: results.memories,
-            generatedTags: results.tags,
-            queryVector: results.vector,
-            augmentedQuery: augmentedQuery,
-            semanticResults: results.semanticResults,
-            tagResults: results.tagResults,
-            executionTime: duration
-        )
-        await context.setContextData(data)
+        await context.finalize(executionTime: duration)
         return AsyncThrowingStream { $0.finish() }
     }
 }

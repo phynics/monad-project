@@ -58,12 +58,22 @@ public actor PromptAssemblyContext: Sendable {
 public typealias PromptAssemblyPipeline = Pipeline<PromptAssemblyContext, PromptAssemblyEvent>
 
 /// Protocol defining a single stage in the prompt assembly pipeline.
-public protocol PromptAssemblyStage: PipelineStage where Context == PromptAssemblyContext, Event == PromptAssemblyEvent {}
+public protocol PromptAssemblyStage: PipelineStage where Context == PromptAssemblyContext, Event == PromptAssemblyEvent {
+    /// Executes the assembly logic for this stage.
+    func execute(_ context: PromptAssemblyContext) async throws
+}
 
 public extension PromptAssemblyStage {
     /// Default implementation returns the type name.
     var id: String {
         String(describing: Self.self)
+    }
+
+    /// Default implementation of process that wraps execute in start/complete events.
+    func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
+        try await running(context) {
+            try await execute(context)
+        }
     }
 
     /// Helper to execute an action and yield start/complete events.

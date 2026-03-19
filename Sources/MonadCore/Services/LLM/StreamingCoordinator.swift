@@ -59,13 +59,11 @@ public final class StreamingCoordinator {
         // Parse the chunk using our parser (handles <think> tags)
         parser.process(delta)
 
+        streamingThinking = parser.thinking
+        streamingContent = parser.content
+
         if parser.hasReclassified {
             logger.warning("PARSER RECLASSIFIED STATE: content moved to thinking")
-            streamingThinking = parser.thinking
-            streamingContent = parser.content
-        } else {
-            streamingThinking = parser.thinking
-            streamingContent = parser.content
         }
     }
 

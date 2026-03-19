@@ -130,9 +130,8 @@ import Testing
         // Calling with nil (default) should preserve tags
         await context.setResults(notes: [ContextFile(name: "n", content: "c", source: "s")])
 
-        let results = await context.getResults()
-        #expect(results.tags == ["a", "b"])
-        #expect(results.notes.count == 1)
+        #expect(await context.generatedTags == ["a", "b"])
+        #expect(await context.notes.count == 1)
     }
 
     @Test("setResults with empty array explicitly clears the field")
@@ -145,8 +144,7 @@ import Testing
         // Explicitly passing [] should clear
         await context.setResults(tags: [])
 
-        let results = await context.getResults()
-        #expect(results.tags.isEmpty)
+        #expect(await context.generatedTags.isEmpty)
     }
 }
 
@@ -180,8 +178,7 @@ private struct CompletionStage: PipelineStage {
     func process(
         _ context: ContextPipelineContext
     ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
-        let data = ContextData()
-        await context.setContextData(data)
+        await context.finalize(executionTime: 0)
         return AsyncThrowingStream { $0.finish() }
     }
 }

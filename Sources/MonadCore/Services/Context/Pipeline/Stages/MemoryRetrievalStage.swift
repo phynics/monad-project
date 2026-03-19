@@ -29,7 +29,7 @@ public struct MemoryRetrievalStage: PipelineStage {
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let memoriesData = try await fetchRelevantMemories(
+                    let results = try await fetchRelevantMemories(
                         for: query,
                         tagContext: augmentedQuery,
                         limit: limit,
@@ -39,11 +39,11 @@ public struct MemoryRetrievalStage: PipelineStage {
                         }
                     )
                     await context.setResults(
-                        memories: memoriesData.memories,
-                        tags: memoriesData.tags,
-                        vector: memoriesData.vector,
-                        semanticResults: memoriesData.semanticResults,
-                        tagResults: memoriesData.tagResults
+                        memories: results.memories,
+                        tags: results.tags,
+                        vector: results.vector,
+                        semanticResults: results.semanticResults,
+                        tagResults: results.tagResults
                     )
                     continuation.finish()
                 } catch {
@@ -60,16 +60,16 @@ public struct MemoryRetrievalStage: PipelineStage {
         limit: Int,
         tagGenerator: (@Sendable (String) async throws -> [String])?,
         onProgress: (@Sendable (Message.ContextGatheringProgress) -> Void)?
-    ) async throws -> MemoryRetrievalResult {
+    ) async throws -> (memories: [SemanticSearchResult], tags: [String], vector: [Double], semanticResults: [SemanticSearchResult], tagResults: [Memory]) {
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return MemoryRetrievalResult(memories: [], tags: [], vector: [], semanticResults: [], tagResults: [])
+            return (memories: [], tags: [], vector: [], semanticResults: [], tagResults: [])
         }
 
         let tags = await generateTagsSafely(tagContext: tagContext, tagGenerator: tagGenerator, onProgress: onProgress)
         let embedding = try await generateQueryEmbedding(for: query, onProgress: onProgress)
 
         if Task.isCancelled {
-            return MemoryRetrievalResult(memories: [], tags: [], vector: [], semanticResults: [], tagResults: [])
+            return (memories: [], tags: [], vector: [], semanticResults: [], tagResults: [])
         }
 
         let doubleEmbedding = embedding.map { Double($0) }
@@ -86,7 +86,7 @@ public struct MemoryRetrievalStage: PipelineStage {
         // swiftlint:disable:next line_length
         logger.info("Recall: \(topResults.count) memories selected from \(semanticResults.count) semantic + \(tagResults.count) tag matches")
 
-        return MemoryRetrievalResult(
+        return (
             memories: topResults, tags: tags, vector: doubleEmbedding,
             semanticResults: semanticResults, tagResults: tagResults
         )
