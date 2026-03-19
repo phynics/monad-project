@@ -41,22 +41,22 @@ public actor ContextPipelineContext {
     }
 
     public func setResults(
-        notes: [ContextFile] = [],
-        memories: [SemanticSearchResult] = [],
-        tags: [String] = [],
-        vector: [Double] = [],
-        semanticResults: [SemanticSearchResult] = [],
-        tagResults: [Memory] = []
+        notes: [ContextFile]? = nil,
+        memories: [SemanticSearchResult]? = nil,
+        tags: [String]? = nil,
+        vector: [Double]? = nil,
+        semanticResults: [SemanticSearchResult]? = nil,
+        tagResults: [Memory]? = nil
     ) {
-        if !notes.isEmpty { self.notes = notes }
-        if !memories.isEmpty { self.memories = memories }
-        if !tags.isEmpty { self.generatedTags = tags }
-        if !vector.isEmpty { self.queryVector = vector }
-        if !semanticResults.isEmpty { self.semanticResults = semanticResults }
-        if !tagResults.isEmpty { self.tagResults = tagResults }
+        if let notes { self.notes = notes }
+        if let memories { self.memories = memories }
+        if let tags { generatedTags = tags }
+        if let vector { queryVector = vector }
+        if let semanticResults { self.semanticResults = semanticResults }
+        if let tagResults { self.tagResults = tagResults }
     }
 
     public func setContextData(_ data: ContextData) {
-        self.contextData = data
+        contextData = data
     }
 }

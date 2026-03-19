@@ -13,7 +13,7 @@ public struct ContextAssemblyStage: PipelineStage {
     public func process(
         _ context: ContextPipelineContext
     ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
-        let startTime = context.startTime
+        let startTime = await context.startTime
         let duration = CFAbsoluteTimeGetCurrent() - startTime
         logger.info("Context gathered in \(String(format: "%.3f", duration))s")
 
