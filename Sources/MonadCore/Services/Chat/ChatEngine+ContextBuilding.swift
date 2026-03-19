@@ -87,12 +87,14 @@ extension ChatEngine {
             generationParameters: generationParameters
         )
 
-        let initialMessages = await PromptBuilder.buildContext(
+        let prompt = try await PromptBuilder.buildContext(
             promptRequest,
             agentInstance: agentInstance,
             timeline: timeline,
             extensionSections: extensionSections
-        ).toMessages()
+        )
+        
+        let initialMessages = await prompt.toMessages()
 
         let modelName = await llmService.configuration.modelName
 

@@ -9,53 +9,53 @@ public enum PromptBuilder {
     public static let maxHistoryTokens = 120_000
     public static let historyTokenBuffer = 4000
 
+    // MARK: - Default Stages
+
+    /// Returns the standard sequence of stages used to assemble a prompt.
+    public static func defaultAssemblyStages() -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
+        [
+            SystemInstructionsStage(),
+            AgentContextStage(),
+            ContextNotesStage(),
+            MemoriesStage(),
+            ToolsStage(),
+            WorkspacesContextStage(),
+            TimelineContextStage(),
+            ChatHistoryStage(),
+            UserQueryStage(),
+            ExtensionSectionsStage()
+        ]
+    }
+
     // MARK: - Build Context
 
     /// Assembles a `Prompt` from a request, optional agent/timeline context, and extension sections.
+    /// Uses the `PromptAssemblyPipeline` to orchestrate assembly.
     public static func buildContext(
         _ request: LLMPromptRequest,
         agentInstance: AgentInstance? = nil,
         timeline: Timeline? = nil,
         extensionSections: [any ContextSection] = []
-    ) -> Prompt {
-        let instructions = request.systemInstructions ?? DefaultInstructions.system()
-
-        var sections: [any ContextSection] = []
-
-        sections.append(SystemInstructions(instructions))
-
-        if let agent = agentInstance {
-            sections.append(AgentContext(agent, timelineTitle: timeline?.title))
-        }
-
-        sections.append(ContextNotes(request.contextNotes))
-        sections.append(Memories(request.memories))
-        sections.append(Tools(request.tools))
-        sections.append(WorkspacesContext(
-            workspaces: request.workspaces,
-            primaryWorkspace: request.primaryWorkspace,
-            clientName: request.clientName
-        ))
-
-        if let timeline {
-            sections.append(TimelineContext(timeline))
-        }
-
-        sections.append(ChatHistory(
-            optimizeHistory(
-                request.chatHistory,
-                availableTokens: maxHistoryTokens - historyTokenBuffer
-            )
-        ))
-        sections.append(UserQuery(request.userQuery))
-        sections += extensionSections
-
-        return Prompt(sections: sections)
+    ) async throws -> Prompt {
+        let assemblyContext = PromptAssemblyContext(
+            request: request,
+            agentInstance: agentInstance,
+            timeline: timeline,
+            extensionSections: extensionSections
+        )
+        
+        let pipeline = PromptAssemblyPipeline(stages: defaultAssemblyStages())
+        
+        // Execute the pipeline and drain the events.
+        let stream = pipeline.execute(assemblyContext)
+        for try await _ in stream {}
+        
+        return Prompt(sections: await assemblyContext.sections)
     }
 
     /// Builds a prompt and converts it to OpenAI message format + raw text.
-    public static func buildPrompt(_ request: LLMPromptRequest) async -> LLMPromptResult {
-        let prompt = buildContext(request)
+    public static func buildPrompt(_ request: LLMPromptRequest) async throws -> LLMPromptResult {
+        let prompt = try await buildContext(request)
         let messages = await prompt.toMessages()
         let raw = await prompt.render()
         return LLMPromptResult(messages: messages, rawPrompt: raw)

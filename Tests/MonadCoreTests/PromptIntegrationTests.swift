@@ -8,10 +8,10 @@ import Testing
 @MainActor
 struct PromptIntegrationTests {
     @Test("testEmptyUserQueryDoesNotAppendMessage")
-    func emptyUserQueryDoesNotAppendMessage() async {
+    func emptyUserQueryDoesNotAppendMessage() async throws {
         let history = [Message(content: "Hello", role: .user)]
 
-        let prompt = PromptBuilder.buildContext(
+        let prompt = try await PromptBuilder.buildContext(
             LLMPromptRequest(
                 userQuery: "",
                 contextNotes: [],
@@ -42,10 +42,10 @@ struct PromptIntegrationTests {
     }
 
     @Test("testNonEmptyUserQueryAppendsMessage")
-    func nonEmptyUserQueryAppendsMessage() async {
+    func nonEmptyUserQueryAppendsMessage() async throws {
         let history = [Message(content: "Hello", role: .user)]
 
-        let prompt = PromptBuilder.buildContext(
+        let prompt = try await PromptBuilder.buildContext(
             LLMPromptRequest(
                 userQuery: "World",
                 contextNotes: [],
@@ -94,11 +94,11 @@ struct PromptIntegrationTests {
     }
 
     @Test("userQueryPreventsLeakageIntoSystem")
-    func userQueryPreventsLeakageIntoSystem() async {
+    func userQueryPreventsLeakageIntoSystem() async throws {
         let history = [Message(content: "Hi", role: .user)]
         let query = "UNIQUE_QUERY_STRING"
 
-        let prompt = PromptBuilder.buildContext(
+        let prompt = try await PromptBuilder.buildContext(
             LLMPromptRequest(
                 userQuery: query,
                 contextNotes: [],

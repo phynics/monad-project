@@ -28,7 +28,7 @@ struct LLMServiceTests {
     }
 
     @Test("Test prompt building logic and structure")
-    func promptBuilding() async {
+    func promptBuilding() async throws {
         let contextFiles = [
             ContextFile(name: "Test Note", content: "Note Content", source: "note"),
         ]
@@ -37,7 +37,7 @@ struct LLMServiceTests {
             Message(content: "Previous assistant message", role: .assistant),
         ]
 
-        let prompt = PromptBuilder.buildContext(
+        let prompt = try await PromptBuilder.buildContext(
             LLMPromptRequest(
                 userQuery: "Current question",
                 contextNotes: contextFiles,
@@ -115,8 +115,8 @@ struct LLMServiceTests {
     }
 
     @Test("Test prompt building with empty context")
-    func promptBuildingEmptyContext() async {
-        let prompt = PromptBuilder.buildContext(
+    func promptBuildingEmptyContext() async throws {
+        let prompt = try await PromptBuilder.buildContext(
             LLMPromptRequest(
                 userQuery: "Hello",
                 contextNotes: [],

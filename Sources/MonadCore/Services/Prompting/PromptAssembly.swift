@@ -2,6 +2,12 @@ import Foundation
 import MonadPrompt
 import MonadShared
 
+/// Events emitted during prompt assembly.
+public enum PromptAssemblyEvent: Sendable {
+    case stageStarted(String)
+    case stageCompleted(String)
+}
+
 /// Manages prompt assembly state. Pipeline-ready.
 public actor PromptAssemblyContext: Sendable {
     public let request: LLMPromptRequest
@@ -28,6 +34,30 @@ public actor PromptAssemblyContext: Sendable {
 
     public func append(_ sections: [any ContextSection]) {
         self.sections.append(contentsOf: sections)
+    }
+}
+
+/// A specialized pipeline for prompt assembly.
+public typealias PromptAssemblyPipeline = Pipeline<PromptAssemblyContext, PromptAssemblyEvent>
+
+/// Protocol defining a single stage in the prompt assembly pipeline.
+public protocol PromptAssemblyStage: PipelineStage where Context == PromptAssemblyContext, Event == PromptAssemblyEvent {}
+
+public extension PromptAssemblyStage {
+    /// Default implementation returns the type name.
+    var id: String {
+        String(describing: Self.self)
+    }
+
+    /// Helper to execute an action and yield start/complete events.
+    func running(_ context: PromptAssemblyContext, action: @Sendable () async throws -> Void) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
+        let id = self.id
+        try await action()
+        return AsyncThrowingStream { continuation in
+            continuation.yield(.stageStarted(id))
+            continuation.yield(.stageCompleted(id))
+            continuation.finish()
+        }
     }
 }
 

@@ -17,7 +17,12 @@ public extension LLMServiceProtocol {
             systemInstructions: request.systemInstructions,
             generationParameters: request.generationParameters
         )
-        let prompt = PromptBuilder.buildContext(promptRequest)
+        guard let prompt = try? await PromptBuilder.buildContext(promptRequest) else {
+            return LLMStreamResult(
+                stream: AsyncThrowingStream { $0.finish(throwing: LLMServiceError.notConfigured) },
+                rawPrompt: ""
+            )
+        }
 
         // Convert to OpenAI format
         let messages = await prompt.toMessages()

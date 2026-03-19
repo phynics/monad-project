@@ -92,4 +92,45 @@ struct PromptAssemblyTests {
         #expect(sections.count == 4)
         #expect(sections.map { $0.id } == ["s1", "s2", "s3", "s4"])
     }
+
+    // MARK: - Pipeline Tests
+
+    @Test("PromptAssemblyPipeline executes stages")
+    func pipelineExecutesStages() async throws {
+        let request = makeRequest()
+        let context = PromptAssemblyContext(request: request)
+        
+        // Define a custom stage
+        struct CustomStage: PromptAssemblyStage {
+            func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
+                await context.append(MockSection(id: "custom"))
+                return AsyncThrowingStream { $0.finish() }
+            }
+        }
+        
+        let pipeline = PromptAssemblyPipeline(stages: [CustomStage()])
+        let stream = pipeline.execute(context)
+        
+        for try await _ in stream {}
+        
+        let sections = await context.sections
+        #expect(sections.count == 1)
+        #expect(sections.first?.id == "custom")
+    }
+
+    @Test("PromptBuilder uses pipeline for default assembly")
+    func promptBuilderUsesPipeline() async throws {
+        let request = makeRequest(userQuery: "pipeline test")
+        let prompt = try await PromptBuilder.buildContext(request)
+        
+        // Check if some of the default sections are present
+        let sections = await prompt.sections
+        #expect(sections.contains { $0.id == "system" })
+        #expect(sections.contains { $0.id == "user_query" })
+        
+        if let querySection = sections.first(where: { $0.id == "user_query" }) as? UserQuery {
+            let content = await querySection.render()
+            #expect(content == "pipeline test")
+        }
+    }
 }
