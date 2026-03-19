@@ -7,7 +7,7 @@ import MonadShared
 // MARK: - Memory Retrieval
 
 extension ContextManager {
-    func fetchRelevantMemories(
+    public func fetchRelevantMemories(
         for query: String,
         tagContext: String,
         limit: Int,

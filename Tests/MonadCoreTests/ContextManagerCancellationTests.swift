@@ -19,7 +19,7 @@ import Testing
         let manager = try await makeContextManager()
         let stream = await manager.gatherContext(for: "test query")
 
-        var events: [ContextManager.ContextGatheringEvent] = []
+        var events: [ContextGatheringEvent] = []
         for try await event in stream {
             events.append(event)
         }
