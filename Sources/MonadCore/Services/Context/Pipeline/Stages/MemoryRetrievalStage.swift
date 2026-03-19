@@ -129,17 +129,21 @@ public struct MemoryRetrievalStage: PipelineStage {
     ) async throws -> ([SemanticSearchResult], [Memory]) {
         onProgress?(.searching)
 
-        async let semanticTask = memoryStore.searchMemories(
-            embedding: embedding,
-            limit: limit * 2,
-            minSimilarity: 0.35
-        )
-        async let tagTask = memoryStore.searchMemories(matchingAnyTag: tags)
+        do {
+            async let semanticTask = memoryStore.searchMemories(
+                embedding: embedding,
+                limit: limit * 2,
+                minSimilarity: 0.35
+            )
+            async let tagTask = memoryStore.searchMemories(matchingAnyTag: tags)
 
-        let (rawSemanticResults, tagResults) = try await (semanticTask, tagTask)
-        let semanticResults = rawSemanticResults.map {
-            SemanticSearchResult(memory: $0.memory, similarity: $0.similarity)
+            let (rawSemanticResults, tagResults) = try await (semanticTask, tagTask)
+            let semanticResults = rawSemanticResults.map {
+                SemanticSearchResult(memory: $0.memory, similarity: $0.similarity)
+            }
+            return (semanticResults, tagResults)
+        } catch {
+            throw ContextManagerError.persistenceFailed(error)
         }
-        return (semanticResults, tagResults)
     }
 }

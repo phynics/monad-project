@@ -110,7 +110,7 @@ public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
         for stage in cleanupStages {
             if let error = await runStage(stage, context: context, continuation: continuation, label: "cleanup") {
                 if finalError == nil {
-                    finalError = PipelineError.cleanupFailed(id: stage.id, underlyingError: error)
+                    finalError = error
                 }
             }
         }
@@ -138,7 +138,17 @@ public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
             let duration = CFAbsoluteTimeGetCurrent() - startTime
             let durationStr = String(format: "%.3f", duration)
             logger?.error("\(label) stage '\(stage.id)' failed after \(durationStr)s: \(error.localizedDescription)")
-            return PipelineError.stageFailed(id: stage.id, underlyingError: error)
+            
+            // If it's already a PipelineError, propagate it directly to avoid double wrapping
+            if let pipelineError = error as? PipelineError {
+                return pipelineError
+            }
+
+            if label == "cleanup" {
+                return PipelineError.cleanupFailed(id: stage.id, underlyingError: error)
+            } else {
+                return PipelineError.stageFailed(id: stage.id, underlyingError: error)
+            }
         }
     }
 }
