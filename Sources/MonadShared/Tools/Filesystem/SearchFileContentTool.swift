@@ -35,6 +35,7 @@ public struct SearchFileContentTool: Tool, Sendable {
             builder.string("path", description: "The directory or file to search (default: .)")
             builder.string("pattern", description: "The text pattern to search for", required: true)
             builder.boolean("recursive", description: "Whether to search recursively (default: false)")
+            builder.string("workspaceID", description: "The UUID of the workspace to target (optional)")
         }.schema
     }
 

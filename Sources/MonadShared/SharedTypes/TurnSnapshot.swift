@@ -42,6 +42,9 @@ public struct TurnSnapshot: Codable, Sendable, Equatable {
     public let maxTurns: Int
     public let systemInstructions: String?
 
+    /// Context sources used in this turn
+    public let contextSnapshot: TurnContextSnapshot?
+
     /// Tool metadata (tool objects aren't Codable, so we store IDs)
     public let availableToolIds: [String]
 
@@ -68,6 +71,7 @@ public struct TurnSnapshot: Codable, Sendable, Equatable {
         turnCount: Int,
         maxTurns: Int,
         systemInstructions: String? = nil,
+        contextSnapshot: TurnContextSnapshot? = nil,
         availableToolIds: [String] = [],
         fullResponse: String = "",
         fullThinking: String = "",
@@ -86,6 +90,7 @@ public struct TurnSnapshot: Codable, Sendable, Equatable {
         self.turnCount = turnCount
         self.maxTurns = maxTurns
         self.systemInstructions = systemInstructions
+        self.contextSnapshot = contextSnapshot
         self.availableToolIds = availableToolIds
         self.fullResponse = fullResponse
         self.fullThinking = fullThinking

@@ -18,8 +18,8 @@ public actor TimelineToolManager {
     /// Cached workspace tools: toolId -> (wrapper, provenance string)
     private var workspaceTools: [String: (tool: WorkspaceToolWrapper, provenance: String)] = [:]
 
-    /// Cached known-tool overrides from workspaces: toolId -> provenance string
-    private var knownToolProvenance: [String: String] = [:]
+    /// Cached known-tool overrides from workspaces: toolId -> Set of provenance strings
+    private var knownToolProvenance: [String: Set<String>] = [:]
 
     public init(availableTools: [AnyTool], timelineContext: ToolTimelineContext? = nil) {
         self.availableTools = availableTools
@@ -55,7 +55,7 @@ public actor TimelineToolManager {
     /// Refresh tools from all registered workspaces
     private func refreshWorkspaceTools() async {
         var newTools: [String: (tool: WorkspaceToolWrapper, provenance: String)] = [:]
-        var newKnownProvenance: [String: String] = [:]
+        var newKnownProvenance: [String: Set<String>] = [:]
 
         for workspace in workspaces.values {
             let provenanceTag = "Workspace: \(workspace.reference.uri.description)"
@@ -66,7 +66,7 @@ public actor TimelineToolManager {
                     case let .known(toolId):
                         // Tag the system tool with this workspace's provenance
                         if availableTools.contains(where: { $0.id == toolId }) {
-                            newKnownProvenance[toolId] = provenanceTag
+                            newKnownProvenance[toolId, default: []].insert(provenanceTag)
                         } else {
                             let logger = Logger(label: "com.monad.session-tool-manager")
                             logger.warning(
@@ -94,9 +94,9 @@ public actor TimelineToolManager {
 
         // Apply workspace provenance to .known system tools
         tools = tools.map { tool in
-            if let provenance = knownToolProvenance[tool.id] {
+            if let provenanceSet = knownToolProvenance[tool.id], !provenanceSet.isEmpty {
                 var tagged = tool
-                tagged.provenance = provenance
+                tagged.provenance = provenanceSet.sorted().joined(separator: ", ")
                 return tagged
             }
             return tool
@@ -122,9 +122,9 @@ public actor TimelineToolManager {
 
         // Apply provenance to .known system tools
         tools = tools.map { tool in
-            if let provenance = knownToolProvenance[tool.id] {
+            if let provenanceSet = knownToolProvenance[tool.id], !provenanceSet.isEmpty {
                 var tagged = tool
-                tagged.provenance = provenance
+                tagged.provenance = provenanceSet.sorted().joined(separator: ", ")
                 return tagged
             }
             return tool
@@ -166,9 +166,9 @@ public actor TimelineToolManager {
     public func getTool(id: String) async -> AnyTool? {
         // First check regular system tools
         if let tool = availableTools.first(where: { $0.id == id }) {
-            if let provenance = knownToolProvenance[id] {
+            if let provenanceSet = knownToolProvenance[id], !provenanceSet.isEmpty {
                 var tagged = tool
-                tagged.provenance = provenance
+                tagged.provenance = provenanceSet.sorted().joined(separator: ", ")
                 return tagged
             }
             return tool

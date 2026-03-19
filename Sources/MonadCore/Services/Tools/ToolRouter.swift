@@ -220,9 +220,13 @@ public actor ToolRouter {
 
         // resolveWorkspace returns nil when the tool is not registered in any of the
         // timeline's workspaces, or when the timeline has no workspaces at all.
-        guard let workspaceId = try await resolveWorkspace(for: tool, in: timelineId) else {
+        guard let workspaceId = try await resolveWorkspace(for: tool, in: timelineId, arguments: arguments) else {
             throw ToolError.toolNotFound(tool.displayName)
         }
+
+        // Strip workspaceID — it's a routing-only concern, not a tool parameter
+        var forwardedArguments = arguments
+        forwardedArguments.removeValue(forKey: "workspaceID")
 
         guard let workspace = try await timelineManager.getWorkspace(workspaceId) else {
             throw ToolError.workspaceNotFound(workspaceId)
@@ -232,7 +236,7 @@ public actor ToolRouter {
         case .server, .serverTimeline:
             let output = try await executeLocally(
                 tool: tool,
-                arguments: arguments,
+                arguments: forwardedArguments,
                 timelineId: timelineId,
                 availableTools: availableTools
             )
@@ -248,13 +252,28 @@ public actor ToolRouter {
 
     // MARK: - Private Helpers
 
-    private func resolveWorkspace(for tool: ToolReference, in timelineId: UUID) async throws -> UUID? {
+    private func resolveWorkspace(
+        for tool: ToolReference,
+        in timelineId: UUID,
+        arguments: [String: AnyCodable]
+    ) async throws -> UUID? {
         let workspaces = await timelineManager.getWorkspaces(for: timelineId)
         guard let wsList = workspaces else { return nil }
 
-        var candidates: [UUID] = []
-        if let primary = wsList.primary { candidates.append(primary.id) }
-        candidates.append(contentsOf: wsList.attached.map { $0.id })
+        let candidates = ([wsList.primary].compactMap { $0?.id }) + wsList.attached.map { $0.id }
+
+        // Check for explicit intent in arguments
+        if let explicitIdString = arguments["workspaceID"]?.value as? String,
+           let explicitId = UUID(uuidString: explicitIdString.trimmingCharacters(in: .whitespacesAndNewlines))
+        {
+            guard candidates.contains(explicitId) else {
+                logger.warning("Requested workspaceID \(explicitId) not found in timeline context. Falling back to default resolution.")
+                return try await timelineManager.findWorkspaceForTool(tool, in: candidates)
+            }
+
+            logger.debug("Routing to explicitly requested workspace: \(explicitId)")
+            return explicitId
+        }
 
         return try await timelineManager.findWorkspaceForTool(tool, in: candidates)
     }

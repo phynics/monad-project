@@ -35,6 +35,7 @@ public struct SearchFilesTool: Tool, Sendable {
             builder.string("pattern", description: "The text pattern to search for (regex supported)", required: true)
             builder.string("path", description: "The directory to search within (default: current directory)")
             builder.string("include", description: "Optional glob pattern for files to include (e.g. '*.swift')")
+            builder.string("workspaceID", description: "The UUID of the workspace to target (optional)")
         }.schema
     }
 

@@ -88,6 +88,32 @@ struct MessagePersistenceStage: PipelineStage {
         let tokensPerSecond = await context.outputs.tokensPerSecond
         let streamUsage = await context.outputs.streamUsage
 
+        let promptMessages = context.currentMessages.map { param -> TurnContextSnapshot.PromptMessage in
+            let (role, content) = Self.extractRoleAndContent(from: param)
+            return TurnContextSnapshot.PromptMessage(
+                role: role,
+                content: content,
+                tokenCount: TokenEstimator.estimate(text: content)
+            )
+        }
+
+        let contextSnapshot = TurnContextSnapshot(
+            promptMessages: promptMessages,
+            files: context.contextData.notes.map {
+                TurnContextSnapshot.FileEntry(name: $0.name, source: $0.source)
+            },
+            memories: context.contextData.memories.map {
+                TurnContextSnapshot.MemoryEntry(
+                    id: $0.memory.id,
+                    content: $0.memory.content,
+                    similarity: $0.similarity
+                )
+            },
+            generatedTags: context.contextData.generatedTags,
+            augmentedQuery: context.contextData.augmentedQuery,
+            executionTime: context.contextData.executionTime
+        )
+
         return TurnSnapshot(
             timelineId: context.timelineId,
             agentInstanceId: context.agentInstanceId,
@@ -95,6 +121,7 @@ struct MessagePersistenceStage: PipelineStage {
             turnCount: context.turnCount,
             maxTurns: context.maxTurns,
             systemInstructions: context.systemInstructions,
+            contextSnapshot: contextSnapshot,
             availableToolIds: context.availableTools.map { $0.id },
             fullResponse: fullResponse,
             fullThinking: fullThinking,
@@ -106,5 +133,35 @@ struct MessagePersistenceStage: PipelineStage {
             completionTokens: streamUsage?.completionTokens,
             totalTokens: streamUsage?.totalTokens
         )
+    }
+
+    // MARK: - Message Extraction
+
+    private static func extractRoleAndContent(
+        from param: ChatQuery.ChatCompletionMessageParam
+    ) -> (role: String, content: String) {
+        switch param {
+        case let .system(msg):
+            let text: String
+            if case let .textContent(t) = msg.content { text = t } else { text = "\(msg.content)" }
+            return ("system", text)
+        case let .user(msg):
+            let text: String
+            if case let .string(t) = msg.content { text = t } else { text = "\(msg.content)" }
+            return ("user", text)
+        case let .assistant(msg):
+            guard let content = msg.content else { return ("assistant", "") }
+            let text: String
+            if case let .textContent(t) = content { text = t } else { text = "\(content)" }
+            return ("assistant", text)
+        case let .tool(msg):
+            let text: String
+            if case let .textContent(t) = msg.content { text = t } else { text = "\(msg.content)" }
+            return ("tool", text)
+        case let .developer(msg):
+            let text: String
+            if case let .textContent(t) = msg.content { text = t } else { text = "\(msg.content)" }
+            return ("developer", text)
+        }
     }
 }

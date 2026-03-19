@@ -33,6 +33,7 @@ public struct InspectFileTool: Tool, Sendable {
     public var parametersSchema: [String: AnyCodable] {
         ToolParameterSchema.object { builder in
             builder.string("path", description: "The path to the file to inspect", required: true)
+            builder.string("workspaceID", description: "The UUID of the workspace to target (optional)")
         }.schema
     }
 

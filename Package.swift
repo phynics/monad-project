@@ -51,7 +51,8 @@ let package = Package(
                 .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "ErrorKit", package: "ErrorKit"),
             ],
-            path: "Sources/MonadCore"
+            path: "Sources/MonadCore",
+            exclude: ["README.md", "docs"]
         ),
         .executableTarget(
             name: "MonadServer",

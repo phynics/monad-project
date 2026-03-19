@@ -38,6 +38,7 @@ public struct FindFileTool: Tool, Sendable {
                 description: "The filename pattern to match (contains check, case insensitive)",
                 required: true
             )
+            builder.string("workspaceID", description: "The UUID of the workspace to target (optional)")
         }.schema
     }
 

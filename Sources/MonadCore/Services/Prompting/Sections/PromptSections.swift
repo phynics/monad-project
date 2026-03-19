@@ -282,8 +282,10 @@ public struct WorkspacesContext: ContextSection {
             output += "\n"
         }
 
-        output += "When a user asks you to operate on files or perform actions " +
-            "in these workspaces, you can use the appropriate tools with the workspace's URI or ID."
+        output += "## Workspace Routing Rules\n"
+        output += "1. All file paths passed to tools MUST be relative to the targeted workspace root.\n"
+        output += "2. **IMPORTANT**: If multiple workspaces provide the same tool (e.g. `ls`, `cat`, `grep`), you MUST provide the `workspaceID` argument in your tool call to specify which workspace to use. If omitted, the system will use a default priority that may not match your intent.\n"
+
         return output
     }
 
