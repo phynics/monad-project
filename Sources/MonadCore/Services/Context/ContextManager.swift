@@ -35,12 +35,14 @@ public actor ContextManager {
     ///   - history: Recent conversation history to provide context for the search
     ///   - limit: Maximum number of memories to retrieve
     ///   - tagGenerator: A function to generate tags from the query (e.g. via LLM)
+    ///   - overridePipeline: An optional pipeline to use instead of the default one
     /// - Returns: A stream of progress events, finishing with the structured context
     public func gatherContext(
         for query: String,
         history: [Message] = [],
         limit: Int = 5,
-        tagGenerator: (@Sendable (String) async throws -> [String])? = nil
+        tagGenerator: (@Sendable (String) async throws -> [String])? = nil,
+        overridePipeline: ContextPipeline? = nil
     ) -> AsyncThrowingStream<ContextGatheringEvent, Error> {
         return AsyncThrowingStream<ContextGatheringEvent, Error> { continuation in
             let task = Task {
@@ -58,7 +60,8 @@ public actor ContextManager {
                 )
 
                 do {
-                    let stream = pipeline.execute(context)
+                    let activePipeline = overridePipeline ?? pipeline
+                    let stream = activePipeline.execute(context)
                     for try await event in stream {
                         continuation.yield(event)
                     }

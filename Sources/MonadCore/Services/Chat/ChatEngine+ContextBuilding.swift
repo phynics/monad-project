@@ -40,7 +40,9 @@ extension ChatEngine {
         systemInstructions: String?,
         agentInstanceId: UUID?,
         maxTurns: Int,
-        generationParameters: GenerationParameters?
+        generationParameters: GenerationParameters?,
+        contextPipeline: ContextPipeline? = nil,
+        assemblyPipeline: PromptAssemblyPipeline? = nil
     ) async throws -> ChatTurnContext {
         // 1. Save new inputs (user message or tool outputs from client)
         try await saveConversationSteps(timelineId: timelineId, message: message, toolOutputs: toolOutputs)
@@ -49,7 +51,12 @@ extension ChatEngine {
         let conversationMessages = try await messageStore.fetchMessages(for: timelineId)
         let history = conversationMessages.map { $0.toMessage() }
         let currentRemoteDepth = conversationMessages.map(\.remoteDepth).max() ?? 0
-        let contextData = await fetchContext(contextManager: contextManager, message: message, history: history)
+        let contextData = await fetchContext(
+            contextManager: contextManager,
+            message: message,
+            history: history,
+            pipeline: contextPipeline
+        )
 
         // 3. Resolve workspaces and session entities
         let workspaceResult = await timelineManager.getWorkspaces(for: timelineId)
@@ -91,7 +98,8 @@ extension ChatEngine {
             promptRequest,
             agentInstance: agentInstance,
             timeline: timeline,
-            extensionSections: extensionSections
+            extensionSections: extensionSections,
+            overridePipeline: assemblyPipeline
         )
         
         let initialMessages = await prompt.toMessages()
@@ -144,7 +152,8 @@ extension ChatEngine {
     private func fetchContext(
         contextManager: ContextManager?,
         message: String,
-        history: [Message]
+        history: [Message],
+        pipeline: ContextPipeline? = nil
     ) async -> ContextData {
         guard let contextManager = contextManager else { return ContextData() }
 
@@ -152,7 +161,8 @@ extension ChatEngine {
             let stream = await contextManager.gatherContext(
                 for: message.isEmpty ? (history.last?.content ?? "") : message,
                 history: history,
-                tagGenerator: { [llmService] query in try await llmService.generateTags(for: query) }
+                tagGenerator: { [llmService] query in try await llmService.generateTags(for: query) },
+                overridePipeline: pipeline
             )
 
             for try await event in stream {

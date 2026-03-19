@@ -77,6 +77,31 @@ import Testing
         #expect(sawComplete)
     }
 
+    @Test("ContextManager uses override pipeline in gatherContext")
+    func contextManager_usesOverridePipeline() async throws {
+        let tracker = StageRunTracker()
+        let overridePipeline = ContextPipeline {
+            TrackingStage(tracker: tracker, stageID: "override")
+            CompletionStage()
+        }
+
+        let manager = try await TestDependencies()
+            .withMocks()
+            .run {
+                ContextManager(workspace: nil) // Uses default pipeline internally
+            }
+
+        let stream = await manager.gatherContext(for: "test", overridePipeline: overridePipeline)
+        var sawComplete = false
+        for try await event in stream {
+            if case .complete = event { sawComplete = true }
+        }
+
+        let runs = await tracker.runs
+        #expect(runs == ["override"])
+        #expect(sawComplete)
+    }
+
     @Test("ContextManager default pipeline emits complete event")
     func contextManager_defaultPipeline_completes() async throws {
         let manager = try await TestDependencies()

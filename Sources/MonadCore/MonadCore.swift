@@ -202,6 +202,8 @@ public struct MonadCore: Sendable {
     ///   - agentInstanceId: Optional identifier for the agent instance.
     ///   - maxTurns: Maximum number of LLM turns before stopping. Defaults to 5.
     ///   - generationParameters: Optional parameters for generation (overrides defaults).
+    ///   - contextPipeline: Optional pipeline to use for context gathering (overrides default).
+    ///   - assemblyPipeline: Optional pipeline to use for prompt assembly (overrides default).
     /// - Returns: An asynchronous stream of chat events.
     public func run(
         timelineId: UUID,
@@ -212,7 +214,9 @@ public struct MonadCore: Sendable {
         systemInstructions: String? = nil,
         agentInstanceId: UUID? = nil,
         maxTurns: Int = ChatEngine.Constants.defaultMaxTurns,
-        generationParameters: GenerationParameters? = nil
+        generationParameters: GenerationParameters? = nil,
+        contextPipeline: ContextPipeline? = nil,
+        assemblyPipeline: PromptAssemblyPipeline? = nil
     ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
         try await withDependencies {
             // Direct ChatEngine deps
@@ -240,7 +244,9 @@ public struct MonadCore: Sendable {
                 systemInstructions: systemInstructions,
                 agentInstanceId: agentInstanceId,
                 maxTurns: maxTurns,
-                generationParameters: generationParameters ?? self.defaultGenerationParameters
+                generationParameters: generationParameters ?? self.defaultGenerationParameters,
+                contextPipeline: contextPipeline,
+                assemblyPipeline: assemblyPipeline
             )
         }
     }

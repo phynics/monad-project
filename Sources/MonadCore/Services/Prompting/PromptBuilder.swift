@@ -35,7 +35,8 @@ public enum PromptBuilder {
         _ request: LLMPromptRequest,
         agentInstance: AgentInstance? = nil,
         timeline: Timeline? = nil,
-        extensionSections: [any ContextSection] = []
+        extensionSections: [any ContextSection] = [],
+        overridePipeline: PromptAssemblyPipeline? = nil
     ) async throws -> Prompt {
         let assemblyContext = PromptAssemblyContext(
             request: request,
@@ -44,7 +45,7 @@ public enum PromptBuilder {
             extensionSections: extensionSections
         )
         
-        let pipeline = PromptAssemblyPipeline(stages: defaultAssemblyStages())
+        let pipeline = overridePipeline ?? PromptAssemblyPipeline(stages: defaultAssemblyStages())
         
         // Execute the pipeline and drain the events.
         let stream = pipeline.execute(assemblyContext)

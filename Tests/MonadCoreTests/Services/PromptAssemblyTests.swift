@@ -133,4 +133,22 @@ struct PromptAssemblyTests {
             #expect(content == "pipeline test")
         }
     }
+
+    @Test("PromptBuilder uses override pipeline in buildContext")
+    func promptBuilder_usesOverridePipeline() async throws {
+        struct CustomStage: PromptAssemblyStage {
+            func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
+                await context.append(PromptAssemblyTests.MockSection(id: "override_assembly"))
+                return AsyncThrowingStream { $0.finish() }
+            }
+        }
+        
+        let overridePipeline = PromptAssemblyPipeline(stages: [CustomStage()])
+        let request = makeRequest(userQuery: "test")
+        let prompt = try await PromptBuilder.buildContext(request, overridePipeline: overridePipeline)
+
+        let sections = await prompt.sections
+        #expect(sections.count == 1)
+        #expect(sections.first?.id == "override_assembly")
+    }
 }
