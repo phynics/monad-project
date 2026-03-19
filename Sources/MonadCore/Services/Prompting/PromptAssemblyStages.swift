@@ -6,7 +6,9 @@ import MonadShared
 
 /// Appends system instructions to the prompt.
 public struct SystemInstructionsStage: PromptAssemblyStage {
+    /// Initializes a new system instructions stage.
     public init() {}
+    /// Appends system instructions from the request or default instructions to the context.
     public func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         try await running(context) {
             let request = context.request
@@ -18,7 +20,9 @@ public struct SystemInstructionsStage: PromptAssemblyStage {
 
 /// Appends agent context and timeline title to the prompt.
 public struct AgentContextStage: PromptAssemblyStage {
+    /// Initializes a new agent context stage.
     public init() {}
+    /// Appends agent instance and timeline title information to the context.
     public func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         try await running(context) {
             if let agent = context.agentInstance {
@@ -31,7 +35,9 @@ public struct AgentContextStage: PromptAssemblyStage {
 
 /// Appends context notes to the prompt.
 public struct ContextNotesStage: PromptAssemblyStage {
+    /// Initializes a new context notes stage.
     public init() {}
+    /// Appends discovered notes from the request to the context.
     public func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         try await running(context) {
             let notes = context.request.contextNotes
@@ -42,7 +48,9 @@ public struct ContextNotesStage: PromptAssemblyStage {
 
 /// Appends memories to the prompt.
 public struct MemoriesStage: PromptAssemblyStage {
+    /// Initializes a new memories stage.
     public init() {}
+    /// Appends retrieved memories from the request to the context.
     public func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         try await running(context) {
             let memories = context.request.memories
@@ -53,7 +61,9 @@ public struct MemoriesStage: PromptAssemblyStage {
 
 /// Appends tools to the prompt.
 public struct ToolsStage: PromptAssemblyStage {
+    /// Initializes a new tools stage.
     public init() {}
+    /// Appends available tools from the request to the context.
     public func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         try await running(context) {
             let tools = context.request.tools
@@ -64,7 +74,9 @@ public struct ToolsStage: PromptAssemblyStage {
 
 /// Appends workspace and client context to the prompt.
 public struct WorkspacesContextStage: PromptAssemblyStage {
+    /// Initializes a new workspaces context stage.
     public init() {}
+    /// Appends workspace and client information to the context.
     public func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         try await running(context) {
             let request = context.request
@@ -79,7 +91,9 @@ public struct WorkspacesContextStage: PromptAssemblyStage {
 
 /// Appends timeline context to the prompt.
 public struct TimelineContextStage: PromptAssemblyStage {
+    /// Initializes a new timeline context stage.
     public init() {}
+    /// Appends timeline information to the context if available.
     public func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         try await running(context) {
             if let timeline = context.timeline {
@@ -91,7 +105,9 @@ public struct TimelineContextStage: PromptAssemblyStage {
 
 /// Appends optimized chat history to the prompt.
 public struct ChatHistoryStage: PromptAssemblyStage {
+    /// Initializes a new chat history stage.
     public init() {}
+    /// Optimizes and appends conversation history to the context.
     public func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         try await running(context) {
             let history = context.request.chatHistory
@@ -106,7 +122,9 @@ public struct ChatHistoryStage: PromptAssemblyStage {
 
 /// Appends the user's latest query to the prompt.
 public struct UserQueryStage: PromptAssemblyStage {
+    /// Initializes a new user query stage.
     public init() {}
+    /// Appends the latest user query to the context.
     public func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         try await running(context) {
             let query = context.request.userQuery
@@ -117,7 +135,9 @@ public struct UserQueryStage: PromptAssemblyStage {
 
 /// Appends extension sections provided in the request context.
 public struct ExtensionSectionsStage: PromptAssemblyStage {
+    /// Initializes a new extension sections stage.
     public init() {}
+    /// Appends any additional sections provided by extensions to the context.
     public func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         try await running(context) {
             let sections = context.extensionSections

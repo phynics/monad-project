@@ -3,21 +3,41 @@ import MonadShared
 
 /// Shared context state during the gathering pipeline
 public actor ContextPipelineContext {
+    /// The original user query.
     public let query: String
+    /// Recent conversation history.
     public let history: [Message]
+    /// Maximum number of results to retrieve.
     public let limit: Int
+    /// Optional closure to generate tags from a string.
     public let tagGenerator: (@Sendable (String) async throws -> [String])?
+    /// The time when the pipeline execution started.
     public let startTime: CFAbsoluteTime
 
+    /// The query after being augmented with history/context.
     public private(set) var augmentedQuery: String = ""
+    /// Discovered filesystem notes.
     public private(set) var notes: [ContextFile] = []
+    /// Final merged semantic memories.
     public private(set) var memories: [SemanticSearchResult] = []
+    /// Tags generated for the current query.
     public private(set) var generatedTags: [String] = []
+    /// Vector representation of the query.
     public private(set) var queryVector: [Double] = []
+    /// Raw semantic search results before ranking.
     public private(set) var semanticResults: [SemanticSearchResult] = []
+    /// Raw tag-based search results before ranking.
     public private(set) var tagResults: [Memory] = []
+    /// The final assembled context data.
     public private(set) var contextData: ContextData?
 
+    /// Initializes a new pipeline context.
+    /// - Parameters:
+    ///   - query: The user's input query.
+    ///   - history: Recent conversation messages.
+    ///   - limit: Result limit for retrieval.
+    ///   - tagGenerator: Optional tag generation logic.
+    ///   - startTime: Pipeline start timestamp.
     public init(
         query: String,
         history: [Message],
@@ -32,14 +52,26 @@ public actor ContextPipelineContext {
         self.startTime = startTime
     }
 
+    /// Returns the gathered results.
+    /// - Returns: A tuple containing notes, memories, tags, query vector, and raw search results.
     public func getResults() -> (notes: [ContextFile], memories: [SemanticSearchResult], tags: [String], vector: [Double], semanticResults: [SemanticSearchResult], tagResults: [Memory]) {
         (notes, memories, generatedTags, queryVector, semanticResults, tagResults)
     }
 
+    /// Sets the augmented version of the search query.
+    /// - Parameter query: The augmented query string.
     public func setAugmentedQuery(_ query: String) {
         augmentedQuery = query
     }
 
+    /// Updates the gathered results in the context.
+    /// - Parameters:
+    ///   - notes: Discovered notes.
+    ///   - memories: Final ranked memories.
+    ///   - tags: Generated tags.
+    ///   - vector: Query embedding vector.
+    ///   - semanticResults: Raw semantic matches.
+    ///   - tagResults: Raw tag matches.
     public func setResults(
         notes: [ContextFile]? = nil,
         memories: [SemanticSearchResult]? = nil,
@@ -56,6 +88,8 @@ public actor ContextPipelineContext {
         if let tagResults { self.tagResults = tagResults }
     }
 
+    /// Sets the final context data object.
+    /// - Parameter data: The assembled context data.
     public func setContextData(_ data: ContextData) {
         contextData = data
     }

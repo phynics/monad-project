@@ -4,18 +4,31 @@ import MonadShared
 
 /// Events emitted during prompt assembly.
 public enum PromptAssemblyEvent: Sendable {
+    /// Indicates a stage has started processing.
     case stageStarted(String)
+    /// Indicates a stage has completed processing.
     case stageCompleted(String)
 }
 
 /// Manages prompt assembly state. Pipeline-ready.
 public actor PromptAssemblyContext: Sendable {
+    /// The original prompt request.
     public let request: LLMPromptRequest
+    /// The agent instance associated with the prompt.
     public let agentInstance: AgentInstance?
+    /// The conversation timeline.
     public let timeline: Timeline?
+    /// Additional context sections provided by extensions.
     public let extensionSections: [any ContextSection]
+    /// The gathered prompt sections.
     public private(set) var sections: [any ContextSection] = []
 
+    /// Initializes a new prompt assembly context.
+    /// - Parameters:
+    ///   - request: The prompt request data.
+    ///   - agentInstance: Optional agent instance.
+    ///   - timeline: Optional timeline.
+    ///   - extensionSections: Optional extension sections.
     public init(
         request: LLMPromptRequest,
         agentInstance: AgentInstance? = nil,
@@ -28,10 +41,14 @@ public actor PromptAssemblyContext: Sendable {
         self.extensionSections = extensionSections
     }
 
+    /// Appends a single section to the prompt.
+    /// - Parameter section: The section to add.
     public func append(_ section: any ContextSection) {
         sections.append(section)
     }
 
+    /// Appends multiple sections to the prompt.
+    /// - Parameter sections: The sections to add.
     public func append(_ sections: [any ContextSection]) {
         self.sections.append(contentsOf: sections)
     }
@@ -50,6 +67,10 @@ public extension PromptAssemblyStage {
     }
 
     /// Helper to execute an action and yield start/complete events.
+    /// - Parameters:
+    ///   - context: The shared assembly context.
+    ///   - action: The work to perform.
+    /// - Returns: A stream that yields start and complete events.
     func running(_: PromptAssemblyContext, action: @escaping @Sendable () async throws -> Void) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         let id = self.id
         return AsyncThrowingStream { continuation in
@@ -68,33 +89,40 @@ public extension PromptAssemblyStage {
     }
 }
 
-/// DSL for composing prompt assembly stages.
+/// DSL for composing prompt assembly sections.
 @resultBuilder
 public struct PromptAssemblyBuilder {
+    /// Includes a single context section.
     public static func buildExpression(_ expression: any ContextSection) -> [any ContextSection] {
         [expression]
     }
 
+    /// Includes an array of context sections.
     public static func buildExpression(_ expression: [any ContextSection]) -> [any ContextSection] {
         expression
     }
 
+    /// Combines multiple components into a single array.
     public static func buildBlock(_ components: [any ContextSection]...) -> [any ContextSection] {
         components.flatMap { $0 }
     }
 
+    /// Handles optional components in the DSL.
     public static func buildOptional(_ component: [any ContextSection]?) -> [any ContextSection] {
         component ?? []
     }
 
+    /// Handles the 'first' case in the DSL.
     public static func buildEither(first component: [any ContextSection]) -> [any ContextSection] {
         component
     }
 
+    /// Handles the 'second' case in the DSL.
     public static func buildEither(second component: [any ContextSection]) -> [any ContextSection] {
         component
     }
 
+    /// Flattens an array of sections in the DSL.
     public static func buildArray(_ components: [[any ContextSection]]) -> [any ContextSection] {
         components.flatMap { $0 }
     }
@@ -103,36 +131,42 @@ public struct PromptAssemblyBuilder {
 /// A result builder for constructing prompt assembly pipelines from stages.
 @resultBuilder
 public struct PromptAssemblyPipelineBuilder {
+    /// Combines multiple stages into a single array.
     public static func buildBlock(
         _ components: [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]...
     ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
         components.flatMap { $0 }
     }
 
+    /// Includes a single pipeline stage.
     public static func buildExpression(
         _ expression: any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>
     ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
         [expression]
     }
 
+    /// Handles optional stages in the DSL.
     public static func buildOptional(
         _ component: [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]?
     ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
         component ?? []
     }
 
+    /// Handles the 'first' case in the DSL.
     public static func buildEither(
         first component: [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]
     ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
         component
     }
 
+    /// Handles the 'second' case in the DSL.
     public static func buildEither(
         second component: [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]
     ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
         component
     }
 
+    /// Flattens an array of stages in the DSL.
     public static func buildArray(
         _ components: [[any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]]
     ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
@@ -141,7 +175,8 @@ public struct PromptAssemblyPipelineBuilder {
 }
 
 public extension PromptAssemblyPipeline {
-    /// Initializes a pipeline using the `@PromptAssemblyPipelineBuilder` DSL.
+    /// Initializes a prompt assembly pipeline using the `@PromptAssemblyPipelineBuilder` DSL.
+    /// - Parameter builder: A closure returning the stages of the pipeline.
     convenience init(
         @PromptAssemblyPipelineBuilder builder: () -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]
     ) {

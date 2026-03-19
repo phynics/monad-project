@@ -6,8 +6,12 @@ import MonadShared
 public struct QueryAugmentationStage: PipelineStage {
     private let logger = Logger.module(named: "com.monad.QueryAugmentationStage")
 
+    /// Initializes a new query augmentation stage.
     public init() {}
 
+    /// Augments the user's query with relevant context from the history.
+    /// - Parameter context: The shared pipeline context.
+    /// - Returns: A stream that yields an augmentation progress event.
     public func process(
         _ context: ContextPipelineContext
     ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {

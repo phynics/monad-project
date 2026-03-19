@@ -12,8 +12,12 @@ public struct MemoryRetrievalStage: PipelineStage {
     private let logger = Logger.module(named: "com.monad.MemoryRetrievalStage")
     private let ranker = ContextRanker()
 
+    /// Initializes a new memory retrieval stage.
     public init() {}
 
+    /// Retrieves relevant memories and tags for the query in the context.
+    /// - Parameter context: The shared pipeline context.
+    /// - Returns: A stream that yields progress events as retrieval proceeds.
     public func process(
         _ context: ContextPipelineContext
     ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
