@@ -50,13 +50,20 @@ public extension PromptAssemblyStage {
     }
 
     /// Helper to execute an action and yield start/complete events.
-    func running(_ context: PromptAssemblyContext, action: @Sendable () async throws -> Void) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
+    func running(_: PromptAssemblyContext, action: @escaping @Sendable () async throws -> Void) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         let id = self.id
-        try await action()
         return AsyncThrowingStream { continuation in
-            continuation.yield(.stageStarted(id))
-            continuation.yield(.stageCompleted(id))
-            continuation.finish()
+            let task = Task {
+                continuation.yield(.stageStarted(id))
+                do {
+                    try await action()
+                    continuation.yield(.stageCompleted(id))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { @Sendable _ in task.cancel() }
         }
     }
 }
@@ -64,11 +71,80 @@ public extension PromptAssemblyStage {
 /// DSL for composing prompt assembly stages.
 @resultBuilder
 public struct PromptAssemblyBuilder {
-    public static func buildExpression(_ expression: any ContextSection) -> [any ContextSection] { [expression] }
-    public static func buildExpression(_ expression: [any ContextSection]) -> [any ContextSection] { expression }
-    public static func buildBlock(_ components: [any ContextSection]...) -> [any ContextSection] { components.flatMap { $0 } }
-    public static func buildOptional(_ component: [any ContextSection]?) -> [any ContextSection] { component ?? [] }
-    public static func buildEither(first component: [any ContextSection]) -> [any ContextSection] { component }
-    public static func buildEither(second component: [any ContextSection]) -> [any ContextSection] { component }
-    public static func buildArray(_ components: [[any ContextSection]]) -> [any ContextSection] { components.flatMap { $0 } }
+    public static func buildExpression(_ expression: any ContextSection) -> [any ContextSection] {
+        [expression]
+    }
+
+    public static func buildExpression(_ expression: [any ContextSection]) -> [any ContextSection] {
+        expression
+    }
+
+    public static func buildBlock(_ components: [any ContextSection]...) -> [any ContextSection] {
+        components.flatMap { $0 }
+    }
+
+    public static func buildOptional(_ component: [any ContextSection]?) -> [any ContextSection] {
+        component ?? []
+    }
+
+    public static func buildEither(first component: [any ContextSection]) -> [any ContextSection] {
+        component
+    }
+
+    public static func buildEither(second component: [any ContextSection]) -> [any ContextSection] {
+        component
+    }
+
+    public static func buildArray(_ components: [[any ContextSection]]) -> [any ContextSection] {
+        components.flatMap { $0 }
+    }
+}
+
+/// A result builder for constructing prompt assembly pipelines from stages.
+@resultBuilder
+public struct PromptAssemblyPipelineBuilder {
+    public static func buildBlock(
+        _ components: [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]...
+    ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
+        components.flatMap { $0 }
+    }
+
+    public static func buildExpression(
+        _ expression: any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>
+    ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
+        [expression]
+    }
+
+    public static func buildOptional(
+        _ component: [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]?
+    ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
+        component ?? []
+    }
+
+    public static func buildEither(
+        first component: [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]
+    ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
+        component
+    }
+
+    public static func buildEither(
+        second component: [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]
+    ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
+        component
+    }
+
+    public static func buildArray(
+        _ components: [[any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]]
+    ) -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>] {
+        components.flatMap { $0 }
+    }
+}
+
+public extension PromptAssemblyPipeline {
+    /// Initializes a pipeline using the `@PromptAssemblyPipelineBuilder` DSL.
+    convenience init(
+        @PromptAssemblyPipelineBuilder builder: () -> [any PipelineStage<PromptAssemblyContext, PromptAssemblyEvent>]
+    ) {
+        self.init(stages: builder())
+    }
 }

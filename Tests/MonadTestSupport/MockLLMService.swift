@@ -8,7 +8,7 @@ public final class MockLLMClient: LLMClientProtocol, @unchecked Sendable {
     public var nextResponse: String = ""
     public var nextResponses: [String] = []
     public var lastMessages: [ChatQuery.ChatCompletionMessageParam] = []
-    public var lastParameters: GenerationParameters? = nil
+    public var lastParameters: GenerationParameters?
     public var shouldThrowError: Bool = false
 
     /// Typed tool calls for stream simulation.
@@ -175,7 +175,7 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         return nextResponse
     }
 
-    public func chatStreamWithContext(_ request: LLMChatRequest) async -> LLMStreamResult {
+    public func chatStreamWithContext(_ request: LLMChatRequest) async throws -> LLMStreamResult {
         let stream = await chatStream(
             messages: [],
             tools: nil,
@@ -190,8 +190,8 @@ public final class MockLLMService: LLMServiceProtocol, @unchecked Sendable, Heal
         tools: [ChatQuery.ChatCompletionToolParam]?,
         responseFormat: ChatQuery.ResponseFormat?,
         generationParameters: GenerationParameters?,
-        useUtilityModel: Bool,
-        useFastModel: Bool
+        useUtilityModel _: Bool,
+        useFastModel _: Bool
     ) async -> AsyncThrowingStream<ChatStreamResult, Error> {
         if let stubbed = stubbedStream {
             return stubbed

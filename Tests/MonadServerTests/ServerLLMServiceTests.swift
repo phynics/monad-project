@@ -6,7 +6,7 @@ import MonadTestSupport
 import OpenAI
 import Testing
 
-@Suite struct ServerLLMServiceTests {
+struct ServerLLMServiceTests {
     @Test("Test LLMService Initialization and Config Load")
     func initialization() async throws {
         let defaults = try #require(UserDefaults(suiteName: "TestLLMService"))
@@ -144,7 +144,7 @@ import Testing
             primaryWorkspace: nil,
             clientName: nil
         )
-        let result = await service.chatStreamWithContext(chatRequest)
+        let result = try await service.chatStreamWithContext(chatRequest)
 
         #expect(!result.rawPrompt.isEmpty)
 

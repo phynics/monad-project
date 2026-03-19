@@ -4,7 +4,7 @@ import OpenAI
 
 public extension LLMServiceProtocol {
     /// Stream chat with full prompt building (includes notes, history, etc.)
-    func chatStreamWithContext(_ request: LLMChatRequest) async -> LLMStreamResult {
+    func chatStreamWithContext(_ request: LLMChatRequest) async throws -> LLMStreamResult {
         let promptRequest = LLMPromptRequest(
             userQuery: request.userQuery,
             contextNotes: request.contextNotes,
@@ -17,12 +17,7 @@ public extension LLMServiceProtocol {
             systemInstructions: request.systemInstructions,
             generationParameters: request.generationParameters
         )
-        guard let prompt = try? await PromptBuilder.buildContext(promptRequest) else {
-            return LLMStreamResult(
-                stream: AsyncThrowingStream { $0.finish(throwing: LLMServiceError.notConfigured) },
-                rawPrompt: ""
-            )
-        }
+        let prompt = try await PromptBuilder.buildContext(promptRequest)
 
         // Convert to OpenAI format
         let messages = await prompt.toMessages()
@@ -43,9 +38,9 @@ public extension LLMServiceProtocol {
     }
 }
 
-extension LLMService {
+public extension LLMService {
     /// Stream chat responses (low-level API)
-    public func chatStream(
+    func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]?,
         responseFormat: ChatQuery.ResponseFormat?,

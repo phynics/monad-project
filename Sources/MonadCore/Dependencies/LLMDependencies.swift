@@ -96,7 +96,7 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         fail()
     }
 
-    public func chatStreamWithContext(_: LLMChatRequest) async -> LLMStreamResult {
+    public func chatStreamWithContext(_: LLMChatRequest) async throws -> LLMStreamResult {
         return LLMStreamResult(stream: AsyncThrowingStream { _ in }, rawPrompt: "")
     }
 

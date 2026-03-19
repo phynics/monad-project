@@ -43,7 +43,6 @@ private func makeAgent(name: String = "TestAgent", description: String = "") -> 
 
 // MARK: - WorkspacesContext Tests
 
-@Suite("WorkspacesContext")
 struct WorkspacesContextTests {
     // MARK: Empty / Nil cases
 
@@ -279,13 +278,12 @@ struct WorkspacesContextTests {
             workspaces: [makeClientWS()], primaryWorkspace: nil, clientName: nil
         )
         let output = await section.render() ?? ""
-        #expect(output.hasSuffix("When a user asks you to operate on files or perform actions in these workspaces, you can use the appropriate tools with the workspace's URI or ID."))
+        #expect(output.hasSuffix("When a user asks you to operate on files or perform actions in these workspaces, you can use the appropriate tools with the workspace's URI or ID.\n"))
     }
 }
 
 // MARK: - SystemInstructions Tests
 
-@Suite("SystemInstructions")
 struct SystemInstructionsTests {
     @Test("empty instructions renders nil")
     func emptyRendersNil() async {
@@ -312,7 +310,6 @@ struct SystemInstructionsTests {
 
 // MARK: - AgentContext Tests
 
-@Suite("AgentContext")
 struct AgentContextTests {
     @Test("contains identity header and agent name")
     func headerAndName() async {
@@ -355,7 +352,6 @@ struct AgentContextTests {
 
 // MARK: - TimelineContext Tests
 
-@Suite("TimelineContext")
 struct TimelineContextTests {
     @Test("contains timeline ID and title")
     func idAndTitle() async {

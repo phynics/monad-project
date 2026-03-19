@@ -152,7 +152,7 @@ public protocol LLMServiceProtocol: HealthCheckable, Sendable {
         useUtilityModel: Bool
     ) async throws -> String
 
-    func chatStreamWithContext(_ request: LLMChatRequest) async -> LLMStreamResult
+    func chatStreamWithContext(_ request: LLMChatRequest) async throws -> LLMStreamResult
 
     /// Stream chat response from a prepared list of messages (low-level)
     func chatStream(
@@ -172,8 +172,8 @@ public protocol LLMServiceProtocol: HealthCheckable, Sendable {
     func fetchAvailableModels() async throws -> [String]?
 }
 
-extension LLMServiceProtocol {
-    public func chatStream(
+public extension LLMServiceProtocol {
+    func chatStream(
         messages: [ChatQuery.ChatCompletionMessageParam],
         tools: [ChatQuery.ChatCompletionToolParam]? = nil,
         responseFormat: ChatQuery.ResponseFormat? = nil,

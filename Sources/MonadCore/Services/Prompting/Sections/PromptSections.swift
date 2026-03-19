@@ -285,7 +285,7 @@ public struct WorkspacesContext: ContextSection {
         output += "## Workspace Routing Rules\n"
         output += "1. All file paths passed to tools MUST be relative to the targeted workspace root.\n"
         output += "2. **IMPORTANT**: If multiple workspaces provide the same tool (e.g. `ls`, `cat`, `grep`), you MUST provide the `workspaceID` argument in your tool call to specify which workspace to use. If omitted, the system will use a default priority that may not match your intent.\n"
-        output += "\nWhen a user asks you to operate on files or perform actions in these workspaces, you can use the appropriate tools with the workspace's URI or ID."
+        output += "\nWhen a user asks you to operate on files or perform actions in these workspaces, you can use the appropriate tools with the workspace's URI or ID.\n"
 
         return output
     }
@@ -312,7 +312,7 @@ public struct AgentContext: ContextSection {
     public func render() async -> String? {
         var lines: [String] = [
             "## Your Identity",
-            "You are **\(agent.name)**."
+            "You are **\(agent.name)**.",
         ]
         if !agent.description.isEmpty {
             lines.append("Description: \(agent.description)")
