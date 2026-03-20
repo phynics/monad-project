@@ -75,12 +75,12 @@ struct PromptAssemblyTests {
         #expect(sections[2].id == "s3")
     }
 
-    // MARK: - PromptAssemblyBuilder Tests
+    // MARK: - ContextBuilder Tests
 
-    @Test("PromptAssemblyBuilder composes sections")
+    @Test("ContextBuilder composes sections")
     func builderComposesSections() {
-        @PromptAssemblyBuilder
-        func build() -> [any ContextSection] {
+        @ContextBuilder
+        func build() -> [ContextSection] {
             MockSection(id: "s1")
             [MockSection(id: "s2"), MockSection(id: "s3")]
             if true {

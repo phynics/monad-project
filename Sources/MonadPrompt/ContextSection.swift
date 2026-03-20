@@ -1,103 +1,112 @@
 import Foundation
 
-/// How stable a section's content is across requests.
-/// Used to order sections for optimal LLM prompt caching.
+/// Defines the stability of a section's content across requests.
+/// Used to order sections to maximize LLM prompt caching effectiveness.
 public enum CachePolicy: Sendable, Comparable {
-    /// Content is stable across turns (system instructions, agent identity).
-    /// Placed earliest in the prompt to maximize cache prefix.
+    /// Content remains stable across multiple turns (e.g., system instructions, agent identity).
+    /// These are placed earliest in the prompt to create a consistent cache prefix.
     case stable
-    /// Content changes occasionally (tools, workspace context).
+    /// Content changes occasionally or between sessions (e.g., tools, workspace environment).
     case semiStable
-    /// Content changes every request (user query, latest history).
+    /// Content changes with every request (e.g., latest user query, recent chat history).
     case volatile
 }
 
-/// Defines how a section should be handled when the token budget is exceeded
+/// Defines how a section should be handled when the total prompt token budget is exceeded.
 public enum CompressionStrategy: Sendable {
-    /// Never compress this section (e.g. system instructions, critical context)
+    /// Never compress or omit this section; it is critical for the prompt.
     case keep
 
-    /// Truncate the section if needed
-    /// - tail: if true, cut from the end. if false, cut from the beginning.
+    /// Truncate the section text to fit the budget.
+    /// - Parameter tail: If true, truncate from the end. If false, truncate from the beginning.
     case truncate(tail: Bool)
 
-    /// Summarize the section content (requires external compressor logic)
+    /// Attempt to summarize the content using a secondary LLM pass.
     case summarize
 
-    /// Omit the section entirely if it doesn't fit
+    /// Omit the entire section if it cannot fit within the allocated budget.
     case drop
 }
 
-/// The structural type of the section, used for formatting hints
+/// Describes the structural nature of a section's content.
 public enum ContextSectionType: Sendable {
-    /// A single block of text
+    /// A continuous block of text.
     case text
 
-    /// A list of items (e.g. chat messages, search results)
+    /// A structured list of distinct items.
     case list(items: [String])
 }
 
-/// A generic section of the prompt context
+/// A protocol defining a distinct component of an LLM prompt.
+/// Implementations are responsible for rendering their specific context into a string.
 public protocol ContextSection: Sendable {
-    /// Unique identifier for this section type (e.g. "system", "history")
+    /// A unique identifier for this section type (e.g., "system", "history").
     var id: String { get }
 
-    /// Priority for ordering (higher = earlier in prompt/more important)
+    /// The priority of the section. Higher values typically result in earlier placement
+    /// or protected status during token budget allocation.
     var priority: Int { get }
 
-    /// Estimated token count for this section
+    /// An estimate of the number of tokens required to represent this section.
     var estimatedTokens: Int { get }
 
-    /// Strategy for handling token budget constraints
+    /// The strategy to employ if the section must be compressed to fit a token limit.
     var strategy: CompressionStrategy { get }
 
-    /// The type of content this section represents
+    /// The structural type of the content.
     var type: ContextSectionType { get }
 
-    /// Cache stability hint. Defaults to `.volatile`.
+    /// A hint about how frequently the content changes, used for cache optimization.
     var cachePolicy: CachePolicy { get }
 
-    /// Render the section into a string for the prompt
+    /// Renders the section into its final string representation.
+    /// - Returns: The rendered string, or nil if the section is empty or irrelevant.
     func render() async -> String?
 
-    /// Render the section, optionally constrained to a specific token limit
-    /// - Parameter tokens: Maximum tokens allowed. If nil, no limit.
-    /// - Returns: Rendered string, potentially truncated/summarized.
+    /// Renders the section, optionally applying a token constraint.
+    /// - Parameter tokens: The maximum number of tokens allowed for the rendered output.
+    /// - Returns: The rendered (and potentially truncated/summarized) string.
     func render(constrainedTo tokens: Int?) async -> String?
 
-    /// Create a version of this section constrained to a token limit
-    /// - Parameter tokens: The token limit
-    /// - Returns: A new section (either self, a modified copy, or a generic wrapper)
+    /// Returns a version of this section that adheres to a specific token limit.
+    /// - Parameter tokens: The token limit to enforce.
+    /// - Returns: A new section that fits within the budget.
     func constrained(to tokens: Int) -> ContextSection
 }
 
-/// Default implementations
+/// Default implementations for the `ContextSection` protocol.
 public extension ContextSection {
+    /// Default strategy is to keep the section as is.
     var strategy: CompressionStrategy {
         .keep
     }
 
+    /// Default content type is simple text.
     var type: ContextSectionType {
         .text
     }
 
+    /// Default cache policy is volatile.
     var cachePolicy: CachePolicy {
         .volatile
     }
 
+    /// Default implementation that ignores constraints and calls `render()`.
     func render(constrainedTo _: Int?) async -> String? {
-        // Default: Ignore limit and render normally
         await render()
     }
 
+    /// Default implementation that wraps the section in a `ConstrainedSection` wrapper.
     func constrained(to tokens: Int) -> ContextSection {
         ConstrainedSection(wrapped: self, limit: tokens)
     }
 }
 
-/// A generic wrapper that enforces a token limit on rendering
+/// A decorator that enforces a token limit on a wrapped `ContextSection`.
 public struct ConstrainedSection: ContextSection {
+    /// The original section being constrained.
     public let wrapped: ContextSection
+    /// The maximum number of tokens allowed.
     public let limit: Int
 
     public var id: String {
@@ -120,21 +129,27 @@ public struct ConstrainedSection: ContextSection {
         wrapped.type
     }
 
+    /// Initializes a new constrained section wrapper.
+    /// - Parameters:
+    ///   - wrapped: The section to constrain.
+    ///   - limit: The token limit.
     public init(wrapped: ContextSection, limit: Int) {
         self.wrapped = wrapped
         self.limit = limit
     }
 
+    /// Renders the wrapped section using the specified limit.
     public func render() async -> String? {
         await wrapped.render(constrainedTo: limit)
     }
 
+    /// Renders the wrapped section using the more restrictive of the two limits.
     public func render(constrainedTo tokens: Int?) async -> String? {
         let effectiveLimit = tokens.map { min($0, limit) } ?? limit
         return await wrapped.render(constrainedTo: effectiveLimit)
     }
 
-    /// Recursive update if constrained again
+    /// Returns a new constrained section with an even more restrictive limit if necessary.
     public func constrained(to tokens: Int) -> ContextSection {
         ConstrainedSection(wrapped: wrapped, limit: min(limit, tokens))
     }

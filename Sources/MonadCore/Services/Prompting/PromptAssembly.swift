@@ -2,33 +2,36 @@ import Foundation
 import MonadPrompt
 import MonadShared
 
-/// Events emitted during prompt assembly.
+/// Events emitted during the prompt assembly process.
 public enum PromptAssemblyEvent: Sendable {
-    /// Indicates a stage has started processing.
+    /// Indicates a specific stage has started processing.
+    /// - Parameter stageID: The unique identifier of the stage.
     case stageStarted(String)
-    /// Indicates a stage has completed processing.
+    /// Indicates a specific stage has completed processing.
+    /// - Parameter stageID: The unique identifier of the stage.
     case stageCompleted(String)
 }
 
-/// Manages prompt assembly state. Pipeline-ready.
+/// Manages the shared state during prompt assembly.
+/// This actor holds the request context and accumulates rendered sections.
 public actor PromptAssemblyContext: Sendable {
-    /// The original prompt request.
+    /// The original prompt request containing user input and context.
     public let request: LLMPromptRequest
-    /// The agent instance associated with the prompt.
+    /// The agent instance associated with the prompt, if any.
     public let agentInstance: AgentInstance?
-    /// The conversation timeline.
+    /// The conversation timeline context, if any.
     public let timeline: Timeline?
-    /// Additional context sections provided by extensions.
+    /// Additional context sections provided by extensions or plugins.
     public let extensionSections: [any ContextSection]
-    /// The gathered prompt sections.
+    /// The ordered collection of gathered prompt sections.
     public private(set) var sections: [any ContextSection] = []
 
     /// Initializes a new prompt assembly context.
     /// - Parameters:
     ///   - request: The prompt request data.
-    ///   - agentInstance: Optional agent instance.
-    ///   - timeline: Optional timeline.
-    ///   - extensionSections: Optional extension sections.
+    ///   - agentInstance: Optional agent instance for identity injection.
+    ///   - timeline: Optional timeline for conversation context.
+    ///   - extensionSections: Optional additional sections from extensions.
     public init(
         request: LLMPromptRequest,
         agentInstance: AgentInstance? = nil,
@@ -41,46 +44,50 @@ public actor PromptAssemblyContext: Sendable {
         self.extensionSections = extensionSections
     }
 
-    /// Appends a single section to the prompt.
-    /// - Parameter section: The section to add.
+    /// Appends a single section to the assembled prompt.
+    /// - Parameter section: The context section to add.
     public func append(_ section: any ContextSection) {
         sections.append(section)
     }
 
-    /// Appends multiple sections to the prompt.
-    /// - Parameter sections: The sections to add.
+    /// Appends multiple sections to the assembled prompt.
+    /// - Parameter sections: An array of context sections to add.
     public func append(_ sections: [any ContextSection]) {
         self.sections.append(contentsOf: sections)
     }
 }
 
-/// A specialized pipeline for prompt assembly.
+/// A specialized pipeline for orchestrating the assembly of an LLM prompt.
 public typealias PromptAssemblyPipeline = Pipeline<PromptAssemblyContext, PromptAssemblyEvent>
 
 /// Protocol defining a single stage in the prompt assembly pipeline.
+/// Stages are responsible for retrieving specific pieces of context and appending them as sections.
 public protocol PromptAssemblyStage: PipelineStage where Context == PromptAssemblyContext, Event == PromptAssemblyEvent {
     /// Executes the assembly logic for this stage.
+    /// - Parameter context: The shared assembly context to modify.
     func execute(_ context: PromptAssemblyContext) async throws
 }
 
 public extension PromptAssemblyStage {
-    /// Default implementation returns the type name.
+    /// Default implementation returns the type name of the stage.
     var id: String {
         String(describing: Self.self)
     }
 
-    /// Default implementation of process that wraps execute in start/complete events.
+    /// Implements the `PipelineStage` requirement by wrapping `execute` in lifecycle events.
+    /// - Parameter context: The shared assembly context.
+    /// - Returns: A stream emitting start and completion events.
     func process(_ context: PromptAssemblyContext) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         try await running(context) {
             try await execute(context)
         }
     }
 
-    /// Helper to execute an action and yield start/complete events.
+    /// Helper that manages the execution lifecycle and yields start/complete events.
     /// - Parameters:
     ///   - context: The shared assembly context.
-    ///   - action: The work to perform.
-    /// - Returns: A stream that yields start and complete events.
+    ///   - action: The actual work to perform within the stage.
+    /// - Returns: A stream that yields `.stageStarted` and `.stageCompleted`.
     func running(_: PromptAssemblyContext, action: @escaping @Sendable () async throws -> Void) async throws -> AsyncThrowingStream<PromptAssemblyEvent, Error> {
         let id = self.id
         return AsyncThrowingStream { continuation in
@@ -96,45 +103,6 @@ public extension PromptAssemblyStage {
             }
             continuation.onTermination = { @Sendable _ in task.cancel() }
         }
-    }
-}
-
-/// DSL for composing prompt assembly sections.
-@resultBuilder
-public struct PromptAssemblyBuilder {
-    /// Includes a single context section.
-    public static func buildExpression(_ expression: any ContextSection) -> [any ContextSection] {
-        [expression]
-    }
-
-    /// Includes an array of context sections.
-    public static func buildExpression(_ expression: [any ContextSection]) -> [any ContextSection] {
-        expression
-    }
-
-    /// Combines multiple components into a single array.
-    public static func buildBlock(_ components: [any ContextSection]...) -> [any ContextSection] {
-        components.flatMap { $0 }
-    }
-
-    /// Handles optional components in the DSL.
-    public static func buildOptional(_ component: [any ContextSection]?) -> [any ContextSection] {
-        component ?? []
-    }
-
-    /// Handles the 'first' case in the DSL.
-    public static func buildEither(first component: [any ContextSection]) -> [any ContextSection] {
-        component
-    }
-
-    /// Handles the 'second' case in the DSL.
-    public static func buildEither(second component: [any ContextSection]) -> [any ContextSection] {
-        component
-    }
-
-    /// Flattens an array of sections in the DSL.
-    public static func buildArray(_ components: [[any ContextSection]]) -> [any ContextSection] {
-        components.flatMap { $0 }
     }
 }
 

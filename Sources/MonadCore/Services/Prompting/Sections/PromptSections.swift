@@ -2,19 +2,29 @@ import Foundation
 import MonadPrompt
 import MonadShared
 
-/// System instructions wrapper
+/// A section containing primary system instructions.
 public struct SystemInstructions: ContextSection {
+    /// Unique identifier for the system instructions section.
     public let id = "system"
+    /// High priority to ensure instructions appear early in the prompt.
     public let priority = 100
+    /// Stable cache policy as instructions rarely change between turns.
     public let cachePolicy: CachePolicy = .stable
+    /// Always keep instructions; never compress them.
     public let strategy: CompressionStrategy = .keep
+    /// Standard text content type.
     public let type: ContextSectionType = .text
+    /// The raw instruction string.
     public let instructions: String
 
+    /// Initializes a new system instructions section.
+    /// - Parameter instructions: The instruction content.
     public init(_ instructions: String) {
         self.instructions = instructions
     }
 
+    /// Renders the instructions with a standardized header.
+    /// - Returns: A formatted string containing the system instructions.
     public func render() async -> String? {
         guard !instructions.isEmpty else { return nil }
         return """
@@ -24,25 +34,40 @@ public struct SystemInstructions: ContextSection {
         """
     }
 
+    /// Estimates the token count for the instructions.
     public var estimatedTokens: Int {
         TokenEstimator.estimate(text: instructions)
     }
 }
 
-/// Memories wrapper
+/// A section containing retrieved semantic memories.
 public struct Memories: ContextSection {
+    /// Unique identifier for the memories section.
     public let id = "memories"
+    /// High priority to provide relevant context early.
     public let priority = 85
+    /// Volatile cache policy as retrieved memories depend on the specific query.
+    public let cachePolicy: CachePolicy = .volatile
+    /// Summarize memories if the token budget is exceeded.
     public let strategy: CompressionStrategy = .summarize
+    /// List-based content type.
     public let type: ContextSectionType = .list(items: [])
+    /// The retrieved memory objects.
     public let memories: [Memory]
+    /// An optional summary of the memories if already compressed.
     public let summarizedContent: String?
 
+    /// Initializes a new memories section.
+    /// - Parameters:
+    ///   - memories: The array of retrieved memories.
+    ///   - summarizedContent: Optional pre-summarized text.
     public init(_ memories: [Memory], summarizedContent: String? = nil) {
         self.memories = memories
         self.summarizedContent = summarizedContent
     }
 
+    /// Renders the memories into a list format or summary.
+    /// - Returns: A formatted string of memories or nil if empty.
     public func render() async -> String? {
         if let summary = summarizedContent {
             return """
@@ -60,6 +85,7 @@ public struct Memories: ContextSection {
         """
     }
 
+    /// Estimates the total token count for the memories.
     public var estimatedTokens: Int {
         if let summary = summarizedContent {
             return TokenEstimator.estimate(text: summary)
@@ -68,52 +94,76 @@ public struct Memories: ContextSection {
     }
 }
 
-/// Tools wrapper
+/// A section describing available tools for the agent.
 public struct Tools: ContextSection {
+    /// Unique identifier for the tools section.
     public let id = "tools"
+    /// High priority to ensure the agent knows its capabilities.
     public let priority = 80
+    /// Semi-stable cache policy as tools are typically consistent within a session.
     public let cachePolicy: CachePolicy = .semiStable
+    /// Always keep tool descriptions to avoid loss of functionality.
     public let strategy: CompressionStrategy = .keep
+    /// List-based content type.
     public let type: ContextSectionType = .list(items: [])
+    /// The available tool objects.
     public let tools: [AnyTool]
 
+    /// Initializes a new tools section.
+    /// - Parameter tools: The tools to describe.
     public init(_ tools: [AnyTool]) {
         self.tools = tools
     }
 
+    /// Renders the tool descriptions using standardized formatting.
+    /// - Returns: A formatted string of tool definitions.
     public func render() async -> String? {
         guard !tools.isEmpty else { return nil }
         return await formatToolsForPrompt(tools)
     }
 
+    /// Estimates the token count for the tool descriptions.
     public var estimatedTokens: Int {
-        tools.count * 50 // Rough estimate
+        tools.count * 50 // Rough estimate per tool definition
     }
 }
 
-/// Chat History wrapper
+/// A section containing conversation history.
 public struct ChatHistory: ContextSection {
+    /// Unique identifier for the history section.
     public let id = "chat_history"
+    /// Medium priority; history is important but instructions/tools take precedence.
     public let priority = 70
-    public let strategy: CompressionStrategy = .truncate(tail: false) // Crop from start (oldest)
+    /// Volatile cache policy as history grows with every turn.
+    public let cachePolicy: CachePolicy = .volatile
+    /// Truncate from the start (oldest messages) if needed.
+    public let strategy: CompressionStrategy = .truncate(tail: false)
+    /// List-based content type.
     public let type: ContextSectionType = .list(items: [])
+    /// The conversation messages.
     public let messages: [Message]
 
+    /// Initializes a new chat history section.
+    /// - Parameter messages: The messages to include.
     public init(_ messages: [Message]) {
         self.messages = messages
     }
 
+    /// Renders the history into text for raw prompts or debugging.
+    /// Note: Actual LLM calls usually pass history as a structured message array.
+    /// - Returns: A formatted conversation string or nil if empty.
     public func render() async -> String? {
-        // Special case: History isn't rendered into system prompt text usually,
-        // it's handled as messages array. But for debug or raw prompt, we render it.
-        // For actual LLM calls, LLMService handles message conversion.
-        return nil
+        return nil // History rendering is usually handled via structured messages
     }
 
+    /// Estimates the total token count for the message history.
     public var estimatedTokens: Int {
         TokenEstimator.estimate(parts: messages.map(\.content))
     }
 
+    /// Returns a new version of this section constrained to a token budget.
+    /// - Parameter tokens: The maximum allowed tokens.
+    /// - Returns: A truncated chat history section.
     public func constrained(to tokens: Int) -> ContextSection {
         guard estimatedTokens > tokens else { return self }
 
@@ -122,7 +172,6 @@ public struct ChatHistory: ContextSection {
 
         // Keep newest messages first (iterate backwards)
         for message in messages.reversed() {
-            // Rough estimate per message including overhead
             let count = TokenEstimator.estimate(text: message.content) + 10
             if accumulated + count > tokens {
                 break
@@ -131,27 +180,34 @@ public struct ChatHistory: ContextSection {
             keepCount += 1
         }
 
-        // If we can't keep any messages but limit is > 0, keep at least the very last one if possible?
-        // Or just return empty.
-        // Strict adherence to budget means return what fits.
-        // If query is huge, history might be 0.
-
         let subset = Array(messages.suffix(keepCount))
         return ChatHistory(subset)
     }
 }
 
+/// A section containing temporary notes or local file context.
 public struct ContextNotes: ContextSection {
+    /// Unique identifier for the context notes section.
     public let id = "context_notes"
+    /// High priority to ensure critical contextual data is provided.
     public let priority = 90
+    /// Volatile cache policy as notes depend on the active workspace and query.
+    public let cachePolicy: CachePolicy = .volatile
+    /// Truncate the end of the notes if the budget is exceeded.
     public let strategy: CompressionStrategy = .truncate(tail: true)
+    /// List-based content type.
     public let type: ContextSectionType = .list(items: [])
+    /// The gathered context files.
     public let notes: [ContextFile]
 
+    /// Initializes a new context notes section.
+    /// - Parameter notes: The context files to include.
     public init(_ notes: [ContextFile]) {
         self.notes = notes
     }
 
+    /// Renders the notes with standardized file headers.
+    /// - Returns: A formatted string of notes or nil if empty.
     public func render() async -> String? {
         guard !notes.isEmpty else { return nil }
 
@@ -172,6 +228,9 @@ public struct ContextNotes: ContextSection {
         """
     }
 
+    /// Renders the notes constrained to a specific token budget.
+    /// - Parameter tokens: Maximum tokens allowed.
+    /// - Returns: A potentially truncated string of notes.
     public func render(constrainedTo tokens: Int?) async -> String? {
         guard let tokens = tokens else { return await render() }
         guard var fullText = await render() else { return nil }
@@ -179,8 +238,6 @@ public struct ContextNotes: ContextSection {
         let estimated = TokenEstimator.estimate(text: fullText)
         if estimated <= tokens { return fullText }
 
-        // Truncate
-        // Simple char approximation: tokens * 4
         let charLimit = tokens * 4
         if fullText.count > charLimit {
             fullText = String(fullText.prefix(charLimit)) + "\n... [Truncated]"
@@ -188,44 +245,70 @@ public struct ContextNotes: ContextSection {
         return fullText
     }
 
+    /// Estimates the token count for all context notes.
     public var estimatedTokens: Int {
         TokenEstimator.estimate(parts: notes.map(\.content))
     }
 }
 
-/// User Query wrapper
+/// A section containing the user's latest query.
 public struct UserQuery: ContextSection {
+    /// Unique identifier for the user query section.
     public let id = "user_query"
+    /// Low priority to ensure it appears at the very end of the prompt.
     public let priority = 10
+    /// Volatile cache policy as the query changes every request.
+    public let cachePolicy: CachePolicy = .volatile
+    /// Always keep the user query.
     public let strategy: CompressionStrategy = .keep
+    /// Standard text content type.
     public let type: ContextSectionType = .text
+    /// The user's query string.
     public let query: String
 
+    /// Initializes a new user query section.
+    /// - Parameter query: The query text.
     public init(_ query: String) {
         self.query = query
     }
 
+    /// Renders the raw user query.
+    /// - Returns: The query string or nil if empty.
     public func render() async -> String? {
         guard !query.isEmpty else { return nil }
         return query
     }
 
+    /// Estimates the token count for the query.
     public var estimatedTokens: Int {
         TokenEstimator.estimate(text: query)
     }
 }
 
-/// Attached Workspaces wrapper
+/// A section describing attached workspaces and routing rules.
 public struct WorkspacesContext: ContextSection {
+    /// Unique identifier for the workspaces section.
     public let id = "workspaces"
+    /// Medium-high priority.
     public let priority = 75
+    /// Semi-stable cache policy as workspaces change per session.
     public let cachePolicy: CachePolicy = .semiStable
+    /// Always keep workspace context.
     public let strategy: CompressionStrategy = .keep
+    /// Standard text content type.
     public let type: ContextSectionType = .text
+    /// All attached workspaces.
     public let workspaces: [WorkspaceReference]
+    /// The primary workspace where most operations occur.
     public let primaryWorkspace: WorkspaceReference?
+    /// The name of the requesting client.
     public let clientName: String?
 
+    /// Initializes a new workspaces context section.
+    /// - Parameters:
+    ///   - workspaces: The full list of workspaces.
+    ///   - primaryWorkspace: The primary workspace.
+    ///   - clientName: The requesting client.
     public init(
         workspaces: [WorkspaceReference], primaryWorkspace: WorkspaceReference?,
         clientName: String?
@@ -235,6 +318,8 @@ public struct WorkspacesContext: ContextSection {
         self.clientName = clientName
     }
 
+    /// Renders workspace information, routing rules, and tool availability.
+    /// - Returns: A formatted string describing the environment.
     public func render() async -> String? {
         var output = ""
 
@@ -293,26 +378,40 @@ public struct WorkspacesContext: ContextSection {
         return output
     }
 
+    /// Estimates the token count for the workspace context.
     public var estimatedTokens: Int {
         TokenEstimator.estimate(text: "Workspaces section placeholder") + workspaces.count * 50
     }
 }
 
-/// Agent identity context — injected when an agent instance is attached to the timeline.
+/// A section describing the agent's identity and persona.
 public struct AgentContext: ContextSection {
+    /// Unique identifier for the agent identity section.
     public let id = "agent_context"
-    public let priority = 95 // Just below system instructions (100)
+    /// Very high priority, just below system instructions.
+    public let priority = 95
+    /// Stable cache policy as persona remains consistent.
     public let cachePolicy: CachePolicy = .stable
+    /// Always keep identity context.
     public let strategy: CompressionStrategy = .keep
+    /// Standard text content type.
     public let type: ContextSectionType = .text
+    /// The agent instance data.
     public let agent: AgentInstance
+    /// The title of the active timeline.
     public let timelineTitle: String?
 
+    /// Initializes a new agent context section.
+    /// - Parameters:
+    ///   - agent: The agent instance.
+    ///   - timelineTitle: Optional timeline name.
     public init(_ agent: AgentInstance, timelineTitle: String? = nil) {
         self.agent = agent
         self.timelineTitle = timelineTitle
     }
 
+    /// Renders the agent's name, description, and current timeline.
+    /// - Returns: A formatted string of identity information.
     public func render() async -> String? {
         var lines: [String] = [
             "## Your Identity",
@@ -328,24 +427,35 @@ public struct AgentContext: ContextSection {
         return lines.joined(separator: "\n")
     }
 
+    /// Estimates the token count for the identity context.
     public var estimatedTokens: Int {
         TokenEstimator.estimate(text: agent.name + agent.description) + 30
     }
 }
 
-/// Current timeline context — identifies the conversation thread the agent is participating in.
+/// A section containing metadata about the current conversation timeline.
 public struct TimelineContext: ContextSection {
+    /// Unique identifier for the timeline metadata section.
     public let id = "timeline_context"
-    public let priority = 72 // Between workspaces (75) and chat history (70)
+    /// Medium priority.
+    public let priority = 72
+    /// Semi-stable cache policy.
     public let cachePolicy: CachePolicy = .semiStable
+    /// Always keep timeline context.
     public let strategy: CompressionStrategy = .keep
+    /// Standard text content type.
     public let type: ContextSectionType = .text
+    /// The timeline object.
     public let timeline: Timeline
 
+    /// Initializes a new timeline context section.
+    /// - Parameter timeline: The timeline data.
     public init(_ timeline: Timeline) {
         self.timeline = timeline
     }
 
+    /// Renders the timeline ID and title.
+    /// - Returns: A formatted string of timeline metadata.
     public func render() async -> String? {
         """
         ## Current Timeline
@@ -354,6 +464,7 @@ public struct TimelineContext: ContextSection {
         """
     }
 
+    /// Estimates the token count for the timeline metadata.
     public var estimatedTokens: Int {
         TokenEstimator.estimate(text: timeline.title) + 20
     }
