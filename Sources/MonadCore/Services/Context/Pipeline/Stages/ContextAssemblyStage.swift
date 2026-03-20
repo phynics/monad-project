@@ -1,5 +1,6 @@
 import Foundation
 import Logging
+import MonadPrompt
 import MonadShared
 
 /// Pipeline stage responsible for assembling the gathered results into a final `ContextData` object.

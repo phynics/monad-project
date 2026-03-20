@@ -1,5 +1,6 @@
 import Foundation
 import Logging
+import MonadPrompt
 import MonadShared
 
 /// Pipeline stage responsible for augmenting the search query with recent conversation history.
@@ -17,7 +18,7 @@ public struct QueryAugmentationStage: PipelineStage {
     ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
         let query = context.query
         let history = context.history
-        
+
         let augmented = buildAugmentedContext(query: query, history: history)
         await context.setAugmentedQuery(augmented)
 

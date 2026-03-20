@@ -1,7 +1,10 @@
 import ErrorKit
 import Foundation
-import Logging
-import MonadShared
+
+/// Log levels for pipeline diagnostics.
+public enum PipelineLogLevel: Sendable {
+    case debug, error
+}
 
 /// Protocol defining a single stage in a pipeline.
 public protocol PipelineStage<Context, Event>: Sendable {
@@ -28,25 +31,27 @@ public extension PipelineStage {
 
 /// A generic, asynchronous pipeline that executes a series of stages.
 public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
+    public typealias LogHandler = @Sendable (PipelineLogLevel, String) -> Void
+
     private let stages: [any PipelineStage<Context, Event>]
     private let cleanupStages: [any PipelineStage<Context, Event>]
-    private let logger: Logger?
+    private let logHandler: LogHandler?
 
     public init(
         stages: [any PipelineStage<Context, Event>] = [],
         cleanupStages: [any PipelineStage<Context, Event>] = [],
-        logger: Logger? = nil
+        logHandler: LogHandler? = nil
     ) {
         self.stages = stages
         self.cleanupStages = cleanupStages
-        self.logger = logger
+        self.logHandler = logHandler
     }
 
     /// Adds a stage to the pipeline and returns a new pipeline instance.
     /// - Parameter stage: The stage to add.
     /// - Returns: A new pipeline instance with the added stage.
     public func add(_ stage: any PipelineStage<Context, Event>) -> Pipeline<Context, Event> {
-        return Pipeline(stages: stages + [stage], cleanupStages: cleanupStages, logger: logger)
+        Pipeline(stages: stages + [stage], cleanupStages: cleanupStages, logHandler: logHandler)
     }
 
     /// Adds a cleanup stage to the pipeline and returns a new pipeline instance.
@@ -54,14 +59,14 @@ public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
     /// - Parameter stage: The cleanup stage to add.
     /// - Returns: A new pipeline instance with the added cleanup stage.
     public func cleanup(_ stage: any PipelineStage<Context, Event>) -> Pipeline<Context, Event> {
-        return Pipeline(stages: stages, cleanupStages: cleanupStages + [stage], logger: logger)
+        Pipeline(stages: stages, cleanupStages: cleanupStages + [stage], logHandler: logHandler)
     }
 
-    /// Sets the logger for the pipeline and returns a new pipeline instance.
-    /// - Parameter logger: The logger to use.
-    /// - Returns: A new pipeline instance with the logger set.
-    public func withLogger(_ logger: Logger) -> Pipeline<Context, Event> {
-        return Pipeline(stages: stages, cleanupStages: cleanupStages, logger: logger)
+    /// Sets the log handler for the pipeline and returns a new pipeline instance.
+    /// - Parameter handler: The log handler closure.
+    /// - Returns: A new pipeline instance with the log handler set.
+    public func withLogHandler(_ handler: @escaping LogHandler) -> Pipeline<Context, Event> {
+        Pipeline(stages: stages, cleanupStages: cleanupStages, logHandler: handler)
     }
 
     /// Executes the pipeline on the given context.
@@ -69,7 +74,7 @@ public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
     ///   - context: The context to process.
     /// - Returns: A merged stream of all events from all stages.
     public func execute(_ context: Context) -> AsyncThrowingStream<Event, Error> {
-        return AsyncThrowingStream { continuation in
+        AsyncThrowingStream { continuation in
             let task = Task {
                 let executionError = await runPrimaryStages(context: context, continuation: continuation)
                 let finalError = await runCleanupStages(
@@ -124,7 +129,7 @@ public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
         label: String
     ) async -> Error? {
         let startTime = CFAbsoluteTimeGetCurrent()
-        logger?.debug("Starting \(label) stage: \(stage.id)")
+        logHandler?(.debug, "Starting \(label) stage: \(stage.id)")
 
         do {
             let stream = try await stage.process(context)
@@ -132,13 +137,13 @@ public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
                 continuation.yield(event)
             }
             let duration = CFAbsoluteTimeGetCurrent() - startTime
-            logger?.debug("Completed \(label) stage: \(stage.id) in \(String(format: "%.3f", duration))s")
+            logHandler?(.debug, "Completed \(label) stage: \(stage.id) in \(String(format: "%.3f", duration))s")
             return nil
         } catch {
             let duration = CFAbsoluteTimeGetCurrent() - startTime
             let durationStr = String(format: "%.3f", duration)
-            logger?.error("\(label) stage '\(stage.id)' failed after \(durationStr)s: \(error.localizedDescription)")
-            
+            logHandler?(.error, "\(label) stage '\(stage.id)' failed after \(durationStr)s: \(error.localizedDescription)")
+
             // If it's already a PipelineError, propagate it directly to avoid double wrapping
             if let pipelineError = error as? PipelineError {
                 return pipelineError
@@ -154,11 +159,15 @@ public final class Pipeline<Context: Sendable, Event: Sendable>: Sendable {
 }
 
 /// Errors that can occur during pipeline execution.
-public enum PipelineError: MonadError {
+public enum PipelineError: Error, Sendable {
     case stageFailed(id: String, underlyingError: Error)
     case cleanupFailed(id: String, underlyingError: Error)
+}
 
-    public var errorDomain: String { MonadErrorDomain.pipeline }
+extension PipelineError: MonadError {
+    public var errorDomain: String {
+        MonadErrorDomain.pipeline
+    }
 
     public var errorCode: Int {
         switch self {

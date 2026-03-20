@@ -2,13 +2,14 @@ import Dependencies
 import ErrorKit
 import Foundation
 import Logging
+import MonadPrompt
 import MonadShared
 
 /// Pipeline stage responsible for retrieving relevant semantic memories and tags.
 public struct MemoryRetrievalStage: PipelineStage {
     @Dependency(\.memoryStore) var memoryStore
     @Dependency(\.embeddingService) var embeddingService
-    
+
     private let logger = Logger.module(named: "com.monad.MemoryRetrievalStage")
     private let ranker = ContextRanker()
 

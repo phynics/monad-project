@@ -5,7 +5,12 @@ public struct Prompt: Sendable {
     public let sections: [ContextSection]
 
     public init(sections: [ContextSection]) {
-        self.sections = sections.sorted(by: { $0.priority > $1.priority })
+        self.sections = sections.sorted {
+            if $0.cachePolicy != $1.cachePolicy {
+                return $0.cachePolicy < $1.cachePolicy // stable < semiStable < volatile
+            }
+            return $0.priority > $1.priority
+        }
     }
 
     public init(@ContextBuilder _ content: () -> [ContextSection]) {

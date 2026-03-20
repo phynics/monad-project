@@ -49,7 +49,7 @@ Contains the foundational library for all domain logic, data models, and busines
 - `AgentInstanceManager` — Actor managing agent instance creation, attachment, and deletion
 - `ContextManager` — Actor for RAG and context gathering (delegates to `ContextPipeline`)
 - `PromptBuilder` — Prompt assembly via `PromptAssemblyPipeline` (10 stages)
-- `Pipeline` — Generic asynchronous pipeline utility in `MonadCore/Utilities/Pipeline.swift`
+- `Pipeline` — Generic asynchronous pipeline utility in `MonadShared/Utilities/Pipeline.swift`
 - `ToolRouter` — Actor routing tool execution to appropriate handler
 - `LLMService` — Multi-provider LLM client with streaming
 - `WorkspaceManager` — Actor managing workspace lifecycle
@@ -248,7 +248,7 @@ MonadServer → [MonadCore, MonadShared, MonadPrompt, MonadClient,
 
 MonadCore uses a generic asynchronous pipeline utility for orchestrating complex multi-stage processes. This decouples logic into discrete, testable, and replaceable stages.
 
-**Location:** `Sources/MonadCore/Utilities/Pipeline.swift`
+**Location:** `Sources/MonadShared/Utilities/Pipeline.swift`
 
 **Key Components:**
 - `Pipeline<Context, Event>` — The main coordinator class. Executes stages sequentially, merging their event streams.

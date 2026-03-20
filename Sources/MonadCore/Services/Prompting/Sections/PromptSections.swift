@@ -6,6 +6,7 @@ import MonadShared
 public struct SystemInstructions: ContextSection {
     public let id = "system"
     public let priority = 100
+    public let cachePolicy: CachePolicy = .stable
     public let strategy: CompressionStrategy = .keep
     public let type: ContextSectionType = .text
     public let instructions: String
@@ -71,6 +72,7 @@ public struct Memories: ContextSection {
 public struct Tools: ContextSection {
     public let id = "tools"
     public let priority = 80
+    public let cachePolicy: CachePolicy = .semiStable
     public let strategy: CompressionStrategy = .keep
     public let type: ContextSectionType = .list(items: [])
     public let tools: [AnyTool]
@@ -217,6 +219,7 @@ public struct UserQuery: ContextSection {
 public struct WorkspacesContext: ContextSection {
     public let id = "workspaces"
     public let priority = 75
+    public let cachePolicy: CachePolicy = .semiStable
     public let strategy: CompressionStrategy = .keep
     public let type: ContextSectionType = .text
     public let workspaces: [WorkspaceReference]
@@ -299,6 +302,7 @@ public struct WorkspacesContext: ContextSection {
 public struct AgentContext: ContextSection {
     public let id = "agent_context"
     public let priority = 95 // Just below system instructions (100)
+    public let cachePolicy: CachePolicy = .stable
     public let strategy: CompressionStrategy = .keep
     public let type: ContextSectionType = .text
     public let agent: AgentInstance
@@ -333,6 +337,7 @@ public struct AgentContext: ContextSection {
 public struct TimelineContext: ContextSection {
     public let id = "timeline_context"
     public let priority = 72 // Between workspaces (75) and chat history (70)
+    public let cachePolicy: CachePolicy = .semiStable
     public let strategy: CompressionStrategy = .keep
     public let type: ContextSectionType = .text
     public let timeline: Timeline

@@ -1,5 +1,6 @@
 import Foundation
 @testable import MonadCore
+import MonadPrompt
 @testable import MonadShared
 import MonadTestSupport
 import Testing

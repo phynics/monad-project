@@ -1,4 +1,5 @@
 import Foundation
+import MonadPrompt
 import MonadShared
 
 /// Shared context state during the gathering pipeline
@@ -67,7 +68,7 @@ public actor ContextPipelineContext {
             tagResults: tagResults,
             executionTime: executionTime
         )
-        self.contextData = data
+        contextData = data
         return data
     }
 

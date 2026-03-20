@@ -1,4 +1,5 @@
 import Foundation
+import MonadPrompt
 import MonadShared
 
 /// Events emitted during the context gathering process

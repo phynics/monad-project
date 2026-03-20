@@ -1,10 +1,9 @@
-import Testing
 import Foundation
 import Logging
-@testable import MonadCore
+@testable import MonadShared
+import Testing
 
-@Suite final class PipelineTests {
-
+final class PipelineTests {
     final class TestContext: @unchecked Sendable {
         var values: [String] = []
     }
@@ -34,7 +33,7 @@ import Logging
 
     struct DefaultIDStage: PipelineStage {
         typealias Event = Never
-        func process(_ context: TestContext) async throws -> AsyncThrowingStream<Never, Error> {
+        func process(_: TestContext) async throws -> AsyncThrowingStream<Never, Error> {
             return AsyncThrowingStream { $0.finish() }
         }
     }
@@ -44,7 +43,7 @@ import Logging
         let id: String
         let error: Error
 
-        func process(_ context: TestContext) async throws -> AsyncThrowingStream<E, Error> {
+        func process(_: TestContext) async throws -> AsyncThrowingStream<E, Error> {
             throw error
         }
     }
@@ -58,13 +57,13 @@ import Logging
     }
 
     @Test
-    func testDefaultID() {
+    func defaultID() {
         let stage = DefaultIDStage()
         #expect(stage.id == "DefaultIDStage")
     }
 
     @Test
-    func testPipelineExecutionWithLogger() async throws {
+    func pipelineExecutionWithLogger() async throws {
         // Given
         let pipeline = Pipeline<TestContext, String>()
             .withLogger(Logger(label: "test"))
@@ -81,7 +80,7 @@ import Logging
     }
 
     @Test
-    func testPipelineExecution() async throws {
+    func pipelineExecution() async throws {
         // Given
         let pipeline = Pipeline<TestContext, String>()
             .add(MockStage(id: "stage1", value: "one"))
@@ -98,7 +97,7 @@ import Logging
     }
 
     @Test
-    func testPipelineEvents() async throws {
+    func pipelineEvents() async throws {
         // Given
         let pipeline = Pipeline<TestContext, String>()
             .add(MockStage(id: "stage1", value: "one", eventToEmit: "event1"))
@@ -119,7 +118,7 @@ import Logging
     }
 
     @Test
-    func testPipelineErrorHandling() async throws {
+    func pipelineErrorHandling() async throws {
         // Given
         let pipeline = Pipeline<TestContext, String>()
             .add(MockStage(id: "stage1", value: "one"))
@@ -143,7 +142,7 @@ import Logging
     }
 
     @Test
-    func testPipelineCleanup() async throws {
+    func pipelineCleanup() async throws {
         // Given
         let pipeline = Pipeline<TestContext, String>()
             .add(MockStage(id: "stage1", value: "one"))
@@ -160,7 +159,7 @@ import Logging
     }
 
     @Test
-    func testPipelineCleanupAfterFailure() async throws {
+    func pipelineCleanupAfterFailure() async throws {
         // Given
         let pipeline = Pipeline<TestContext, String>()
             .add(ErrorStage<String>(id: "errorStage", error: MockError.someError))
@@ -179,7 +178,7 @@ import Logging
     }
 
     @Test
-    func testPipelineCleanupFailure() async throws {
+    func pipelineCleanupFailure() async throws {
         // Given
         let pipeline = Pipeline<TestContext, Never>()
             .cleanup(ErrorStage<Never>(id: "cleanupError", error: MockError.someError))
@@ -199,7 +198,7 @@ import Logging
     }
 
     @Test
-    func testPipelineCleanupFailureDoesNotOverridePrimaryError() async throws {
+    func pipelineCleanupFailureDoesNotOverridePrimaryError() async throws {
         // Given
         let pipeline = Pipeline<TestContext, Never>()
             .add(ErrorStage<Never>(id: "primaryError", error: MockError.someError))
@@ -220,7 +219,7 @@ import Logging
     }
 
     @Test
-    func testEmptyPipeline() async throws {
+    func emptyPipeline() async throws {
         // Given
         let pipeline = Pipeline<TestContext, Never>()
         let context = TestContext()

@@ -58,7 +58,7 @@ Six targets with strict dependency hierarchy:
 
 ## Context & Prompt Pipelines
 
-Both context gathering and prompt assembly use the generic `Pipeline<Context, Event>` pattern (`MonadCore/Utilities/Pipeline.swift`). Each pipeline is composed of discrete, replaceable stages.
+Both context gathering and prompt assembly use the generic `Pipeline<Context, Event>` pattern (`MonadShared/Utilities/Pipeline.swift`). Each pipeline is composed of discrete, replaceable stages.
 
 ### Context Gathering Pipeline
 - **ContextManager** delegates to a `ContextPipeline` (alias for `Pipeline<ContextPipelineContext, ContextGatheringEvent>`).

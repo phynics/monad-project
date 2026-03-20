@@ -38,7 +38,7 @@ let package = Package(
         ),
         .target(
             name: "MonadPrompt",
-            dependencies: [],
+            dependencies: ["MonadShared"],
             path: "Sources/MonadPrompt"
         ),
         .target(

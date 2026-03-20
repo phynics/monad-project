@@ -1,5 +1,17 @@
 import Foundation
 
+/// How stable a section's content is across requests.
+/// Used to order sections for optimal LLM prompt caching.
+public enum CachePolicy: Sendable, Comparable {
+    /// Content is stable across turns (system instructions, agent identity).
+    /// Placed earliest in the prompt to maximize cache prefix.
+    case stable
+    /// Content changes occasionally (tools, workspace context).
+    case semiStable
+    /// Content changes every request (user query, latest history).
+    case volatile
+}
+
 /// Defines how a section should be handled when the token budget is exceeded
 public enum CompressionStrategy: Sendable {
     /// Never compress this section (e.g. system instructions, critical context)
@@ -42,6 +54,9 @@ public protocol ContextSection: Sendable {
     /// The type of content this section represents
     var type: ContextSectionType { get }
 
+    /// Cache stability hint. Defaults to `.volatile`.
+    var cachePolicy: CachePolicy { get }
+
     /// Render the section into a string for the prompt
     func render() async -> String?
 
@@ -56,12 +71,21 @@ public protocol ContextSection: Sendable {
     func constrained(to tokens: Int) -> ContextSection
 }
 
-// Default implementations
+/// Default implementations
 public extension ContextSection {
-    var strategy: CompressionStrategy { .keep }
-    var type: ContextSectionType { .text }
+    var strategy: CompressionStrategy {
+        .keep
+    }
 
-    func render(constrainedTo tokens: Int?) async -> String? {
+    var type: ContextSectionType {
+        .text
+    }
+
+    var cachePolicy: CachePolicy {
+        .volatile
+    }
+
+    func render(constrainedTo _: Int?) async -> String? {
         // Default: Ignore limit and render normally
         await render()
     }
@@ -76,11 +100,25 @@ public struct ConstrainedSection: ContextSection {
     public let wrapped: ContextSection
     public let limit: Int
 
-    public var id: String { wrapped.id }
-    public var priority: Int { wrapped.priority }
-    public var estimatedTokens: Int { min(wrapped.estimatedTokens, limit) }
-    public var strategy: CompressionStrategy { wrapped.strategy }
-    public var type: ContextSectionType { wrapped.type }
+    public var id: String {
+        wrapped.id
+    }
+
+    public var priority: Int {
+        wrapped.priority
+    }
+
+    public var estimatedTokens: Int {
+        min(wrapped.estimatedTokens, limit)
+    }
+
+    public var strategy: CompressionStrategy {
+        wrapped.strategy
+    }
+
+    public var type: ContextSectionType {
+        wrapped.type
+    }
 
     public init(wrapped: ContextSection, limit: Int) {
         self.wrapped = wrapped
@@ -96,7 +134,7 @@ public struct ConstrainedSection: ContextSection {
         return await wrapped.render(constrainedTo: effectiveLimit)
     }
 
-    // Recursive update if constrained again
+    /// Recursive update if constrained again
     public func constrained(to tokens: Int) -> ContextSection {
         ConstrainedSection(wrapped: wrapped, limit: min(limit, tokens))
     }

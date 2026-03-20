@@ -1,6 +1,7 @@
 import ErrorKit
 import Foundation
 import Logging
+import MonadPrompt
 import MonadShared
 
 /// Manages the retrieval and organization of context for the chat
@@ -25,7 +26,7 @@ public actor ContextManager {
             QueryAugmentationStage(),
             MemoryRetrievalStage(),
             NoteDiscoveryStage(workspace: workspace),
-            ContextAssemblyStage(logger: Logger.module(named: "com.monad.ContextAssemblyStage"))
+            ContextAssemblyStage(logger: Logger.module(named: "com.monad.ContextAssemblyStage")),
         ]
     }
 

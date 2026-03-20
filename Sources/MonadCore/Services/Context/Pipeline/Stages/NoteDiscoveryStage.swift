@@ -1,6 +1,7 @@
 import ErrorKit
 import Foundation
 import Logging
+import MonadPrompt
 import MonadShared
 
 /// Pipeline stage responsible for discovering relevant filesystem notes in the workspace.

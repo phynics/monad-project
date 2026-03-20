@@ -1,35 +1,35 @@
-import Testing
 import Foundation
-@testable import MonadCore
 @testable import MonadShared
+import Testing
 
-@Suite struct PipelineErrorHandlingTests {
-    
+struct PipelineErrorHandlingTests {
     final class TestContext: @unchecked Sendable {}
-    
+
     struct FailingStage: PipelineStage {
         typealias Event = String
         let id: String
         let error: Error
-        
-        func process(_ context: TestContext) async throws -> AsyncThrowingStream<String, Error> {
+
+        func process(_: TestContext) async throws -> AsyncThrowingStream<String, Error> {
             throw error
         }
     }
-    
+
     struct PipelineFailingStage: PipelineStage {
         typealias Event = String
         let id: String
         let pipelineError: PipelineError
-        
-        func process(_ context: TestContext) async throws -> AsyncThrowingStream<String, Error> {
+
+        func process(_: TestContext) async throws -> AsyncThrowingStream<String, Error> {
             throw pipelineError
         }
     }
 
     enum MockError: Error, LocalizedError, Equatable {
         case someError
-        var errorDescription: String? { "Mock error" }
+        var errorDescription: String? {
+            "Mock error"
+        }
     }
 
     @Test("Generic Pipeline avoids double-wrapping PipelineError")
@@ -37,7 +37,7 @@ import Foundation
         let innerError = PipelineError.stageFailed(id: "inner", underlyingError: MockError.someError)
         let pipeline = Pipeline<TestContext, String>()
             .add(PipelineFailingStage(id: "outer", pipelineError: innerError))
-        
+
         let context = TestContext()
         do {
             let stream = pipeline.execute(context)
@@ -52,12 +52,12 @@ import Foundation
             Issue.record("Unexpected error type: \(error)")
         }
     }
-    
+
     @Test("Pipeline cleanup error is correctly typed and not double-wrapped")
     func pipeline_cleanupErrorCorrectType() async throws {
         let pipeline = Pipeline<TestContext, String>()
             .cleanup(FailingStage(id: "clean", error: MockError.someError))
-        
+
         let context = TestContext()
         do {
             let stream = pipeline.execute(context)
