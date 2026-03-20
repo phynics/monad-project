@@ -47,11 +47,16 @@ public actor MemoryRepository: MemoryStoreProtocol {
         let allMemories = try await fetchAllMemories()
         var results: [(memory: Memory, similarity: Double)] = []
 
+        // ⚡ Bolt: Pre-calculate the magnitude of the query embedding outside the loop
+        // to avoid recalculating it for every memory in the database.
+        let queryMagnitude = VectorMath.magnitude(embedding)
+        guard queryMagnitude > 0 else { return [] }
+
         for memory in allMemories {
             let memoryVector = memory.embeddingVector
             guard !memoryVector.isEmpty else { continue }
 
-            let similarity = VectorMath.cosineSimilarity(embedding, memoryVector)
+            let similarity = VectorMath.cosineSimilarity(embedding, magnitudeA: queryMagnitude, memoryVector)
             if similarity >= minSimilarity {
                 results.append((memory: memory, similarity: similarity))
             }

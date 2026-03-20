@@ -5,7 +5,37 @@ import Foundation
 
 @Suite final class VectorMathTests {
 
+    // MARK: - Magnitude
+
+    @Test
+
+    func testMagnitude() {
+        let v1 = [3.0, 4.0]
+        let mag = VectorMath.magnitude(v1)
+        #expect(mag == 5.0)
+
+        let vEmpty: [Double] = []
+        let magEmpty = VectorMath.magnitude(vEmpty)
+        #expect(magEmpty == 0.0)
+    }
+
     // MARK: - Cosine Similarity
+
+    @Test
+
+    func testOptimizedCosineSimilarity() {
+        let v1 = [1.0, 2.0, 3.0]
+        let v2 = [1.0, 2.0, 3.0]
+        let v3 = [-1.0, -2.0, -3.0]
+
+        let mag1 = VectorMath.magnitude(v1)
+
+        let sim1 = VectorMath.cosineSimilarity(v1, magnitudeA: mag1, v2)
+        #expect(sim1 == 1.0)
+
+        let sim2 = VectorMath.cosineSimilarity(v1, magnitudeA: mag1, v3)
+        #expect(sim2 == -1.0)
+    }
 
     @Test
 
