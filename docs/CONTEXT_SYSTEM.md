@@ -4,7 +4,7 @@ This document explains how Monad gathers, filters, and assembles context for the
 
 ## 1. Context Assembly Pipeline
 
-The `ChatEngine` orchestrates the context gathering process before every LLM turn. It uses the `ContextManager` service to gather relevant context, then uses the `@ContextBuilder` DSL from the `MonadPrompt` module to construct the final prompt.
+The `ChatEngine` orchestrates the context gathering process before every LLM turn. It uses the `ContextManager` service to gather relevant context, then uses `PromptBuilder` (backed by a `PromptAssemblyPipeline`) to construct the final prompt. Both pipelines are built on the generic `Pipeline<Context, Event>` utility and support per-request overrides.
 
 ### Flow Overview
 
@@ -54,7 +54,7 @@ The final prompt consists of sections assembled with the `@ContextBuilder` DSL:
 
 ### ContextManager Service
 
-`ContextManager` is an actor that orchestrates RAG (Retrieval-Augmented Generation).
+`ContextManager` is an actor that orchestrates RAG (Retrieval-Augmented Generation) via a `ContextPipeline`.
 
 **Location:** `Sources/MonadCore/Services/Context/ContextManager.swift`
 
@@ -64,23 +64,54 @@ func gatherContext(
     for query: String,
     history: [Message],
     limit: Int,
-    tagGenerator: ((String) async throws -> [String])?
-) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error>
+    tagGenerator: ((String) async throws -> [String])?,
+    overridePipeline: ContextPipeline? = nil
+) -> AsyncThrowingStream<ContextGatheringEvent, Error>
 ```
 
 **Return Type:** Streaming events for progress tracking
 
-**Events:**
-- `.augmenting` — Augmenting query with conversation history
-- `.tagging` — Generating search tags via LLM
-- `.embedding` — Creating query embedding
-- `.searching` — Executing parallel searches
-- `.ranking` — Re-ranking combined results
+**Events (defined in `ContextGatheringEvent`):**
+- `.progress(.augmenting)` — Augmenting query with conversation history
+- `.progress(.tagging)` — Generating search tags via LLM
+- `.progress(.embedding)` — Creating query embedding
+- `.progress(.searching)` — Executing parallel searches
+- `.progress(.ranking)` — Re-ranking combined results
+- `.progress(.discoveringNotes)` — Reading workspace notes
 - `.complete(ContextData)` — Context ready
+
+### Pipeline Architecture
+
+The context gathering flow is decomposed into four stages, each a `PipelineStage<ContextPipelineContext, ContextGatheringEvent>`:
+
+| Stage | File | Responsibility |
+|:------|:-----|:---------------|
+| `QueryAugmentationStage` | `Pipeline/Stages/QueryAugmentationStage.swift` | Augments query with recent conversation history |
+| `MemoryRetrievalStage` | `Pipeline/Stages/MemoryRetrievalStage.swift` | Semantic + tag search, re-ranking via `ContextRanker` |
+| `NoteDiscoveryStage` | `Pipeline/Stages/NoteDiscoveryStage.swift` | Reads `.md` files from workspace `Notes/` directory |
+| `ContextAssemblyStage` | `Pipeline/Stages/ContextAssemblyStage.swift` | Assembles final `ContextData`, logs timing |
+
+**Shared state:** `ContextPipelineContext` (actor) holds query, history, and accumulated results across stages.
+
+**Default pipeline factory:** `ContextManager.defaultStages(workspace:)` returns the standard stage sequence.
+
+**Custom pipelines** can be built with the `@ContextPipelineBuilder` DSL:
+```swift
+let pipeline = ContextPipeline {
+    QueryAugmentationStage()
+    MemoryRetrievalStage()
+    if workspace != nil {
+        NoteDiscoveryStage(workspace: workspace)
+    }
+    ContextAssemblyStage(logger: logger)
+}
+```
+
+**Dependency injection:** `@Dependency` fields (`memoryStore`, `embeddingService`) live on individual stages (e.g., `MemoryRetrievalStage`), not on `ContextManager` itself.
 
 ### Search Strategy
 
-The system uses a **hybrid search** approach combining:
+The `MemoryRetrievalStage` uses a **hybrid search** approach combining:
 
 1. **Semantic Search** (Vector-based):
    - Query augmented with recent conversation history
@@ -104,7 +135,7 @@ The system uses a **hybrid search** approach combining:
 
 ### Parallel Execution
 
-Searches execute in parallel for performance:
+Searches execute in parallel within `MemoryRetrievalStage`:
 
 ```swift
 async let semanticTask = persistenceService.searchMemories(
@@ -143,11 +174,11 @@ Rather than storing context in database records, Monad uses plain markdown files
 
 ### RAG Integration
 
-The `ContextManager.fetchAllNotes()` method:
-1. Lists all `.md` files in `Notes/` directory
+The `NoteDiscoveryStage` (in the context gathering pipeline):
+1. Lists all `.md` files in `Notes/` directory via the workspace
 2. Reads file contents
 3. Wraps in `ContextFile` objects with metadata
-4. Returns as high-priority context
+4. Stores results on `ContextPipelineContext` for downstream stages
 
 **Priority:** Context Notes receive priority 90 (higher than memories)
 
@@ -438,7 +469,7 @@ Tools hosted by remote clients (e.g., IDE integrations):
 ```swift
 let contextManager = ContextManager(
     workspace: primaryWorkspace,
-    agentId: agent.id
+    pipeline: customPipeline  // optional, uses defaultStages() if nil
 )
 ```
 
@@ -451,56 +482,77 @@ let contextManager = ContextManager(
 When `ChatEngine` needs context:
 
 ```swift
-let contextStream = try await contextManager.gatherContext(
+let contextStream = await contextManager.gatherContext(
     for: userQuery,
     history: recentHistory,
     limit: 10,
-    tagGenerator: llmService.generateTags
+    tagGenerator: llmService.generateTags,
+    overridePipeline: customPipeline  // optional per-request override
 )
 
 var contextData: ContextData?
 for try await event in contextStream {
     switch event {
-    case .augmenting, .tagging, .embedding, .searching, .ranking:
-        // Emit progress events
+    case .progress(let progress):
+        // Emit progress events (.augmenting, .tagging, .embedding, etc.)
     case .complete(let data):
         contextData = data
     }
 }
 ```
 
-**ContextData:**
-```swift
-public struct ContextData: Sendable {
-    public let notes: [ContextFile]
-    public let memories: [Memory]
-    public let augmentedQuery: String
-    public let searchTags: [String]
-}
-```
-
 ### Building the Prompt
 
-`ChatEngine` uses `LLMService.buildContext()` which internally uses `@ContextBuilder`:
+`ChatEngine` uses `PromptBuilder.buildContext()` which delegates to a `PromptAssemblyPipeline`:
 
 ```swift
-let prompt = await llmService.buildContext(
-    userQuery: query,
-    contextNotes: contextData.notes,
-    memories: contextData.memories.map { $0.memory },
-    chatHistory: history,
-    tools: availableTools,
-    workspaces: attachedWorkspaces,
-    primaryWorkspace: workspaces?.primary,
-    clientName: clientName,
-    connectedClients: connectedClients,
-    systemInstructions: systemInstructions, // from Notes/system.md if agent attached
-    agentInstance: agentInstance,           // injects AgentContext section
-    timeline: timeline                      // injects TimelineContext section
+let prompt = try await PromptBuilder.buildContext(
+    promptRequest,
+    agentInstance: agentInstance,
+    timeline: timeline,
+    extensionSections: extensionSections,
+    overridePipeline: assemblyPipeline  // optional per-request override
 )
 ```
 
-**Note:** The `buildContext` method is a convenience wrapper. For custom prompt construction, use `@ContextBuilder` directly.
+The pipeline executes 10 stages in sequence, each appending sections to a shared `PromptAssemblyContext`:
+
+| Stage | Section Added |
+|:------|:-------------|
+| `SystemInstructionsStage` | `SystemInstructions` |
+| `AgentContextStage` | `AgentContext` (if agent attached) |
+| `ContextNotesStage` | `ContextNotes` |
+| `MemoriesStage` | `Memories` |
+| `ToolsStage` | `Tools` |
+| `WorkspacesContextStage` | `WorkspacesContext` |
+| `TimelineContextStage` | `TimelineContext` (if timeline available) |
+| `ChatHistoryStage` | `ChatHistory` (truncated) |
+| `UserQueryStage` | `UserQuery` |
+| `ExtensionSectionsStage` | Extension sections |
+
+Custom stages implement `PromptAssemblyStage` and use the `running()` helper for event emission:
+
+```swift
+struct MyCustomStage: PromptAssemblyStage {
+    func process(_ context: PromptAssemblyContext) async throws
+        -> AsyncThrowingStream<PromptAssemblyEvent, Error>
+    {
+        try await running(context) {
+            await context.append(MySection())
+        }
+    }
+}
+```
+
+Custom pipelines can be built with `@PromptAssemblyPipelineBuilder`:
+
+```swift
+let pipeline = PromptAssemblyPipeline {
+    SystemInstructionsStage()
+    ToolsStage()
+    UserQueryStage()
+}
+```
 
 ### ContextData
 

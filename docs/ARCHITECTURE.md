@@ -47,7 +47,8 @@ Contains the foundational library for all domain logic, data models, and busines
 - `ChatEngine` — Unified engine for chat and autonomous agents (uses Pipeline pattern)
 - `TimelineManager` — Actor managing timeline lifecycle and components
 - `AgentInstanceManager` — Actor managing agent instance creation, attachment, and deletion
-- `ContextManager` — Actor for RAG and context gathering (uses Pipeline pattern)
+- `ContextManager` — Actor for RAG and context gathering (delegates to `ContextPipeline`)
+- `PromptBuilder` — Prompt assembly via `PromptAssemblyPipeline` (10 stages)
 - `Pipeline` — Generic asynchronous pipeline utility in `MonadCore/Utilities/Pipeline.swift`
 - `ToolRouter` — Actor routing tool execution to appropriate handler
 - `LLMService` — Multi-provider LLM client with streaming
@@ -245,17 +246,36 @@ MonadServer → [MonadCore, MonadShared, MonadPrompt, MonadClient,
 
 ## Pipeline Pattern
 
-MonadCore uses a generic asynchronous pipeline utility for orchestrating complex multi-stage processes. This decouples logic into discrete, testable stages.
+MonadCore uses a generic asynchronous pipeline utility for orchestrating complex multi-stage processes. This decouples logic into discrete, testable, and replaceable stages.
 
 **Location:** `Sources/MonadCore/Utilities/Pipeline.swift`
 
 **Key Components:**
-- `Pipeline<Context, Event>` — The main coordinator class.
-- `PipelineStage<Context, Event>` — Protocol defining a single stage.
+- `Pipeline<Context, Event>` — The main coordinator class. Executes stages sequentially, merging their event streams.
+- `PipelineStage<Context, Event>` — Protocol defining a single stage (`process(_:) -> AsyncThrowingStream`).
 
-**Usage in Codebase:**
-- **ChatEngine**: `processTurn` is decomposed into stages: `PromptBuildingStage`, `LLMStreamingStage`, `ToolCallExtractionStage`, `MessagePersistenceStage`.
-- **ContextManager**: The context gathering flow is implemented as a pipeline.
+**Three Pipeline Instances:**
+
+| Pipeline | Context Type | Event Type | Stages | DSL Builder |
+|:---------|:-------------|:-----------|:-------|:------------|
+| **ChatEngine** | `ChatTurnContext` | `ChatEvent` | `LLMStreamingStage`, `ToolExecutionStage`, `PersistenceStage` | — |
+| **ContextManager** | `ContextPipelineContext` | `ContextGatheringEvent` | `QueryAugmentationStage`, `MemoryRetrievalStage`, `NoteDiscoveryStage`, `ContextAssemblyStage` | `@ContextPipelineBuilder` |
+| **PromptBuilder** | `PromptAssemblyContext` | `PromptAssemblyEvent` | 10 stages (system instructions through extension sections) | `@PromptAssemblyPipelineBuilder` |
+
+**Per-Request Overrides:**
+Both `ContextPipeline` and `PromptAssemblyPipeline` accept an `overridePipeline:` parameter, threaded through `MonadCore.run()` → `ChatEngine` → `ContextManager`/`PromptBuilder`. This allows callers to customize behavior per-request without modifying defaults.
+
+**DSL Usage:**
+```swift
+let pipeline = ContextPipeline {
+    QueryAugmentationStage()
+    MemoryRetrievalStage()
+    if includeNotes {
+        NoteDiscoveryStage(workspace: workspace)
+    }
+    ContextAssemblyStage(logger: logger)
+}
+```
 
 ---
 

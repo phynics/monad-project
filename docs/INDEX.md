@@ -186,12 +186,15 @@ Sources/MonadCore/Services/
 ├── Agents/                       — AgentInstanceManager
 ├── Configuration/                — ConfigurationServiceProtocol
 ├── Context/                      — ContextManager, ContextRanker
+│   └── Pipeline/                — ContextPipelineContext, ContextPipelineBuilder, ContextGatheringEvent
+│       └── Stages/              — QueryAugmentation, MemoryRetrieval, NoteDiscovery, ContextAssembly
 ├── Database/                     — Persistence protocols (7 store protocols)
 ├── Embeddings/                   — EmbeddingService, LocalEmbeddingService, OpenAIEmbeddingService
 ├── LLM/                          — LLMService, StreamingParser, StreamingCoordinator
 │   └── Providers/                — OpenAI, Ollama, OpenRouter clients
 ├── AgentTemplates/               — AgentTemplateExecutor, AgentTemplateRegistry
-├── Prompting/                    — DefaultInstructions, PromptSections
+├── Prompting/                    — PromptBuilder, PromptAssembly (pipeline + DSL), PromptAssemblyStages, DefaultInstructions
+│   └── Sections/                — PromptSections (SystemInstructions, AgentContext, etc.)
 ├── Timeline/                     — TimelineManager, TimelineToolManager
 ├── Tools/                        — SystemToolRegistry, ToolExecutor, ToolRouter
 │   └── Timeline/                 — TimelineListTool, TimelinePeekTool, TimelineSendTool

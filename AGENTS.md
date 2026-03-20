@@ -56,13 +56,30 @@ Six targets with strict dependency hierarchy:
 ### Dependency Injection
 - Uses Point-Free's `swift-dependencies` (`@Dependency`).
 
-## Context System
-- **ContextManager** assembles prompts via `@ContextBuilder`.
-- Token budgeting via `MonadPrompt`.
+## Context & Prompt Pipelines
 
-## Pipeline Pattern
-- Generic asynchronous pipeline utility in `MonadCore/Utilities/Pipeline.swift`.
-- Used in `ChatEngine.processTurn` and `ContextManager`.
+Both context gathering and prompt assembly use the generic `Pipeline<Context, Event>` pattern (`MonadCore/Utilities/Pipeline.swift`). Each pipeline is composed of discrete, replaceable stages.
+
+### Context Gathering Pipeline
+- **ContextManager** delegates to a `ContextPipeline` (alias for `Pipeline<ContextPipelineContext, ContextGatheringEvent>`).
+- Default stages: `QueryAugmentationStage` → `MemoryRetrievalStage` → `NoteDiscoveryStage` → `ContextAssemblyStage`.
+- Stages live in `Services/Context/Pipeline/Stages/`.
+- Build custom pipelines with `@ContextPipelineBuilder` DSL or pass `overridePipeline:` per-request.
+- `@Dependency` fields (e.g. `memoryStore`, `embeddingService`) live on stages, not on `ContextManager`.
+
+### Prompt Assembly Pipeline
+- **PromptBuilder** delegates to a `PromptAssemblyPipeline` (alias for `Pipeline<PromptAssemblyContext, PromptAssemblyEvent>`).
+- Default stages (10): `SystemInstructionsStage`, `AgentContextStage`, `ContextNotesStage`, `MemoriesStage`, `ToolsStage`, `WorkspacesContextStage`, `TimelineContextStage`, `ChatHistoryStage`, `UserQueryStage`, `ExtensionSectionsStage`.
+- Stages live in `Services/Prompting/PromptAssemblyStages.swift`; types/DSL in `PromptAssembly.swift`.
+- Build custom pipelines with `@PromptAssemblyPipelineBuilder` DSL or pass `overridePipeline:` per-request.
+- Custom stages implement `PromptAssemblyStage` protocol (provides `running()` helper for event emission).
+
+### Per-Request Overrides
+Both pipelines can be overridden per-request through `MonadCore.run(contextPipeline:assemblyPipeline:)` → `ChatEngine` → `ContextManager`/`PromptBuilder`.
+
+### Token Budgeting
+- `MonadPrompt` provides `@ContextBuilder` DSL, `ContextSection` protocol, and compression strategies.
+- `PromptBuilder` handles history truncation (`maxHistoryTokens`, `historyTokenBuffer`).
 
 ## Documentation
 
