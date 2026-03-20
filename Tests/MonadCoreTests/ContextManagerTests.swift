@@ -163,4 +163,39 @@ struct ContextManagerTests {
         #expect(note?.source == "Notes/FSNote.md")
         #expect(note?.content == noteContent)
     }
+
+    @Test("Gather Context: Error Propagation")
+    func gatherContextErrorPropagation() async throws {
+        struct FailingWorkspace: WorkspaceProtocol {
+            var id: UUID = UUID()
+            var reference: WorkspaceReference = .fixture()
+            func listTools() async throws -> [ToolReference] { [] }
+            func executeTool(id: String, parameters: [String: AnyCodable]) async throws -> ToolResult {
+                throw WorkspaceError.toolExecutionNotSupported
+            }
+            func listFiles(path: String) async throws -> [String] {
+                throw WorkspaceError.connectionFailed
+            }
+            func readFile(path: String) async throws -> String { "" }
+            func writeFile(path: String, content: String) async throws {}
+            func deleteFile(path: String) async throws {}
+            func healthCheck() async -> Bool { false }
+        }
+
+        let mockPersistence = MockPersistenceService()
+        let mockEmbedding = MockEmbeddingService()
+        let workspace = FailingWorkspace()
+
+        let manager = try await TestDependencies()
+            .withMocks(persistence: mockPersistence, embedding: mockEmbedding)
+            .run {
+                ContextManager(workspace: workspace)
+            }
+
+        let stream = await manager.gatherContext(for: "some query")
+        
+        await #expect(throws: Error.self) {
+            for try await _ in stream {}
+        }
+    }
 }

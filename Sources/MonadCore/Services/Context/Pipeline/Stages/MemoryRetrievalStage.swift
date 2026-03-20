@@ -55,6 +55,14 @@ public struct MemoryRetrievalStage: PipelineStage {
         }
     }
 
+    /// Fetches all memories, tags, and embeddings required for the query.
+    /// - Parameters:
+    ///   - query: The raw user query.
+    ///   - tagContext: The augmented query context for tag generation.
+    ///   - limit: Result limit for retrieval.
+    ///   - tagGenerator: Optional closure for generating tags.
+    ///   - onProgress: Closure to report gathering progress.
+    /// - Returns: A tuple containing the gathered results.
     private func fetchRelevantMemories(
         for query: String,
         tagContext: String,
@@ -93,6 +101,12 @@ public struct MemoryRetrievalStage: PipelineStage {
         )
     }
 
+    /// Attempts to generate tags from the context while suppressing non-critical errors.
+    /// - Parameters:
+    ///   - tagContext: Context for tag generation.
+    ///   - tagGenerator: Optional tag generation closure.
+    ///   - onProgress: Progress reporting callback.
+    /// - Returns: An array of generated tags, or empty if generation fails.
     private func generateTagsSafely(
         tagContext: String,
         tagGenerator: (@Sendable (String) async throws -> [String])?,
@@ -110,6 +124,12 @@ public struct MemoryRetrievalStage: PipelineStage {
         }
     }
 
+    /// Generates the query embedding vector and reports progress.
+    /// - Parameters:
+    ///   - query: The query string to embed.
+    ///   - onProgress: Progress reporting callback.
+    /// - Returns: The embedding vector.
+    /// - Throws: `ContextManagerError.embeddingFailed` if generation fails.
     private func generateQueryEmbedding(
         for query: String,
         onProgress: (@Sendable (Message.ContextGatheringProgress) -> Void)?
@@ -122,6 +142,14 @@ public struct MemoryRetrievalStage: PipelineStage {
         }
     }
 
+    /// Searches both semantic and tag-based memory stores in parallel.
+    /// - Parameters:
+    ///   - embedding: The embedding vector for the search.
+    ///   - tags: The tags for filtering.
+    ///   - limit: Max number of results.
+    ///   - onProgress: Progress reporting callback.
+    /// - Returns: A tuple with the raw search results.
+    /// - Throws: `ContextManagerError.persistenceFailed` if retrieval fails.
     private func performParallelSearch(
         embedding: [Double],
         tags: [String],

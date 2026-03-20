@@ -28,6 +28,11 @@ public struct QueryAugmentationStage: PipelineStage {
         }
     }
 
+    /// Combines recent conversation history with the current query to provide more context for search.
+    /// - Parameters:
+    ///   - query: The original user input query.
+    ///   - history: Recent messages in the conversation.
+    /// - Returns: A string combining history and the query.
     private func buildAugmentedContext(query: String, history: [Message]) -> String {
         guard !history.isEmpty else { return query }
 

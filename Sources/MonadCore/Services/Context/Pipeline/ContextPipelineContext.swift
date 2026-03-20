@@ -54,8 +54,8 @@ public actor ContextPipelineContext {
     }
 
     /// Assembles and sets the final context data object.
-    /// - Parameter executionTime: The total time taken to gather context.
-    /// - Returns: The final context data.
+    /// - Parameter executionTime: The total time taken (in seconds) to gather all context data.
+    /// - Returns: A fully populated `ContextData` object containing notes, memories, and metadata.
     @discardableResult
     public func finalize(executionTime: TimeInterval) -> ContextData {
         let data = ContextData(
@@ -73,19 +73,19 @@ public actor ContextPipelineContext {
     }
 
     /// Sets the augmented version of the search query.
-    /// - Parameter query: The augmented query string.
+    /// - Parameter query: The final augmented query string used for retrieval.
     public func setAugmentedQuery(_ query: String) {
         augmentedQuery = query
     }
 
-    /// Updates the gathered results in the context.
+    /// Updates the gathered results in the context with new data from pipeline stages.
     /// - Parameters:
-    ///   - notes: Discovered notes.
-    ///   - memories: Final ranked memories.
-    ///   - tags: Generated tags.
-    ///   - vector: Query embedding vector.
-    ///   - semanticResults: Raw semantic matches.
-    ///   - tagResults: Raw tag matches.
+    ///   - notes: Discovered filesystem notes, if any.
+    ///   - memories: Final ranked and merged semantic memories, if any.
+    ///   - tags: Collection of generated search tags, if any.
+    ///   - vector: The embedding vector generated for the query, if any.
+    ///   - semanticResults: Raw results from semantic search before ranking, if any.
+    ///   - tagResults: Raw memories discovered via tag matching before ranking, if any.
     public func setResults(
         notes: [ContextFile]? = nil,
         memories: [SemanticSearchResult]? = nil,

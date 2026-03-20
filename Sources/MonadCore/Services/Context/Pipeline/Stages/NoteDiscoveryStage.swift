@@ -24,40 +24,43 @@ public struct NoteDiscoveryStage: PipelineStage {
     ) async throws -> AsyncThrowingStream<ContextGatheringEvent, Error> {
         return AsyncThrowingStream { continuation in
             let task = Task {
-                continuation.yield(.progress(.discoveringNotes))
-                let notes = (try? await fetchAllNotes()) ?? []
-                await context.setResults(notes: notes)
-                continuation.finish()
+                do {
+                    continuation.yield(.progress(.discoveringNotes))
+                    let notes = try await fetchAllNotes()
+                    await context.setResults(notes: notes)
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
             }
             continuation.onTermination = { @Sendable _ in task.cancel() }
         }
     }
 
+    /// Fetches all Markdown notes from the workspace "Notes" directory.
+    /// - Returns: An array of `ContextFile` objects sorted by name.
+    /// - Throws: An error if the workspace listing or reading fails.
     private func fetchAllNotes() async throws -> [ContextFile] {
         var allNotes: [ContextFile] = []
 
-        if let workspace = workspace {
-            do {
-                let files = try await workspace.listFiles(path: "Notes")
+        guard let workspace = workspace else {
+            return []
+        }
 
-                for filePath in files where filePath.hasSuffix(".md") {
-                    guard let content = try? await workspace.readFile(path: filePath) else {
-                        continue
-                    }
-                    let name = URL(fileURLWithPath: filePath).deletingPathExtension().lastPathComponent
+        let files = try await workspace.listFiles(path: "Notes")
 
-                    let note = ContextFile(
-                        name: name,
-                        content: content,
-                        source: filePath
-                    )
-                    allNotes.append(note)
-                }
-            } catch {
-                logger.warning(
-                    "Failed to fetch notes from workspace: \(ErrorKit.userFriendlyMessage(for: error))"
-                )
+        for filePath in files where filePath.hasSuffix(".md") {
+            guard let content = try? await workspace.readFile(path: filePath) else {
+                continue
             }
+            let name = URL(fileURLWithPath: filePath).deletingPathExtension().lastPathComponent
+
+            let note = ContextFile(
+                name: name,
+                content: content,
+                source: filePath
+            )
+            allNotes.append(note)
         }
 
         return allNotes.sorted(by: { $0.name < $1.name })
