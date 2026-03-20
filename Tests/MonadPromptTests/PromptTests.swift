@@ -81,4 +81,31 @@ struct DummySection: ContextSection {
 
         #expect(prompt.estimatedTokens == 150)
     }
+
+    struct PolicySection: ContextSection {
+        let id: String
+        let cachePolicy: CachePolicy
+        let priority: Int
+
+        var estimatedTokens: Int { 0 }
+        func render() async -> String? { id }
+    }
+
+    @Test
+
+    func testPromptCachePolicySorting() {
+        let volatileHigh = PolicySection(id: "volatileHigh", cachePolicy: .volatile, priority: 100)
+        let semiStableLow = PolicySection(id: "semiStableLow", cachePolicy: .semiStable, priority: 1)
+        let stableMedium = PolicySection(id: "stableMedium", cachePolicy: .stable, priority: 50)
+        let stableHigh = PolicySection(id: "stableHigh", cachePolicy: .stable, priority: 100)
+
+        let prompt = Prompt(sections: [volatileHigh, semiStableLow, stableMedium, stableHigh])
+
+        #expect(prompt.sections.count == 4)
+        // Order: stableHigh (stable, 100) -> stableMedium (stable, 50) -> semiStableLow (semiStable, 1) -> volatileHigh (volatile, 100)
+        #expect(prompt.sections[0].id == "stableHigh")
+        #expect(prompt.sections[1].id == "stableMedium")
+        #expect(prompt.sections[2].id == "semiStableLow")
+        #expect(prompt.sections[3].id == "volatileHigh")
+    }
 }

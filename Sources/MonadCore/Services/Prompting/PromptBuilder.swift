@@ -100,7 +100,7 @@ public enum PromptBuilder {
                 usedTokens += tokens
             } else {
                 // Only insert summary if we actually skipped messages and have some space
-                if result.count < messages.count && availableTokens > 100 {
+                if result.count < messages.count && availableTokens >= 100 {
                     let skippedCount = messages.count - result.count
                     let summary = Message(
                         content: "[System: History truncated. \(skippedCount) earlier messages hidden. " +
