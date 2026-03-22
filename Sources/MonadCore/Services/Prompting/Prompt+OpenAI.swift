@@ -4,17 +4,19 @@ import MonadShared
 import OpenAI
 
 public extension Prompt {
-    /// Convert the assembled prompt into OpenAI chat messages
-    func toMessages() async -> [ChatQuery.ChatCompletionMessageParam] {
+    /// Convert the assembled prompt into OpenAI chat messages.
+    /// - Parameter preRendered: Optional pre-rendered content map from `renderAll()`.
+    ///   When provided, sections use this content instead of re-rendering.
+    func toMessages(preRendered: [String: String]? = nil) async -> [ChatQuery.ChatCompletionMessageParam] {
         var messages: [ChatQuery.ChatCompletionMessageParam] = []
 
-        let systemMessage = await buildSystemMessage()
+        let systemMessage = await buildSystemMessage(preRendered: preRendered)
         if let msg = systemMessage { messages.append(msg) }
 
         let historyMessages = await buildHistoryMessages()
         messages.append(contentsOf: historyMessages)
 
-        let queryMessage = await buildUserQueryMessage()
+        let queryMessage = await buildUserQueryMessage(preRendered: preRendered)
         if let msg = queryMessage { messages.append(msg) }
 
         return messages
@@ -22,12 +24,24 @@ public extension Prompt {
 
     // MARK: - Helpers
 
-    private func buildSystemMessage() async -> ChatQuery.ChatCompletionMessageParam? {
+    private func resolvedContent(
+        for section: ContextSection,
+        using cache: [String: String]?
+    ) async -> String? {
+        if let cache {
+            return cache[section.id]
+        }
+        return await section.render()
+    }
+
+    private func buildSystemMessage(
+        preRendered: [String: String]? = nil
+    ) async -> ChatQuery.ChatCompletionMessageParam? {
         var systemParts: [String] = []
 
         for section in sections {
             if section.id == "chat_history" || section.id == "user_query" { continue }
-            if let content = await section.render(), !content.isEmpty {
+            if let content = await resolvedContent(for: section, using: preRendered), !content.isEmpty {
                 systemParts.append(content)
             }
         }
@@ -93,10 +107,11 @@ public extension Prompt {
         return .user(.init(content: .string(responseContent), name: nil))
     }
 
-    private func buildUserQueryMessage() async -> ChatQuery.ChatCompletionMessageParam? {
-        guard let querySection = sections.first(where: { $0.id == "user_query" }),
-              let content = await querySection.render()
-        else { return nil }
+    private func buildUserQueryMessage(
+        preRendered: [String: String]? = nil
+    ) async -> ChatQuery.ChatCompletionMessageParam? {
+        guard let querySection = sections.first(where: { $0.id == "user_query" }) else { return nil }
+        guard let content = await resolvedContent(for: querySection, using: preRendered) else { return nil }
         return .user(.init(content: .string(content), name: nil))
     }
 }

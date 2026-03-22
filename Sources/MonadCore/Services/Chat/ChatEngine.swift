@@ -162,6 +162,14 @@ public struct ChatEngine: Sendable {
             case let .continueWith(newMessages):
                 // A tool result or internal thought needs the LLM to process it in the next turn
                 loopMessages += newMessages
+                // Track appended messages for compaction awareness
+                if let history = context.promptHistory {
+                    let responseText = await turnContext.outputs.fullResponse + turnContext.outputs.fullThinking
+                    await history.recordAppend(
+                        messageCount: newMessages.count,
+                        estimatedTokens: TokenEstimator.estimate(text: responseText)
+                    )
+                }
             }
         }
 

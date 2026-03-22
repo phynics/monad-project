@@ -1,6 +1,7 @@
 import ErrorKit
 import Foundation
 import Logging
+import MonadPrompt
 import MonadShared
 import OpenAI
 
@@ -9,7 +10,9 @@ public enum ChatEngineError: MonadError {
     case llmServiceNotConfigured
     case missingInput
 
-    public var errorDomain: String { MonadErrorDomain.chat }
+    public var errorDomain: String {
+        MonadErrorDomain.chat
+    }
 
     public var errorCode: Int {
         switch self {
@@ -61,12 +64,12 @@ extension ChatEngine {
         // 3. Resolve workspaces and session entities
         let workspaceResult = await timelineManager.getWorkspaces(for: timelineId)
         let timeline = await timelineManager.getTimeline(id: timelineId)
-        
+
         var agentInstance: AgentInstance?
         if let agentId = agentInstanceId {
             agentInstance = try? await agentInstanceStore.fetchAgentInstance(id: agentId)
         }
-        
+
         var clientName: String?
         if let ownerId = workspaceResult?.primary?.ownerId,
            let client = try? await clientStore.fetchClient(id: ownerId)
@@ -101,8 +104,17 @@ extension ChatEngine {
             extensionSections: extensionSections,
             overridePipeline: assemblyPipeline
         )
-        
-        let initialMessages = await prompt.toMessages()
+
+        // 5. Render once and reuse for messages + prompt history
+        let renderedContent = await prompt.renderAll()
+        let initialMessages = await prompt.toMessages(preRendered: renderedContent)
+
+        // 6. Record prompt snapshot for cache tracking
+        let promptHistory = TimelinePromptHistory()
+        let diff = await promptHistory.record(sections: prompt.sections, renderedContent: renderedContent)
+        logger.debug(
+            "Prompt snapshot: \(prompt.sections.count) sections, ~\(prompt.estimatedTokens) tokens, \(diff.stablePrefixCount) stable prefix entries"
+        )
 
         let modelName = await llmService.configuration.modelName
 
@@ -116,6 +128,7 @@ extension ChatEngine {
             contextData: contextData,
             remoteDepth: currentRemoteDepth,
             generationParameters: generationParameters,
+            promptHistory: promptHistory,
             currentMessages: initialMessages,
             turnCount: 0,
             outputs: TurnOutputs()
@@ -129,7 +142,7 @@ extension ChatEngine {
         message: String,
         toolOutputs: [ToolOutputSubmission]?
     ) async throws {
-        if let toolOutputs = toolOutputs {
+        if let toolOutputs {
             for output in toolOutputs {
                 let msg = ConversationMessage(
                     timelineId: timelineId,
@@ -155,7 +168,7 @@ extension ChatEngine {
         history: [Message],
         pipeline: ContextPipeline? = nil
     ) async -> ContextData {
-        guard let contextManager = contextManager else { return ContextData() }
+        guard let contextManager else { return ContextData() }
 
         do {
             let stream = await contextManager.gatherContext(

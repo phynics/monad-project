@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import MonadCore
 @testable import MonadShared
+import MonadTestSupport
 @Suite struct MockVectorStoreTests {
 
     @Test("Mock Store Initialize and Add")

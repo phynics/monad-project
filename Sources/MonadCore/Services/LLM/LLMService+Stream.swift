@@ -17,11 +17,9 @@ public extension LLMServiceProtocol {
             systemInstructions: request.systemInstructions,
             generationParameters: request.generationParameters
         )
-        let prompt = try await PromptBuilder.buildContext(promptRequest)
-
-        // Convert to OpenAI format
-        let messages = await prompt.toMessages()
-        let rawPrompt = await prompt.render()
+        let result = try await PromptBuilder.buildPrompt(promptRequest)
+        let messages = result.messages
+        let rawPrompt = result.rawPrompt
 
         // Delegate to client for streaming
         let toolParams = request.tools.isEmpty ? nil : request.tools.map { $0.toToolParam() }

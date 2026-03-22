@@ -8,7 +8,7 @@ import Testing
     @Test("Simplified OpenAI initialization")
     func openAIInitialization() async throws {
         let apiKey = "sk-test-key"
-        let chat = MonadCoreChat(openAIKey: apiKey)
+        let chat = MonadCore(openAIKey: apiKey)
         
         let config = await chat.llmService.configuration
         #expect(config.provider == .openAI)
@@ -22,7 +22,7 @@ import Testing
     @Test("Simplified Ollama initialization")
     func ollamaInitialization() async throws {
         let model = "llama3"
-        let chat = MonadCoreChat(ollamaModel: model)
+        let chat = MonadCore(ollamaModel: model)
         
         let config = await chat.llmService.configuration
         #expect(config.provider == .ollama)
@@ -36,7 +36,7 @@ import Testing
     @Test("Custom Ollama endpoint")
     func customOllamaEndpoint() async throws {
         let endpoint = "http://192.168.1.100:11434"
-        let chat = MonadCoreChat(ollamaModel: "mistral", endpoint: endpoint)
+        let chat = MonadCore(ollamaModel: "mistral", endpoint: endpoint)
         
         let config = await chat.llmService.configuration
         #expect(config.endpoint == endpoint)
@@ -44,7 +44,7 @@ import Testing
 
     @Test("MonadCore default initialization")
     func defaultInitialization() async throws {
-        let chat = MonadCoreChat()
+        let chat = MonadCore()
         let isConfigured = await chat.llmService.isConfigured
         #expect(!isConfigured, "Default init should not be configured")
     }

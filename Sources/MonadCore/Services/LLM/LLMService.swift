@@ -48,10 +48,12 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     // MARK: - HealthCheckable
 
     public func getHealthStatus() async -> HealthStatus {
+        await preparationTask?.value
         return isConfigured ? .ok : .degraded
     }
 
     public func getHealthDetails() async -> [String: String]? {
+        await preparationTask?.value
         return [
             "model": configuration.modelName,
             "provider": configuration.endpoint.contains("openai")
@@ -61,6 +63,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     }
 
     public func checkHealth() async -> HealthStatus {
+        await preparationTask?.value
         // Basic check: is configured
         guard isConfigured else { return .degraded }
 
@@ -89,6 +92,8 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     private let storage: any ConfigurationServiceProtocol
 
     let logger = Logger.module(named: "llm")
+
+    private var preparationTask: Task<Void, Never>?
 
     // MARK: - Client Accessors
 
@@ -130,6 +135,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
             self.utilityClient = nil
             self.fastClient = nil
         }
+        self.preparationTask = nil
     }
 
     public init(
@@ -146,15 +152,21 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
 
         let needsLoad = client == nil
 
-        Task { [needsLoad] in
+        self.preparationTask = nil
+        let t = Task { [needsLoad] in
             await storage.migrateIfNeeded()
             if needsLoad {
                 await self.loadConfiguration()
             }
         }
+        Task { await self.setPreparationTask(t) }
     }
 
     // MARK: - Public API
+
+    private func setPreparationTask(_ task: Task<Void, Never>) {
+        self.preparationTask = task
+    }
 
     public func loadConfiguration() async {
         let config = await storage.load()
@@ -171,6 +183,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     }
 
     public func restoreFromBackup() async throws {
+        await preparationTask?.value
         if let restored = try await storage.restoreFromBackup() {
             logger.info("Restored configuration from backup")
             configuration = restored
@@ -183,16 +196,19 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     }
 
     public func exportConfiguration() async throws -> Data {
-        try await storage.exportConfiguration()
+        await preparationTask?.value
+        return try await storage.exportConfiguration()
     }
 
     public func importConfiguration(from data: Data) async throws {
+        await preparationTask?.value
         logger.info("Importing configuration")
         try await storage.importConfiguration(from: data)
         await loadConfiguration()
     }
 
     public func updateConfiguration(_ config: LLMConfiguration) async throws {
+        await preparationTask?.value
         logger.info(
             "Updating configuration to models: \(config.modelName) / \(config.utilityModel) / \(config.fastModel)"
         )
@@ -208,6 +224,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     }
 
     public func clearConfiguration() async {
+        await preparationTask?.value
         logger.warning("Clearing configuration")
         await storage.clear()
         configuration = .openAI
@@ -216,6 +233,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
     }
 
     public func fetchAvailableModels() async throws -> [String]? {
+        await preparationTask?.value
         guard let client = client else {
             return nil
         }
@@ -232,6 +250,7 @@ public actor LLMService: LLMServiceProtocol, HealthCheckable {
         generationParameters: GenerationParameters?,
         useUtilityModel: Bool
     ) async throws -> String {
+        await preparationTask?.value
         let selectedClient: (any LLMClientProtocol)?
         if useUtilityModel {
             selectedClient = utilityClient ?? client

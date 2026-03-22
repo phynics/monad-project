@@ -334,5 +334,4 @@ public extension MonadCore {
 
 // MARK: - Backward Compatibility
 
-@available(*, deprecated, renamed: "MonadCore")
-public typealias MonadCoreChat = MonadCore
+

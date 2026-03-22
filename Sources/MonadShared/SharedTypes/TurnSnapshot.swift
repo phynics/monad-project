@@ -62,6 +62,7 @@ public struct TurnSnapshot: Codable, Sendable, Equatable {
     public let promptTokens: Int?
     public let completionTokens: Int?
     public let totalTokens: Int?
+    public let cachedTokens: Int?
 
     public init(
         timestamp: Date = Date(),
@@ -81,7 +82,8 @@ public struct TurnSnapshot: Codable, Sendable, Equatable {
         tokensPerSecond: Double? = nil,
         promptTokens: Int? = nil,
         completionTokens: Int? = nil,
-        totalTokens: Int? = nil
+        totalTokens: Int? = nil,
+        cachedTokens: Int? = nil
     ) {
         self.timestamp = timestamp
         self.timelineId = timelineId
@@ -101,5 +103,6 @@ public struct TurnSnapshot: Codable, Sendable, Equatable {
         self.promptTokens = promptTokens
         self.completionTokens = completionTokens
         self.totalTokens = totalTokens
+        self.cachedTokens = cachedTokens
     }
 }

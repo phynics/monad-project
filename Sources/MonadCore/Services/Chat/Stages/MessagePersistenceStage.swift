@@ -58,6 +58,7 @@ struct MessagePersistenceStage: PipelineStage {
                         promptTokens: streamUsage?.promptTokens,
                         completionTokens: streamUsage?.completionTokens,
                         totalTokens: streamUsage?.totalTokens,
+                        cachedTokens: streamUsage?.promptTokensDetails?.cachedTokens,
                         duration: turnDuration,
                         tokensPerSecond: tokensPerSecond,
                         turnSnapshotData: snapshotData
@@ -132,7 +133,8 @@ struct MessagePersistenceStage: PipelineStage {
             tokensPerSecond: tokensPerSecond,
             promptTokens: streamUsage?.promptTokens,
             completionTokens: streamUsage?.completionTokens,
-            totalTokens: streamUsage?.totalTokens
+            totalTokens: streamUsage?.totalTokens,
+            cachedTokens: streamUsage?.promptTokensDetails?.cachedTokens
         )
     }
 

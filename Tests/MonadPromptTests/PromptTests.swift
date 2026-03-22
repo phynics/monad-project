@@ -1,6 +1,6 @@
-import Testing
 import Foundation
 @testable import MonadPrompt
+import Testing
 
 struct DummySection: ContextSection {
     let id: String
@@ -8,14 +8,15 @@ struct DummySection: ContextSection {
     let estimatedTokens: Int
     let text: String?
 
-    func render() async -> String? { return text }
+    func render() async -> String? {
+        return text
+    }
 }
 
-@Suite final class PromptTests {
-
+final class PromptTests {
     @Test
 
-    func testPromptInitializationSortsByPriorityDesc() {
+    func promptInitializationSortsByPriorityDesc() {
         let sec1 = DummySection(id: "s1", priority: 1, estimatedTokens: 10, text: "Low")
         let sec2 = DummySection(id: "s2", priority: 100, estimatedTokens: 10, text: "High")
 
@@ -29,7 +30,7 @@ struct DummySection: ContextSection {
 
     @Test
 
-    func testPromptContextBuilderInitialization() {
+    func promptContextBuilderInitialization() {
         let prompt = Prompt {
             DummySection(id: "s1", priority: 1, estimatedTokens: 10, text: "A")
             DummySection(id: "s2", priority: 100, estimatedTokens: 10, text: "B")
@@ -41,7 +42,7 @@ struct DummySection: ContextSection {
 
     @Test
 
-    func testPromptRender() async {
+    func promptRender() async {
         let prompt = Prompt {
             DummySection(id: "s1", priority: 10, estimatedTokens: 10, text: "First block")
             DummySection(id: "s2", priority: 5, estimatedTokens: 10, text: nil) // Skipped
@@ -56,14 +57,14 @@ struct DummySection: ContextSection {
 
     @Test
 
-    func testPromptStructuredContext() async {
+    func promptStructuredContext() async {
         let prompt = Prompt {
             DummySection(id: "s1", priority: 10, estimatedTokens: 10, text: "Val1")
             DummySection(id: "s2", priority: 5, estimatedTokens: 10, text: "") // Empty string is skipped
             DummySection(id: "s3", priority: 1, estimatedTokens: 10, text: "Val2")
         }
 
-        let context = await prompt.structuredContext()
+        let context = await prompt.renderAll()
 
         #expect(context.count == 2)
         #expect(context["s1"] == "Val1")
@@ -73,7 +74,7 @@ struct DummySection: ContextSection {
 
     @Test
 
-    func testPromptEstimatedTokens() {
+    func promptEstimatedTokens() {
         let prompt = Prompt {
             DummySection(id: "s1", priority: 10, estimatedTokens: 50, text: "A")
             DummySection(id: "s2", priority: 5, estimatedTokens: 100, text: "B")
@@ -87,13 +88,18 @@ struct DummySection: ContextSection {
         let cachePolicy: CachePolicy
         let priority: Int
 
-        var estimatedTokens: Int { 0 }
-        func render() async -> String? { id }
+        var estimatedTokens: Int {
+            0
+        }
+
+        func render() async -> String? {
+            id
+        }
     }
 
     @Test
 
-    func testPromptCachePolicySorting() {
+    func promptCachePolicySorting() {
         let volatileHigh = PolicySection(id: "volatileHigh", cachePolicy: .volatile, priority: 100)
         let semiStableLow = PolicySection(id: "semiStableLow", cachePolicy: .semiStable, priority: 1)
         let stableMedium = PolicySection(id: "stableMedium", cachePolicy: .stable, priority: 50)

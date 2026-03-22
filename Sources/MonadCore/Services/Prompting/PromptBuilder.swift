@@ -27,7 +27,7 @@ public enum PromptBuilder {
             TimelineContextStage(),
             ChatHistoryStage(),
             UserQueryStage(),
-            ExtensionSectionsStage()
+            ExtensionSectionsStage(),
         ]
     }
 
@@ -55,13 +55,13 @@ public enum PromptBuilder {
             timeline: timeline,
             extensionSections: extensionSections
         )
-        
+
         let pipeline = overridePipeline ?? PromptAssemblyPipeline(stages: defaultAssemblyStages())
-        
+
         // Execute the pipeline and drain the events.
         let stream = pipeline.execute(assemblyContext)
         for try await _ in stream {}
-        
+
         return Prompt(sections: await assemblyContext.sections)
     }
 
@@ -71,8 +71,9 @@ public enum PromptBuilder {
     /// - Throws: An error if assembly fails.
     public static func buildPrompt(_ request: LLMPromptRequest) async throws -> LLMPromptResult {
         let prompt = try await buildContext(request)
-        let messages = await prompt.toMessages()
-        let raw = await prompt.render()
+        let renderedContent = await prompt.renderAll()
+        let messages = await prompt.toMessages(preRendered: renderedContent)
+        let raw = prompt.render(preRendered: renderedContent)
         return LLMPromptResult(messages: messages, rawPrompt: raw)
     }
 
@@ -89,7 +90,7 @@ public enum PromptBuilder {
         availableTokens: Int
     ) -> [Message] {
         guard availableTokens > 0 else { return [] }
-        
+
         var result: [Message] = []
         var usedTokens = 0
 
@@ -100,7 +101,7 @@ public enum PromptBuilder {
                 usedTokens += tokens
             } else {
                 // Only insert summary if we actually skipped messages and have some space
-                if result.count < messages.count && availableTokens >= 100 {
+                if result.count < messages.count, availableTokens >= 100 {
                     let skippedCount = messages.count - result.count
                     let summary = Message(
                         content: "[System: History truncated. \(skippedCount) earlier messages hidden. " +

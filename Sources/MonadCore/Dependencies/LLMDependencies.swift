@@ -138,18 +138,3 @@ public struct UnconfiguredLLMService: LLMServiceProtocol {
         nil
     }
 }
-
-public struct UnconfiguredEmbeddingService: EmbeddingServiceProtocol {
-    public init() {}
-    private func fail() -> Never {
-        fatalError("EmbeddingService not configured. Call 'MonadCore.configure()'.")
-    }
-
-    public func generateEmbedding(for _: String) async throws -> [Float] {
-        fail()
-    }
-
-    public func generateEmbeddings(for _: [String]) async throws -> [[Float]] {
-        fail()
-    }
-}

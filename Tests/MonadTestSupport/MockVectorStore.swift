@@ -1,4 +1,5 @@
 import MonadShared
+import MonadCore
 import Foundation
 import Logging
 
@@ -52,9 +53,18 @@ public actor MockVectorStore: VectorStoreProtocol {
 
     private func cosineDistance(vector1: [Float], vector2: [Float]) -> Float {
         guard vector1.count == vector2.count else { return 1.0 }
-        let dot = zip(vector1, vector2).map(*).reduce(0, +)
-        let mag1 = sqrt(vector1.map { $0 * $0 }.reduce(0, +))
-        let mag2 = sqrt(vector2.map { $0 * $0 }.reduce(0, +))
+        var dot: Float = 0
+        var mag1Sq: Float = 0
+        var mag2Sq: Float = 0
+        for i in 0..<vector1.count {
+            let v1 = vector1[i]
+            let v2 = vector2[i]
+            dot += v1 * v2
+            mag1Sq += v1 * v1
+            mag2Sq += v2 * v2
+        }
+        let mag1 = sqrt(mag1Sq)
+        let mag2 = sqrt(mag2Sq)
         if mag1 == 0 || mag2 == 0 { return 1.0 }
         return 1.0 - (dot / (mag1 * mag2))
     }

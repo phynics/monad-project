@@ -35,16 +35,35 @@ public struct Prompt: Sendable {
         return parts.joined(separator: "\n\n---\n\n")
     }
 
-    /// Generates a structured representation of the prompt sections for logging or analysis.
-    /// - Returns: A dictionary mapping section IDs to their rendered content.
-    public func structuredContext() async -> [String: String] {
-        var context: [String: String] = [:]
+    /// Render all sections once, returning a map of section ID to rendered content.
+    /// Use this to avoid double-rendering when content is needed by multiple consumers
+    /// (e.g. `toMessages()` and `TimelinePromptHistory.record()`).
+    public func renderAll() async -> [String: String] {
+        var result: [String: String] = [:]
         for section in sections {
             if let content = await section.render(), !content.isEmpty {
-                context[section.id] = content
+                result[section.id] = content
             }
         }
-        return context
+        return result
+    }
+
+    /// Renders the full prompt string using a pre-rendered content map.
+    /// - Parameter preRendered: A map of section IDs to their already-rendered content.
+    /// - Returns: The final rendered prompt string.
+    public func render(preRendered: [String: String]) -> String {
+        var parts: [String] = []
+        for section in sections {
+            if let content = preRendered[section.id], !content.isEmpty {
+                parts.append(content)
+            }
+        }
+        return parts.joined(separator: "\n\n---\n\n")
+    }
+
+    @available(*, deprecated, renamed: "renderAll")
+    public func structuredContext() async -> [String: String] {
+        await renderAll()
     }
 
     /// An estimate of the total number of tokens for all sections in the prompt.

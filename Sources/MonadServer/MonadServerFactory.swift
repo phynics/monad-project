@@ -41,7 +41,7 @@ public struct MonadServerFactory {
     private struct ServiceSet {
         let llmService: any LLMServiceProtocol
         let embeddingService: any EmbeddingServiceProtocol
-        let vectorStore: any VectorStoreProtocol
+        let vectorStore: (any VectorStoreProtocol)?
         let keyValueStore: DatabaseKeyValueStore
         let connectionManager: WebSocketConnectionManager
     }
@@ -174,14 +174,14 @@ public struct MonadServerFactory {
             logger.info("Using Local Embedding Service (OpenAI API Key not found)")
         }
 
-        var vectorStore: any VectorStoreProtocol
+        var vectorStore: (any VectorStoreProtocol)?
         do {
             vectorStore = try VectorStore()
-            try await vectorStore.initialize()
+            try await vectorStore?.initialize()
             logger.info("Vector Store initialized.")
         } catch {
-            logger.error("Failed to initialize Vector Store: \(error). Falling back to mock.")
-            vectorStore = MockVectorStore()
+            logger.error("Failed to initialize Vector Store: \(error). No fallback available.")
+            vectorStore = nil
         }
 
         let appSupportDir = try defaultWorkspacePath().deletingLastPathComponent()

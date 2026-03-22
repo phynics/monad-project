@@ -46,10 +46,10 @@ The easiest way to get started is by providing your OpenAI API key or an Ollama 
 import MonadCore
 
 // For OpenAI
-let chat = MonadCoreChat(openAIKey: "sk-...")
+let chat = MonadCore(openAIKey: "sk-...")
 
 // For Ollama
-let chat = MonadCoreChat(ollamaModel: "llama3")
+let chat = MonadCore(ollamaModel: "llama3")
 ```
 
 ### Full Initialization (Production)
@@ -60,7 +60,7 @@ For production, you should provide persistent stores and specific service config
 import MonadCore
 import MonadShared
 
-let chat = MonadCoreChat(
+let chat = MonadCore(
     llmService: myLLM,
     messageStore: myMessageStore,
     timelineManager: myTimelineManager,
@@ -84,7 +84,7 @@ The `run` method returns an `AsyncThrowingStream<ChatEvent, Error>`. This allows
 import MonadCore
 import MonadShared
 
-let chat = MonadCoreChat(
+let chat = MonadCore(
     llmService: myLLM,
     messageStore: myMessageStore,
     timelineManager: myTimelineManager,
