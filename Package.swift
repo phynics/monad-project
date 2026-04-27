@@ -12,7 +12,6 @@ let package = Package(
         .executable(name: "MonadCLI", targets: ["MonadCLI"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main"),
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
         .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.0.0"),
         .package(url: "https://github.com/hummingbird-project/hummingbird-websocket.git", from: "2.0.0"),

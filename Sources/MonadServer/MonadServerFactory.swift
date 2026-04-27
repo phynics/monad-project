@@ -82,7 +82,7 @@ public struct MonadServerFactory {
             toolRouter: components.managers.toolRouter
         )
 
-        return try await withDependencies {
+        return withDependencies {
             configureDependencies(&$0, from: components)
         } operation: {
             registerPublicRoutes(on: router)

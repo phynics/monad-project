@@ -4,6 +4,6 @@ import PositronicKit
 import Foundation
 import GRDB
 
-extension ClientIdentity: FetchableRecord, PersistableRecord {
+extension ClientIdentity: @retroactive FetchableRecord, @retroactive PersistableRecord {
     public static var databaseTableName: String { "clientIdentity" }
 }

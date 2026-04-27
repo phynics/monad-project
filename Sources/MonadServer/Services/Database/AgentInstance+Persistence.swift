@@ -4,7 +4,7 @@ import PKShared
 
 // MARK: - AgentInstance GRDB Conformance
 
-extension AgentInstance: FetchableRecord, PersistableRecord {
+extension AgentInstance: @retroactive FetchableRecord, @retroactive PersistableRecord {
     public static var databaseTableName: String {
         "agentInstance"
     }

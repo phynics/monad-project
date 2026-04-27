@@ -27,13 +27,13 @@ public enum PersistenceError: PKError {
 
 // MARK: - ConversationMessage
 
-extension ConversationMessage: FetchableRecord, PersistableRecord {
+extension ConversationMessage: @retroactive FetchableRecord, @retroactive PersistableRecord {
     // Default Codable implementation
 }
 
 // MARK: - Timeline
 
-extension Timeline: FetchableRecord, PersistableRecord {
+extension Timeline: @retroactive FetchableRecord, @retroactive PersistableRecord {
     public static var databaseTableName: String {
         "timeline"
     }
@@ -41,7 +41,7 @@ extension Timeline: FetchableRecord, PersistableRecord {
 
 // MARK: - AgentTemplate
 
-extension AgentTemplate: FetchableRecord, PersistableRecord {
+extension AgentTemplate: @retroactive FetchableRecord, @retroactive PersistableRecord {
     public static var databaseTableName: String {
         "agent"
     }
@@ -56,13 +56,13 @@ public extension AgentTemplate {
 
 // MARK: - WorkspaceTool
 
-extension WorkspaceTool: FetchableRecord, PersistableRecord {
+extension WorkspaceTool: @retroactive FetchableRecord, @retroactive PersistableRecord {
     // Default Codable implementation
 }
 
 // MARK: - Memory
 
-extension Memory: FetchableRecord, PersistableRecord {
+extension Memory: @retroactive FetchableRecord, @retroactive PersistableRecord {
     public init(row: Row) throws {
         // Handle ID decoding with fallback for non-hyphenated UUID strings
         let id: UUID

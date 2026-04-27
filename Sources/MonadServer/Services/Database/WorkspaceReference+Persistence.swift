@@ -5,7 +5,7 @@ import PKShared
 
 // MARK: - Persistence
 
-extension WorkspaceReference: FetchableRecord, PersistableRecord {
+extension WorkspaceReference: @retroactive FetchableRecord, @retroactive PersistableRecord {
     public static var databaseTableName: String {
         "workspace"
     }

@@ -4,7 +4,7 @@ import PositronicKit
 import Foundation
 import GRDB
 
-extension WorkspaceURI: DatabaseValueConvertible {
+extension WorkspaceURI: @retroactive DatabaseValueConvertible {
     public var databaseValue: DatabaseValue {
         description.databaseValue
     }

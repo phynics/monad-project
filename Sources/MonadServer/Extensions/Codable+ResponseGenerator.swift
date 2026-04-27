@@ -23,32 +23,32 @@ public extension ResponseGenerator where Self: Codable & Sendable {
 
 // Concrete conformances for shared models
 
-extension TimelineResponse: ResponseGenerator {}
+extension TimelineResponse: @retroactive ResponseGenerator {}
 
-extension WorkspaceReference: ResponseGenerator {}
+extension WorkspaceReference: @retroactive ResponseGenerator {}
 
-extension PaginatedResponse: ResponseGenerator {}
+extension PaginatedResponse: @retroactive ResponseGenerator {}
 
-extension ToolReference: ResponseGenerator {}
+extension ToolReference: @retroactive ResponseGenerator {}
 
-extension ToolInfo: ResponseGenerator {}
+extension ToolInfo: @retroactive ResponseGenerator {}
 
-extension Memory: ResponseGenerator {}
+extension Memory: @retroactive ResponseGenerator {}
 
-extension ClientIdentity: ResponseGenerator {}
+extension ClientIdentity: @retroactive ResponseGenerator {}
 
-extension ClientRegistrationResponse: ResponseGenerator {}
+extension ClientRegistrationResponse: @retroactive ResponseGenerator {}
 
-extension LLMConfiguration: ResponseGenerator {}
+extension LLMConfiguration: @retroactive ResponseGenerator {}
 
-extension PruneResponse: ResponseGenerator {}
+extension PruneResponse: @retroactive ResponseGenerator {}
 
-extension StatusResponse: ResponseGenerator {}
+extension StatusResponse: @retroactive ResponseGenerator {}
 
-extension ChatResponse: ResponseGenerator {}
+extension ChatResponse: @retroactive ResponseGenerator {}
 
-extension TimelineWorkspacesResponse: ResponseGenerator {}
+extension TimelineWorkspacesResponse: @retroactive ResponseGenerator {}
 
-extension APIErrorResponse: ResponseGenerator {}
+extension APIErrorResponse: @retroactive ResponseGenerator {}
 
-extension Message: ResponseGenerator {}
+extension Message: @retroactive ResponseGenerator {}
