@@ -1,8 +1,8 @@
 import Dependencies
 import Foundation
 import Logging
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 import ServiceLifecycle
 
 /// Service that cleans up orphaned workspaces

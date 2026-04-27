@@ -1,9 +1,9 @@
 import Foundation
-import MonadShared
+import PKShared
 
-// MARK: - Type Aliases from MonadShared
+// MARK: - Type Aliases from PKShared
 
-public typealias LLMProvider = MonadShared.LLMProvider
-public typealias ToolCallFormat = MonadShared.ToolCallFormat
-public typealias ProviderConfiguration = MonadShared.ProviderConfiguration
-public typealias LLMConfiguration = MonadShared.LLMConfiguration
+public typealias LLMProvider = PKShared.LLMProvider
+public typealias ToolCallFormat = PKShared.ToolCallFormat
+public typealias ProviderConfiguration = PKShared.ProviderConfiguration
+public typealias LLMConfiguration = PKShared.LLMConfiguration

@@ -1,6 +1,6 @@
 import Foundation
 import MonadClient
-import MonadShared
+import PKShared
 
 /// Executes tools locally on the client machine for attached workspaces.
 struct ClientToolExecutor {
@@ -86,7 +86,7 @@ struct ClientToolExecutor {
         }
     }
 
-    private func instantiateTool(name: String, rootPath: String) -> MonadShared.Tool? {
+    private func instantiateTool(name: String, rootPath: String) -> PKShared.Tool? {
         // Shared filesystem tools require currentDirectory and jailRoot initialization
         switch name {
         case "ls": return ListDirectoryTool(currentDirectory: rootPath, jailRoot: rootPath)

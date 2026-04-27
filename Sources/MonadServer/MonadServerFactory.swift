@@ -4,8 +4,8 @@ import GRDB
 import Hummingbird
 import HummingbirdWebSocket
 import Logging
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 import ServiceLifecycle
 import UnixSignals
 
@@ -209,15 +209,13 @@ public struct MonadServerFactory {
         return ManagerSet(
             timelineManager: TimelineManager(
                 workspaceRoot: workspaceRoot,
-                connectionManager: connectionManager,
-                workspaceCreator: WorkspaceFactory()
+                workspaceCreator: WorkspaceFactory(connectionManager: connectionManager)
             ),
             toolRouter: ToolRouter(),
             agentInstanceManager: AgentInstanceManager(repository: agentWorkspaceService),
             workspaceManager: WorkspaceManager(
                 repository: agentWorkspaceService,
-                connectionManager: connectionManager,
-                workspaceCreator: WorkspaceFactory()
+                workspaceCreator: WorkspaceFactory(connectionManager: connectionManager)
             )
         )
     }

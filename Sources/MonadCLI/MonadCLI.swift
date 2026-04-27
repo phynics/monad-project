@@ -2,7 +2,7 @@ import ArgumentParser
 import Foundation
 import Logging
 import MonadClient
-import MonadShared
+import PKShared
 
 @main
 struct MonadCLI: AsyncParsableCommand {
@@ -85,7 +85,7 @@ struct Chat: AsyncParsableCommand {
 
     private func initializeLogging() {
         LoggingSystem.bootstrap { label in
-            var handler = MonadLogHandler(label: label)
+            var handler = PKLogHandler(label: label)
             handler.logLevel = verbose ? .debug : .info
             return handler
         }

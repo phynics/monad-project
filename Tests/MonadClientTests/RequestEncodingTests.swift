@@ -1,7 +1,7 @@
 import Foundation
 @testable import MonadClient
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 import Testing
 
 // MARK: - Helpers

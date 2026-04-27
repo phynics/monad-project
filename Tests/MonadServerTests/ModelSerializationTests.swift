@@ -1,8 +1,8 @@
 import Foundation
 import GRDB
-import MonadCore
+import PositronicKit
 import MonadServer
-import MonadShared
+import PKShared
 import Testing
 
 @Suite struct ModelSerializationTests {

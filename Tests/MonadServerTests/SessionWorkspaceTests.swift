@@ -1,10 +1,10 @@
 import Dependencies
 import Foundation
 import GRDB
-import MonadCore
+import PositronicKit
 @testable import MonadServer
-import MonadShared
-import MonadTestSupport
+import PKShared
+import PKTestSupport
 import Testing
 
 @Suite final class SessionWorkspaceTests {

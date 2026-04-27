@@ -1,5 +1,5 @@
-import MonadShared
-import MonadCore
+import PKShared
+import PositronicKit
 import ErrorKit
 
 import Foundation
@@ -93,13 +93,13 @@ public struct RPCResponse: Codable, Sendable {
 }
 
 /// Error type for RPC failures
-public enum RPCError: MonadError {
+public enum RPCError: PKError {
     case timeout
     case connectionLost
     case invalidResponse
     case remoteError(String)
 
-    public var errorDomain: String { MonadErrorDomain.rpc }
+    public var errorDomain: String { PKErrorDomain.rpc }
 
     public var errorCode: Int {
         switch self {

@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 
 public extension DatabaseSchema {
     /// Register all migrations

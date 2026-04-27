@@ -1,6 +1,6 @@
 import Foundation
 import MonadClient
-import MonadShared
+import PKShared
 
 struct WorkspaceSlashCommand: SlashCommand {
     let name = "workspace"

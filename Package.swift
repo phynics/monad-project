@@ -7,12 +7,9 @@ let package = Package(
         .macOS(.v15),
     ],
     products: [
-        .library(name: "MonadCore", targets: ["MonadCore"]),
-        .library(name: "MonadPrompt", targets: ["MonadPrompt"]),
         .library(name: "MonadClient", targets: ["MonadClient"]),
         .executable(name: "MonadServer", targets: ["MonadServer"]),
         .executable(name: "MonadCLI", targets: ["MonadCLI"]),
-        .library(name: "MonadShared", targets: ["MonadShared"]),
     ],
     dependencies: [
         .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main"),
@@ -25,41 +22,15 @@ let package = Package(
         .package(url: "https://github.com/unum-cloud/USearch", from: "2.0.0"),
         .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.0.0"),
         .package(url: "https://github.com/FlineDev/ErrorKit", from: "1.0.0"),
+        .package(path: "../PositronicKit"),
     ],
     targets: [
-        .target(
-            name: "MonadShared",
-            dependencies: [
-                .product(name: "OpenAI", package: "OpenAI"),
-                .product(name: "ErrorKit", package: "ErrorKit"),
-                .product(name: "Logging", package: "swift-log"),
-            ],
-            path: "Sources/MonadShared"
-        ),
-        .target(
-            name: "MonadPrompt",
-            dependencies: ["MonadShared"],
-            path: "Sources/MonadPrompt"
-        ),
-        .target(
-            name: "MonadCore",
-            dependencies: [
-                "MonadShared",
-                "MonadPrompt",
-                .product(name: "OpenAI", package: "OpenAI"),
-                .product(name: "Logging", package: "swift-log"),
-                .product(name: "Dependencies", package: "swift-dependencies"),
-                .product(name: "ErrorKit", package: "ErrorKit"),
-            ],
-            path: "Sources/MonadCore",
-            exclude: ["README.md", "docs"]
-        ),
         .executableTarget(
             name: "MonadServer",
             dependencies: [
-                "MonadCore",
-                "MonadShared",
-                "MonadPrompt",
+                .product(name: "PositronicKit", package: "PositronicKit"),
+                .product(name: "PKShared", package: "PositronicKit"),
+                .product(name: "PKPrompt", package: "PositronicKit"),
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "HummingbirdWebSocket", package: "hummingbird-websocket"),
@@ -74,7 +45,7 @@ let package = Package(
         .target(
             name: "MonadClient",
             dependencies: [
-                "MonadShared",
+                .product(name: "PKShared", package: "PositronicKit"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "ErrorKit", package: "ErrorKit"),
             ],
@@ -90,39 +61,13 @@ let package = Package(
             ],
             path: "Sources/MonadCLI"
         ),
-        .target(
-            name: "MonadTestSupport",
-            dependencies: [
-                "MonadCore",
-                "MonadShared",
-                "MonadPrompt",
-                .product(name: "OpenAI", package: "OpenAI"),
-                .product(name: "Dependencies", package: "swift-dependencies"),
-            ],
-            path: "Tests/MonadTestSupport"
-        ),
-        .testTarget(
-            name: "MonadCoreTests",
-            dependencies: [
-                "MonadCore",
-                "MonadShared",
-                "MonadTestSupport",
-                .product(name: "Dependencies", package: "swift-dependencies"),
-            ],
-            path: "Tests/MonadCoreTests"
-        ),
-        .testTarget(
-            name: "MonadPromptTests",
-            dependencies: ["MonadPrompt", "MonadTestSupport"],
-            path: "Tests/MonadPromptTests"
-        ),
         .testTarget(
             name: "MonadServerTests",
             dependencies: [
                 "MonadServer",
-                "MonadCore",
-                "MonadShared",
-                "MonadTestSupport",
+                .product(name: "PositronicKit", package: "PositronicKit"),
+                .product(name: "PKShared", package: "PositronicKit"),
+                .product(name: "PKTestSupport", package: "PositronicKit"),
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
                 .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "USearch", package: "USearch"),
@@ -131,17 +76,20 @@ let package = Package(
         ),
         .testTarget(
             name: "MonadCLITests",
-            dependencies: ["MonadCLI", "MonadClient", "MonadTestSupport"],
+            dependencies: [
+                "MonadCLI", 
+                "MonadClient", 
+                .product(name: "PKTestSupport", package: "PositronicKit")
+            ],
             path: "Tests/MonadCLITests"
         ),
         .testTarget(
-            name: "MonadSharedTests",
-            dependencies: ["MonadShared", "MonadTestSupport"],
-            path: "Tests/MonadSharedTests"
-        ),
-        .testTarget(
             name: "MonadClientTests",
-            dependencies: ["MonadClient", "MonadCore", "MonadTestSupport"],
+            dependencies: [
+                "MonadClient", 
+                .product(name: "PositronicKit", package: "PositronicKit"), 
+                .product(name: "PKTestSupport", package: "PositronicKit")
+            ],
             path: "Tests/MonadClientTests"
         ),
     ]

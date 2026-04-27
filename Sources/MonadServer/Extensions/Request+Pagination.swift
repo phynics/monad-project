@@ -1,6 +1,6 @@
 import Foundation
 import Hummingbird
-import MonadShared
+import PKShared
 
 public extension Request {
     /// Parse pagination parameters from query string

@@ -1,7 +1,7 @@
 import Foundation
 import Logging
 import MonadClient
-import MonadShared
+import PKShared
 
 struct StoredIdentity: Codable {
     let clientId: UUID

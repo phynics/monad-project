@@ -1,6 +1,6 @@
-import MonadCore
+import PositronicKit
 import Foundation
-import MonadShared
+import PKShared
 
 /// Implementation of WorkspaceProtocol that forwards requests to a remote client via RPC/WebSocket
 public actor RemoteWorkspace: WorkspaceProtocol {

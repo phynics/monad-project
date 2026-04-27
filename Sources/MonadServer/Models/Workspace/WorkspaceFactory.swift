@@ -1,20 +1,21 @@
 import Foundation
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 
 /// Factory for resolving WorkspaceReference into a concrete WorkspaceProtocol implementation.
 /// Conforms to `WorkspaceCreating` so it can be injected into MonadCore services.
 public struct WorkspaceFactory: WorkspaceCreating {
-    public init() {}
+    private let connectionManager: (any ClientConnectionManagerProtocol)?
 
-    public func create(
-        from reference: WorkspaceReference,
-        connectionManager: (any ClientConnectionManagerProtocol)?
-    ) throws -> any WorkspaceProtocol {
-        switch reference.hostType {
-        case .server, .serverTimeline:
+    public init(connectionManager: (any ClientConnectionManagerProtocol)? = nil) {
+        self.connectionManager = connectionManager
+    }
+
+    public func create(from reference: WorkspaceReference) throws -> any WorkspaceProtocol {
+        switch reference.location {
+        case .runtime, .runtimeTimeline:
             return try LocalWorkspace(reference: reference)
-        case .client:
+        case .attached:
             guard let connManager = connectionManager else {
                 throw WorkspaceError.connectionFailed
             }

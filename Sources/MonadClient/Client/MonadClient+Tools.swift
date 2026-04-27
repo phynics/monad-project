@@ -1,5 +1,5 @@
 import Foundation
-import MonadShared
+import PKShared
 
 public extension MonadWorkspaceClient {
     // MARK: - Tool API

@@ -1,6 +1,6 @@
 import Foundation
 import MonadClient
-import MonadShared
+import PKShared
 
 /// Protocol for a slash command in the chat REPL
 protocol SlashCommand: Sendable {

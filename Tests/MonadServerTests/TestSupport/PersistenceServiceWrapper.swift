@@ -1,8 +1,8 @@
 import Foundation
 import GRDB
-import MonadCore
+import PositronicKit
 import MonadServer
-import MonadShared
+import PKShared
 
 public final class PersistenceService: HealthCheckable, @unchecked Sendable {
     public let databaseManager: DatabaseManager

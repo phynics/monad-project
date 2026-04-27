@@ -1,4 +1,4 @@
-import MonadShared
+import PKShared
 
 // MARK: - Filesystem Tool References
 
@@ -49,5 +49,5 @@ public enum ClientConstants {
 
 // MARK: - Re-exports for CLI consumers
 
-public typealias TurnSnapshot = MonadShared.TurnSnapshot
-public typealias SerializationUtils = MonadShared.SerializationUtils
+public typealias TurnSnapshot = PKShared.TurnSnapshot
+public typealias SerializationUtils = PKShared.SerializationUtils

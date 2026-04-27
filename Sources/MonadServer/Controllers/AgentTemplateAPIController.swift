@@ -2,8 +2,8 @@ import Dependencies
 import Foundation
 import HTTPTypes
 import Hummingbird
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 import NIOCore
 
 /// Controller for discovering available agentTemplates in the framework

@@ -1,5 +1,5 @@
 import Foundation
-import MonadShared
+import PKShared
 
 /// Domain-specific client for Chat, Session, Memory, and AgentTemplate operations
 public struct MonadChatClient: Sendable {

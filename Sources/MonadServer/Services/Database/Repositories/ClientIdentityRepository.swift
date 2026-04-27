@@ -1,6 +1,6 @@
 import GRDB
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 import Foundation
 
 public actor ClientIdentityRepository: ClientStoreProtocol {
@@ -32,6 +32,10 @@ public actor ClientIdentityRepository: ClientStoreProtocol {
         try await dbQueue.write { db in
             try ClientIdentity.deleteOne(db, key: id)
         }
+    }
+
+    public func fetchOriginTools(originId: UUID) async throws -> [ToolReference] {
+        try await fetchClientTools(clientId: originId)
     }
 
     public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] {

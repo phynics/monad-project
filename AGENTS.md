@@ -1,42 +1,75 @@
-# CLAUDE.md
+# AGENTS
 
-Quick reference for agents working with the Monad project.
+Quick reference for agents working with the Monad application repository.
 
 ## Project Essentials
 
 - **Language:** Swift 6.0 (macOS 15+)
-- **Architecture:** Server/CLI with six modular targets (no circular dependencies)
 - **Build System:** Swift Package Manager
-- **Key Tech:** Hummingbird (REST/SSE), GRDB/SQLite, USearch (embeddings), swift-dependencies, ErrorKit
+- **Architecture:** Monad is now primarily an application host around the shared runtime modules in `../PositronicKit`
+- **Key Tech:** Hummingbird (REST/SSE), GRDB/SQLite, swift-service-lifecycle, swift-dependencies, ErrorKit
+
+## Repository Split
+
+- `Monad` contains the app-facing targets: `MonadServer`, `MonadClient`, `MonadCLI`, and their tests.
+- `../PositronicKit` contains the shared runtime, prompt, contracts, and test-support modules consumed by Monad.
+- `Package.swift` wires Monad to `PositronicKit` via `.package(path: "../PositronicKit")`.
+
+## Working Boundary
+
+- If the change is about chat orchestration, timelines, agents, tools, prompt assembly, context gathering, shared contracts, or test-support infrastructure, inspect `../PositronicKit` first. That is the source of truth now.
+- If the change is about HTTP APIs, GRDB-backed persistence wiring, CLI flows, client networking, app bootstrapping, or Monad-specific hosting behavior, it likely belongs in this repository.
+- Prefer fixing shared abstractions in `PositronicKit` rather than re-implementing them in Monad.
+- Keep Monad transport- and host-specific. Keep reusable runtime logic in `PositronicKit`.
 
 ## Quick Commands
 
 ```bash
-swift build                          # Build all targets
-swift build -c release               # Release build
-swift test                           # All tests
-swift test --filter MonadCoreTests   # Specific module
-swift run MonadServer                # Start server
-swift run MonadCLI chat              # Interactive CLI
+swift build                                # Build Monad app targets
+swift test                                 # Run Monad tests
+swift test --filter MonadServerTests       # Run specific Monad test target
+swift run MonadServer                      # Start server
+swift run MonadCLI chat                    # Interactive CLI
 ```
 
-## Code Quality & Linting
+For shared-runtime work in `../PositronicKit`:
 
-SwiftLint enforces code style and quality.
+```bash
+swift build                                # Build current package
+swift test                                 # Run current package tests
+swift run PositronicKitExamples            # Run shared runtime examples
+```
 
-- `make lint` — lint entire project
-- `swiftlint --fix Sources/` — auto-fix formatting issues (whitespace, line breaks, etc.)
+## Local Target Architecture
 
-## Module Architecture
+Monad defines three main app targets:
 
-Six targets with strict dependency hierarchy:
+1. `MonadServer` — Hummingbird API host, SSE/WebSocket endpoints, GRDB persistence adapters, service lifecycle.
+2. `MonadClient` — Client-side networking and shared API consumption.
+3. `MonadCLI` — Command-line interface built on top of `MonadClient`.
 
-1. **MonadPrompt** — Standalone DSL for prompt construction (`@ContextBuilder`). No dependencies.
-2. **MonadCore** — Core business logic. Contains `ChatEngine`, `TimelineManager`, `AgentInstanceManager`, `ContextManager`, `ToolRouter`/`ToolExecutor`, LLM providers, embeddings, persistence.
-3. **MonadShared** — Common types for client/server (`AgentInstance`, `AgentTemplate`, `ToolReference`, `WorkspaceReference`, `AnyCodable`, `ChatEvent`).
-4. **MonadServer** — Hummingbird REST API, SSE streaming, GRDB persistence, WebSocket, service lifecycle.
-5. **MonadClient** — Core HTTP/SSE networking layer and base client.
-6. **MonadCLI** — Command-line interface with slash commands.
+Monad consumes these products from `PositronicKit`:
+
+1. `PositronicKit` — Shared runtime orchestration (`ChatEngine`, `TimelineManager`, `ContextManager`, `ToolRouter`, agent services, LLM services).
+2. `PKShared` — Shared API/runtime contracts and utility models.
+3. `PKPrompt` — Prompt DSL, prompt assembly artifacts, and token/compression primitives.
+4. `PKTestSupport` — Reusable test helpers and fixtures.
+
+## PositronicKit Guidance
+
+- Treat `PositronicKit` as the agent-building toolkit centered on timelines, workspaces, agents, tools, pipelines, and orchestration stages.
+- Keep concrete transport, RPC, and client/server hosting concerns downstream in Monad unless the abstraction is clearly reusable.
+- Prefer neutral seams like persistence protocols, workspace creators, prompt section providers, and tool routers over embedding Monad-specific deployment details in shared runtime code.
+- `TimelineManager`, `WorkspaceManager`, `ToolRouter`, `ChatEngine`, and prompt/context pipeline code should remain transport-neutral.
+- Preserve stable core concepts such as `Timeline`, `WorkspaceReference`, `AgentInstance`, tool metadata, and prompt artifacts. Avoid leaking host-specific terminology into shared APIs when a neutral alternative exists.
+
+## Prompt And Pipeline Guidance
+
+- Both context gathering and prompt assembly use the generic `Pipeline<Context, Event>` pattern in shared runtime code.
+- `ContextManager` delegates to a `ContextPipeline`; `PromptBuilder` delegates to a `PromptAssemblyPipeline`.
+- Build custom pipelines with the corresponding DSL/builders or per-request overrides instead of hard-coding branching logic into `ChatEngine`.
+- In prompt work, treat prompt IR and assembled prompt artifacts as owned by the shared prompt module. Monad should consume them, not reimplement prompt-tree semantics locally.
+- Preserve both requested compression strategy and realized compression outcome when changing token-budgeting behavior.
 
 ## Critical Conventions
 
@@ -46,41 +79,27 @@ Six targets with strict dependency hierarchy:
 
 ### Concurrency
 - Use `AsyncThrowingStream` for streaming/progress.
-- Use **actors** for thread-safe state management (`TimelineManager`, `AgentInstanceManager`, `ContextManager`, `WorkspaceManager`).
-- Use `Mutex<T>` for fine-grained locking.
+- Use actors for thread-safe state management.
+- Favor Swift 6 concurrency defaults such as `Sendable`, actor isolation, and `@MainActor` where appropriate.
+- Avoid shared mutable state; use `Mutex<T>` only for narrow cases that do not fit actor ownership.
 
 ### Graceful Shutdown
-- Services in `ServiceGroup` **must** wrap work in `cancelWhenGracefulShutdown { ... }` from `ServiceLifecycle`.
-- **CRITICAL:** DO NOT rely on `Task.isCancelled` alone.
+- Services in `ServiceGroup` must wrap work in `cancelWhenGracefulShutdown { ... }` from `ServiceLifecycle`.
+- Do not rely on `Task.isCancelled` alone.
 
 ### Dependency Injection
-- Uses Point-Free's `swift-dependencies` (`@Dependency`).
+- Use Point-Free's `swift-dependencies` (`@Dependency`).
+- Keep `@Dependency` fields on focused services/stages instead of central coordinators when possible.
 
-## Context & Prompt Pipelines
+## Working Conventions
 
-Both context gathering and prompt assembly use the generic `Pipeline<Context, Event>` pattern (`MonadShared/Utilities/Pipeline.swift`). Each pipeline is composed of discrete, replaceable stages.
-
-### Context Gathering Pipeline
-- **ContextManager** delegates to a `ContextPipeline` (alias for `Pipeline<ContextPipelineContext, ContextGatheringEvent>`).
-- Default stages: `QueryAugmentationStage` → `MemoryRetrievalStage` → `NoteDiscoveryStage` → `ContextAssemblyStage`.
-- Stages live in `Services/Context/Pipeline/Stages/`.
-- Build custom pipelines with `@ContextPipelineBuilder` DSL or pass `overridePipeline:` per-request.
-- `@Dependency` fields (e.g. `memoryStore`, `embeddingService`) live on stages, not on `ContextManager`.
-
-### Prompt Assembly Pipeline
-- **PromptBuilder** delegates to a `PromptAssemblyPipeline` (alias for `Pipeline<PromptAssemblyContext, PromptAssemblyEvent>`).
-- Default stages (10): `SystemInstructionsStage`, `AgentContextStage`, `ContextNotesStage`, `MemoriesStage`, `ToolsStage`, `WorkspacesContextStage`, `TimelineContextStage`, `ChatHistoryStage`, `UserQueryStage`, `ExtensionSectionsStage`.
-- Stages live in `Services/Prompting/PromptAssemblyStages.swift`; types/DSL in `PromptAssembly.swift`.
-- Build custom pipelines with `@PromptAssemblyPipelineBuilder` DSL or pass `overridePipeline:` per-request.
-- Custom stages implement `PromptAssemblyStage` protocol (provides `running()` helper for event emission).
-
-### Per-Request Overrides
-Both pipelines can be overridden per-request through `MonadCore.run(contextPipeline:assemblyPipeline:)` → `ChatEngine` → `ContextManager`/`PromptBuilder`.
-
-### Token Budgeting
-- `MonadPrompt` provides `@ContextBuilder` DSL, `ContextSection` protocol, and compression strategies.
-- `PromptBuilder` handles history truncation (`maxHistoryTokens`, `historyTokenBuffer`).
+- Prefer small, focused changes that preserve the Monad/PositronicKit boundary.
+- When shared public APIs change, update imports, package references, docs, and Monad call sites together.
+- Keep examples and tests aligned with any shared-runtime API change; `PositronicKitExamples` is a useful reference for intended composition.
+- Add or update tests with behavioral changes, using `PKTestSupport` where it fits.
+- Prefer composition over inheritance, narrow protocols, explicit `throws`, and structured logging.
 
 ## Documentation
 
-See **[docs/INDEX.md](docs/INDEX.md)** for comprehensive documentation index.
+See `docs/INDEX.md` for Monad documentation.
+See `../PositronicKit/AGENTS.md` for the authoritative shared-runtime guidance.

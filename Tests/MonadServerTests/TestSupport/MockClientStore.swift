@@ -1,6 +1,6 @@
-@testable import MonadCore
+@testable import PositronicKit
 import Foundation
-@testable import MonadShared
+@testable import PKShared
 @testable import MonadServer
 
 public final class MockClientStore: ClientStoreProtocol, @unchecked Sendable {
@@ -32,5 +32,9 @@ public final class MockClientStore: ClientStoreProtocol, @unchecked Sendable {
 
     public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] {
         return []
+    }
+
+    public func fetchOriginTools(originId: UUID) async throws -> [ToolReference] {
+        try await fetchClientTools(clientId: originId)
     }
 }

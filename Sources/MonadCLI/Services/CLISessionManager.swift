@@ -2,7 +2,7 @@ import ArgumentParser
 import Foundation
 import Logging
 import MonadClient
-import MonadShared
+import PKShared
 
 struct CLITimelineManager {
     let client: MonadClient

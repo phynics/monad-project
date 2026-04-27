@@ -1,5 +1,5 @@
 import Foundation
-import MonadShared
+import PKShared
 
 public extension MonadChatClient {
     // MARK: - Chat API
@@ -18,8 +18,8 @@ public extension MonadChatClient {
             ChatRequest(
                 message: message,
                 toolOutputs: toolOutputs,
-                clientId: client.configuration.clientId,
-                clientTools: clientTools
+                requestOriginId: client.configuration.clientId,
+                attachedTools: clientTools
             )
         )
         return try await client.perform(request)
@@ -46,7 +46,12 @@ public extension MonadChatClient {
         )
         let clientId = client.configuration.clientId
         request.httpBody = try await client.encode(
-            ChatRequest(message: message, toolOutputs: toolOutputs, clientId: clientId, clientTools: clientTools)
+            ChatRequest(
+                message: message,
+                toolOutputs: toolOutputs,
+                requestOriginId: clientId,
+                attachedTools: clientTools
+            )
         )
 
         client.configuration.logger.debug(

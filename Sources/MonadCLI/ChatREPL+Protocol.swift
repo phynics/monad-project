@@ -1,6 +1,6 @@
 import Foundation
 import MonadClient
-import MonadShared
+import PKShared
 
 extension ChatREPL {
     // MARK: - ChatREPLController

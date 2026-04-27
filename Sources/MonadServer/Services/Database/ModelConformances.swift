@@ -1,15 +1,15 @@
 import ErrorKit
 import Foundation
 import GRDB
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 
 // MARK: - Persistence Error
 
-public enum PersistenceError: MonadError {
+public enum PersistenceError: PKError {
     case invalidUUIDFormat(String)
 
-    public var errorDomain: String { MonadErrorDomain.persistence }
+    public var errorDomain: String { PKErrorDomain.persistence }
 
     public var errorCode: Int {
         switch self {

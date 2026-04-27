@@ -2,8 +2,8 @@ import Testing
 import Foundation
 import Logging
 @testable import MonadClient
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 
 struct ProtocolWrapper: @unchecked Sendable {
     let obj: URLProtocol

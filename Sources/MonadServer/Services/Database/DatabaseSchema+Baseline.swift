@@ -1,6 +1,6 @@
 import Foundation
 import GRDB
-import MonadShared
+import PKShared
 
 extension DatabaseSchema {
     // MARK: - Workspace Tables

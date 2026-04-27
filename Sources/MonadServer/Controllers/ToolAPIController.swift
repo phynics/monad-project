@@ -2,8 +2,8 @@ import Dependencies
 import Foundation
 import HTTPTypes
 import Hummingbird
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 import NIOCore
 
 public struct ExecuteToolRequest: Codable, Sendable {
@@ -130,8 +130,8 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
             switch outcome {
             case let .completed(result):
                 return result
-            case .deferredToClient:
-                throw HTTPError(.badRequest, message: "Server API cannot execute client-deferred tools currently")
+            case .deferredExternally:
+                throw HTTPError(.badRequest, message: "Server API cannot execute externally deferred tools currently")
             }
         } catch let error as ToolError {
             if case .toolNotFound = error {

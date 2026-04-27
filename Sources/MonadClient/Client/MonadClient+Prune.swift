@@ -1,5 +1,5 @@
 import Foundation
-import MonadShared
+import PKShared
 
 public extension MonadChatClient {
     // MARK: - Prune API

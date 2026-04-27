@@ -1,8 +1,8 @@
 import Foundation
-import MonadCore
+import PositronicKit
 @testable import MonadServer
-import MonadShared
-import MonadTestSupport
+import PKShared
+import PKTestSupport
 import OpenAI
 import Testing
 

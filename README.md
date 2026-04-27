@@ -1,84 +1,51 @@
-# Conductor
+# Monad
 
 ![Spark, a curious lynx](docs/assets/spark.png)
 
-A headless AI assistant built for deep context integration. Conductor focuses on how your data and documents integrate with Large Language Models through a server/CLI architecture.
+Monad is the application host around the shared `PositronicKit` runtime.
 
-Built with **Swift 6.0**, it features a modular architecture designed for high performance and a local-first approach.
+- `MonadServer` provides the Hummingbird HTTP/SSE/WebSocket host and GRDB-backed persistence.
+- `MonadClient` provides the Swift client API for talking to the server.
+- `MonadCLI` provides the interactive terminal interface.
+- `../PositronicKit` provides the shared runtime, prompt system, contracts, and test support used by this repo.
 
 ## Architecture
 
-- **MonadCore**: Pure logic framework with session management, context engine, persistence (GRDB/SQLite), and tool execution
-- **MonadPrompt**: Context-aware prompt construction DSL
-- **MonadShared**: Common types and protocols (ToolReference, WorkspaceReference, AnyCodable)
-- **MonadServer**: REST API server with streaming chat support
-- **MonadClient**: HTTP client library for server communication
-- **MonadCLI**: Command-line interface for interacting with the server
+Monad now depends on these `PositronicKit` products:
 
-## Context & Semantic Memory
+- `PositronicKit` for runtime orchestration such as `ChatEngine`, `TimelineManager`, `ToolRouter`, and LLM services
+- `PKShared` for shared API and runtime types
+- `PKPrompt` for prompt construction and assembly primitives
+- `PKTestSupport` for reusable test helpers
 
-The heart of Monad is its context engine, moving beyond simple message history with sophisticated retrieval.
-
-- **Semantic Retrieval & Tag Boosting**: Uses vector embeddings to find relevant memories and notes with LLM-driven tag-boosting for precision
-- **Adaptive Learning**: Refines retrieval strategy over time, learning which memories were useful in past interactions
-
-## Virtual Document Workspace
-
-Documents are active parts of your conversation, not static attachments.
-
-- **Stateful Management**: Documents are loaded, unloaded, or pinned to keep context clean while keeping critical data accessible
-- **Autonomous Toolset**: The LLM can search excerpts, summarize content, and switch between document views
+Use Monad for transport, persistence wiring, and app-specific behavior. Use `PositronicKit` for reusable agent-runtime logic.
 
 ## Getting Started
 
-### Quick Start (SPM)
-
 ```bash
-# Build everything
 swift build
-
-# Run tests
 swift test
-
-# Start the server
 swift run MonadServer
-
-# In another terminal, use the CLI
 swift run MonadCLI chat
-
-# Quick one-off query (no quotes needed)
-swift run MonadCLI q what is the capital of France
-
-# Generate shell commands from natural language
-swift run MonadCLI cmd find all TODO comments in Swift files
-
-# Check server status
-swift run MonadCLI status
 ```
 
-### With Xcode
+## Working With PositronicKit
+
+For shared runtime work, use the sibling package directly:
 
 ```bash
-# Install xcodegen if needed
-brew install xcodegen
-
-# Generate Xcode project
-make generate
-
-# Open in Xcode
-make open
+cd ../PositronicKit
+swift build
+swift test
+swift run PositronicKitExamples
 ```
 
-### Development Commands
+## Docs
 
-```bash
-make help          # Show all available commands
-make build         # Build the server
-make run-server    # Run the server
-make test          # Run tests
-make clean         # Clean build artifacts
-```
+- `AGENTS.md` for repository-specific guidance
+- `docs/INDEX.md` for the documentation index
+- `../PositronicKit/AGENTS.md` for shared runtime guidance
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT License. See `LICENSE`.

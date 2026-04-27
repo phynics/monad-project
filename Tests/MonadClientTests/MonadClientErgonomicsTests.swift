@@ -1,6 +1,6 @@
 import Foundation
 @testable import MonadClient
-@testable import MonadShared
+@testable import PKShared
 import Testing
 
 public actor MockSession: URLSessionProtocol {

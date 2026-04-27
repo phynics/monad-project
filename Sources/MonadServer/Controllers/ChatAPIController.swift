@@ -3,8 +3,8 @@ import Foundation
 import HTTPTypes
 import Hummingbird
 import Logging
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 import NIOCore
 import OpenAI
 
@@ -209,7 +209,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         do {
             let references = try await timelineManager.getAllToolReferences(
-                timelineId: timelineId, clientTools: clientTools
+                timelineId: timelineId, requestOriginTools: clientTools
             )
 
             for ref in references {

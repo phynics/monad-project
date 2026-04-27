@@ -1,57 +1,57 @@
 import ErrorKit
 import Foundation
-import MonadShared
+import PKShared
 
-// MARK: - Type Aliases from MonadShared
+// MARK: - Type Aliases from PKShared
 
 /// Timeline Models
-public typealias Timeline = MonadShared.TimelineResponse
+public typealias Timeline = PKShared.TimelineResponse
 
 // Chat Models
-public typealias ChatRequest = MonadShared.ChatRequest
-public typealias ChatResponse = MonadShared.ChatResponse
+public typealias ChatRequest = PKShared.ChatRequest
+public typealias ChatResponse = PKShared.ChatResponse
 
 // Status Models
-public typealias StatusResponse = MonadShared.StatusResponse
-public typealias ComponentStatus = MonadShared.ComponentStatus
-public typealias HealthStatus = MonadShared.HealthStatus
+public typealias StatusResponse = PKShared.StatusResponse
+public typealias ComponentStatus = PKShared.ComponentStatus
+public typealias HealthStatus = PKShared.HealthStatus
 
 // Memory Models
-public typealias Memory = MonadShared.Memory
-public typealias MemorySearchRequest = MonadShared.MemorySearchRequest
+public typealias Memory = PKShared.Memory
+public typealias MemorySearchRequest = PKShared.MemorySearchRequest
 
 /// Tool Models
-public typealias Tool = MonadShared.ToolInfo
+public typealias Tool = PKShared.ToolInfo
 
 /// AgentTemplate Models
-public typealias AgentTemplate = MonadShared.AgentTemplate
+public typealias AgentTemplate = PKShared.AgentTemplate
 
 // Message Models
-public typealias Message = MonadShared.Message
-public typealias MessageRole = MonadShared.Message.MessageRole
+public typealias Message = PKShared.Message
+public typealias MessageRole = PKShared.Message.MessageRole
 
 // MARK: - Client-Specific Models
 
 /// A delta for a tool call in a streaming response
-public typealias ToolCallDelta = MonadShared.ToolCallDelta
+public typealias ToolCallDelta = PKShared.ToolCallDelta
 
 /// Metadata about the context used for a chat response
-public typealias ChatMetadata = MonadShared.ChatMetadata
+public typealias ChatMetadata = PKShared.ChatMetadata
 
 // MARK: - Client API Models
 
-public typealias ClientIdentity = MonadShared.ClientIdentity
-public typealias WorkspaceReference = MonadShared.WorkspaceReference
-public typealias WorkspaceURI = MonadShared.WorkspaceURI
-public typealias WorkspaceTrustLevel = MonadShared.WorkspaceTrustLevel
-public typealias ToolReference = MonadShared.ToolReference
-public typealias WorkspaceToolDefinition = MonadShared.WorkspaceToolDefinition
-public typealias AnyCodable = MonadShared.AnyCodable
+public typealias ClientIdentity = PKShared.ClientIdentity
+public typealias WorkspaceReference = PKShared.WorkspaceReference
+public typealias WorkspaceURI = PKShared.WorkspaceURI
+public typealias WorkspaceTrustLevel = PKShared.WorkspaceTrustLevel
+public typealias ToolReference = PKShared.ToolReference
+public typealias WorkspaceToolDefinition = PKShared.WorkspaceToolDefinition
+public typealias AnyCodable = PKShared.AnyCodable
 
 // MARK: - Error Models
 
 /// Errors that can occur when communicating with the server
-public enum MonadClientError: MonadError {
+public enum MonadClientError: PKError {
     case invalidURL
     case networkError(Error)
     case httpError(statusCode: Int, message: String?)
@@ -61,7 +61,7 @@ public enum MonadClientError: MonadError {
     case notFound
     case unknown(String)
 
-    public var errorDomain: String { MonadErrorDomain.client }
+    public var errorDomain: String { PKErrorDomain.client }
 
     public var errorCode: Int {
         switch self {

@@ -2,8 +2,8 @@ import Foundation
 import HTTPTypes
 import Hummingbird
 import Logging
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 import NIOCore
 
 public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
@@ -69,11 +69,11 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
             return ErrorClassification(status: .badRequest, code: "missing_argument")
         case .invalidArgument:
             return ErrorClassification(status: .badRequest, code: "invalid_argument")
-        case .clientNotConnected:
+        case .requestOriginUnavailable:
             return ErrorClassification(status: .serviceUnavailable, code: "client_not_connected")
         case .executionFailed:
             return ErrorClassification(status: .internalServerError, code: "execution_failed")
-        case .clientToolsDisallowedOnPrivateTimeline:
+        case .attachedToolsDisallowedOnPrivateTimeline:
             return ErrorClassification(status: .forbidden, code: "client_tools_disallowed_on_private_timeline")
         }
     }

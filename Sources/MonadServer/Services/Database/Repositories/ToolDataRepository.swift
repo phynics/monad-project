@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
-import MonadCore
-import MonadShared
+import PositronicKit
+import PKShared
 
 public actor ToolDataRepository: ToolPersistenceProtocol {
     private let dbQueue: DatabaseQueue
@@ -69,6 +69,10 @@ public actor ToolDataRepository: ToolPersistenceProtocol {
 
             return try tools.map { try $0.toToolReference() }
         }
+    }
+
+    public func fetchOriginTools(originId: UUID) async throws -> [ToolReference] {
+        try await fetchClientTools(clientId: originId)
     }
 
     public func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID? {
