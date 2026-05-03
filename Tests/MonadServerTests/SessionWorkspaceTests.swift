@@ -68,7 +68,7 @@ import Testing
 
                 try #require(workspace != nil)
                 #expect(workspace?.location == .runtime)
-                #expect(workspace?.uri.path == "/sessions/\(session.id.uuidString)")
+                #expect(workspace?.uri.path == "/timelines/\(session.id.uuidString)")
             }
     }
 }

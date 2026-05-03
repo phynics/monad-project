@@ -41,7 +41,7 @@ import Testing
 
         let ref = WorkspaceReference(
             id: wsId,
-            uri: .serverTimeline(wsId),
+            uri: .timelineWorkspace(wsId),
             location: .runtime,
             rootPath: wsDir.path
         )
@@ -73,7 +73,7 @@ import Testing
 
         let ref = WorkspaceReference(
             id: wsId,
-            uri: .serverTimeline(wsId),
+            uri: .timelineWorkspace(wsId),
             location: .runtime,
             rootPath: wsDir.path
         )
@@ -95,7 +95,7 @@ import Testing
         let wsDir = testDir.appendingPathComponent("ws3")
         try FileManager.default.createDirectory(at: wsDir, withIntermediateDirectories: true)
 
-        let ref1 = WorkspaceReference(id: wsId1, uri: .serverTimeline(wsId1), location: .runtime, rootPath: wsDir.path)
+        let ref1 = WorkspaceReference(id: wsId1, uri: .timelineWorkspace(wsId1), location: .runtime, rootPath: wsDir.path)
         try await persistence.saveWorkspace(ref1)
 
         _ = try await manager.getWorkspace(id: wsId1)

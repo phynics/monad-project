@@ -16,7 +16,7 @@ public actor ToolDataRepository: ToolPersistenceProtocol {
             guard try WorkspaceReference.exists(db, key: workspaceId) else {
                 throw ToolError.workspaceNotFound(workspaceId)
             }
-            let workspaceTool = try WorkspaceTool(workspaceId: workspaceId, toolReference: tool)
+            let workspaceTool = try WorkspaceToolRecord(workspaceId: workspaceId, toolReference: tool)
             try workspaceTool.insert(db)
         }
     }
@@ -29,7 +29,7 @@ public actor ToolDataRepository: ToolPersistenceProtocol {
 
             let incomingIds = Set(tools.map { $0.toolId })
 
-            let existing = try WorkspaceTool
+            let existing = try WorkspaceToolRecord
                 .filter(Column("workspaceId") == workspaceId)
                 .fetchAll(db)
 
@@ -39,7 +39,7 @@ public actor ToolDataRepository: ToolPersistenceProtocol {
 
             let existingIds = Set(existing.map { $0.toolId })
             for tool in tools where !existingIds.contains(tool.toolId) {
-                let workspaceTool = try WorkspaceTool(workspaceId: workspaceId, toolReference: tool)
+                let workspaceTool = try WorkspaceToolRecord(workspaceId: workspaceId, toolReference: tool)
                 try workspaceTool.insert(db)
             }
         }
@@ -48,7 +48,7 @@ public actor ToolDataRepository: ToolPersistenceProtocol {
     public func fetchTools(forWorkspaces workspaceIds: [UUID]) async throws -> [ToolReference] {
         guard !workspaceIds.isEmpty else { return [] }
         return try await dbQueue.read { db in
-            let tools = try WorkspaceTool
+            let tools = try WorkspaceToolRecord
                 .filter(workspaceIds.contains(Column("workspaceId")))
                 .fetchAll(db)
             return try tools.map { try $0.toToolReference() }
@@ -64,7 +64,7 @@ public actor ToolDataRepository: ToolPersistenceProtocol {
             let workspaceIds = workspaces.map { $0.id }
             guard !workspaceIds.isEmpty else { return [] }
 
-            let tools = try WorkspaceTool
+            let tools = try WorkspaceToolRecord
                 .filter(workspaceIds.contains(Column("workspaceId")))
                 .fetchAll(db)
 
@@ -78,7 +78,7 @@ public actor ToolDataRepository: ToolPersistenceProtocol {
 
     public func findWorkspaceId(forToolId toolId: String, in workspaceIds: [UUID]) async throws -> UUID? {
         try await dbQueue.read { db in
-            let exists = try WorkspaceTool
+            let exists = try WorkspaceToolRecord
                 .filter(Column("toolId") == toolId)
                 .filter(workspaceIds.contains(Column("workspaceId")))
                 .fetchOne(db)
@@ -91,7 +91,7 @@ public actor ToolDataRepository: ToolPersistenceProtocol {
     ) async throws -> String? {
         if workspaceIds.isEmpty { return nil }
         return try await dbQueue.read { db -> String? in
-            if let toolRecord = try WorkspaceTool
+            if let toolRecord = try WorkspaceToolRecord
                 .filter(Column("toolId") == toolId)
                 .filter(workspaceIds.contains(Column("workspaceId")))
                 .fetchOne(db),

@@ -36,7 +36,7 @@ public actor WorkspaceDataRepository: WorkspacePersistenceProtocol {
             }
 
             if includeTools {
-                let workspaceTools = try WorkspaceTool
+                let workspaceTools = try WorkspaceToolRecord
                     .filter(Column("workspaceId") == id)
                     .fetchAll(db)
 

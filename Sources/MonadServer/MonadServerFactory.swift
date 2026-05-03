@@ -163,17 +163,8 @@ public struct MonadServerFactory {
         dbQueue: DatabaseQueue,
         logger: Logger
     ) async throws -> ServiceSet {
-        let embeddingService: any EmbeddingServiceProtocol
-        let envVars = ProcessInfo.processInfo.environment
-        if let apiKey = envVars["MONAD_OPENAI_API_KEY"] ?? envVars["OPENAI_API_KEY"],
-           !apiKey.isEmpty
-        {
-            embeddingService = OpenAIEmbeddingService(apiKey: apiKey)
-            logger.info("Using OpenAI Embedding Service")
-        } else {
-            embeddingService = LocalEmbeddingService()
-            logger.info("Using Local Embedding Service (OpenAI API Key not found)")
-        }
+        let embeddingService: any EmbeddingServiceProtocol = LocalEmbeddingService()
+        logger.info("Using Local Embedding Service")
 
         var vectorStore: (any VectorStoreProtocol)?
         do {

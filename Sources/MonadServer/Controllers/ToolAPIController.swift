@@ -21,6 +21,8 @@ public struct ExecuteToolRequest: Codable, Sendable {
 
 public struct ToolAPIController<Context: RequestContext>: Sendable {
     @Dependency(\.timelineManager) var timelineManager
+    @Dependency(\.timelinePersistence) var timelineStore
+    @Dependency(\.messageStore) var messageStore
     @Dependency(\.toolRouter) var toolRouter
 
     public init() {}
@@ -34,9 +36,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func listSystemTools(_: Request, context _: Context) async throws -> [ToolInfo] {
-        SystemToolRegistry.shared
-            .allDefinitions
-            .map { ToolInfo(id: $0.id, name: $0.name, description: $0.description) }
+        currentSystemTools().map { ToolInfo(id: $0.id, name: $0.name, description: $0.description) }
     }
 
     @Sendable func enable(_: Request, context: Context) async throws -> HTTPResponse.Status {
@@ -110,5 +110,19 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         } catch {
             throw error
         }
+    }
+
+    private func currentSystemTools() -> [AnyTool] {
+        let cwd = FileManager.default.currentDirectoryPath
+        return [
+            AnyTool(ChangeDirectoryTool(currentPath: cwd, root: cwd, onChange: { _ in })),
+            AnyTool(ListDirectoryTool(currentDirectory: cwd, jailRoot: cwd)),
+            AnyTool(FindFileTool(currentDirectory: cwd, jailRoot: cwd)),
+            AnyTool(SearchFileContentTool(currentDirectory: cwd, jailRoot: cwd)),
+            AnyTool(SearchFilesTool(currentDirectory: cwd, jailRoot: cwd)),
+            AnyTool(ReadFileTool(currentDirectory: cwd, jailRoot: cwd)),
+            AnyTool(TimelineListTool(timelineStore: timelineStore)),
+            AnyTool(TimelinePeekTool(messageStore: messageStore, timelineStore: timelineStore)),
+        ]
     }
 }

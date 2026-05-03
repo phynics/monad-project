@@ -44,7 +44,7 @@ public actor RequestOriginRepository: RequestOriginStoreProtocol {
             let workspaceIds = workspaces.map { $0.id }
             guard !workspaceIds.isEmpty else { return [] }
 
-            let tools = try WorkspaceTool
+            let tools = try WorkspaceToolRecord
                 .filter(workspaceIds.contains(Column("workspaceId")))
                 .fetchAll(db)
 

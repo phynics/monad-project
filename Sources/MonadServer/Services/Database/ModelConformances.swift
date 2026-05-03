@@ -55,12 +55,6 @@ public extension AgentTemplate {
     }
 }
 
-// MARK: - WorkspaceTool
-
-extension WorkspaceTool: @retroactive FetchableRecord, @retroactive PersistableRecord {
-    // Default Codable implementation
-}
-
 // MARK: - Memory
 
 extension Memory: @retroactive FetchableRecord, @retroactive PersistableRecord {

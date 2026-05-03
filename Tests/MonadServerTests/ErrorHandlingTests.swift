@@ -112,11 +112,11 @@ import Testing
         }
     }
 
-    @Test("ToolError.clientNotConnected maps to 503 client_not_connected")
-    func toolError_clientNotConnected_maps503() async throws {
+    @Test("ToolError.requestOriginUnavailable maps to 503 client_not_connected")
+    func toolError_requestOriginUnavailable_maps503() async throws {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
-        router.get("/err") { _, _ -> String in throw ToolError.clientNotConnected }
+        router.get("/err") { _, _ -> String in throw ToolError.requestOriginUnavailable }
         let app = Application(router: router)
 
         try await app.test(.router) { client in

@@ -34,8 +34,7 @@ struct ServerLLMServiceTests {
         let newConfig = await service.configuration
         #expect(newConfig.activeProvider == .ollama)
 
-        let newClient = await service.getClient()
-        #expect(newClient != nil, "Client should be initialized after valid config")
+        #expect(await service.isConfigured)
 
         try? FileManager.default.removeItem(at: tempURL)
     }
@@ -143,7 +142,7 @@ struct ServerLLMServiceTests {
             tools: [],
             workspaces: [],
             primaryWorkspace: nil,
-            clientName: nil
+            requestOriginName: nil
         )
         let result = try await service.chatStreamWithContext(chatRequest)
 
@@ -178,8 +177,9 @@ struct ServerLLMServiceTests {
 
         try await service.updateConfiguration(config)
 
-        let client = await service.getClient()
-        #expect(client != nil)
+        let updated = await service.configuration
+        #expect(updated.activeProvider == .openRouter)
+        #expect(updated.providers[.openRouter]?.modelName == "anthropic/claude-3")
 
         try? FileManager.default.removeItem(at: tempURL)
     }
