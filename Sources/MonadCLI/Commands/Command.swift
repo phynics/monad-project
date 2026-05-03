@@ -39,8 +39,9 @@ struct Command: AsyncParsableCommand {
             throw ExitCode.failure
         }
 
-        let client = try await buildClient()
-        let targetTimeline = try await resolveTimeline(client: client)
+        let support = CLICommandSupport(server: server, apiKey: apiKey, verbose: verbose)
+        let client = try await support.buildClient()
+        let targetTimeline = try await support.resolveTimeline(client: client, explicitTimelineID: timeline)
 
         // Build command generation prompt
         let systemInfo = gatherSystemInfo()
@@ -60,66 +61,6 @@ struct Command: AsyncParsableCommand {
 
         try await commandLoop(command: command, client: client, timeline: targetTimeline)
     }
-
-    // MARK: - Client & Timeline Setup
-
-    private func buildClient() async throws -> MonadClient {
-        let localConfig = LocalConfigManager.shared.getConfig()
-
-        let explicitURL: URL?
-        if let serverFlag = server {
-            explicitURL = URL(string: serverFlag)
-        } else {
-            explicitURL = localConfig.serverURL.flatMap { URL(string: $0) }
-        }
-
-        let config = await ClientConfiguration.autoDetect(
-            explicitURL: explicitURL,
-            apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"]
-                ?? localConfig.apiKey,
-            verbose: verbose
-        )
-
-        let client = MonadClient(configuration: config)
-        try await verifyServerHealth(client: client, baseURL: config.baseURL)
-        return client
-    }
-
-    private func verifyServerHealth(client: MonadClient, baseURL: URL) async throws {
-        do {
-            guard try await client.healthCheck() else {
-                throw MonadClientError.serverNotReachable
-            }
-        } catch {
-            TerminalUI.printError(
-                "Could not connect to Monad Server at \(baseURL.absoluteString)"
-            )
-            throw ExitCode.failure
-        }
-    }
-
-    private func resolveTimeline(client: MonadClient) async throws -> Timeline {
-        let localConfig = LocalConfigManager.shared.getConfig()
-
-        if let timelineId = timeline, let uuid = UUID(uuidString: timelineId) {
-            let timelines = try await client.chat.listTimelines()
-            guard let found = timelines.first(where: { $0.id == uuid }) else {
-                TerminalUI.printError("Timeline not found: \(timelineId)")
-                throw ExitCode.failure
-            }
-            return found
-        }
-
-        if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
-            let timelines = try await client.chat.listTimelines()
-            if let found = timelines.first(where: { $0.id == uuid }) {
-                return found
-            }
-        }
-
-        return try await client.chat.createTimeline()
-    }
-
     // MARK: - Streaming
 
     private func streamResponse(client: MonadClient, timelineId: UUID, message: String) async throws -> String {

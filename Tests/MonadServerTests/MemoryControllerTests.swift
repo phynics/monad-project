@@ -13,8 +13,6 @@ import Testing
 @Suite struct MemoryControllerTests {
     @Test("Test Memories CRUD")
     func memoriesCRUD() async throws {
-        let workspace = TestWorkspace()
-
         try await TestDependencies()
             .withMocks()
             .run {

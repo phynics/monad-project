@@ -95,15 +95,8 @@ struct Chat: AsyncParsableCommand {
     private func buildAndVerifyClient() async throws -> (client: MonadClient, config: ClientConfiguration) {
         let localConfig = LocalConfigManager.shared.getConfig()
 
-        let explicitURL: URL?
-        if let serverFlag = server {
-            explicitURL = URL(string: serverFlag)
-        } else {
-            explicitURL = localConfig.serverURL.flatMap { URL(string: $0) }
-        }
-
         let config = await ClientConfiguration.autoDetect(
-            explicitURL: explicitURL,
+            explicitURL: CLICommandSupport.resolvedServerURL(serverFlag: server, localConfig: localConfig),
             apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"]
                 ?? localConfig.apiKey,
             verbose: verbose

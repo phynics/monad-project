@@ -1,8 +1,4 @@
-import PKShared
-import MonadShared
-import PositronicKit
 import Testing
-import Foundation
 
 @Suite struct VectorStoreTests {
 
@@ -16,7 +12,7 @@ import Foundation
     // }
 
     @Test("Sanity Check")
-    func testSanity() async throws {
-        #expect(true)
+    func testSanity() {
+        #expect(Bool(true))
     }
 }

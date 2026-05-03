@@ -36,8 +36,9 @@ struct Query: AsyncParsableCommand {
             throw ExitCode.failure
         }
 
-        let client = try await buildClient()
-        let targetTimeline = try await resolveTimeline(client: client)
+        let support = CLICommandSupport(server: server, apiKey: apiKey, verbose: verbose)
+        let client = try await support.buildClient()
+        let targetTimeline = try await support.resolveTimeline(client: client, explicitTimelineID: timeline)
 
         // Stream the response
         let stream = try await client.chat.execute(timelineId: targetTimeline.id, message: questionText)
@@ -49,62 +50,5 @@ struct Query: AsyncParsableCommand {
             }
         }
         print("")
-    }
-
-    // MARK: - Client & Timeline Setup
-
-    private func buildClient() async throws -> MonadClient {
-        let localConfig = LocalConfigManager.shared.getConfig()
-
-        let explicitURL: URL?
-        if let serverFlag = server {
-            explicitURL = URL(string: serverFlag)
-        } else {
-            explicitURL = localConfig.serverURL.flatMap { URL(string: $0) }
-        }
-
-        let config = await ClientConfiguration.autoDetect(
-            explicitURL: explicitURL,
-            apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"]
-                ?? localConfig.apiKey,
-            verbose: verbose
-        )
-
-        let client = MonadClient(configuration: config)
-
-        do {
-            guard try await client.healthCheck() else {
-                throw MonadClientError.serverNotReachable
-            }
-        } catch {
-            TerminalUI.printError(
-                "Could not connect to Monad Server at \(config.baseURL.absoluteString)"
-            )
-            throw ExitCode.failure
-        }
-
-        return client
-    }
-
-    private func resolveTimeline(client: MonadClient) async throws -> Timeline {
-        let localConfig = LocalConfigManager.shared.getConfig()
-
-        if let timelineId = timeline, let uuid = UUID(uuidString: timelineId) {
-            let timelines = try await client.chat.listTimelines()
-            guard let found = timelines.first(where: { $0.id == uuid }) else {
-                TerminalUI.printError("Timeline not found: \(timelineId)")
-                throw ExitCode.failure
-            }
-            return found
-        }
-
-        if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
-            let timelines = try await client.chat.listTimelines()
-            if let found = timelines.first(where: { $0.id == uuid }) {
-                return found
-            }
-        }
-
-        return try await client.chat.createTimeline()
     }
 }
