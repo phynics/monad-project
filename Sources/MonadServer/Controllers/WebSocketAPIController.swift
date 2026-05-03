@@ -4,6 +4,7 @@ import Hummingbird
 import HummingbirdWebSocket
 import Logging
 import PKShared
+import MonadShared
 import NIOCore
 import ServiceLifecycle
 

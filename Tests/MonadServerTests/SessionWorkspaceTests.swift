@@ -4,6 +4,7 @@ import GRDB
 import PositronicKit
 @testable import MonadServer
 import PKShared
+import MonadShared
 import PKTestSupport
 import Testing
 
@@ -44,7 +45,7 @@ import Testing
                 $0.memoryStore = persistenceService.memoryStore
                 $0.messageStore = persistenceService.messageStore
                 $0.agentTemplateStore = persistenceService.agentTemplateStore
-                $0.clientStore = persistenceService.clientStore
+                $0.requestOriginStore = persistenceService.requestOriginStore
                 $0.agentInstanceStore = persistenceService.agentInstanceStore
                 $0.embeddingService = embeddingService
                 $0.llmService = llmService
@@ -66,7 +67,7 @@ import Testing
                 }
 
                 try #require(workspace != nil)
-                #expect(workspace?.hostType == WorkspaceReference.WorkspaceHostType.server)
+                #expect(workspace?.location == .runtime)
                 #expect(workspace?.uri.path == "/sessions/\(session.id.uuidString)")
             }
     }

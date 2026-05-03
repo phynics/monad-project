@@ -4,6 +4,7 @@ import Hummingbird
 import Logging
 import PositronicKit
 import PKShared
+import MonadShared
 import NIOCore
 
 public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {

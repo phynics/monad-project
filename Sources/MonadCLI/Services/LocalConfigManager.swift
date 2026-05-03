@@ -1,6 +1,7 @@
 import Foundation
 import Logging
 import PKShared
+import MonadShared
 
 struct LocalConfig: Codable {
     var serverURL: String?

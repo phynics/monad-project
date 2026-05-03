@@ -3,6 +3,7 @@ import GRDB
 import PositronicKit
 import MonadServer
 import PKShared
+import MonadShared
 import Testing
 
 @Suite(.serialized)

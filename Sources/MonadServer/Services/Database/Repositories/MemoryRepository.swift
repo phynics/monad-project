@@ -1,6 +1,7 @@
 import GRDB
 import PositronicKit
 import PKShared
+import MonadShared
 import Foundation
 
 public actor MemoryRepository: MemoryStoreProtocol {

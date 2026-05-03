@@ -3,6 +3,7 @@ import Foundation
 import PositronicKit
 @testable import MonadServer
 import PKShared
+import MonadShared
 import PKTestSupport
 import Testing
 
@@ -41,7 +42,7 @@ import Testing
         let ref = WorkspaceReference(
             id: wsId,
             uri: .serverTimeline(wsId),
-            hostType: .server,
+            location: .runtime,
             rootPath: wsDir.path
         )
         try await persistence.saveWorkspace(ref)
@@ -73,7 +74,7 @@ import Testing
         let ref = WorkspaceReference(
             id: wsId,
             uri: .serverTimeline(wsId),
-            hostType: .server,
+            location: .runtime,
             rootPath: wsDir.path
         )
         try await persistence.saveWorkspace(ref)
@@ -94,7 +95,7 @@ import Testing
         let wsDir = testDir.appendingPathComponent("ws3")
         try FileManager.default.createDirectory(at: wsDir, withIntermediateDirectories: true)
 
-        let ref1 = WorkspaceReference(id: wsId1, uri: .serverTimeline(wsId1), hostType: .server, rootPath: wsDir.path)
+        let ref1 = WorkspaceReference(id: wsId1, uri: .serverTimeline(wsId1), location: .runtime, rootPath: wsDir.path)
         try await persistence.saveWorkspace(ref1)
 
         _ = try await manager.getWorkspace(id: wsId1)

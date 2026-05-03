@@ -3,6 +3,7 @@ import Foundation
 import PositronicKit
 @testable import MonadServer
 import PKShared
+import MonadShared
 import PKTestSupport
 import Testing
 
@@ -32,8 +33,8 @@ import Testing
         let activePath = workspaceRoot.appendingPathComponent(activeId.uuidString).path
         try FileManager.default.createDirectory(atPath: activePath, withIntermediateDirectories: true)
 
-        let wsOrphan = WorkspaceReference(id: orphanId, uri: .init(host: "server", path: "/orphan"), hostType: .server, rootPath: orphanPath)
-        let wsActive = WorkspaceReference(id: activeId, uri: .init(host: "server", path: "/active"), hostType: .server, rootPath: activePath)
+        let wsOrphan = WorkspaceReference(id: orphanId, uri: .init(host: "server", path: "/orphan"), location: .runtime, rootPath: orphanPath)
+        let wsActive = WorkspaceReference(id: activeId, uri: .init(host: "server", path: "/active"), location: .runtime, rootPath: activePath)
 
         mockPersistence.workspaces = [wsOrphan, wsActive]
 
@@ -73,7 +74,7 @@ import Testing
         try FileManager.default.createDirectory(atPath: userWsPath, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(atPath: userWsPath) }
 
-        let wsUser = WorkspaceReference(id: userWsId, uri: .init(host: "server", path: "/user"), hostType: .server, rootPath: userWsPath)
+        let wsUser = WorkspaceReference(id: userWsId, uri: .init(host: "server", path: "/user"), location: .runtime, rootPath: userWsPath)
         mockPersistence.workspaces = [wsUser]
         mockPersistence.timelines = [] // No sessions, so it is technically "orphaned"
 

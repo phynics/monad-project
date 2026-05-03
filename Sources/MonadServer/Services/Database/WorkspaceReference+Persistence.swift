@@ -2,6 +2,7 @@ import Foundation
 import GRDB
 import PositronicKit
 import PKShared
+import MonadShared
 
 // MARK: - Persistence
 
@@ -13,8 +14,8 @@ extension WorkspaceReference: @retroactive FetchableRecord, @retroactive Persist
     public func encode(to container: inout PersistenceContainer) throws {
         container["id"] = id
         container["uri"] = uri.description
-        container["hostType"] = hostType.rawValue
-        container["ownerId"] = ownerId
+        container["location"] = location.rawValue
+        container["originId"] = originId
 
         if let toolsData = try? JSONEncoder().encode(tools),
            let toolsString = String(data: toolsData, encoding: .utf8) {
@@ -50,10 +51,12 @@ public extension WorkspaceReference {
             throw PersistenceError.invalidUUIDFormat("Invalid WorkspaceURI: \(uriString)")
         }
 
-        let hostTypeString: String = row["hostType"]
-        let hostType = WorkspaceHostType(rawValue: hostTypeString) ?? .server
+        let locationColumn = row.hasColumn("location") ? "location" : "hostType"
+        let locationString: String = row[locationColumn]
+        let location = WorkspaceLocation(rawValue: locationString) ?? .runtime
 
-        let ownerId: UUID? = row["ownerId"]
+        let originIdColumn = row.hasColumn("originId") ? "originId" : "ownerId"
+        let originId: UUID? = row[originIdColumn]
 
         let toolsString: String? = row.hasColumn("tools") ? row["tools"] : nil
         let tools: [ToolReference]
@@ -88,8 +91,8 @@ public extension WorkspaceReference {
         self.init(
             id: id,
             uri: uri,
-            hostType: hostType,
-            ownerId: ownerId,
+            location: location,
+            originId: originId,
             tools: tools,
             rootPath: rootPath,
             trustLevel: trustLevel,

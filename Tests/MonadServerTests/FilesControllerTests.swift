@@ -6,6 +6,7 @@ import Logging
 import PositronicKit
 @testable import MonadServer
 import PKShared
+import MonadShared
 import PKTestSupport
 import NIOCore
 import Testing

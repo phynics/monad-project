@@ -7,6 +7,7 @@ let package = Package(
         .macOS(.v15),
     ],
     products: [
+        .library(name: "MonadShared", targets: ["MonadShared"]),
         .library(name: "MonadClient", targets: ["MonadClient"]),
         .executable(name: "MonadServer", targets: ["MonadServer"]),
         .executable(name: "MonadCLI", targets: ["MonadCLI"]),
@@ -18,15 +19,27 @@ let package = Package(
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.0.0"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
+        .package(url: "https://github.com/ajevans99/swift-json-schema", from: "0.11.2"),
         .package(url: "https://github.com/unum-cloud/USearch", from: "2.0.0"),
         .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.0.0"),
         .package(url: "https://github.com/FlineDev/ErrorKit", from: "1.0.0"),
         .package(path: "../PositronicKit"),
     ],
     targets: [
+        .target(
+            name: "MonadShared",
+            dependencies: [
+                .product(name: "PKShared", package: "PositronicKit"),
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "JSONSchema", package: "swift-json-schema"),
+                .product(name: "JSONSchemaBuilder", package: "swift-json-schema"),
+            ],
+            path: "Sources/MonadShared"
+        ),
         .executableTarget(
             name: "MonadServer",
             dependencies: [
+                "MonadShared",
                 .product(name: "PositronicKit", package: "PositronicKit"),
                 .product(name: "PKShared", package: "PositronicKit"),
                 .product(name: "PKPrompt", package: "PositronicKit"),
@@ -44,6 +57,7 @@ let package = Package(
         .target(
             name: "MonadClient",
             dependencies: [
+                "MonadShared",
                 .product(name: "PKShared", package: "PositronicKit"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "ErrorKit", package: "ErrorKit"),
@@ -54,6 +68,7 @@ let package = Package(
             name: "MonadCLI",
             dependencies: [
                 "MonadClient",
+                "MonadShared",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "ErrorKit", package: "ErrorKit"),
                 .product(name: "Logging", package: "swift-log"),
@@ -61,9 +76,18 @@ let package = Package(
             path: "Sources/MonadCLI"
         ),
         .testTarget(
+            name: "MonadSharedTests",
+            dependencies: [
+                "MonadShared",
+                .product(name: "PKShared", package: "PositronicKit"),
+            ],
+            path: "Tests/MonadSharedTests"
+        ),
+        .testTarget(
             name: "MonadServerTests",
             dependencies: [
                 "MonadServer",
+                "MonadShared",
                 .product(name: "PositronicKit", package: "PositronicKit"),
                 .product(name: "PKShared", package: "PositronicKit"),
                 .product(name: "PKTestSupport", package: "PositronicKit"),
@@ -76,8 +100,9 @@ let package = Package(
         .testTarget(
             name: "MonadCLITests",
             dependencies: [
-                "MonadCLI", 
-                "MonadClient", 
+                "MonadCLI",
+                "MonadClient",
+                "MonadShared",
                 .product(name: "PKTestSupport", package: "PositronicKit")
             ],
             path: "Tests/MonadCLITests"
@@ -85,8 +110,9 @@ let package = Package(
         .testTarget(
             name: "MonadClientTests",
             dependencies: [
-                "MonadClient", 
-                .product(name: "PositronicKit", package: "PositronicKit"), 
+                "MonadClient",
+                "MonadShared",
+                .product(name: "PositronicKit", package: "PositronicKit"),
                 .product(name: "PKTestSupport", package: "PositronicKit")
             ],
             path: "Tests/MonadClientTests"

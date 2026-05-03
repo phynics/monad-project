@@ -4,6 +4,7 @@ import HummingbirdWebSocket
 import Logging
 import PositronicKit
 import PKShared
+import MonadShared
 import ServiceLifecycle
 import UnixSignals
 
@@ -42,7 +43,7 @@ extension MonadServerFactory {
     static func registerChatAndTimelineRoutes(
         on protected: RouterGroup<AppRequestContext>,
         connectionManager: WebSocketConnectionManager,
-        chat: MonadCore,
+        chat: PositronicKitCore,
         verbose: Bool
     ) {
         let wsController = WebSocketAPIController<AppRequestContext>(connectionManager: connectionManager)

@@ -1,4 +1,5 @@
 import PKShared
+import MonadShared
 import PositronicKit
 @testable import MonadServer
 import Testing
@@ -49,8 +50,8 @@ actor MockConnectionManagerForRemote: ClientConnectionManagerProtocol {
         let ref = WorkspaceReference(
             id: UUID(),
             uri: WorkspaceURI(host: "client-host", path: "/remote"),
-            hostType: .client,
-            ownerId: clientId,
+            location: .attached,
+            originId: clientId,
             rootPath: "/remote"
         )
         workspace = try RemoteWorkspace(reference: ref, connectionManager: mockConnection)

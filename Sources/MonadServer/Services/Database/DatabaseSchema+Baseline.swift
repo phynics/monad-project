@@ -1,13 +1,14 @@
 import Foundation
 import GRDB
 import PKShared
+import MonadShared
 
 extension DatabaseSchema {
     // MARK: - Workspace Tables
 
     static func createWorkspaceTables(in db: Database) throws {
-        // Client entity table
-        try db.create(table: "clientIdentity") { table in
+        // Request-origin entity table
+        try db.create(table: "requestOrigin") { table in
             table.column("id", .blob).primaryKey()
             table.column("hostname", .text).notNull()
             table.column("displayName", .text).notNull()
@@ -20,8 +21,8 @@ extension DatabaseSchema {
         try db.create(table: "workspace") { table in
             table.column("id", .blob).primaryKey()
             table.column("uri", .text).notNull().unique()
-            table.column("hostType", .text).notNull()
-            table.column("ownerId", .blob).references("clientIdentity", onDelete: .setNull)
+            table.column("location", .text).notNull()
+            table.column("originId", .blob).references("requestOrigin", onDelete: .setNull)
             table.column("tools", .text).notNull().defaults(to: "[]")
             table.column("rootPath", .text)
             table.column("trustLevel", .text).notNull().defaults(to: "full")

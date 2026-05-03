@@ -3,6 +3,7 @@ import Foundation
 import Logging
 import MonadClient
 import PKShared
+import MonadShared
 
 struct CLITimelineManager {
     let client: MonadClient
@@ -166,8 +167,8 @@ struct CLITimelineManager {
         let rootPath = workspaceURI.path
         let newWs = try await client.workspace.createWorkspace(
             uri: workspaceURI,
-            hostType: .client,
-            ownerId: clientId,
+            location: .attached,
+            originId: clientId,
             rootPath: rootPath,
             trustLevel: .readOnly
         )

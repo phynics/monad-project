@@ -1,9 +1,10 @@
 import PKShared
+import MonadShared
 import PositronicKit
 
 import Foundation
 import GRDB
 
-extension ClientIdentity: @retroactive FetchableRecord, @retroactive PersistableRecord {
-    public static var databaseTableName: String { "clientIdentity" }
+extension RequestOriginIdentity: @retroactive FetchableRecord, @retroactive PersistableRecord {
+    public static var databaseTableName: String { "requestOrigin" }
 }

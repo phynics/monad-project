@@ -4,6 +4,7 @@ import Logging
 @testable import MonadClient
 import PositronicKit
 import PKShared
+import MonadShared
 
 struct ProtocolWrapper: @unchecked Sendable {
     let obj: URLProtocol

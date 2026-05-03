@@ -5,16 +5,17 @@ import Hummingbird
 import Logging
 import PositronicKit
 import PKShared
+import MonadShared
 import NIOCore
-import OpenAI
 
 public struct ChatAPIController<Context: RequestContext>: Sendable {
     @Dependency(\.timelineManager) var timelineManager: TimelineManager
+    @Dependency(\.agentInstanceStore) var agentInstanceStore
     @Dependency(\.toolRouter) var toolRouter: ToolRouter
-    private let chat: MonadCore
+    private let chat: PositronicKitCore
     public let verbose: Bool
 
-    public init(chat: MonadCore, verbose: Bool = false) {
+    public init(chat: PositronicKitCore, verbose: Bool = false) {
         self.chat = chat
         self.verbose = verbose
     }
@@ -36,22 +37,19 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         // Hydrate timeline and resolve tools at the server layer
         try await timelineManager.hydrateTimeline(id: id)
 
-        // Strict mode: require an agent to be attached
-        guard let agent = await timelineManager.getAttachedAgentInstance(for: id) else {
+        guard let agent = try await attachedAgent(for: id) else {
             throw HTTPError(
                 .unprocessableContent,
                 message: "No agent attached to timeline. Attach an agent before sending messages."
             )
         }
-        let systemInstructions = await timelineManager.getAgentSystemInstructions(for: id)
-        let availableTools = await resolveTools(timelineId: id, clientTools: chatRequest.clientTools)
+        let availableTools = await resolveTools(timelineId: id, attachedTools: chatRequest.attachedTools)
 
         let stream = try await chat.run(
             timelineId: id,
             message: chatRequest.message,
             tools: availableTools,
-            toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) },
-            systemInstructions: systemInstructions,
+            toolOutputs: chatRequest.toolOutputs,
             agentInstanceId: agent.id
         )
 
@@ -96,14 +94,13 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     ) async throws -> AsyncThrowingStream<ChatEvent, Error> {
         try await timelineManager.hydrateTimeline(id: timelineId)
 
-        guard let agent = await timelineManager.getAttachedAgentInstance(for: timelineId) else {
+        guard let agent = try await attachedAgent(for: timelineId) else {
             throw HTTPError(
                 .unprocessableContent,
                 message: "No agent attached to timeline. Attach an agent before sending messages."
             )
         }
-        let systemInstructions = await timelineManager.getAgentSystemInstructions(for: timelineId)
-        let availableTools = await resolveTools(timelineId: timelineId, clientTools: chatRequest.clientTools)
+        let availableTools = await resolveTools(timelineId: timelineId, attachedTools: chatRequest.attachedTools)
 
         let toolCountStr = ANSIColors.colorize("\(availableTools.count)", color: ANSIColors.green)
         Logger.module(named: "chat").info("Resolved \(toolCountStr) tools for timeline \(sid)")
@@ -112,8 +109,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             timelineId: timelineId,
             message: chatRequest.message,
             tools: availableTools,
-            toolOutputs: chatRequest.toolOutputs?.map { .init(toolCallId: $0.toolCallId, output: $0.output) },
-            systemInstructions: systemInstructions,
+            toolOutputs: chatRequest.toolOutputs,
             agentInstanceId: agent.id
         )
     }
@@ -184,58 +180,79 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
     // MARK: - Tool Resolution (Server-Layer Concern)
 
-    private func resolveTools(timelineId: UUID, clientTools: [ToolReference]?) async -> [AnyTool] {
-        var availableTools: [AnyTool] = []
-
-        // Build a fallback lookup from in-memory system tools so .known refs for workspace-registered
-        // filesystem tools (cat, ls, grep, etc.) can be resolved even though SystemToolRegistry only
-        // contains always-on system tools (memory_search, web_search).
-        let inMemoryLookup: [String: WorkspaceToolDefinition]
-        if let toolManager = await timelineManager.getToolManager(for: timelineId) {
-            let systemTools = await toolManager.getAvailableTools()
-            inMemoryLookup = systemTools.reduce(into: [:]) { dict, tool in
-                dict[tool.id] = WorkspaceToolDefinition(
-                    id: tool.id,
-                    name: tool.name,
-                    description: tool.description,
-                    parametersSchema: tool.parametersSchema,
-                    usageExample: tool.usageExample,
-                    requiresPermission: tool.requiresPermission
-                )
-            }
-        } else {
-            inMemoryLookup = [:]
+    private func resolveTools(timelineId: UUID, attachedTools: [ToolReference]?) async -> [AnyTool] {
+        guard let toolManager = await timelineManager.getToolManager(for: timelineId) else {
+            return []
         }
 
-        do {
-            let references = try await timelineManager.getAllToolReferences(
-                timelineId: timelineId, requestOriginTools: clientTools
-            )
+        var availableTools = await toolManager.getEnabledTools()
+        let knownIDs = Set(availableTools.map(\.id))
 
-            for ref in references {
-                var def: WorkspaceToolDefinition?
-                switch ref {
-                case let .known(id):
-                    def = SystemToolRegistry.shared.getDefinition(for: id) ?? inMemoryLookup[id]
-                case let .custom(definition):
-                    def = definition
-                }
-                guard let definition = def else {
-                    Logger.module(named: "chat").debug("Skipping tool with no resolvable definition: \(ref.toolId)")
-                    continue
-                }
-                var toolWrapper = AnyTool(DelegatingTool(
-                    ref: ref,
-                    router: toolRouter,
-                    timelineId: timelineId,
-                    resolvedDefinition: definition
-                ))
-                toolWrapper.provenance = await timelineManager.getToolSource(toolId: ref.toolId, for: timelineId)
-                availableTools.append(toolWrapper)
-            }
-        } catch {
-            Logger.module(named: "chat").error("Failed to resolve tools for timeline \(timelineId): \(error)")
+        for ref in attachedTools ?? [] where !knownIDs.contains(ref.toolId) {
+            var tool = AnyTool(DeferredAttachedTool(reference: ref))
+            tool.provenance = "Attached"
+            availableTools.append(tool)
         }
+
         return availableTools
+    }
+
+    private func attachedAgent(for timelineId: UUID) async throws -> AgentInstance? {
+        guard let timeline = await timelineManager.getTimeline(id: timelineId),
+              let agentId = timeline.attachedAgentInstanceId else {
+            return nil
+        }
+        return try await agentInstanceStore.fetchAgentInstance(id: agentId)
+    }
+}
+
+private struct DeferredAttachedTool: PKShared.Tool, ToolReferenceProviding {
+    let toolReference: ToolReference
+
+    init(reference: ToolReference) {
+        toolReference = reference
+    }
+
+    var id: String { toolReference.toolId }
+
+    var name: String {
+        switch toolReference {
+        case let .known(id): return id
+        case let .custom(definition): return definition.name
+        }
+    }
+
+    var description: String {
+        switch toolReference {
+        case let .known(id): return "Attached workspace tool: \(id)"
+        case let .custom(definition): return definition.description
+        }
+    }
+
+    var requiresPermission: Bool {
+        switch toolReference {
+        case .known: return false
+        case let .custom(definition): return definition.requiresPermission
+        }
+    }
+
+    var usageExample: String? {
+        switch toolReference {
+        case .known: return nil
+        case let .custom(definition): return definition.usageExample
+        }
+    }
+
+    var parametersSchema: [String: AnyCodable] {
+        switch toolReference {
+        case .known: return [:]
+        case let .custom(definition): return definition.parametersSchema
+        }
+    }
+
+    func canExecute() async -> Bool { true }
+
+    func execute(parameters _: [String: Any]) async throws -> ToolResult {
+        .failure("Attached workspace tools are routed externally")
     }
 }

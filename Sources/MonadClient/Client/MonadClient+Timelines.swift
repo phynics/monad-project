@@ -1,5 +1,6 @@
 import Foundation
 import PKShared
+import MonadShared
 
 public extension MonadChatClient {
     // MARK: - Timeline API

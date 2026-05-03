@@ -4,11 +4,13 @@ import HTTPTypes
 import Hummingbird
 import PositronicKit
 import PKShared
+import MonadShared
 import NIOCore
 
 public struct TimelineAPIController<Context: RequestContext>: Sendable {
     @Dependency(\.timelineManager) var timelineManager
     @Dependency(\.timelinePersistence) var timelineStore
+    @Dependency(\.workspacePersistence) var workspaceStore
 
     public init() {}
 
@@ -210,11 +212,28 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         let idString = try context.parameters.require("id")
         let wsIdString = try context.parameters.require("wsId")
 
-        guard UUID(uuidString: idString) != nil, let wsId = UUID(uuidString: wsIdString) else {
+        guard let timelineId = UUID(uuidString: idString), let wsId = UUID(uuidString: wsIdString) else {
             throw HTTPError(.badRequest)
         }
 
-        try await timelineManager.restoreWorkspace(wsId)
+        try await timelineManager.hydrateTimeline(id: timelineId)
+
+        guard let workspaces = await timelineManager.getWorkspaces(for: timelineId),
+              ([workspaces.primary?.id].compactMap { $0 } + workspaces.attached.map(\.id)).contains(wsId) else {
+            throw HTTPError(.notFound)
+        }
+
+        guard try await workspaceStore.fetchWorkspace(id: wsId, includeTools: true) != nil else {
+            throw HTTPError(.notFound)
+        }
+
+        guard let toolManager = await timelineManager.getToolManager(for: timelineId) else {
+            throw HTTPError(.notFound)
+        }
+
+        if let workspace = try await timelineManager.workspaceManager.getWorkspace(id: wsId) {
+            await toolManager.registerWorkspace(workspace)
+        }
 
         return .ok
     }

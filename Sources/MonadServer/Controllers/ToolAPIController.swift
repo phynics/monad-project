@@ -4,6 +4,7 @@ import HTTPTypes
 import Hummingbird
 import PositronicKit
 import PKShared
+import MonadShared
 import NIOCore
 
 public struct ExecuteToolRequest: Codable, Sendable {
@@ -33,8 +34,9 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func listSystemTools(_: Request, context _: Context) async throws -> [ToolInfo] {
-        let tools = await timelineManager.systemTools()
-        return tools.map { ToolInfo(id: $0.id, name: $0.name, description: $0.description) }
+        SystemToolRegistry.shared
+            .allDefinitions
+            .map { ToolInfo(id: $0.id, name: $0.name, description: $0.description) }
     }
 
     @Sendable func enable(_: Request, context: Context) async throws -> HTTPResponse.Status {
@@ -73,49 +75,16 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound)
         }
 
-        var toolInfos: [ToolInfo] = []
-
-        // 1. System Tools
-        let systemTools = await toolManager.getEnabledTools()
-        for tool in systemTools {
-            let source = await timelineManager.getToolSource(toolId: tool.id, for: id)
-            toolInfos.append(
-                ToolInfo(
-                    id: tool.id, name: tool.name, description: tool.description, isEnabled: true,
-                    source: source
-                )
+        let tools = await toolManager.getEnabledTools()
+        return tools.map {
+            ToolInfo(
+                id: $0.id,
+                name: $0.name,
+                description: $0.description,
+                isEnabled: true,
+                source: $0.provenance ?? "System"
             )
         }
-
-        // 2. Workspace Tools
-        let workspaceTools = try await timelineManager.getAggregatedTools(for: id)
-        for toolRef in workspaceTools {
-            if toolInfos.contains(where: { $0.id == toolRef.toolId }) { continue }
-
-            let source = await timelineManager.getToolSource(toolId: toolRef.toolId, for: id)
-            let name = toolRef.displayName
-            var description = "Workspace tool"
-
-            switch toolRef {
-            case let .known(toolId):
-                if let sysTool = await toolManager.getAvailableTools().first(where: {
-                    $0.id == toolId
-                }) {
-                    description = sysTool.description
-                }
-            case let .custom(def):
-                description = def.description
-            }
-
-            toolInfos.append(
-                ToolInfo(
-                    id: toolRef.toolId, name: name, description: description, isEnabled: true,
-                    source: source
-                )
-            )
-        }
-
-        return toolInfos
     }
 
     @Sendable func execute(_ request: Request, context: Context) async throws -> String {

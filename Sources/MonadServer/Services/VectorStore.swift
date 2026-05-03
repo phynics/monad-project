@@ -2,6 +2,7 @@ import Foundation
 import Logging
 import PositronicKit
 import PKShared
+import MonadShared
 import USearch
 
 /// Mark USearchIndex as unchecked Sendable since we are managing thread safety via serial queue

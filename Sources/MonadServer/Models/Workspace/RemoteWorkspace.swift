@@ -1,6 +1,7 @@
 import PositronicKit
 import Foundation
 import PKShared
+import MonadShared
 
 /// Implementation of WorkspaceProtocol that forwards requests to a remote client via RPC/WebSocket
 public actor RemoteWorkspace: WorkspaceProtocol {
@@ -12,12 +13,12 @@ public actor RemoteWorkspace: WorkspaceProtocol {
     public let connectionManager: any ClientConnectionManagerProtocol
 
     public init(reference: WorkspaceReference, connectionManager: any ClientConnectionManagerProtocol) throws {
-        guard reference.hostType == WorkspaceReference.WorkspaceHostType.client, let owner = reference.ownerId else {
+        guard reference.location == .attached, let originId = reference.originId else {
             throw WorkspaceError.invalidWorkspaceType
         }
         self.reference = reference
         self.id = reference.id
-        self.clientId = owner
+        self.clientId = originId
         self.connectionManager = connectionManager
     }
 

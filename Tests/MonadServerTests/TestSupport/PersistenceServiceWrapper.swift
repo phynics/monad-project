@@ -3,6 +3,7 @@ import GRDB
 import PositronicKit
 import MonadServer
 import PKShared
+import MonadShared
 
 public final class PersistenceService: HealthCheckable, @unchecked Sendable {
     public let databaseManager: DatabaseManager
@@ -10,7 +11,7 @@ public final class PersistenceService: HealthCheckable, @unchecked Sendable {
     public let timelineStore: TimelineRepository
     public let memoryStore: MemoryRepository
     public let messageStore: MessageRepository
-    public let clientStore: ClientIdentityRepository
+    public let requestOriginStore: RequestOriginRepository
     public let toolStore: ToolDataRepository
     public let agentInstanceStore: AgentInstanceDataRepository
     public let agentTemplateStore: AgentTemplateRepository
@@ -23,7 +24,7 @@ public final class PersistenceService: HealthCheckable, @unchecked Sendable {
         timelineStore = TimelineRepository(dbQueue: dbQueue)
         memoryStore = MemoryRepository(dbQueue: dbQueue)
         messageStore = MessageRepository(dbQueue: dbQueue)
-        clientStore = ClientIdentityRepository(dbQueue: dbQueue)
+        requestOriginStore = RequestOriginRepository(dbQueue: dbQueue)
         toolStore = ToolDataRepository(dbQueue: dbQueue)
         agentInstanceStore = AgentInstanceDataRepository(dbQueue: dbQueue)
         agentTemplateStore = AgentTemplateRepository(dbQueue: dbQueue)
@@ -185,22 +186,38 @@ public final class PersistenceService: HealthCheckable, @unchecked Sendable {
         try await agentInstanceStore.fetchTimelines(attachedToAgent: agentInstanceId)
     }
 
-    // MARK: - ClientStoreProtocol
+    // MARK: - RequestOriginStoreProtocol
 
-    public func saveClient(_ client: ClientIdentity) async throws {
-        try await clientStore.saveClient(client)
+    public func saveOrigin(_ origin: RequestOriginIdentity) async throws {
+        try await requestOriginStore.saveOrigin(origin)
     }
 
-    public func fetchClient(id: UUID) async throws -> ClientIdentity? {
-        try await clientStore.fetchClient(id: id)
+    public func fetchOrigin(id: UUID) async throws -> RequestOriginIdentity? {
+        try await requestOriginStore.fetchOrigin(id: id)
     }
 
-    public func fetchAllClients() async throws -> [ClientIdentity] {
-        try await clientStore.fetchAllClients()
+    public func fetchAllOrigins() async throws -> [RequestOriginIdentity] {
+        try await requestOriginStore.fetchAllOrigins()
+    }
+
+    public func deleteOrigin(id: UUID) async throws -> Bool {
+        try await requestOriginStore.deleteOrigin(id: id)
+    }
+
+    public func saveClient(_ client: RequestOriginIdentity) async throws {
+        try await saveOrigin(client)
+    }
+
+    public func fetchClient(id: UUID) async throws -> RequestOriginIdentity? {
+        try await fetchOrigin(id: id)
+    }
+
+    public func fetchAllClients() async throws -> [RequestOriginIdentity] {
+        try await fetchAllOrigins()
     }
 
     public func deleteClient(id: UUID) async throws -> Bool {
-        try await clientStore.deleteClient(id: id)
+        try await deleteOrigin(id: id)
     }
 
     // MARK: - ToolPersistenceProtocol

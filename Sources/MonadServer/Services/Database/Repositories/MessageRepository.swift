@@ -3,6 +3,7 @@ import GRDB
 import Logging
 import PositronicKit
 import PKShared
+import MonadShared
 
 public actor MessageRepository: MessageStoreProtocol {
     private let dbQueue: DatabaseQueue

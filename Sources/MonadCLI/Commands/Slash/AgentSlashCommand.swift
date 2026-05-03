@@ -1,6 +1,7 @@
 import Foundation
 import MonadClient
 import PKShared
+import MonadShared
 
 // MARK: - /agent command
 

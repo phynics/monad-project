@@ -1,4 +1,5 @@
 import PKShared
+import MonadShared
 import PositronicKit
 import Foundation
 import GRDB
@@ -23,7 +24,7 @@ struct ClientControllerTests {
 
     private func makeApp() -> some ApplicationProtocol {
         return withDependencies {
-            $0.clientStore = persistence.clientStore
+            $0.requestOriginStore = persistence.requestOriginStore
             $0.workspacePersistence = persistence.workspaceStore
             $0.toolPersistence = persistence.toolStore
         } operation: {
@@ -39,7 +40,7 @@ struct ClientControllerTests {
     @Test("POST /clients/register creates a client and returns 201")
     func register_returnsCreatedClient() async throws {
         let app = makeApp()
-        let requestBody = ClientRegistrationRequest(
+        let requestBody = RequestOriginRegistrationRequest(
             hostname: "test-host.local",
             displayName: "Test User",
             platform: "macos",
@@ -57,10 +58,10 @@ struct ClientControllerTests {
                 #expect(response.status == .created)
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .iso8601
-                let registration = try decoder.decode(ClientRegistrationResponse.self, from: response.body)
-                #expect(registration.client.hostname == "test-host.local")
-                #expect(registration.client.displayName == "Test User")
-                #expect(registration.defaultWorkspace.hostType == .client)
+                let registration = try decoder.decode(RequestOriginRegistrationResponse.self, from: response.body)
+                #expect(registration.origin.hostname == "test-host.local")
+                #expect(registration.origin.displayName == "Test User")
+                #expect(registration.defaultWorkspace.location == .attached)
             }
         }
     }
@@ -68,7 +69,7 @@ struct ClientControllerTests {
     @Test("POST /clients/register persists the client and its workspace")
     func register_persistsClientAndWorkspace() async throws {
         let app = makeApp()
-        let body = try JSONEncoder().encode(ClientRegistrationRequest(
+        let body = try JSONEncoder().encode(RequestOriginRegistrationRequest(
             hostname: "laptop.local",
             displayName: "dev",
             platform: "macos",
@@ -85,8 +86,8 @@ struct ClientControllerTests {
             ) { response in
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .iso8601
-                let registration = try decoder.decode(ClientRegistrationResponse.self, from: response.body)
-                let id = registration.client.id
+                let registration = try decoder.decode(RequestOriginRegistrationResponse.self, from: response.body)
+                let id = registration.origin.id
                 registeredClientId = id
             }
         }
@@ -101,7 +102,7 @@ struct ClientControllerTests {
     @Test("GET /clients/:id returns registered client")
     func getClient_returnsClient() async throws {
         let app = makeApp()
-        let body = try JSONEncoder().encode(ClientRegistrationRequest(
+        let body = try JSONEncoder().encode(RequestOriginRegistrationRequest(
             hostname: "mac.local", displayName: "me", platform: "macos", tools: []
         ))
 
@@ -115,8 +116,8 @@ struct ClientControllerTests {
             ) { response in
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .iso8601
-                let reg = try decoder.decode(ClientRegistrationResponse.self, from: response.body)
-                clientId = reg.client.id
+                let reg = try decoder.decode(RequestOriginRegistrationResponse.self, from: response.body)
+                clientId = reg.origin.id
             }
         }
 
@@ -125,7 +126,7 @@ struct ClientControllerTests {
                 #expect(response.status == .ok)
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .iso8601
-                let identity = try decoder.decode(ClientIdentity.self, from: response.body)
+                let identity = try decoder.decode(RequestOriginIdentity.self, from: response.body)
                 #expect(identity.id == clientId)
                 #expect(identity.hostname == "mac.local")
             }
@@ -149,7 +150,7 @@ struct ClientControllerTests {
         let app = makeApp()
 
         for index in 1 ... 3 {
-            let body = try JSONEncoder().encode(ClientRegistrationRequest(
+            let body = try JSONEncoder().encode(RequestOriginRegistrationRequest(
                 hostname: "host\(index).local", displayName: "user\(index)", platform: "macos", tools: []
             ))
             try await app.test(.router) { client in
@@ -167,7 +168,7 @@ struct ClientControllerTests {
                 #expect(response.status == .ok)
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .iso8601
-                let clients = try decoder.decode([ClientIdentity].self, from: response.body)
+                let clients = try decoder.decode([RequestOriginIdentity].self, from: response.body)
                 #expect(clients.count == 3)
             }
         }
@@ -178,7 +179,7 @@ struct ClientControllerTests {
     @Test("DELETE /clients/:id returns 204 and removes client")
     func deleteClient_returnsNoContent() async throws {
         let app = makeApp()
-        let body = try JSONEncoder().encode(ClientRegistrationRequest(
+        let body = try JSONEncoder().encode(RequestOriginRegistrationRequest(
             hostname: "temp.local", displayName: "temp", platform: "macos", tools: []
         ))
 
@@ -192,8 +193,8 @@ struct ClientControllerTests {
             ) { response in
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .iso8601
-                let reg = try decoder.decode(ClientRegistrationResponse.self, from: response.body)
-                clientId = reg.client.id
+                let reg = try decoder.decode(RequestOriginRegistrationResponse.self, from: response.body)
+                clientId = reg.origin.id
             }
         }
 

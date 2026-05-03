@@ -2,6 +2,7 @@ import Foundation
 import Logging
 import MonadClient
 import PKShared
+import MonadShared
 
 struct StoredIdentity: Codable {
     let clientId: UUID
@@ -107,9 +108,9 @@ struct RegistrationManager {
         )
 
         let identity = StoredIdentity(
-            clientId: response.client.id,
-            clientName: response.client.displayName,
-            hostname: response.client.hostname,
+            clientId: response.origin.id,
+            clientName: response.origin.displayName,
+            hostname: response.origin.hostname,
             shellWorkspaceId: response.defaultWorkspace.id,
             shellWorkspaceURI: response.defaultWorkspace.uri.description
         )

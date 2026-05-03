@@ -1,40 +1,38 @@
 @testable import PositronicKit
 import Foundation
 @testable import PKShared
+import MonadShared
 @testable import MonadServer
 
-public final class MockClientStore: ClientStoreProtocol, @unchecked Sendable {
-    public var clients: [ClientIdentity] = []
+public final class MockClientStore: RequestOriginStoreProtocol, @unchecked Sendable {
+    public var origins: [RequestOriginIdentity] = []
 
     public init() {}
 
-    public func saveClient(_ client: ClientIdentity) async throws {
-        if let index = clients.firstIndex(where: { $0.id == client.id }) {
-            clients[index] = client
+    public func saveOrigin(_ origin: RequestOriginIdentity) async throws {
+        if let index = origins.firstIndex(where: { $0.id == origin.id }) {
+            origins[index] = origin
         } else {
-            clients.append(client)
+            origins.append(origin)
         }
     }
 
-    public func fetchClient(id: UUID) async throws -> ClientIdentity? {
-        return clients.first(where: { $0.id == id })
+    public func fetchOrigin(id: UUID) async throws -> RequestOriginIdentity? {
+        return origins.first(where: { $0.id == id })
     }
 
-    public func fetchAllClients() async throws -> [ClientIdentity] {
-        return clients
+    public func fetchAllOrigins() async throws -> [RequestOriginIdentity] {
+        return origins
     }
 
-    public func deleteClient(id: UUID) async throws -> Bool {
-        let countBefore = clients.count
-        clients.removeAll(where: { $0.id == id })
-        return countBefore > clients.count
-    }
-
-    public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] {
-        return []
+    public func deleteOrigin(id: UUID) async throws -> Bool {
+        let countBefore = origins.count
+        origins.removeAll(where: { $0.id == id })
+        return countBefore > origins.count
     }
 
     public func fetchOriginTools(originId: UUID) async throws -> [ToolReference] {
-        try await fetchClientTools(clientId: originId)
+        _ = originId
+        return []
     }
 }

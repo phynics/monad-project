@@ -1,6 +1,7 @@
 import Foundation
 import MonadClient
 import PKShared
+import MonadShared
 
 // Needed for fflush
 #if canImport(Glibc)
@@ -136,13 +137,13 @@ extension ChatREPL {
     ) -> [WorkspaceReference] {
         var workspacesToRestore: [WorkspaceReference] = []
 
-        if let primary = timelineWS.primary, primary.status == .missing, primary.hostType == .server {
+        if let primary = timelineWS.primary, primary.status == .missing, primary.location == .runtime {
             workspacesToRestore.append(primary)
         }
 
         if let identity = RegistrationManager.shared.getIdentity() {
             for workspace in timelineWS.attached {
-                if workspace.hostType == .client, workspace.ownerId == identity.clientId {
+                if workspace.location == .attached, workspace.originId == identity.clientId {
                     if let url = URL(string: workspace.uri.description), url.host == identity.hostname {
                         let path = url.path
                         if !FileManager.default.fileExists(atPath: path) {
@@ -164,7 +165,7 @@ extension ChatREPL {
         print(TerminalUI.dim("------------------------------------------------"))
         TerminalUI.printWarning("Missing Workspaces Detected:")
         for workspace in workspacesToRestore {
-            print(" - \(workspace.uri.description) (\(workspace.hostType == .server ? "Server" : "Client"))")
+            print(" - \(workspace.uri.description) (\(workspace.location == .runtime ? "Server" : "Client"))")
         }
         print("")
         print("Do you want to restore these workspaces? [y/N] ", terminator: "")
@@ -174,7 +175,7 @@ extension ChatREPL {
     private func restoreWorkspaces(_ workspacesToRestore: [WorkspaceReference]) async {
         for workspace in workspacesToRestore {
             do {
-                if workspace.hostType == .server {
+                if workspace.location == .runtime {
                     try await client.workspace.restoreWorkspace(
                         timelineId: timeline.id, workspaceId: workspace.id
                     )
@@ -200,7 +201,7 @@ extension ChatREPL {
         do {
             let pwd = FileManager.default.currentDirectoryPath
             let hostname = ProcessInfo.processInfo.hostName
-            let uriString = WorkspaceURI.clientProject(hostname: hostname, path: pwd).description
+            let uriString = WorkspaceURI.requestOriginProject(hostname: hostname, path: pwd).description
 
             guard let myId = RegistrationManager.shared.getIdentity()?.clientId else { return }
 
@@ -213,8 +214,8 @@ extension ChatREPL {
                 guard let uri = WorkspaceURI(parsing: uriString) else { return }
                 let newWs = try await client.workspace.createWorkspace(
                     uri: uri,
-                    hostType: .client,
-                    ownerId: myId,
+                    location: .attached,
+                    originId: myId,
                     rootPath: pwd,
                     trustLevel: .readOnly
                 )

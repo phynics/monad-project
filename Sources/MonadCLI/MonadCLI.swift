@@ -3,6 +3,7 @@ import Foundation
 import Logging
 import MonadClient
 import PKShared
+import MonadShared
 
 @main
 struct MonadCLI: AsyncParsableCommand {

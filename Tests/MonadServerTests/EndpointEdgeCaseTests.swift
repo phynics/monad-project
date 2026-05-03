@@ -6,6 +6,7 @@ import HummingbirdTesting
 import PositronicKit
 @testable import MonadServer
 import PKShared
+import MonadShared
 import PKTestSupport
 import NIOCore
 import Testing

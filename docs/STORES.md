@@ -1,10 +1,10 @@
 # State Stores
 
-State stores in MonadCore (`Sources/MonadCore/Stores/`) provide thread-safe, actor-based caching layers that sit between high-traffic API controllers and the database layer.
+State stores in the shared runtime and Monad host provide thread-safe caching layers that sit between high-traffic API controllers and the database layer.
 
 ## Persistence Stores
 
-Persistence stores (`Sources/MonadCore/Services/Database/`) define the interface for long-term storage of domain entities. `MonadServer` provides a `PersistenceService` that implements all of these protocols using GRDB and SQLite.
+Persistence protocols live in `PositronicKit`; `MonadServer` provides GRDB/SQLite-backed implementations for the host application.
 
 ### 1. `TimelineStore`
 Manages the lifecycle of conversation sessions.
@@ -30,15 +30,15 @@ Stores the static blueprints used to create new agents.
 Note: There is a `WorkspacePersistenceProtocol` for DB access and a `WorkspaceStore` actor for memory caching.
 - **Persistence API**: `saveWorkspace`, `fetchWorkspace`, `fetchAllWorkspaces`, `deleteWorkspace`.
 
-### 7. `ClientStore`
-Tracks remote client identities (e.g., your laptop running the CLI).
-- **API**: `saveClient`, `fetchClient`, `fetchAllClients`, `deleteClient`.
+### 7. `RequestOriginStore`
+Tracks remote request origins such as CLI or IDE hosts.
+- **API**: `saveOrigin`, `fetchOrigin`, `fetchAllOrigins`, `deleteOrigin`.
 
 ---
 
 ## Caching Stores
 
-These stores live in `Sources/MonadCore/Stores/` and provide thread-safe, actor-based caching layers that sit between high-traffic API controllers and the database layer.
+These stores live in the shared runtime and provide thread-safe caching layers between high-traffic API controllers and the database layer.
 
 ### `WorkspaceStore` (Cache)
 
@@ -49,7 +49,7 @@ It bridges the gap between the lightweight data-only `WorkspaceReference` stored
 **Primary Consumer:** `FilesAPIController` uses this store on every file read/write request to avoid repeatedly hydrating remote workspaces from their database references.
 
 **API Surface:**
-- `createWorkspace(uri:hostType:rootPath:ownerId:) -> WorkspaceProtocol` — Persists a new workspace reference and caches the hydrated instance.
+- `createWorkspace(uri:location:rootPath:originId:) -> WorkspaceProtocol` — Persists a new workspace reference and caches the hydrated instance.
 - `getWorkspace(id: UUID) -> WorkspaceProtocol?` — Retrieves a cached instance.
 - `reloadWorkspace(id: UUID)` — Forces a fetch from persistence and re-hydrates the instance.
 - `unloadWorkspace(id: UUID)` — Removes a workspace from the memory cache (leaving it in the database).

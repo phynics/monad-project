@@ -1,27 +1,28 @@
 import ErrorKit
 import Foundation
 import PKShared
+import MonadShared
 
-// MARK: - Type Aliases from PKShared
+// MARK: - Type Aliases from Shared Modules
 
 /// Timeline Models
-public typealias Timeline = PKShared.TimelineResponse
+public typealias Timeline = MonadShared.TimelineResponse
 
 // Chat Models
-public typealias ChatRequest = PKShared.ChatRequest
-public typealias ChatResponse = PKShared.ChatResponse
+public typealias ChatRequest = MonadShared.ChatRequest
+public typealias ChatResponse = MonadShared.ChatResponse
 
 // Status Models
-public typealias StatusResponse = PKShared.StatusResponse
-public typealias ComponentStatus = PKShared.ComponentStatus
+public typealias StatusResponse = MonadShared.StatusResponse
+public typealias ComponentStatus = MonadShared.ComponentStatus
 public typealias HealthStatus = PKShared.HealthStatus
 
 // Memory Models
 public typealias Memory = PKShared.Memory
-public typealias MemorySearchRequest = PKShared.MemorySearchRequest
+public typealias MemorySearchRequest = MonadShared.MemorySearchRequest
 
 /// Tool Models
-public typealias Tool = PKShared.ToolInfo
+public typealias Tool = MonadShared.ToolInfo
 
 /// AgentTemplate Models
 public typealias AgentTemplate = PKShared.AgentTemplate
@@ -40,7 +41,13 @@ public typealias ChatMetadata = PKShared.ChatMetadata
 
 // MARK: - Client API Models
 
-public typealias ClientIdentity = PKShared.ClientIdentity
+public typealias RequestOriginIdentity = PKShared.RequestOriginIdentity
+public typealias RequestOriginRegistrationRequest = MonadShared.RequestOriginRegistrationRequest
+public typealias RequestOriginRegistrationResponse = MonadShared.RequestOriginRegistrationResponse
+
+public typealias ClientIdentity = PKShared.RequestOriginIdentity
+public typealias ClientRegistrationRequest = MonadShared.RequestOriginRegistrationRequest
+public typealias ClientRegistrationResponse = MonadShared.RequestOriginRegistrationResponse
 public typealias WorkspaceReference = PKShared.WorkspaceReference
 public typealias WorkspaceURI = PKShared.WorkspaceURI
 public typealias WorkspaceTrustLevel = PKShared.WorkspaceTrustLevel

@@ -1,5 +1,6 @@
 import Foundation
 import PKShared
+import MonadShared
 
 /// Debug command to display the turn snapshot for the last exchange
 struct DebugCommand: SlashCommand {

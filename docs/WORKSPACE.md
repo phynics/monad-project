@@ -6,7 +6,7 @@ A **Workspace** is a secure, addressable execution environment where tools opera
 
 ## Model
 
-**Location:** `Sources/MonadShared/SharedTypes/WorkspaceReference.swift`
+**Location:** `../PositronicKit/Sources/PKShared/SharedTypes/WorkspaceReference.swift`
 
 `WorkspaceReference` is the lightweight metadata record stored in the database:
 
@@ -14,9 +14,9 @@ A **Workspace** is a secure, addressable execution environment where tools opera
 public struct WorkspaceReference: Codable, Sendable, Identifiable {
     public var id: UUID
     public var uri: WorkspaceURI
-    public var hostType: HostType           // .server, .client
+    public var location: WorkspaceLocation  // .runtime, .runtimeTimeline, .attached
     public var rootPath: String?
-    public var ownerId: UUID?
+    public var originId: UUID?
     public var tools: [WorkspaceToolDefinition]
     public var contextInjection: String?
     public var trustLevel: TrustLevel       // .full, .restricted
@@ -29,10 +29,11 @@ public struct WorkspaceReference: Codable, Sendable, Identifiable {
 
 ## Workspace Types
 
-| Host Type | Description | Location | Used For |
-|:----------|:------------|:---------|:---------|
-| `.server` | Local disk path on the server | Server disk | Agent workspaces, attached project dirs |
-| `.client` | Remote environment on the user's machine | Client machine | IDE integrations, client-hosted tools (RPC) |
+| Location | Description | Backing Host | Used For |
+|:---------|:------------|:-------------|:---------|
+| `.runtime` | Local disk path on the Monad server | Server disk | Runtime-managed workspaces |
+| `.runtimeTimeline` | Timeline-scoped runtime workspace | Server disk | Timeline primary workspaces |
+| `.attached` | Remote environment attached through a request origin | User machine or external host | IDE integrations, client-hosted tools (RPC) |
 
 ### Workspace URI Types
 
@@ -66,7 +67,7 @@ public enum WorkspaceURI {
 - Shared project directories attached to a specific timeline
 - The CLI **automatically attaches** the current working directory on startup as a read-only workspace.
 - Additional workspaces can be attached via `/workspace attach` or API.
-- Can be server-side (`hostType: .server`) or client-side (`hostType: .client`)
+- Can be runtime-managed (`location: .runtime`) or attached (`location: .attached`)
 - Detaching removes their tools from the timeline
 
 ---
@@ -98,12 +99,12 @@ ToolRouter.route()
            └─ Not found → ToolError
 ```
 
-**Location:** `Sources/MonadCore/Services/Tools/ToolRouter.swift`
+**Location:** `../PositronicKit/Sources/PositronicKit/Services/Tools/ToolRouter.swift`
 
 ### 3. Execution
 
-- **Server tools** (`.server` host type): Executed directly by `ToolExecutor` on the server.
-- **Client tools** (`.client` host type): `ToolRouter` throws `ToolError.clientExecutionRequired`. `ChatEngine` pauses generation and emits a `toolExecution` event. The client executes locally and resumes the stream by posting `toolOutputs`.
+- **Runtime tools** (`location: .runtime` or `.runtimeTimeline`): Executed directly by the Monad host.
+- **Attached tools** (`location: .attached`): Routed back through the remote workspace connection so the client can execute locally and return `toolOutputs`.
 
 ### Write Access Elevation
 
@@ -136,7 +137,7 @@ Client-side workspaces are attached with `trustLevel: .readOnly` by default. If 
 When you start `monad chat`, the CLI:
 
 1. Resolves the absolute path of the current directory.
-2. Registers/Finds a client-side workspace for this path on the server.
+2. Registers or finds an attached workspace for this path on the server.
 3. Attaches it to the current timeline with `.readOnly` trust.
 4. Syncs the standard read-only toolset.
 
@@ -144,8 +145,8 @@ When you start `monad chat`, the CLI:
 
 For IDE integrations or remote environments:
 
-1. Client registers its identity via `POST /api/clients`
-2. Client declares a `.client` workspace via `POST /api/workspaces`
+1. Client registers its identity via `POST /api/clients/register`
+2. Client declares an attached workspace via `POST /api/workspaces`
 3. Client attaches the workspace to a timeline
 4. When the LLM calls a tool in this workspace, `ToolRouter` throws `clientExecutionRequired`
 5. The server-sent event prompts the client to execute locally and return the result
@@ -159,7 +160,7 @@ For IDE integrations or remote environments:
 **Primary consumer:** `FilesAPIController` — avoids re-hydrating remote workspaces on every file request.
 
 **API:**
-- `createWorkspace(uri:hostType:rootPath:ownerId:)` — Persist + cache
+- `createWorkspace(uri:location:rootPath:originId:)` — Persist + cache
 - `getWorkspace(id:)` — Retrieve cached instance
 - `reloadWorkspace(id:)` — Force re-hydration from DB
 - `unloadWorkspace(id:)` — Remove from cache (keep in DB)

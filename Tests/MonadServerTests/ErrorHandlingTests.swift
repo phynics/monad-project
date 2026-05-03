@@ -1,4 +1,5 @@
 import PKShared
+import MonadShared
 import PositronicKit
 import Foundation
 import Hummingbird
@@ -143,11 +144,11 @@ import Testing
         }
     }
 
-    @Test("ToolError.clientToolsDisallowedOnPrivateTimeline maps to 403 client_tools_disallowed_on_private_timeline")
-    func toolError_clientToolsDisallowedOnPrivateTimeline_maps403() async throws {
+    @Test("ToolError.attachedToolsDisallowedOnPrivateTimeline maps to 403 client_tools_disallowed_on_private_timeline")
+    func toolError_attachedToolsDisallowedOnPrivateTimeline_maps403() async throws {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
-        router.get("/err") { _, _ -> String in throw ToolError.clientToolsDisallowedOnPrivateTimeline }
+        router.get("/err") { _, _ -> String in throw ToolError.attachedToolsDisallowedOnPrivateTimeline }
         let app = Application(router: router)
 
         try await app.test(.router) { client in

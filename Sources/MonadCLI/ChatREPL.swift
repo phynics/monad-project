@@ -2,6 +2,7 @@ import Foundation
 import Logging
 import MonadClient
 import PKShared
+import MonadShared
 
 // Needed for fflush
 #if canImport(Glibc)

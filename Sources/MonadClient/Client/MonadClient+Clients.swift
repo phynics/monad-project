@@ -1,5 +1,6 @@
 import Foundation
 import PKShared
+import MonadShared
 
 public extension MonadClient {
     // MARK: - Client API
@@ -12,7 +13,7 @@ public extension MonadClient {
     ) async throws -> ClientRegistrationResponse {
         var request = try buildRequest(path: "/api/clients/register", method: "POST")
         request.httpBody = try encoder.encode(
-            ClientRegistrationRequest(
+            RequestOriginRegistrationRequest(
                 hostname: hostname,
                 displayName: displayName,
                 platform: platform,

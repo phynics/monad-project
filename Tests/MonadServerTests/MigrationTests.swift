@@ -1,4 +1,5 @@
 import PKShared
+import MonadShared
 import PositronicKit
 import Foundation
 import GRDB
@@ -67,6 +68,26 @@ struct MigrationTests {
                 INSERT INTO memory (id, title, content, createdAt, updatedAt, tags, metadata, embedding)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, arguments: [UUID(), "Test", "Content", Date(), Date(), "[]", "{}", "[]"])
+        }
+    }
+
+    @Test("Verify latest schema uses request-origin and location column names")
+    func latestSchema_usesRequestOriginTerminology() async throws {
+        let queue = try DatabaseQueue()
+        var migrator = DatabaseMigrator()
+        DatabaseSchema.registerMigrations(in: &migrator)
+
+        try migrator.migrate(queue)
+
+        try await queue.read { db in
+            #expect(try db.tableExists("requestOrigin"))
+            #expect(!(try db.tableExists("clientIdentity")))
+
+            let workspaceColumns = try db.columns(in: "workspace").map(\.name)
+            #expect(workspaceColumns.contains("location"))
+            #expect(workspaceColumns.contains("originId"))
+            #expect(!workspaceColumns.contains("hostType"))
+            #expect(!workspaceColumns.contains("ownerId"))
         }
     }
 }

@@ -59,10 +59,10 @@ The CLI registers itself with the server so client-side tools (like `request_wri
 
 ```swift
 let identity = try await RegistrationManager.shared.ensureRegistered(client: client)
-// Returns ClientIdentity with a stable clientId stored in local config
+// Returns a registered origin with a stable local identity stored in config
 ```
 
-**API:** `POST /api/clients` (register), `DELETE /api/clients/:id` (unregister)
+**API:** `POST /api/clients/register`, `GET /api/clients`, `DELETE /api/clients/:id`
 
 ---
 
@@ -88,11 +88,11 @@ swift run MonadCLI status                  # Check server health
 1. Load local config (`LocalConfigManager`)
 2. Auto-detect server URL (flag → local config → Bonjour → localhost)
 3. Health check server
-4. Register client identity (idempotent)
+4. Register the local request origin (idempotent)
 5. Check/show configuration screen if LLM not configured
 6. Resolve timeline (explicit ID → last session → new)
 7. Handle workspace re-attachment
-8. **Auto-attach current directory** as a read-only client workspace
+8. **Auto-attach current directory** as a read-only attached workspace
 9. Restore last attached agent instance (from local config)
 10. Start REPL
 

@@ -1,13 +1,14 @@
 import Foundation
 import PKShared
+import MonadShared
 
 public extension MonadWorkspaceClient {
     // MARK: - Workspace API
 
     func createWorkspace(
         uri: WorkspaceURI,
-        hostType: WorkspaceReference.WorkspaceHostType,
-        ownerId: UUID?,
+        location: WorkspaceReference.WorkspaceLocation,
+        originId: UUID?,
         rootPath: String?,
         trustLevel: WorkspaceTrustLevel?
     ) async throws -> WorkspaceReference {
@@ -15,8 +16,8 @@ public extension MonadWorkspaceClient {
         request.httpBody = try await client.encode(
             CreateWorkspaceRequest(
                 uri: uri.description,
-                hostType: hostType,
-                ownerId: ownerId,
+                location: location,
+                originId: originId,
                 rootPath: rootPath,
                 trustLevel: trustLevel
             )

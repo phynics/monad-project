@@ -1,5 +1,6 @@
 import Foundation
 import PKShared
+import MonadShared
 
 /// Domain-specific client for Workspace, Tool, and File operations
 public struct MonadWorkspaceClient: Sendable {

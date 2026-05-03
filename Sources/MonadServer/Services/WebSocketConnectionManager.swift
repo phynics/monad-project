@@ -4,6 +4,7 @@ import HummingbirdWebSocket
 import Logging
 import PositronicKit
 import PKShared
+import MonadShared
 
 public actor WebSocketConnectionManager: ClientConnectionManagerProtocol {
     private let logger = Logger(label: "com.monad.server.websocket")

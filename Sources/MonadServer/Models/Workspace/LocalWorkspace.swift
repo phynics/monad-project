@@ -1,6 +1,7 @@
 import Foundation
 import PositronicKit
 import PKShared
+import MonadShared
 
 /// Implementation of WorkspaceProtocol for workspaces hosted on the local server filesystem
 public actor LocalWorkspace: WorkspaceProtocol {
@@ -11,7 +12,7 @@ public actor LocalWorkspace: WorkspaceProtocol {
     private let rootURL: URL
 
     public init(reference: WorkspaceReference) throws {
-        guard reference.hostType == .server || reference.hostType == .serverTimeline,
+        guard reference.location == .runtime || reference.location == .runtimeTimeline,
               let path = reference.rootPath
         else {
             throw WorkspaceError.invalidWorkspaceType

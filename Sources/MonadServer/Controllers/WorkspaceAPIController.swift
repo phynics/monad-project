@@ -6,6 +6,7 @@ import Hummingbird
 import Logging
 import PositronicKit
 import PKShared
+import MonadShared
 import NIOCore
 
 /// Controller for managing workspaces
@@ -41,8 +42,8 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         let workspace = WorkspaceReference(
             id: id,
             uri: uri,
-            hostType: input.hostType,
-            ownerId: input.ownerId,
+            location: input.location,
+            originId: input.originId,
             rootPath: input.rootPath,
             trustLevel: input.trustLevel ?? .full,
             createdAt: now

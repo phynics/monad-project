@@ -1,6 +1,7 @@
 import Foundation
 import Logging
 import PKShared
+import MonadShared
 
 /// Parses Server-Sent Events (SSE) from an async byte stream
 public struct SSEStreamReader: Sendable {

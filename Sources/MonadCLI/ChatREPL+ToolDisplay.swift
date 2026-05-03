@@ -1,6 +1,7 @@
 import Foundation
 import MonadClient
 import PKShared
+import MonadShared
 
 extension ChatREPL {
     func printToolAttempt(name: String, argsJSON: String, reference: ToolReference?) {

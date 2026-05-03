@@ -1,47 +1,44 @@
 import GRDB
 import PositronicKit
 import PKShared
+import MonadShared
 import Foundation
 
-public actor ClientIdentityRepository: ClientStoreProtocol {
+public actor RequestOriginRepository: RequestOriginStoreProtocol {
     private let dbQueue: DatabaseQueue
 
     public init(dbQueue: DatabaseQueue) {
         self.dbQueue = dbQueue
     }
 
-    public func saveClient(_ client: ClientIdentity) async throws {
+    public func saveOrigin(_ origin: RequestOriginIdentity) async throws {
         try await dbQueue.write { db in
-            try client.save(db)
+            try origin.save(db)
         }
     }
 
-    public func fetchClient(id: UUID) async throws -> ClientIdentity? {
+    public func fetchOrigin(id: UUID) async throws -> RequestOriginIdentity? {
         try await dbQueue.read { db in
-            try ClientIdentity.fetchOne(db, key: id)
+            try RequestOriginIdentity.fetchOne(db, key: id)
         }
     }
 
-    public func fetchAllClients() async throws -> [ClientIdentity] {
+    public func fetchAllOrigins() async throws -> [RequestOriginIdentity] {
         try await dbQueue.read { db in
-            try ClientIdentity.fetchAll(db)
+            try RequestOriginIdentity.fetchAll(db)
         }
     }
 
-    public func deleteClient(id: UUID) async throws -> Bool {
+    public func deleteOrigin(id: UUID) async throws -> Bool {
         try await dbQueue.write { db in
-            try ClientIdentity.deleteOne(db, key: id)
+            try RequestOriginIdentity.deleteOne(db, key: id)
         }
     }
 
     public func fetchOriginTools(originId: UUID) async throws -> [ToolReference] {
-        try await fetchClientTools(clientId: originId)
-    }
-
-    public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] {
         return try await dbQueue.read { db in
             let workspaces = try WorkspaceReference
-                .filter(Column("ownerId") == clientId)
+                .filter(Column("originId") == originId)
                 .fetchAll(db)
 
             let workspaceIds = workspaces.map { $0.id }

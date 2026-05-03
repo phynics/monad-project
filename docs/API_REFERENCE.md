@@ -268,7 +268,9 @@ AgentTemplates are static templates used to seed new agent instance workspaces.
 
 ## Clients
 
+- `POST /clients/register` — Register a new client/request origin and create its default attached workspace.
 - `GET /clients` — List all registered clients.
+- `GET /clients/:id` — Get a registered client by id.
 - `DELETE /clients/:id` — Unregister a client.
 
 ---

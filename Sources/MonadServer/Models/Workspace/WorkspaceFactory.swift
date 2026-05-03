@@ -1,6 +1,7 @@
 import Foundation
 import PositronicKit
 import PKShared
+import MonadShared
 
 /// Factory for resolving WorkspaceReference into a concrete WorkspaceProtocol implementation.
 /// Conforms to `WorkspaceCreating` so it can be injected into MonadCore services.

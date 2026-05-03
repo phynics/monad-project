@@ -3,6 +3,7 @@ import Foundation
 import PositronicKit
 @testable import MonadServer
 import PKShared
+import MonadShared
 import PKTestSupport
 import Testing
 

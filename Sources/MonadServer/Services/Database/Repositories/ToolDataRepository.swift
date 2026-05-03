@@ -2,6 +2,7 @@ import Foundation
 import GRDB
 import PositronicKit
 import PKShared
+import MonadShared
 
 public actor ToolDataRepository: ToolPersistenceProtocol {
     private let dbQueue: DatabaseQueue
@@ -57,7 +58,7 @@ public actor ToolDataRepository: ToolPersistenceProtocol {
     public func fetchClientTools(clientId: UUID) async throws -> [ToolReference] {
         return try await dbQueue.read { db in
             let workspaces = try WorkspaceReference
-                .filter(Column("ownerId") == clientId)
+                .filter(Column("originId") == clientId)
                 .fetchAll(db)
 
             let workspaceIds = workspaces.map { $0.id }
@@ -95,10 +96,10 @@ public actor ToolDataRepository: ToolPersistenceProtocol {
                 .filter(workspaceIds.contains(Column("workspaceId")))
                 .fetchOne(db),
                 let workspace = try WorkspaceReference.fetchOne(db, key: toolRecord.workspaceId) {
-                if workspace.hostType == .client {
-                    if let owner = workspace.ownerId,
-                       let client = try? ClientIdentity.fetchOne(db, key: owner) {
-                        return "Client: \(client.hostname)"
+                if workspace.location == .attached {
+                    if let originId = workspace.originId,
+                       let origin = try? RequestOriginIdentity.fetchOne(db, key: originId) {
+                        return "Client: \(origin.hostname)"
                     }
                     return "Client Workspace"
                 } else if primaryWorkspaceId == workspace.id {

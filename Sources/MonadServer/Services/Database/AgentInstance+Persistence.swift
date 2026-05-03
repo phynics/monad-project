@@ -1,6 +1,7 @@
 import Foundation
 import GRDB
 import PKShared
+import MonadShared
 
 // MARK: - AgentInstance GRDB Conformance
 

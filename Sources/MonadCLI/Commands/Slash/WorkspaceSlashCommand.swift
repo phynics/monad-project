@@ -1,6 +1,7 @@
 import Foundation
 import MonadClient
 import PKShared
+import MonadShared
 
 struct WorkspaceSlashCommand: SlashCommand {
     let name = "workspace"
@@ -189,7 +190,7 @@ struct WorkspaceSlashCommand: SlashCommand {
     private func attachCurrentDirectory(context: ChatContext) async throws {
         let pwd = FileManager.default.currentDirectoryPath
         let hostname = ProcessInfo.processInfo.hostName
-        let uriString = WorkspaceURI.clientProject(hostname: hostname, path: pwd).description
+        let uriString = WorkspaceURI.requestOriginProject(hostname: hostname, path: pwd).description
 
         guard let myId = RegistrationManager.shared.getIdentity()?.clientId else {
             TerminalUI.printError("Could not determine local client identity.")
@@ -211,8 +212,8 @@ struct WorkspaceSlashCommand: SlashCommand {
 
             let newWs = try await context.client.workspace.createWorkspace(
                 uri: uri,
-                hostType: .client,
-                ownerId: myId,
+                location: .attached,
+                originId: myId,
                 rootPath: pwd,
                 trustLevel: .readOnly
             )

@@ -3,11 +3,12 @@ import GRDB
 import Hummingbird
 import Logging
 import PKShared
+import MonadShared
 import Dependencies
 
 /// Controller for managing client identities
 public struct ClientAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.clientStore) var clientStore
+    @Dependency(\.requestOriginStore) var requestOriginStore
     @Dependency(\.workspacePersistence) var workspaceStore
     @Dependency(\.toolPersistence) var toolStore
 
@@ -22,13 +23,13 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
 
     /// POST /clients/register
     @Sendable func register(request: Request, context: Context) async throws -> Response {
-        let input = try await request.decode(as: ClientRegistrationRequest.self, context: context)
+        let input = try await request.decode(as: RequestOriginRegistrationRequest.self, context: context)
 
         // Generate ID
         let id = UUID()
         let now = Date()
 
-        let client = ClientIdentity(
+        let requestOrigin = RequestOriginIdentity(
             id: id,
             hostname: input.hostname,
             displayName: input.displayName,
@@ -38,16 +39,16 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
         )
 
         // Create default shell workspace
-        let workspaceUri = client.shellWorkspaceURI
+        let workspaceUri = requestOrigin.shellWorkspaceURI
         let defaultWorkspace = WorkspaceReference(
             uri: workspaceUri,
-            hostType: .client,
-            ownerId: id,
+            location: .attached,
+            originId: id,
             rootPath: nil, // Unknown until client reports it, or assume home
             trustLevel: .full
         )
 
-        try await clientStore.saveClient(client)
+        try await requestOriginStore.saveOrigin(requestOrigin)
         try await workspaceStore.saveWorkspace(defaultWorkspace)
 
         // Save tools
@@ -55,33 +56,33 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
             try await toolStore.addToolToWorkspace(workspaceId: defaultWorkspace.id, tool: toolRef)
         }
 
-        let response = ClientRegistrationResponse(
-            client: client, defaultWorkspace: defaultWorkspace
+        let response = RequestOriginRegistrationResponse(
+            origin: requestOrigin, defaultWorkspace: defaultWorkspace
         )
         return try response.response(status: .created, from: request, context: context)
     }
 
     /// GET /clients/:id
-    @Sendable func get(request _: Request, context: Context) async throws -> ClientIdentity {
+    @Sendable func get(request _: Request, context: Context) async throws -> RequestOriginIdentity {
         let id = try context.parameters.require("id", as: UUID.self)
-        let client = try await clientStore.fetchClient(id: id)
+        let requestOrigin = try await requestOriginStore.fetchOrigin(id: id)
 
-        guard let client = client else {
+        guard let requestOrigin = requestOrigin else {
             throw HTTPError(.notFound)
         }
 
-        return client
+        return requestOrigin
     }
 
     /// GET /clients
-    @Sendable func list(request _: Request, context _: Context) async throws -> [ClientIdentity] {
-        return try await clientStore.fetchAllClients()
+    @Sendable func list(request _: Request, context _: Context) async throws -> [RequestOriginIdentity] {
+        return try await requestOriginStore.fetchAllOrigins()
     }
 
     /// DELETE /clients/:id
     @Sendable func delete(request _: Request, context: Context) async throws -> HTTPResponse.Status {
         let id = try context.parameters.require("id", as: UUID.self)
-        let deleted = try await clientStore.deleteClient(id: id)
+        let deleted = try await requestOriginStore.deleteOrigin(id: id)
 
         guard deleted else {
             throw HTTPError(.notFound)
@@ -91,6 +92,6 @@ public struct ClientAPIController<Context: RequestContext>: Sendable {
     }
 }
 
-// MARK: - GRDB Conformance for ClientIdentity
+// MARK: - GRDB Conformance for RequestOriginIdentity
 
 // Extended in MonadCore

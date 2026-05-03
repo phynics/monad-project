@@ -2,6 +2,7 @@ import Foundation
 import GRDB
 import PositronicKit
 import PKShared
+import MonadShared
 
 public extension DatabaseSchema {
     /// Register all migrations
@@ -42,6 +43,26 @@ public extension DatabaseSchema {
                 try db.alter(table: "conversationMessage") { table in
                     table.add(column: "snapshotData", .blob)
                 }
+            }
+        }
+
+        migrator.registerMigration("v5") { db in
+            if try db.tableExists("clientIdentity") && !(try db.tableExists("requestOrigin")) {
+                try db.execute(sql: "ALTER TABLE clientIdentity RENAME TO requestOrigin")
+            }
+
+            guard try db.tableExists("workspace") else {
+                return
+            }
+
+            let workspaceColumns = try db.columns(in: "workspace").map(\.name)
+
+            if workspaceColumns.contains("hostType") && !workspaceColumns.contains("location") {
+                try db.execute(sql: "ALTER TABLE workspace RENAME COLUMN hostType TO location")
+            }
+
+            if workspaceColumns.contains("ownerId") && !workspaceColumns.contains("originId") {
+                try db.execute(sql: "ALTER TABLE workspace RENAME COLUMN ownerId TO originId")
             }
         }
     }

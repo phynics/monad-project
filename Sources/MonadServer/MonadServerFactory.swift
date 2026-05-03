@@ -6,6 +6,7 @@ import HummingbirdWebSocket
 import Logging
 import PositronicKit
 import PKShared
+import MonadShared
 import ServiceLifecycle
 import UnixSignals
 
@@ -29,7 +30,7 @@ public struct MonadServerFactory {
 
     private struct RepositorySet {
         let agentInstanceStore: AgentInstanceDataRepository
-        let clientStore: ClientIdentityRepository
+        let requestOriginStore: RequestOriginRepository
         let agentTemplateStore: AgentTemplateRepository
         let memoryStore: MemoryRepository
         let messageStore: MessageRepository
@@ -65,7 +66,7 @@ public struct MonadServerFactory {
         router.add(middleware: LogMiddleware())
         router.add(middleware: ErrorMiddleware())
 
-        let coreChat = MonadCore(
+        let coreChat = PositronicKitCore(
             llmService: components.services.llmService,
             persistence: .init(
                 messageStore: components.repositories.messageStore,
@@ -74,7 +75,7 @@ public struct MonadServerFactory {
                 memoryStore: components.repositories.memoryStore,
                 toolPersistence: components.repositories.toolPersistence,
                 agentInstanceStore: components.repositories.agentInstanceStore,
-                clientStore: components.repositories.clientStore,
+                requestOriginStore: components.repositories.requestOriginStore,
                 agentTemplateStore: components.repositories.agentTemplateStore
             ),
             embeddingService: components.services.embeddingService,
@@ -148,7 +149,7 @@ public struct MonadServerFactory {
     private static func initializeRepositories(dbQueue: DatabaseQueue) -> RepositorySet {
         RepositorySet(
             agentInstanceStore: AgentInstanceDataRepository(dbQueue: dbQueue),
-            clientStore: ClientIdentityRepository(dbQueue: dbQueue),
+            requestOriginStore: RequestOriginRepository(dbQueue: dbQueue),
             agentTemplateStore: AgentTemplateRepository(dbQueue: dbQueue),
             memoryStore: MemoryRepository(dbQueue: dbQueue),
             messageStore: MessageRepository(dbQueue: dbQueue),
@@ -229,7 +230,7 @@ public struct MonadServerFactory {
         let repos = components.repositories
         deps.databaseManager = components.databaseManager
         deps.agentInstanceStore = repos.agentInstanceStore
-        deps.clientStore = repos.clientStore
+        deps.requestOriginStore = repos.requestOriginStore
         deps.agentTemplateStore = repos.agentTemplateStore
         deps.memoryStore = repos.memoryStore
         deps.messageStore = repos.messageStore
