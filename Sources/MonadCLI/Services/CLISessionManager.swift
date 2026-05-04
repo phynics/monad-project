@@ -7,85 +7,170 @@ import MonadShared
 
 struct CLITimelineManager {
     let client: MonadClient
+    private let input: @Sendable () -> String?
     private let logger = Logger.module(named: "timeline-manager")
+
+    init(
+        client: MonadClient,
+        input: @escaping @Sendable () -> String? = { readLine() }
+    ) {
+        self.client = client
+        self.input = input
+    }
 
     /// Resolves which timeline to use (Resume or New)
     func resolveTimeline(
         explicitId: String?,
         localConfig: LocalConfig
     ) async throws -> Timeline {
-        // 1. Try to resume from flag
         if let timelineId = explicitId, let uuid = UUID(uuidString: timelineId) {
             do {
-                _ = try await client.chat.getHistory(timelineId: uuid)
+                let timeline = try await client.chat.getTimeline(id: uuid)
                 TerminalUI.printInfo("Resuming timeline \(uuid.uuidString.prefix(8))...")
-                return Timeline(id: uuid, title: nil)
+                return timeline
             } catch {
                 TerminalUI.printError("Timeline not found: \(timelineId)")
                 throw ExitCode.failure
             }
         }
 
-        // 2. Try to resume from config (automatic)
         if let lastId = localConfig.lastSessionId, let uuid = UUID(uuidString: lastId) {
             do {
-                _ = try await client.chat.getHistory(timelineId: uuid)
+                let timeline = try await client.chat.getTimeline(id: uuid)
                 TerminalUI.printInfo("Resumed timeline \(uuid.uuidString.prefix(8))")
-                return Timeline(id: uuid, title: nil)
+                return timeline
             } catch {
-                // Stale config, ignore and proceed to menu
                 logger.debug("Stale session in local config: \(uuid.uuidString). Proceeding to menu.")
             }
         }
 
-        // 3. Interactive Menu
         return try await showTimelineMenu()
     }
 
     private func showTimelineMenu() async throws -> Timeline {
         print("")
-        print(TerminalUI.bold("No active timeline found."))
-        print("  [1] Create New Timeline")
-        print("  [2] List Existing Timelines")
-        print("")
-        print("Select an option [1]: ", terminator: "")
+        print(TerminalUI.bold("Choose a public timeline to start."))
+        guard let timeline = try await showPublicTimelineSelector(
+            currentTimelineId: nil,
+            allowCancel: true
+        ) else {
+            throw ExitCode.failure
+        }
+        return timeline
+    }
 
-        let choice = readLine()?.trimmingCharacters(in: .whitespaces) ?? "1"
+    func createNewTimelineFlow(title: String? = nil) async throws -> Timeline {
+        let timeline = try await client.chat.createTimeline(title: title)
+        TerminalUI.printSuccess("Created new timeline \(timeline.id.uuidString.prefix(8))")
+        return timeline
+    }
 
-        if choice == "2" {
-            let timelines = try await client.chat.listTimelines()
+    func showPublicTimelineSelector(
+        currentTimelineId: UUID?,
+        allowCancel: Bool
+    ) async throws -> Timeline? {
+        while true {
+            let timelines = CLITimelineCatalog.sortedPublicTimelines(try await client.chat.listTimelines())
+
             if timelines.isEmpty {
-                print("No timelines found. Creating new one.")
+                TerminalUI.printInfo("No public timelines found. Creating one.")
                 return try await createNewTimelineFlow()
             }
 
             print("")
+            print(TerminalUI.bold("Public Timelines"))
+            print("")
+
             for (idx, timeline) in timelines.enumerated() {
                 let title = timeline.title ?? "Untitled"
+                let marker = timeline.id == currentTimelineId ? TerminalUI.green("●") : " "
+                let id = timeline.id.uuidString.prefix(8)
                 let date = TerminalUI.formatDate(timeline.updatedAt)
-                print("  [\(idx + 1)] \(title) (\(timeline.id.uuidString.prefix(8))) - \(date)")
+                print("  \(idx + 1). \(marker) \(title)  \(TerminalUI.dim("#\(id) • \(date)"))")
             }
-            print("")
-            print("Select a timeline [1]: ", terminator: "")
-            let indexStr = readLine()?.trimmingCharacters(in: .whitespaces) ?? "1"
-            let index = (Int(indexStr) ?? 1) - 1
 
-            if index >= 0 && index < timelines.count {
-                let timeline = timelines[index]
-                return Timeline(id: timeline.id, title: timeline.title)
-            } else {
-                TerminalUI.printError("Invalid selection.")
-                throw ExitCode.failure
+            print("")
+            print("Actions: <number> switch, p <number> peek, d <number> delete, c create\(allowCancel ? ", q cancel" : "")")
+            print("Select action: ", terminator: "")
+
+            let response = input()?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if response.isEmpty, let first = timelines.first {
+                return first
             }
-        } else {
-            return try await createNewTimelineFlow()
+            if allowCancel, response.lowercased() == "q" {
+                return nil
+            }
+            if response.lowercased() == "c" {
+                return try await createTimelineWithPrompt()
+            }
+
+            let parts = response.split(separator: " ", maxSplits: 1).map(String.init)
+            if let selected = resolveIndexedTimelineSelection(parts, timelines: timelines) {
+                switch parts.first?.lowercased() {
+                case "p":
+                    try await browseTimeline(
+                        timelineId: selected.id,
+                        title: selected.title ?? "Untitled",
+                        kindLabel: "public"
+                    )
+                    continue
+                case "d":
+                    try await deleteTimelineWithConfirmation(
+                        selected,
+                        currentTimelineId: currentTimelineId
+                    )
+                    continue
+                default:
+                    return selected
+                }
+            }
+
+            TerminalUI.printError("Invalid selection.")
         }
     }
 
-    private func createNewTimelineFlow() async throws -> Timeline {
-        let timeline = try await client.chat.createTimeline()
-        TerminalUI.printSuccess("Created new timeline \(timeline.id.uuidString.prefix(8))")
-        return timeline
+    func browseTimeline(
+        timelineId: UUID,
+        title: String,
+        kindLabel: String,
+        pageSize: Int = 10
+    ) async throws {
+        let messages = try await client.chat.getHistory(timelineId: timelineId)
+        if messages.isEmpty {
+            TerminalUI.printInfo("No messages in this \(kindLabel) timeline yet.")
+            return
+        }
+
+        var page = 0
+        let totalPages = max(1, Int(ceil(Double(messages.count) / Double(pageSize))))
+
+        while true {
+            let start = page * pageSize
+            let end = min(start + pageSize, messages.count)
+
+            print("")
+            print(TerminalUI.bold(title) + TerminalUI.dim("  [\(kindLabel) #\(timelineId.uuidString.prefix(8))]"))
+            print(TerminalUI.dim("Messages \(start + 1)-\(end) of \(messages.count) • page \(page + 1)/\(totalPages)"))
+            print("")
+
+            for message in messages[start ..< end] {
+                render(message: message)
+                print("")
+            }
+
+            print("Peek actions: n next, p previous, q quit [q]: ", terminator: "")
+            let choice = input()?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "q"
+            switch choice {
+            case "n" where page + 1 < totalPages:
+                page += 1
+            case "p" where page > 0:
+                page -= 1
+            case "q", "":
+                return
+            default:
+                TerminalUI.printError("Invalid selection.")
+            }
+        }
     }
 
     /// Handles re-attachment of client-side workspaces
@@ -111,7 +196,7 @@ struct CLITimelineManager {
 
         print("")
         print("Re-attach these workspaces? (y/n) [y]: ", terminator: "")
-        let response = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? "y"
+        let response = input()?.lowercased().trimmingCharacters(in: .whitespaces) ?? "y"
         return response == "y" || response == ""
     }
 
@@ -173,5 +258,72 @@ struct CLITimelineManager {
             trustLevel: .readOnly
         )
         return newWs.id
+    }
+
+    private func createTimelineWithPrompt() async throws -> Timeline {
+        print("Title (optional): ", terminator: "")
+        let title = input()?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try await createNewTimelineFlow(title: title?.isEmpty == true ? nil : title)
+    }
+
+    private func resolveIndexedTimelineSelection(
+        _ parts: [String],
+        timelines: [TimelineResponse]
+    ) -> TimelineResponse? {
+        let selectionToken: String
+        if let first = parts.first?.lowercased(), ["p", "d"].contains(first) {
+            guard parts.count == 2 else { return nil }
+            selectionToken = parts[1]
+        } else if let first = parts.first {
+            selectionToken = first
+        } else {
+            return nil
+        }
+
+        guard let index = Int(selectionToken), index > 0, index <= timelines.count else {
+            return nil
+        }
+        return timelines[index - 1]
+    }
+
+    private func deleteTimelineWithConfirmation(
+        _ timeline: TimelineResponse,
+        currentTimelineId: UUID?
+    ) async throws {
+        if timeline.id == currentTimelineId {
+            TerminalUI.printError("Switch to another timeline before deleting the current one.")
+            return
+        }
+
+        let title = timeline.title ?? "Untitled"
+        print("Delete \"\(title)\"? (y/N): ", terminator: "")
+        let confirmation = input()?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "n"
+        guard confirmation == "y" else {
+            TerminalUI.printInfo("Deletion cancelled.")
+            return
+        }
+
+        try await client.chat.deleteTimeline(timeline.id)
+        TerminalUI.printSuccess("Deleted timeline \(timeline.id.uuidString.prefix(8))")
+    }
+
+    private func render(message: Message) {
+        switch message.role {
+        case .user:
+            print("\(TerminalUI.userColor("You:"))")
+            print(message.content)
+        case .assistant:
+            print("\(TerminalUI.assistantColor("Assistant:"))")
+            print(message.content)
+        case .system:
+            print("\(TerminalUI.systemColor("System:"))")
+            print(message.content)
+        case .tool:
+            print("\(TerminalUI.toolColor("Tool:"))")
+            print(message.content)
+        case .summary:
+            print("\(TerminalUI.dim("Summary:"))")
+            print(message.content)
+        }
     }
 }

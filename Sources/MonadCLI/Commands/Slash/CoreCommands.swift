@@ -1,5 +1,7 @@
 import Foundation
 import MonadClient
+import MonadShared
+import PKShared
 
 // MARK: - Core Commands
 
@@ -68,7 +70,8 @@ struct NewTimelineCommand: SlashCommand {
     func run(args _: [String], context: ChatContext) async throws {
         do {
             let currentAgent = await context.repl.getCurrentAgent()
-            let timeline = try await context.client.chat.createTimeline()
+            let manager = CLITimelineManager(client: context.client)
+            let timeline = try await manager.createNewTimelineFlow()
             if let agent = currentAgent {
                 try? await context.client.chat.attachAgent(agentId: agent.id, to: timeline.id)
             }
@@ -90,7 +93,7 @@ struct TimelineCommand: SlashCommand {
     let aliases = ["timelines"]
     let description = "Manage timelines"
     let category: String? = "Timeline Management"
-    let usage = "/timeline [info|list|delete|rename|switch|log] [args]"
+    let usage = "/timeline [info|list|create|delete|rename|switch|log] [args]"
 
     func run(args: [String], context: ChatContext) async throws {
         let subcommand = args.first ?? "info"
@@ -106,6 +109,9 @@ struct TimelineCommand: SlashCommand {
             } else {
                 TerminalUI.printError("Usage: /timeline delete <timeline-id>")
             }
+        case "create", "new":
+            let title = args.dropFirst().dropFirst().joined(separator: " ")
+            try await createTimeline(title.isEmpty ? nil : title, context: context)
         case "rename", "name":
             if args.count > 1 {
                 let newTitle = args.dropFirst().joined(separator: " ")
@@ -163,88 +169,36 @@ struct TimelineCommand: SlashCommand {
     }
 
     private func interactiveSwitch(context: ChatContext) async throws {
-        let timelines = try await context.client.chat.listTimelines()
-        guard !timelines.isEmpty else {
-            TerminalUI.printInfo("No other timelines found.")
+        let manager = CLITimelineManager(client: context.client)
+        guard let selected = try await manager.showPublicTimelineSelector(
+            currentTimelineId: context.timeline.id,
+            allowCancel: true
+        ) else {
+            TerminalUI.printInfo("Cancelled.")
             return
         }
 
-        let currentId = context.timeline.id
-        let sortedTimelines = timelines.sorted { $0.createdAt > $1.createdAt }
-
-        print("")
-        print(TerminalUI.bold("Switch Timeline:"))
-        print("")
-
-        for (idx, timeline) in sortedTimelines.enumerated() {
-            let title = timeline.title ?? "Untitled"
-            let isCurrent = timeline.id == currentId
-            let marker = isCurrent ? TerminalUI.green("[●]") : "[ ]"
-            let dateStr = TerminalUI.formatDate(timeline.createdAt)
-
-            print("  \(idx + 1). \(marker) \(title)  \(TerminalUI.dim(dateStr))")
-        }
-
-        print("")
-        print("Enter number (1-\(sortedTimelines.count)) or q to cancel: ", terminator: "")
-        fflush(stdout)
-
-        guard let input = readLine()?.trimmingCharacters(in: .whitespaces) else {
-            return
-        }
-
-        if input.lowercased() == "q" || input.isEmpty {
-            print("Cancelled.")
-            return
-        }
-
-        guard let index = Int(input), index > 0, index <= sortedTimelines.count else {
-            TerminalUI.printError("Invalid selection.")
-            return
-        }
-
-        let selected = sortedTimelines[index - 1]
-        if selected.id == currentId {
+        if selected.id == context.timeline.id {
             TerminalUI.printInfo("Already in this timeline.")
             return
         }
 
-        await context.repl.switchTimeline(selected)
-        TerminalUI.printSuccess("Switched to timeline: \(selected.title ?? selected.id.uuidString)")
+        try await switchToTimeline(selected, context: context)
     }
 
     private func showHistory(context: ChatContext) async throws {
-        let messages = try await context.client.chat.getHistory(timelineId: context.timeline.id)
-        if messages.isEmpty {
-            TerminalUI.printInfo("No messages in this timeline yet.")
-            return
-        }
-
-        print("")
-        for message in messages {
-            switch message.role {
-            case .user:
-                print("\(TerminalUI.userColor("You:"))")
-                print(message.content)
-            case .assistant:
-                print("\(TerminalUI.assistantColor("Assistant:"))")
-                print(message.content)
-            case .system:
-                print("\(TerminalUI.systemColor("System:"))")
-                print(message.content)
-            case .tool:
-                print("\(TerminalUI.toolColor("Tool:"))")
-                print(message.content)
-            case .summary:
-                print("\(TerminalUI.dim("Summary:"))")
-                print(message.content)
-            }
-            print("")
-        }
+        let manager = CLITimelineManager(client: context.client)
+        try await manager.browseTimeline(
+            timelineId: context.timeline.id,
+            title: context.timeline.title ?? "Untitled",
+            kindLabel: "public"
+        )
     }
 
     private func listTimelines(context: ChatContext) async throws {
-        let timelines = try await context.client.chat.listTimelines()
+        let timelines = CLITimelineCatalog.sortedPublicTimelines(
+            try await context.client.chat.listTimelines()
+        )
         if timelines.isEmpty {
             TerminalUI.printInfo("No timelines found.")
             return
@@ -268,6 +222,11 @@ struct TimelineCommand: SlashCommand {
     }
 
     private func deleteTimeline(_ idStr: String, context: ChatContext) async throws {
+        if context.timeline.id.uuidString.hasPrefix(idStr) {
+            TerminalUI.printError("Switch to another timeline before deleting the current one.")
+            return
+        }
+
         if let uuid = UUID(uuidString: idStr) {
             try await context.client.chat.deleteTimeline(uuid)
             TerminalUI.printSuccess("Deleted timeline \(uuid.uuidString.prefix(8))")
@@ -279,6 +238,10 @@ struct TimelineCommand: SlashCommand {
         if let match = timelines.first(where: {
             $0.id.uuidString.hasPrefix(idStr) || $0.id.uuidString.hasPrefix(idStr.uppercased())
         }) {
+            if match.id == context.timeline.id {
+                TerminalUI.printError("Switch to another timeline before deleting the current one.")
+                return
+            }
             try await context.client.chat.deleteTimeline(match.id)
             TerminalUI.printSuccess("Deleted timeline \(match.id.uuidString.prefix(8))")
         } else {
@@ -292,12 +255,40 @@ struct TimelineCommand: SlashCommand {
     }
 
     private func switchTimeline(_ idStr: String, context: ChatContext) async throws {
-        let timelines = try await context.client.chat.listTimelines()
+        let timelines = CLITimelineCatalog.sortedPublicTimelines(
+            try await context.client.chat.listTimelines()
+        )
         if let match = timelines.first(where: { $0.id.uuidString.hasPrefix(idStr) }) {
-            await context.repl.switchTimeline(match)
-            TerminalUI.printSuccess("Switched to timeline: \(match.title ?? match.id.uuidString)")
+            try await switchToTimeline(match, context: context)
         } else {
             TerminalUI.printError("No timeline found matching: \(idStr)")
         }
+    }
+
+    private func createTimeline(_ title: String?, context: ChatContext) async throws {
+        let manager = CLITimelineManager(client: context.client)
+        let timeline = try await manager.createNewTimelineFlow(title: title)
+        let currentAgent = await context.repl.getCurrentAgent()
+        await context.repl.switchTimeline(timeline)
+        if let currentAgent {
+            try? await context.client.chat.attachAgent(agentId: currentAgent.id, to: timeline.id)
+            await context.repl.setAgent(currentAgent)
+        }
+        TerminalUI.printSuccess("Switched to timeline: \(timeline.title ?? timeline.id.uuidString)")
+    }
+
+    private func switchToTimeline(_ timeline: TimelineResponse, context: ChatContext) async throws {
+        let agent = try await attachedAgent(for: timeline, context: context)
+        await context.repl.switchTimeline(timeline)
+        await context.repl.setAgent(agent)
+        TerminalUI.printSuccess("Switched to timeline: \(timeline.title ?? timeline.id.uuidString)")
+    }
+
+    private func attachedAgent(
+        for timeline: TimelineResponse,
+        context: ChatContext
+    ) async throws -> AgentInstance? {
+        guard let agentId = timeline.attachedAgentInstanceId else { return nil }
+        return try await context.client.chat.getAgentInstance(id: agentId)
     }
 }

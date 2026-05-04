@@ -7,7 +7,6 @@ struct LocalConfig: Codable {
     var serverURL: String?
     var apiKey: String?
     var lastSessionId: String?
-    var lastAgentInstanceId: String?
     var clientWorkspaces: [String: String]? // URI -> WorkspaceID
 }
 
@@ -105,12 +104,6 @@ struct LocalConfigManager {
     func updateLastSessionId(_ id: String) {
         var config = getConfig()
         config.lastSessionId = id
-        saveConfig(config)
-    }
-
-    func updateLastAgentInstanceId(_ id: String?) {
-        var config = getConfig()
-        config.lastAgentInstanceId = id
         saveConfig(config)
     }
 

@@ -22,6 +22,7 @@ struct MonadCLI: AsyncParsableCommand {
           /status                       Show server status
           /config                       View/edit configuration
           /debug                        Show rendered prompt & raw output
+          /peek timeline [target]       Read another timeline without switching
           /quit                         Exit (or :q)
 
           TIMELINE & WORKSPACE:
@@ -187,31 +188,31 @@ struct Chat: AsyncParsableCommand {
     }
 
     private func restoreOrCreateAgent(client: MonadClient, timelineId: UUID) async -> AgentInstance? {
-        let localConfig = LocalConfigManager.shared.getConfig()
         let logger = Logger.module(named: "startup")
-        var restoredAgent: AgentInstance?
-
-        if let agentIdStr = localConfig.lastAgentInstanceId,
-           let agentId = UUID(uuidString: agentIdStr) {
-            do {
-                restoredAgent = try await client.chat.getAgentInstance(id: agentId)
-            } catch {
-                logger.warning("Failed to restore last agent (\(agentId)): \(error.localizedDescription)")
+        do {
+            let timeline = try await client.chat.getTimeline(id: timelineId)
+            if let agentId = timeline.attachedAgentInstanceId {
+                do {
+                    return try await client.chat.getAgentInstance(id: agentId)
+                } catch {
+                    logger.warning(
+                        "Failed to restore timeline-attached agent (\(agentId)): \(error.localizedDescription)"
+                    )
+                }
             }
+        } catch {
+            logger.warning("Failed to load timeline state (\(timelineId)): \(error.localizedDescription)")
         }
 
-        if restoredAgent == nil {
-            do {
-                restoredAgent = try await ensureDefaultAgent(client: client, timelineId: timelineId)
-            } catch {
-                logger.error("Failed to ensure default agent: \(error.localizedDescription)")
-                TerminalUI.printWarning(
-                    "Could not attach an agent to the timeline. AI responses may fail until an agent is attached."
-                )
-            }
+        do {
+            return try await ensureDefaultAgent(client: client, timelineId: timelineId)
+        } catch {
+            logger.error("Failed to ensure default agent: \(error.localizedDescription)")
+            TerminalUI.printWarning(
+                "Could not attach an agent to the timeline. AI responses may fail until an agent is attached."
+            )
+            return nil
         }
-
-        return restoredAgent
     }
 }
 
@@ -225,7 +226,10 @@ private func ensureDefaultAgent(client: MonadClient, timelineId: UUID) async thr
     if let existing = agents.first {
         agent = existing
     } else {
-        agent = try await client.chat.createAgentInstance(name: "Assistant", description: "")
+        agent = try await client.chat.createAgentInstance(
+            name: "Assistant",
+            description: "Default CLI assistant"
+        )
     }
     try await client.chat.attachAgent(agentId: agent.id, to: timelineId)
     return agent

@@ -22,7 +22,6 @@ extension ChatREPL {
 
     func setAgent(_ agent: AgentInstance?) async {
         currentAgent = agent
-        LocalConfigManager.shared.updateLastAgentInstanceId(agent?.id.uuidString)
     }
 
     func getCurrentAgent() -> AgentInstance? {

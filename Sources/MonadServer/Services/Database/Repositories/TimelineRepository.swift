@@ -37,6 +37,7 @@ public actor TimelineRepository: TimelinePersistenceProtocol {
                 return
                     try Timeline
                         .filter(Column("isArchived") == false)
+                        .filter(Column("isPrivate") == false)
                         .order(Column("updatedAt").desc)
                         .fetchAll(db)
             }

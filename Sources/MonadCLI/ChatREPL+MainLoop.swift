@@ -103,6 +103,7 @@ extension ChatREPL {
         await registry.register(StatusCommand())
         await registry.register(NewTimelineCommand())
         await registry.register(TimelineCommand())
+        await registry.register(PeekSlashCommand())
         await registry.register(ConfigCommand())
         await registry.register(CancelCommand())
 

@@ -45,11 +45,16 @@ public struct AgentInstanceAPIController<Context: RequestContext>: Sendable {
     @Sendable func create(_ request: Request, context: Context) async throws -> Response {
         let input = try await request.decode(as: CreateAgentInstanceRequest.self, context: context)
         let template: AgentTemplate? = nil // Template lookup not supported in this endpoint
-        let instance = try await agentInstanceManager.createInstance(
-            from: template,
-            name: input.name,
-            description: input.description
-        )
+        let instance: AgentInstance
+        do {
+            instance = try await agentInstanceManager.createInstance(
+                from: template,
+                name: input.name,
+                description: input.description
+            )
+        } catch let error as AgentInstanceError {
+            throw HTTPError(.unprocessableContent, message: error.localizedDescription)
+        }
         return try jsonResponse(instance, status: .created, from: context)
     }
 

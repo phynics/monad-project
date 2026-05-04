@@ -135,6 +135,13 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
+        guard let timeline = try await timelineStore.fetchTimeline(id: id) else {
+            throw HTTPError(.notFound)
+        }
+        guard !timeline.isPrivate else {
+            throw HTTPError(.forbidden, message: "Private timelines cannot be deleted via the session API")
+        }
+
         // Remove from memory
         await timelineManager.deleteTimeline(id: id)
 
