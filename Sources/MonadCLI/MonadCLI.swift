@@ -161,7 +161,9 @@ struct Chat: AsyncParsableCommand {
     private func validateConfiguration(client: MonadClient) async throws {
         do {
             let config = try await client.getConfiguration()
-            if !config.isValid {
+            let status = try await client.getStatus()
+
+            if ConfigurationPreflight.evaluate(config: config, status: status) == .needsSetup {
                 let screen = ConfigurationScreen(client: client)
                 try await screen.show()
             }
