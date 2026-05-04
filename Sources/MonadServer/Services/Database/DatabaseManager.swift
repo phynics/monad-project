@@ -17,7 +17,10 @@ public actor DatabaseManager: HealthCheckable {
         self.dbQueue = dbQueue
     }
 
-    public static func create(path: String? = nil) throws -> DatabaseManager {
+    public static func create(
+        path: String? = nil,
+        onInitializationFailure: ((any Error, String) -> Bool)? = nil
+    ) throws -> DatabaseManager {
         let databasePath: String
         if let providedPath = path {
             databasePath = providedPath
@@ -25,16 +28,21 @@ public actor DatabaseManager: HealthCheckable {
             databasePath = try Self.defaultDatabasePath()
         }
 
-        let queue = try DatabaseQueue(path: databasePath)
-        try Self.performMigration(on: queue)
-        let manager = DatabaseManager(dbQueue: queue)
+        let queue: DatabaseQueue
+        do {
+            queue = try Self.openDatabase(at: databasePath)
+        } catch {
+            guard Self.isResettableInitializationFailure(error),
+                onInitializationFailure?(error, databasePath) == true
+            else {
+                throw error
+            }
 
-        // Initial sync
-        Task {
-            try? await manager.syncTableDirectory()
+            try Self.removeDatabaseFiles(at: databasePath)
+            queue = try Self.openDatabase(at: databasePath)
         }
 
-        return manager
+        return DatabaseManager(dbQueue: queue)
     }
 
     /// Default database path
@@ -76,10 +84,38 @@ public actor DatabaseManager: HealthCheckable {
 
     // MARK: - Migrations
 
+    private static func openDatabase(at databasePath: String) throws -> DatabaseQueue {
+        let queue = try DatabaseQueue(path: databasePath)
+        try Self.performMigration(on: queue)
+        return queue
+    }
+
     private static func performMigration(on dbQueue: DatabaseQueue) throws {
         var migrator = DatabaseMigrator()
         DatabaseSchema.registerMigrations(in: &migrator)
         try migrator.migrate(dbQueue)
+    }
+
+    private static func removeDatabaseFiles(at databasePath: String) throws {
+        let fileManager = FileManager.default
+        for path in [databasePath, "\(databasePath)-shm", "\(databasePath)-wal"] {
+            if fileManager.fileExists(atPath: path) {
+                try fileManager.removeItem(atPath: path)
+            }
+        }
+    }
+
+    private static func isResettableInitializationFailure(_ error: any Error) -> Bool {
+        guard let databaseError = error as? GRDB.DatabaseError else {
+            return false
+        }
+
+        switch databaseError.resultCode {
+        case .SQLITE_CORRUPT, .SQLITE_NOTADB, .SQLITE_CONSTRAINT:
+            return true
+        default:
+            return false
+        }
     }
 
     // MARK: - Database Reset
@@ -92,44 +128,6 @@ public actor DatabaseManager: HealthCheckable {
             logger.info(
                 "Database reset: Memories cleared. Archives preserved due to immutability constraints."
             )
-        }
-    }
-
-    /// Synchronize table_directory with actual SQLite schema
-    public func syncTableDirectory() async throws {
-        try await dbQueue.write { db in
-            let currentTables = try String.fetchAll(
-                db,
-                sql: """
-                    SELECT name FROM sqlite_master
-                    WHERE type='table'
-                    AND name NOT LIKE 'sqlite_%'
-                    AND name NOT LIKE 'grdb_%'
-                    AND name != 'table_directory'
-                """
-            )
-
-            let placeholders = currentTables.map { _ in "?" }.joined(separator: ",")
-            try db.execute(
-                sql: "DELETE FROM table_directory WHERE name NOT IN (\(placeholders))",
-                arguments: StatementArguments(currentTables)
-            )
-
-            let now = Date()
-            for table in currentTables {
-                let exists =
-                    try Int.fetchOne(
-                        db, sql: "SELECT COUNT(*) FROM table_directory WHERE name = ?",
-                        arguments: [table]
-                    ) ?? 0
-                if exists == 0 {
-                    try db.execute(
-                        sql:
-                        "INSERT INTO table_directory (name, description, createdAt) VALUES (?, ?, ?)",
-                        arguments: [table, "", now]
-                    )
-                }
-            }
         }
     }
 

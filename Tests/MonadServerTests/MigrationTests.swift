@@ -90,4 +90,163 @@ struct MigrationTests {
             #expect(!workspaceColumns.contains("ownerId"))
         }
     }
+
+    @Test("v6 migration clears orphaned workspace origins after request-origin rename")
+    func migration_repairsOrphanedWorkspaceOrigins() async throws {
+        let queue = try DatabaseQueue()
+
+        var oldMigrator = DatabaseMigrator()
+        oldMigrator.registerMigration("v1") { db in
+            try db.create(table: "clientIdentity") { table in
+                table.column("id", .blob).primaryKey()
+                table.column("hostname", .text).notNull()
+                table.column("displayName", .text).notNull()
+                table.column("platform", .text).notNull()
+                table.column("registeredAt", .datetime).notNull()
+                table.column("lastSeenAt", .datetime)
+            }
+
+            try db.create(table: "workspace") { table in
+                table.column("id", .blob).primaryKey()
+                table.column("uri", .text).notNull().unique()
+                table.column("hostType", .text).notNull()
+                table.column("ownerId", .blob)
+                table.column("tools", .text).notNull().defaults(to: "[]")
+                table.column("rootPath", .text)
+                table.column("trustLevel", .text).notNull().defaults(to: "full")
+                table.column("lastModifiedBy", .blob)
+                table.column("status", .text).notNull().defaults(to: "active")
+                table.column("metadata", .text).notNull().defaults(to: "{}")
+                table.column("createdAt", .datetime).notNull()
+            }
+        }
+        oldMigrator.registerMigration("v2") { _ in }
+        oldMigrator.registerMigration("v3") { _ in }
+        oldMigrator.registerMigration("v4") { _ in }
+        oldMigrator.registerMigration("v5") { db in
+            try db.execute(sql: "ALTER TABLE clientIdentity RENAME TO requestOrigin")
+            try db.execute(sql: "ALTER TABLE workspace RENAME COLUMN hostType TO location")
+            try db.execute(sql: "ALTER TABLE workspace RENAME COLUMN ownerId TO originId")
+        }
+        try oldMigrator.migrate(queue)
+
+        let orphanedOriginId = UUID()
+        try await queue.write { db in
+            try db.execute(
+                sql: """
+                INSERT INTO workspace (id, uri, location, originId, tools, trustLevel, status, metadata, createdAt)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                arguments: [
+                    UUID(),
+                    "atkn-mbp.local:~",
+                    "client",
+                    orphanedOriginId,
+                    "[]",
+                    "full",
+                    "active",
+                    "{}",
+                    Date(),
+                ]
+            )
+        }
+
+        var migrator = DatabaseMigrator()
+        DatabaseSchema.registerMigrations(in: &migrator)
+        try migrator.migrate(queue)
+
+        try await queue.read { db in
+            let workspace = try #require(try WorkspaceReference.fetchOne(db))
+            #expect(workspace.originId == nil)
+        }
+    }
+
+    @Test("database reset fallback is not offered for non-integrity open failures")
+    func databaseInitialization_doesNotOfferResetForOpenFailure() throws {
+        let badPath = "/definitely-missing-parent-\(UUID().uuidString)/monad.sqlite"
+        var callbackInvoked = false
+
+        #expect(throws: Error.self) {
+            _ = try DatabaseManager.create(path: badPath, onInitializationFailure: { _, _ in
+                callbackInvoked = true
+                return true
+            })
+        }
+
+        #expect(callbackInvoked == false)
+    }
+
+    @Test("Database initialization can reset an unrecoverable legacy database")
+    func databaseInitialization_canResetLegacyDatabase() async throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let databasePath = tempDir.appendingPathComponent("monad.sqlite").path
+        var configuration = Configuration()
+        configuration.foreignKeysEnabled = false
+        let queue = try DatabaseQueue(path: databasePath, configuration: configuration)
+
+        var oldMigrator = DatabaseMigrator()
+        oldMigrator.registerMigration("v1") { db in
+            try db.create(table: "clientIdentity") { table in
+                table.column("id", .blob).primaryKey()
+                table.column("hostname", .text).notNull()
+                table.column("displayName", .text).notNull()
+                table.column("platform", .text).notNull()
+                table.column("registeredAt", .datetime).notNull()
+                table.column("lastSeenAt", .datetime)
+            }
+
+            try db.create(table: "workspace") { table in
+                table.column("id", .blob).primaryKey()
+                table.column("uri", .text).notNull().unique()
+                table.column("hostType", .text).notNull()
+                table.column("ownerId", .blob).references("clientIdentity", onDelete: .setNull)
+                table.column("tools", .text).notNull().defaults(to: "[]")
+                table.column("rootPath", .text)
+                table.column("trustLevel", .text).notNull().defaults(to: "full")
+                table.column("lastModifiedBy", .blob)
+                table.column("status", .text).notNull().defaults(to: "active")
+                table.column("metadata", .text).notNull().defaults(to: "{}")
+                table.column("createdAt", .datetime).notNull()
+            }
+        }
+        oldMigrator.registerMigration("v2") { _ in }
+        oldMigrator.registerMigration("v3") { _ in }
+        oldMigrator.registerMigration("v4") { _ in }
+        try oldMigrator.migrate(queue)
+
+        try await queue.write { db in
+            try db.execute(
+                sql: """
+                INSERT INTO workspace (id, uri, hostType, ownerId, tools, trustLevel, status, metadata, createdAt)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                arguments: [
+                    UUID(),
+                    "atkn-mbp.local:~",
+                    "client",
+                    UUID(),
+                    "[]",
+                    "full",
+                    "active",
+                    "{}",
+                    Date(),
+                ]
+            )
+        }
+
+        let manager = try DatabaseManager.create(path: databasePath, onInitializationFailure: { _, failingPath in
+            #expect(failingPath == databasePath)
+            return true
+        })
+
+        try await manager.dbQueue.read { db in
+            #expect(try db.tableExists("requestOrigin"))
+            #expect(!(try db.tableExists("clientIdentity")))
+            let workspaces = try WorkspaceReference.fetchCount(db)
+            #expect(workspaces == 0)
+        }
+    }
 }

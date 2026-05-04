@@ -16,6 +16,15 @@ public actor ToolDataRepository: ToolPersistenceProtocol {
             guard try WorkspaceReference.exists(db, key: workspaceId) else {
                 throw ToolError.workspaceNotFound(workspaceId)
             }
+
+            let existing = try WorkspaceToolRecord
+                .filter(Column("workspaceId") == workspaceId)
+                .filter(Column("toolId") == tool.toolId)
+                .fetchOne(db)
+            guard existing == nil else {
+                return
+            }
+
             let workspaceTool = try WorkspaceToolRecord(workspaceId: workspaceId, toolReference: tool)
             try workspaceTool.insert(db)
         }

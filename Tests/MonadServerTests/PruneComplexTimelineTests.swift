@@ -114,4 +114,26 @@ struct PruneComplexSessionTests {
         }
         #expect(archivedNodes == 1)
     }
+
+    @Test("pruneTimelines throws instead of silently swallowing delete failures")
+    func pruneTimelines_propagatesDeleteFailures() async throws {
+        var timeline = Timeline(title: "Live Session")
+        timeline.updatedAt = Date().addingTimeInterval(-3600)
+        try await persistence.saveTimeline(timeline)
+
+        try await dbQueue.write { db in
+            try db.execute(sql: """
+                CREATE TRIGGER fail_live_timeline_delete
+                BEFORE DELETE ON timeline
+                FOR EACH ROW
+                BEGIN
+                    SELECT RAISE(ABORT, 'blocked for test');
+                END;
+            """)
+        }
+
+        await #expect(throws: Error.self) {
+            _ = try await persistence.pruneTimelines(olderThan: 0, excluding: [], dryRun: false)
+        }
+    }
 }

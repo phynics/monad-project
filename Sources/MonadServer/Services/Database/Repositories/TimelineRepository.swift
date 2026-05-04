@@ -91,25 +91,7 @@ public actor TimelineRepository: TimelinePersistenceProtocol {
             if dryRun {
                 return try query.fetchCount(database)
             } else {
-                let candidates = try query.fetchAll(database)
-                var deletedCount = 0
-                for timeline in candidates {
-                    // Double check before deleting
-                    if timeline.isArchived {
-                        // Logger not available here, silently skip or use print if critical debug needed
-                        continue
-                    }
-
-                    do {
-                        let didDelete = try Timeline.deleteOne(
-                            database, key: ["id": timeline.id]
-                        )
-                        deletedCount += (didDelete ? 1 : 0)
-                    } catch {
-                        // Ignore individual failures to continue pruning
-                    }
-                }
-                return deletedCount
+                return try query.deleteAll(database)
             }
         }
     }

@@ -10,6 +10,12 @@ import MonadShared
 import ServiceLifecycle
 import UnixSignals
 
+#if canImport(Darwin)
+    import Darwin
+#elseif canImport(Glibc)
+    import Glibc
+#endif
+
 @available(macOS 14.0, *)
 public struct MonadServerFactory {
     public typealias AppRequestContext = BasicWebSocketRequestContext
@@ -117,7 +123,9 @@ public struct MonadServerFactory {
     private static func initializeComponents(logger: Logger) async throws -> ServerComponents {
         let databaseManager: DatabaseManager
         do {
-            databaseManager = try DatabaseManager.create()
+            databaseManager = try DatabaseManager.create(onInitializationFailure: { error, databasePath in
+                offerDatabaseReset(error: error, databasePath: databasePath, logger: logger)
+            })
             logger.info("Database initialized.")
         } catch {
             logger.error("Failed to initialize database: \(error)")
@@ -144,6 +152,30 @@ public struct MonadServerFactory {
             managers: managers,
             orphanCleanup: orphanCleanup
         )
+    }
+
+    private static func offerDatabaseReset(error: any Error, databasePath: String, logger: Logger) -> Bool {
+        guard isatty(STDIN_FILENO) != 0 else {
+            logger.error(
+                "Database initialization failed for \(databasePath). Run in an interactive terminal to allow resetting the database. Error: \(error)"
+            )
+            return false
+        }
+
+        print("")
+        print("Database initialization failed for \(databasePath).")
+        print("Error: \(error.localizedDescription)")
+        print("Reset the database and start over? This will delete the local server database. [y/N]: ", terminator: "")
+
+        guard let response = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else {
+            return false
+        }
+
+        let shouldReset = response == "y" || response == "yes"
+        if shouldReset {
+            logger.warning("Resetting database after initialization failure at \(databasePath)")
+        }
+        return shouldReset
     }
 
     private static func initializeRepositories(dbQueue: DatabaseQueue) -> RepositorySet {

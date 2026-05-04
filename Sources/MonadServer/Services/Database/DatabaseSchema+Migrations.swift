@@ -65,5 +65,41 @@ public extension DatabaseSchema {
                 try db.execute(sql: "ALTER TABLE workspace RENAME COLUMN ownerId TO originId")
             }
         }
+
+        migrator.registerMigration("v6") { db in
+            guard try db.tableExists("workspace"), try db.tableExists("requestOrigin") else {
+                return
+            }
+
+            try db.execute(sql: """
+                UPDATE workspace
+                SET originId = NULL
+                WHERE originId IS NOT NULL
+                  AND originId NOT IN (SELECT id FROM requestOrigin)
+            """)
+        }
+
+        migrator.registerMigration("v7") { db in
+            guard try db.tableExists("workspaceTool") else {
+                return
+            }
+
+            try db.execute(sql: """
+                DELETE FROM workspaceTool
+                WHERE rowid NOT IN (
+                    SELECT MIN(rowid)
+                    FROM workspaceTool
+                    GROUP BY workspaceId, toolId
+                )
+            """)
+
+            try db.create(
+                index: "idx_workspaceTool_unique_membership",
+                on: "workspaceTool",
+                columns: ["workspaceId", "toolId"],
+                unique: true,
+                ifNotExists: true
+            )
+        }
     }
 }

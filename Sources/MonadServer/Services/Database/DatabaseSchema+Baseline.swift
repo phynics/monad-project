@@ -46,6 +46,13 @@ extension DatabaseSchema {
             on: "workspaceTool",
             columns: ["workspaceId"]
         )
+        try db.create(
+            index: "idx_workspaceTool_unique_membership",
+            on: "workspaceTool",
+            columns: ["workspaceId", "toolId"],
+            unique: true,
+            ifNotExists: true
+        )
 
         // Workspace locks
         try db.create(table: "workspaceLock") { table in
