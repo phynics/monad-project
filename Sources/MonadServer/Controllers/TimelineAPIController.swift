@@ -56,6 +56,7 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         let perPage = pagination.perPage
 
         let timelines = try await timelineManager.listTimelines()
+            .filter { !$0.isPrivate }
 
         // In-memory pagination
         let total = timelines.count
