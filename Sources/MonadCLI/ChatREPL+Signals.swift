@@ -3,7 +3,7 @@ import MonadClient
 
 extension ChatREPL {
     func setupSignalHandler() {
-        let source = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
+        let source = DispatchSource.makeSignalSource(signal: SIGINT, queue: .global())
         source.setEventHandler { [weak self] in
             Task { [weak self] in
                 await self?.handleSigint()

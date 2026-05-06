@@ -50,6 +50,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             message: chatRequest.message,
             tools: availableTools,
             toolOutputs: chatRequest.toolOutputs,
+            systemInstructions: MonadSystemInstructions.system(),
             agentInstanceId: agent.id
         )
 
@@ -110,6 +111,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
             message: chatRequest.message,
             tools: availableTools,
             toolOutputs: chatRequest.toolOutputs,
+            systemInstructions: MonadSystemInstructions.system(),
             agentInstanceId: agent.id
         )
     }

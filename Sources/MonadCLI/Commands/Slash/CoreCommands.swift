@@ -3,6 +3,17 @@ import MonadClient
 import MonadShared
 import PKShared
 
+private func attachAgentIfPossible(
+    _ agent: AgentInstance?,
+    to timelineId: UUID,
+    context: ChatContext
+) async throws -> AgentInstance? {
+    guard let agent else { return nil }
+
+    try await context.client.chat.attachAgent(agentId: agent.id, to: timelineId)
+    return agent
+}
+
 // MARK: - Core Commands
 
 struct HelpCommand: SlashCommand {
@@ -72,11 +83,9 @@ struct NewTimelineCommand: SlashCommand {
             let currentAgent = await context.repl.getCurrentAgent()
             let manager = CLITimelineManager(client: context.client)
             let timeline = try await manager.createNewTimelineFlow()
-            if let agent = currentAgent {
-                try? await context.client.chat.attachAgent(agentId: agent.id, to: timeline.id)
-            }
+            let attachedAgent = try await attachAgentIfPossible(currentAgent, to: timeline.id, context: context)
             await context.repl.switchTimeline(timeline)
-            if let agent = currentAgent {
+            if let agent = attachedAgent {
                 await context.repl.setAgent(agent)
             }
             TerminalUI.printSuccess("Started new timeline \(timeline.id.uuidString.prefix(8))")
@@ -269,10 +278,10 @@ struct TimelineCommand: SlashCommand {
         let manager = CLITimelineManager(client: context.client)
         let timeline = try await manager.createNewTimelineFlow(title: title)
         let currentAgent = await context.repl.getCurrentAgent()
+        let attachedAgent = try await attachAgentIfPossible(currentAgent, to: timeline.id, context: context)
         await context.repl.switchTimeline(timeline)
-        if let currentAgent {
-            try? await context.client.chat.attachAgent(agentId: currentAgent.id, to: timeline.id)
-            await context.repl.setAgent(currentAgent)
+        if let attachedAgent {
+            await context.repl.setAgent(attachedAgent)
         }
         TerminalUI.printSuccess("Switched to timeline: \(timeline.title ?? timeline.id.uuidString)")
     }
@@ -291,4 +300,5 @@ struct TimelineCommand: SlashCommand {
         guard let agentId = timeline.attachedAgentInstanceId else { return nil }
         return try await context.client.chat.getAgentInstance(id: agentId)
     }
+
 }

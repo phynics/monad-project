@@ -102,14 +102,7 @@ final class LineReader {
 
     private func enableRawMode() {
         tcgetattr(STDIN_FILENO, &originalTerm)
-        var raw = originalTerm
-
-        // Disable ECHO and ICANON (canonical mode)
-        #if canImport(Darwin)
-            raw.c_lflag &= ~UInt(ECHO | ICANON)
-        #else
-            raw.c_lflag &= ~UInt32(ECHO | ICANON)
-        #endif
+        var raw = TerminalInputMode.makeRaw(originalTerm, interceptSignals: true)
 
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw)
         isRawMode = true

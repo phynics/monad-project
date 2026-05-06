@@ -85,7 +85,7 @@ struct Command: AsyncParsableCommand {
         while true {
             printCommandOptions(currentCommand)
 
-            guard let input = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) else {
+            guard let input = CLIInput.readLine()?.lowercased() else {
                 break
             }
 
@@ -134,9 +134,7 @@ struct Command: AsyncParsableCommand {
         client: MonadClient,
         timeline: Timeline
     ) async throws -> String? {
-        print("Describe the changes: ", terminator: "")
-        fflush(stdout)
-        guard let feedback = readLine(), !feedback.isEmpty else {
+        guard let feedback = CLIInput.readLine(prompt: "Describe the changes: "), !feedback.isEmpty else {
             return nil
         }
 

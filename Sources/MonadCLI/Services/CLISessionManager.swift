@@ -12,7 +12,7 @@ struct CLITimelineManager {
 
     init(
         client: MonadClient,
-        input: @escaping @Sendable () -> String? = { readLine() }
+        input: @escaping @Sendable () -> String? = { CLIInput.readLine() }
     ) {
         self.client = client
         self.input = input

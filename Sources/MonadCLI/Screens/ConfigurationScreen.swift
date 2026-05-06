@@ -16,7 +16,10 @@ struct ConfigurationScreen {
             print("\(index + 1). \(provider.rawValue)")
         }
 
-        let providerIndex = readInt(min: 1, max: providers.count) - 1
+        guard let providerSelection = readInt(min: 1, max: providers.count) else {
+            throw CancellationError()
+        }
+        let providerIndex = providerSelection - 1
         let selectedProvider = providers[providerIndex]
 
         // Defaults
@@ -63,7 +66,10 @@ struct ConfigurationScreen {
             let isDefault = format == config.toolFormat ? " (current)" : ""
             print("\(index + 1). \(format.rawValue)\(isDefault)")
         }
-        let formatIndex = readInt(min: 1, max: toolFormats.count) - 1
+        guard let formatSelection = readInt(min: 1, max: toolFormats.count) else {
+            throw CancellationError()
+        }
+        let formatIndex = formatSelection - 1
         config.toolFormat = toolFormats[formatIndex]
 
         // Update Config
@@ -82,21 +88,11 @@ struct ConfigurationScreen {
     }
 
     private func readString(prompt: String, default defaultValue: String? = nil) -> String {
-        print(prompt, terminator: " ")
-        if let input = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines), !input.isEmpty {
-            return input
-        }
-        return defaultValue ?? ""
+        CLIInput.readLine(prompt: prompt + " ", default: defaultValue) ?? defaultValue ?? ""
     }
 
-    private func readInt(min: Int, max: Int) -> Int {
-        while true {
-            print("Selection [\(min)-\(max)]:", terminator: " ")
-            if let input = readLine(), let val = Int(input), val >= min && val <= max {
-                return val
-            }
-            TerminalUI.printError("Invalid selection.")
-        }
+    private func readInt(min: Int, max: Int) -> Int? {
+        CLIInput.readInt(prompt: "Selection [\(min)-\(max)]: ", min: min, max: max)
     }
 
     private func readSecret(prompt: String) -> String {

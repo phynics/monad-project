@@ -191,8 +191,7 @@ struct ConfigCommand: SlashCommand {
     }
 
     private func setConfigWithPrompt(key: String, context: ChatContext) async {
-        print("Enter value for \(key): ", terminator: "")
-        guard let value = readLine()?.trimmingCharacters(in: .whitespaces), !value.isEmpty else {
+        guard let value = CLIInput.readLine(prompt: "Enter value for \(key): "), !value.isEmpty else {
             TerminalUI.printError("No value provided")
             return
         }
@@ -256,20 +255,17 @@ private extension ConfigCommand {
         providerConfig: inout ProviderConfiguration
     ) {
         // Endpoint
-        print("Endpoint [\(providerConfig.endpoint)]: ", terminator: "")
-        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+        if let input = CLIInput.readLine(prompt: "Endpoint [\(providerConfig.endpoint)]: "), !input.isEmpty {
             providerConfig.endpoint = input
         }
 
         // API Key
-        print("API Key [\(maskApiKey(providerConfig.apiKey))]: ", terminator: "")
-        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+        if let input = CLIInput.readLine(prompt: "API Key [\(maskApiKey(providerConfig.apiKey))]: "), !input.isEmpty {
             providerConfig.apiKey = input
         }
 
         // Model
-        print("Model [\(providerConfig.modelName)]: ", terminator: "")
-        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+        if let input = CLIInput.readLine(prompt: "Model [\(providerConfig.modelName)]: "), !input.isEmpty {
             providerConfig.modelName = input
         }
 
@@ -277,8 +273,7 @@ private extension ConfigCommand {
         let utilityDisplay =
             providerConfig.utilityModel == providerConfig.modelName
                 ? "(same as model)" : providerConfig.utilityModel
-        print("Utility Model [\(utilityDisplay)]: ", terminator: "")
-        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+        if let input = CLIInput.readLine(prompt: "Utility Model [\(utilityDisplay)]: "), !input.isEmpty {
             providerConfig.utilityModel = input
         }
 
@@ -286,22 +281,19 @@ private extension ConfigCommand {
         let fastDisplay =
             providerConfig.fastModel == providerConfig.modelName
                 ? "(same as model)" : providerConfig.fastModel
-        print("Fast Model [\(fastDisplay)]: ", terminator: "")
-        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+        if let input = CLIInput.readLine(prompt: "Fast Model [\(fastDisplay)]: "), !input.isEmpty {
             providerConfig.fastModel = input
         }
 
         // Memory Limit
-        print("Memory Limit [\(config.memoryContextLimit)]: ", terminator: "")
-        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+        if let input = CLIInput.readLine(prompt: "Memory Limit [\(config.memoryContextLimit)]: "), !input.isEmpty {
             if let limit = Int(input) {
                 config.memoryContextLimit = limit
             }
         }
 
         // Document Limit
-        print("Document Limit [\(config.documentContextLimit)]: ", terminator: "")
-        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+        if let input = CLIInput.readLine(prompt: "Document Limit [\(config.documentContextLimit)]: "), !input.isEmpty {
             if let limit = Int(input) {
                 config.documentContextLimit = limit
             }
@@ -318,8 +310,10 @@ private extension ConfigCommand {
             let isDefault = format == providerConfig.toolFormat ? " (current)" : ""
             print("\(index + 1). \(format.rawValue)\(isDefault)")
         }
-        print("Selection [1-\(toolFormats.count), Enter to skip]: ", terminator: "")
-        if let input = readLine()?.trimmingCharacters(in: .whitespaces), !input.isEmpty {
+        if let input = CLIInput.readLine(
+            prompt: "Selection [1-\(toolFormats.count), Enter to skip]: ",
+            default: ""
+        ), !input.isEmpty {
             if let idx = Int(input), idx >= 1, idx <= toolFormats.count {
                 providerConfig.toolFormat = toolFormats[idx - 1]
             }

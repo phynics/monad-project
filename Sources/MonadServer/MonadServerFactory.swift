@@ -195,6 +195,8 @@ public struct MonadServerFactory {
         dbQueue: DatabaseQueue,
         logger: Logger
     ) async throws -> ServiceSet {
+        LLMProviderBootstrap.registerBuiltIns()
+
         let embeddingService: any EmbeddingServiceProtocol = LocalEmbeddingService()
         logger.info("Using Local Embedding Service")
 

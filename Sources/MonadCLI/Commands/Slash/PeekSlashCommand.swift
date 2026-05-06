@@ -68,9 +68,7 @@ struct PeekSlashCommand: SlashCommand {
             print("  \(index + 1). \(title)  \(TerminalUI.dim("#\(timeline.id.uuidString.prefix(8)) • \(date)"))")
         }
         print("")
-        print("Choose a timeline to peek [q]: ", terminator: "")
-
-        let response = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "q"
+        let response = CLIInput.readLine(prompt: "Choose a timeline to peek [q]: ", default: "q")?.lowercased() ?? "q"
         guard response != "q", !response.isEmpty else { return nil }
         guard let index = Int(response), index > 0, index <= sortedMatches.count else {
             TerminalUI.printError("Invalid selection.")

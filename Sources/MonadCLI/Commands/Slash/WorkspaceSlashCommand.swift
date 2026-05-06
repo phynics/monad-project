@@ -174,9 +174,11 @@ struct WorkspaceSlashCommand: SlashCommand {
         for (idx, workspace) in workspaces.enumerated() {
             print("  \(idx + 1). \(workspace.uri.description) (\(workspace.id.uuidString.prefix(8)))")
         }
-        print("\nSelect workspace to attach (1-\(workspaces.count)): ", terminator: "")
-
-        if let input = readLine(), let index = Int(input), index > 0, index <= workspaces.count {
+        if let index = CLIInput.readInt(
+            prompt: "\nSelect workspace to attach (1-\(workspaces.count)): ",
+            min: 1,
+            max: workspaces.count
+        ) {
             let selected = workspaces[index - 1]
             try await context.client.workspace.attachWorkspace(
                 selected.id, to: context.timeline.id

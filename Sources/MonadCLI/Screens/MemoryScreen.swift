@@ -30,8 +30,7 @@ class MemoryScreen {
 
             print(TerminalUI.dim("──────────────────────────────────────────────────"))
             print("Commands: [q]uit, [n]ext, [p]rev, [s]earch <query>, <number> to view")
-            print("> ", terminator: "")
-            guard let input = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines) else {
+            guard let input = CLIInput.readLine(prompt: "> ") else {
                 break
             }
 
@@ -150,7 +149,6 @@ class MemoryScreen {
         print(TerminalUI.dim("──────────────────────────────────────────────────"))
         print(memory.content)
         print(TerminalUI.dim("──────────────────────────────────────────────────"))
-        print("Press [Enter] to return list...")
-        _ = readLine()
+        _ = CLIInput.waitForEnter(prompt: "Press [Enter] to return list...")
     }
 }

@@ -102,8 +102,7 @@ struct AgentSlashCommand: SlashCommand {
         let agent = try await context.client.chat.createAgentInstance(name: agentName, description: agentDescription)
         TerminalUI.printSuccess("Created agent '\(agent.name)' (\(agent.id.uuidString.prefix(8)))")
 
-        print("Attach to current timeline? [y/N] ", terminator: "")
-        if let answer = readLine()?.lowercased().trimmingCharacters(in: .whitespaces), answer == "y" {
+        if CLIInput.readConfirmation(prompt: "Attach to current timeline? [y/N] ", default: false) == true {
             try await context.client.chat.attachAgent(agentId: agent.id, to: context.timeline.id)
             await context.repl.setAgent(agent)
             TerminalUI.printSuccess("Attached '\(agent.name)' to current timeline.")

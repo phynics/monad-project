@@ -133,11 +133,10 @@ struct RmCommand: SlashCommand {
         }
         do {
             let resolved = try await resolvePath(pathInput, context: context)
-            print(
-                "Are you sure you want to delete \(resolved.workspaceName):\(resolved.path)? (y/n): ",
-                terminator: ""
-            )
-            if readLine()?.lowercased() == "y" {
+            if CLIInput.readConfirmation(
+                prompt: "Are you sure you want to delete \(resolved.workspaceName):\(resolved.path)? (y/n): ",
+                default: false
+            ) == true {
                 try await context.client.workspace.deleteFile(
                     workspaceId: resolved.workspaceId, path: resolved.path
                 )
@@ -161,16 +160,18 @@ struct WriteCommand: SlashCommand {
         }
         do {
             let resolved = try await resolvePath(pathInput, context: context)
-            print("Enter content (end with empty line):")
-            var content = ""
-            while let line = readLine() {
-                if line.isEmpty { break }
-                content += line + "\n"
+            switch CLIInput.readMultiline(
+                prompt: "Enter content (end with empty line):",
+                terminatorHint: "Press Ctrl-C to cancel."
+            ) {
+            case .submitted(let content):
+                try await context.client.workspace.writeFileContent(
+                    workspaceId: resolved.workspaceId, path: resolved.path, content: content
+                )
+                TerminalUI.printSuccess("Wrote \(resolved.path)")
+            case .cancelled:
+                TerminalUI.printInfo("Write cancelled.")
             }
-            try await context.client.workspace.writeFileContent(
-                workspaceId: resolved.workspaceId, path: resolved.path, content: content
-            )
-            TerminalUI.printSuccess("Wrote \(resolved.path)")
         } catch {
             TerminalUI.printError("write failed: \(error.localizedDescription)")
         }

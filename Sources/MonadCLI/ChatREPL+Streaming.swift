@@ -18,6 +18,10 @@ extension ChatREPL {
         }
 
         let timelineId = timeline.id
+        guard await synchronizeAgentStateBeforeSend(timelineId: timelineId) else {
+            return
+        }
+
         startEscapeMonitor()
         currentGenerationTask = Task {
             var currentMessage = initialMessage
@@ -43,6 +47,8 @@ extension ChatREPL {
                         if Task.isCancelled { break }
                         handleStreamEvent(event, state: &streamState)
                     }
+
+                    emitToolCallingDiagnosticIfNeeded(streamState)
 
                     if !streamState.pendingToolCalls.isEmpty && !Task.isCancelled {
                         let submissions = await executeLocalToolCalls(
@@ -70,11 +76,46 @@ extension ChatREPL {
         stopEscapeMonitor()
     }
 
+    private func synchronizeAgentStateBeforeSend(timelineId: UUID) async -> Bool {
+        do {
+            let timeline = try await client.chat.getTimeline(id: timelineId)
+            let decision = ChatSendPreflight.evaluate(
+                serverAttachedAgentId: timeline.attachedAgentInstanceId,
+                localAgentId: currentAgent?.id
+            )
+
+            switch decision {
+            case .proceed:
+                return true
+            case .syncLocalAgent(let agentId):
+                let agent = try await client.chat.getAgentInstance(id: agentId)
+                await setAgent(agent)
+                return true
+            case .abortNoAttachedAgent:
+                if currentAgent != nil {
+                    await setAgent(nil)
+                }
+                TerminalUI.printError(
+                    "No agent attached to this timeline. Use /agent attach or /agent create before chatting."
+                )
+                return false
+            }
+        } catch {
+            await handleError(error)
+            return false
+        }
+    }
+
     // MARK: - Stream State
 
     private struct StreamState {
         var assistantStartPrinted = false
+        var sawGenerationContent = false
+        var sawGenerationCompleted = false
+        var sawToolCallDelta = false
+        var sawToolExecutionEvent = false
         var toolCallArgs: [String: String] = [:]
+        var toolCallNames: [Int: String] = [:]
         var pendingToolCalls: [ToolCall] = []
     }
 
@@ -121,15 +162,21 @@ extension ChatREPL {
                 TerminalUI.printAssistantStart()
                 state.assistantStartPrinted = true
             }
+            state.sawGenerationContent = true
             print(content, terminator: "")
             fflush(stdout)
 
         case let .toolCall(delta):
+            state.sawToolCallDelta = true
             if let callId = delta.id {
                 state.toolCallArgs[callId] = (state.toolCallArgs[callId] ?? "") + (delta.arguments ?? "")
             }
+            if let name = delta.name {
+                state.toolCallNames[delta.index] = (state.toolCallNames[delta.index] ?? "") + name
+            }
 
         case let .toolExecution(toolCallId, status):
+            state.sawToolExecutionEvent = true
             handleToolExecutionDelta(toolCallId: toolCallId, status: status, state: &state)
         }
     }
@@ -178,6 +225,7 @@ extension ChatREPL {
         metadata: APIResponseMetadata,
         state: inout StreamState
     ) {
+        state.sawGenerationCompleted = true
         if let snapshotData = metadata.turnSnapshotData {
             updateTurnSnapshot(snapshotData)
         }
@@ -188,6 +236,28 @@ extension ChatREPL {
         if let calls = message.toolCalls, !calls.isEmpty {
             state.pendingToolCalls = calls
         }
+    }
+
+    private func emitToolCallingDiagnosticIfNeeded(_ state: StreamState) {
+        let diagnosticState = ToolCallingDiagnostics.State(
+            assistantStarted: state.assistantStartPrinted,
+            sawGenerationContent: state.sawGenerationContent,
+            sawGenerationCompleted: state.sawGenerationCompleted,
+            sawToolCallDelta: state.sawToolCallDelta,
+            sawToolExecutionEvent: state.sawToolExecutionEvent,
+            streamedToolCallNames: state.toolCallNames
+                .sorted(by: { $0.key < $1.key })
+                .map(\.value)
+                .filter { !$0.isEmpty }
+        )
+
+        guard let message = ToolCallingDiagnostics.message(for: diagnosticState) else {
+            return
+        }
+
+        print("")
+        TerminalUI.printWarning(message)
+        logger.warning("\(message)")
     }
 
     private func handleToolExecutionCompletion(status: ToolExecutionStatus) {
