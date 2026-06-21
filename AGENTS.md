@@ -7,7 +7,7 @@ Quick reference for agents working with the Monad application repository.
 - **Language:** Swift 6.0 (macOS 15+)
 - **Build System:** Swift Package Manager
 - **Architecture:** Monad is now primarily an application host around the shared runtime modules in `../PositronicKit`
-- **Key Tech:** Hummingbird (REST/SSE), GRDB/SQLite, swift-service-lifecycle, swift-dependencies, ErrorKit
+- **Key Tech:** Hummingbird (REST/SSE), GRDB/SQLite, swift-service-lifecycle, ErrorKit
 
 ## Repository Split
 
@@ -88,8 +88,9 @@ Monad consumes these products from `PositronicKit`:
 - Do not rely on `Task.isCancelled` alone.
 
 ### Dependency Injection
-- Use Point-Free's `swift-dependencies` (`@Dependency`).
-- Keep `@Dependency` fields on focused services/stages instead of central coordinators when possible.
+- Use explicit constructor injection: pass stores, managers, routers, and services into initializers. There is no ambient/service-locator DI.
+- `MonadServerFactory` is the composition root; group route wiring in `RouteDependencies`.
+- In tests, compose collaborators explicitly via `PKTestSupport.TestRuntime` or direct construction rather than ambient overrides.
 
 ## Working Conventions
 

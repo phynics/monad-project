@@ -87,7 +87,7 @@ POST /api/agents
 ### Via Code
 
 ```swift
-@Dependency(\.agentInstanceManager) var agentInstanceManager
+let agentInstanceManager = AgentInstanceManager(repository: agentWorkspaceService)
 
 let instance = try await agentInstanceManager.createInstance(
     from: template,          // optional AgentTemplate seed

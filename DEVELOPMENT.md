@@ -157,31 +157,20 @@ final class MyService: Service {
 
 ### Dependency Injection
 
-Uses Point-Free's `swift-dependencies`:
+Uses explicit constructor injection — collaborators are passed into initializers; there is no ambient container or service locator.
 
 ```swift
-import Dependencies
-
-@Dependency(\.sessionManager) private var sessionManager
-@Dependency(\.llmService) private var llmService
-@Dependency(\.persistenceService) private var persistenceService
+let controller = ChatAPIController<BasicRequestContext>(
+    chat: chat,
+    timelineManager: timelineManager,
+    agentInstanceStore: persistence,
+    toolRouter: toolRouter
+)
 ```
 
-**Registration:**
+**Composition root:** `Sources/MonadServer/MonadServerFactory.swift` builds the persistence stores, managers, router, and services and wires them into controllers (route wiring grouped in `RouteDependencies`).
 
-```swift
-withDependencies {
-    $0.sessionManager = mySessionManager
-    $0.llmService = myLLMService
-} operation: {
-    // Use dependencies here
-}
-```
-
-**Dependency Key Files:**
-- `Sources/MonadCore/Dependencies/LLMDependencies.swift`
-- `Sources/MonadCore/Dependencies/OrchestrationDependencies.swift`
-- `Sources/MonadCore/Dependencies/StorageDependencies.swift`
+**Tests:** compose collaborators explicitly with `PKTestSupport.TestRuntime` or by constructing controllers directly — not via ambient overrides.
 
 ### Logging
 

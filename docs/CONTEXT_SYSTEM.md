@@ -107,7 +107,7 @@ let pipeline = ContextPipeline {
 }
 ```
 
-**Dependency injection:** `@Dependency` fields (`memoryStore`, `embeddingService`) live on individual stages (e.g., `MemoryRetrievalStage`), not on `ContextManager` itself.
+**Dependency injection:** stores and services (`memoryStore`, `embeddingService`) are passed into individual stages (e.g., `MemoryRetrievalStage`) through their initializers, not held on `ContextManager` itself.
 
 ### Search Strategy
 
