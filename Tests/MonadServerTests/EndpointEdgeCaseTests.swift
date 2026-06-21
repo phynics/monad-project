@@ -22,7 +22,12 @@ struct EndpointEdgeCaseTests {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
         let protected = router.group("/api").add(middleware: AuthMiddleware())
-        ChatAPIController<BasicRequestContext>(chat: runtime.buildCore())
+        ChatAPIController(
+            chat: runtime.buildCore(),
+            timelineManager: runtime.timelineManager,
+            agentInstanceStore: runtime.persistence,
+            toolRouter: runtime.toolRouter
+        )
             .addRoutes(to: protected.group("/sessions"))
 
         let app = Application(router: router)
@@ -53,7 +58,12 @@ struct EndpointEdgeCaseTests {
         let router = Router()
         router.add(middleware: ErrorMiddleware())
         let protected = router.group("/api").add(middleware: AuthMiddleware())
-        ChatAPIController<BasicRequestContext>(chat: runtime.buildCore())
+        ChatAPIController(
+            chat: runtime.buildCore(),
+            timelineManager: runtime.timelineManager,
+            agentInstanceStore: runtime.persistence,
+            toolRouter: runtime.toolRouter
+        )
             .addRoutes(to: protected.group("/sessions"))
 
         let app = Application(router: router)

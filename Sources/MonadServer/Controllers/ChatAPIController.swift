@@ -29,26 +29,6 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         self.verbose = verbose
     }
 
-    public init(chat: PositronicKitCore, verbose: Bool = false) {
-        let timelineManager = TimelineManager(
-            stores: .init(
-                timelineStore: InMemoryTimelinePersistence(),
-                messageStore: InMemoryMessageStore(),
-                workspaceStore: InMemoryWorkspacePersistence(),
-                toolPersistence: InMemoryToolPersistence()
-            ),
-            workspaceRoot: FileManager.default.temporaryDirectory
-        )
-        let agentInstanceStore = InMemoryAgentInstanceStore()
-        self.init(
-            chat: chat,
-            timelineManager: timelineManager,
-            agentInstanceStore: agentInstanceStore,
-            toolRouter: ToolRouter(timelineManager: timelineManager, messageStore: InMemoryMessageStore()),
-            verbose: verbose
-        )
-    }
-
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("/{id}/chat", use: chat)
         group.post("/{id}/chat/stream", use: chatStream)

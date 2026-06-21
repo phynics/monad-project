@@ -22,14 +22,6 @@ public final class OrphanCleanupService: Service, @unchecked Sendable {
         self.timelineStore = timelineStore
     }
 
-    public convenience init(workspaceRoot: URL) {
-        self.init(
-            workspaceRoot: workspaceRoot,
-            workspaceStore: InMemoryWorkspacePersistence(),
-            timelineStore: InMemoryTimelinePersistence()
-        )
-    }
-
     /// Run the cleanup loop
     public func run() async throws {
         logger.info("OrphanCleanupService started")
