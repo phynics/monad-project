@@ -76,6 +76,10 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
             return ErrorClassification(status: .internalServerError, code: "execution_failed")
         case .attachedToolsDisallowedOnPrivateTimeline:
             return ErrorClassification(status: .forbidden, code: "client_tools_disallowed_on_private_timeline")
+        case .malformedArguments:
+            return ErrorClassification(status: .badRequest, code: "malformed_arguments")
+        case .schemaMismatch:
+            return ErrorClassification(status: .badRequest, code: "schema_mismatch")
         }
     }
 

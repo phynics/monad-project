@@ -1,17 +1,33 @@
 import Foundation
 import HTTPTypes
 import Hummingbird
+import PositronicKit
 import PKShared
 import MonadShared
 import NIOCore
-import Dependencies
 
 public struct PruneAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.memoryStore) var memoryStore
-    @Dependency(\.timelinePersistence) var timelineStore
-    @Dependency(\.messageStore) var messageStore
+    private let memoryStore: any MemoryStoreProtocol
+    private let timelineStore: any TimelinePersistenceProtocol
+    private let messageStore: any MessageStoreProtocol
 
-    public init() {}
+    public init(
+        memoryStore: any MemoryStoreProtocol,
+        timelineStore: any TimelinePersistenceProtocol,
+        messageStore: any MessageStoreProtocol
+    ) {
+        self.memoryStore = memoryStore
+        self.timelineStore = timelineStore
+        self.messageStore = messageStore
+    }
+
+    public init() {
+        self.init(
+            memoryStore: InMemoryMemoryStore(),
+            timelineStore: InMemoryTimelinePersistence(),
+            messageStore: InMemoryMessageStore()
+        )
+    }
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("/memories", use: pruneMemories)

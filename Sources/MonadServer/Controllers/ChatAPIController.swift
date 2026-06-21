@@ -1,4 +1,3 @@
-import Dependencies
 import Foundation
 import HTTPTypes
 import Hummingbird
@@ -9,15 +8,45 @@ import MonadShared
 import NIOCore
 
 public struct ChatAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.timelineManager) var timelineManager: TimelineManager
-    @Dependency(\.agentInstanceStore) var agentInstanceStore
-    @Dependency(\.toolRouter) var toolRouter: ToolRouter
+    private let timelineManager: TimelineManager
+    private let agentInstanceStore: any AgentInstanceStoreProtocol
+    private let toolRouter: ToolRouter
     private let chat: PositronicKitCore
     public let verbose: Bool
+    private let logger = Logger.module(named: "chat")
+
+    public init(
+        chat: PositronicKitCore,
+        timelineManager: TimelineManager,
+        agentInstanceStore: any AgentInstanceStoreProtocol,
+        toolRouter: ToolRouter,
+        verbose: Bool = false
+    ) {
+        self.chat = chat
+        self.timelineManager = timelineManager
+        self.agentInstanceStore = agentInstanceStore
+        self.toolRouter = toolRouter
+        self.verbose = verbose
+    }
 
     public init(chat: PositronicKitCore, verbose: Bool = false) {
-        self.chat = chat
-        self.verbose = verbose
+        let timelineManager = TimelineManager(
+            stores: .init(
+                timelineStore: InMemoryTimelinePersistence(),
+                messageStore: InMemoryMessageStore(),
+                workspaceStore: InMemoryWorkspacePersistence(),
+                toolPersistence: InMemoryToolPersistence()
+            ),
+            workspaceRoot: FileManager.default.temporaryDirectory
+        )
+        let agentInstanceStore = InMemoryAgentInstanceStore()
+        self.init(
+            chat: chat,
+            timelineManager: timelineManager,
+            agentInstanceStore: agentInstanceStore,
+            toolRouter: ToolRouter(timelineManager: timelineManager, messageStore: InMemoryMessageStore()),
+            verbose: verbose
+        )
     }
 
     public func addRoutes(to group: RouterGroup<Context>) {
@@ -75,7 +104,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         let chatRequest = try await request.decode(as: ChatRequest.self, context: context)
 
         let sid = ANSIColors.colorize(id.uuidString.prefix(8).lowercased(), color: ANSIColors.brightBlue)
-        Logger.module(named: "chat").info("Streaming chat in timeline \(sid)")
+        logger.info("Streaming chat in timeline \(sid)")
 
         let chatStream = try await prepareAndExecuteChat(
             timelineId: id, chatRequest: chatRequest, sid: sid
@@ -104,7 +133,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         let availableTools = await resolveTools(timelineId: timelineId, attachedTools: chatRequest.attachedTools)
 
         let toolCountStr = ANSIColors.colorize("\(availableTools.count)", color: ANSIColors.green)
-        Logger.module(named: "chat").info("Resolved \(toolCountStr) tools for timeline \(sid)")
+        logger.info("Resolved \(toolCountStr) tools for timeline \(sid)")
 
         return try await chat.run(
             timelineId: timelineId,
@@ -147,6 +176,9 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     }
 
     private func yieldSSEEvent(_ event: ChatEvent, to continuation: AsyncStream<ByteBuffer>.Continuation) {
+        if verbose {
+            logger.debug("Stream delta: \(describe(event: event))")
+        }
         if let data = try? SerializationUtils.jsonEncoder.encode(event) {
             let sseString = "data: \(String(bytes: data, encoding: .utf8) ?? "")\n\n"
             continuation.yield(ByteBuffer(string: sseString))
@@ -157,10 +189,23 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         if error is CancellationError {
             yieldSSEEvent(ChatEvent.generationCancelled(), to: continuation)
         } else {
-            Logger.module(named: "chat").error("Stream error: \(error)")
+            logger.error("Stream error: \(error)")
             yieldSSEEvent(ChatEvent.error(error.localizedDescription), to: continuation)
         }
         continuation.finish()
+    }
+
+    private func describe(event: ChatEvent) -> String {
+        switch event {
+        case .meta(let meta):
+            return "meta=\(String(reflecting: meta))"
+        case .delta(let delta):
+            return "delta=\(String(reflecting: delta))"
+        case .error(let error):
+            return "error=\(String(reflecting: error))"
+        case .completion(let completion):
+            return "completion=\(String(reflecting: completion))"
+        }
     }
 
     private func buildSSEResponse(body: AsyncStream<ByteBuffer>) -> Response {

@@ -1,4 +1,3 @@
-import Dependencies
 import Foundation
 import HTTPTypes
 import Hummingbird
@@ -8,11 +7,36 @@ import MonadShared
 import NIOCore
 
 public struct TimelineAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.timelineManager) var timelineManager
-    @Dependency(\.timelinePersistence) var timelineStore
-    @Dependency(\.workspacePersistence) var workspaceStore
+    private let timelineManager: TimelineManager
+    private let timelineStore: any TimelinePersistenceProtocol
+    private let workspaceStore: any WorkspacePersistenceProtocol
 
-    public init() {}
+    public init(
+        timelineManager: TimelineManager,
+        timelineStore: any TimelinePersistenceProtocol,
+        workspaceStore: any WorkspacePersistenceProtocol
+    ) {
+        self.timelineManager = timelineManager
+        self.timelineStore = timelineStore
+        self.workspaceStore = workspaceStore
+    }
+
+    public init() {
+        let timelineStore = InMemoryTimelinePersistence()
+        self.init(
+            timelineManager: TimelineManager(
+                stores: .init(
+                    timelineStore: timelineStore,
+                    messageStore: InMemoryMessageStore(),
+                    workspaceStore: InMemoryWorkspacePersistence(),
+                    toolPersistence: InMemoryToolPersistence()
+                ),
+                workspaceRoot: FileManager.default.temporaryDirectory
+            ),
+            timelineStore: timelineStore,
+            workspaceStore: InMemoryWorkspacePersistence()
+        )
+    }
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("/", use: create)

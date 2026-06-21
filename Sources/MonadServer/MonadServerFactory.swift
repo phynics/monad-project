@@ -1,4 +1,3 @@
-import Dependencies
 import Foundation
 import GRDB
 import Hummingbird
@@ -22,7 +21,6 @@ public struct MonadServerFactory {
 
     public struct ServerContext {
         public let serviceGroup: ServiceGroup
-        public let dependencies: DependencyValues
     }
 
     /// Aggregates all initialized stores, services, and managers needed for server startup
@@ -89,33 +87,48 @@ public struct MonadServerFactory {
             toolRouter: components.managers.toolRouter
         )
 
-        return withDependencies {
-            configureDependencies(&$0, from: components)
-        } operation: {
-            registerPublicRoutes(on: router)
-            let protected = registerProtectedGroup(on: router)
-            registerChatAndTimelineRoutes(
-                on: protected,
-                connectionManager: components.services.connectionManager,
-                chat: coreChat,
-                verbose: verbose
-            )
-            registerResourceRoutes(
-                on: protected,
-                agentInstanceManager: components.managers.agentInstanceManager,
+        registerPublicRoutes(
+            on: router,
+            databaseManager: components.databaseManager,
+            llmService: components.services.llmService
+        )
+        let protected = registerProtectedGroup(on: router)
+        registerChatAndTimelineRoutes(
+            on: protected,
+            connectionManager: components.services.connectionManager,
+            chat: coreChat,
+            timelineManager: components.managers.timelineManager,
+            timelineStore: components.repositories.timelinePersistence,
+            workspaceStore: components.repositories.workspacePersistence,
+            agentInstanceStore: components.repositories.agentInstanceStore,
+            toolRouter: components.managers.toolRouter,
+            verbose: verbose
+        )
+        registerResourceRoutes(
+            on: protected,
+            dependencies: .init(
+                memoryStore: components.repositories.memoryStore,
+                messageStore: components.repositories.messageStore,
+                timelineStore: components.repositories.timelinePersistence,
+                workspaceStore: components.repositories.workspacePersistence,
+                toolStore: components.repositories.toolPersistence,
+                agentTemplateStore: components.repositories.agentTemplateStore,
+                requestOriginStore: components.repositories.requestOriginStore,
+                workspaceManager: components.managers.workspaceManager,
+                timelineManager: components.managers.timelineManager,
+                toolRouter: components.managers.toolRouter,
+                databaseManager: components.databaseManager,
                 llmService: components.services.llmService
-            )
+            ),
+            agentInstanceManager: components.managers.agentInstanceManager
+        )
 
-            let serviceGroup = buildServiceGroup(
-                router: router, hostname: hostname, port: port,
-                orphanCleanup: components.orphanCleanup, logger: logger
-            )
+        let serviceGroup = buildServiceGroup(
+            router: router, hostname: hostname, port: port,
+            orphanCleanup: components.orphanCleanup, logger: logger
+        )
 
-            return ServerContext(
-                serviceGroup: serviceGroup,
-                dependencies: DependencyValues._current
-            )
-        }
+        return ServerContext(serviceGroup: serviceGroup)
     }
 
     // MARK: - Component Initialization
@@ -139,11 +152,17 @@ public struct MonadServerFactory {
         let workspaceRoot = try defaultWorkspacePath()
 
         let managers = initializeManagers(
+            repositories: repositories,
             workspaceRoot: workspaceRoot,
             connectionManager: services.connectionManager
         )
 
-        let orphanCleanup = OrphanCleanupService(workspaceRoot: workspaceRoot)
+        let orphanCleanup = OrphanCleanupService(
+            workspaceRoot: workspaceRoot,
+            workspaceStore: repositories.workspacePersistence,
+            timelineStore: repositories.timelinePersistence
+        )
+
 
         return ServerComponents(
             databaseManager: databaseManager,
@@ -227,53 +246,46 @@ public struct MonadServerFactory {
     }
 
     private static func initializeManagers(
+        repositories: RepositorySet,
         workspaceRoot: URL,
         connectionManager: WebSocketConnectionManager
     ) -> ManagerSet {
-        let agentWorkspaceService = AgentWorkspaceService(workspaceRoot: workspaceRoot)
+        let agentWorkspaceService = AgentWorkspaceService(
+            workspaceRoot: workspaceRoot,
+            workspacePersistence: repositories.workspacePersistence
+        )
+        let timelineManager = TimelineManager(
+            stores: .init(
+                timelineStore: repositories.timelinePersistence,
+                messageStore: repositories.messageStore,
+                workspaceStore: repositories.workspacePersistence,
+                toolPersistence: repositories.toolPersistence
+            ),
+            workspaceRoot: workspaceRoot,
+            workspaceCreator: WorkspaceFactory(connectionManager: connectionManager)
+        )
+        let toolRouter = ToolRouter(
+            timelineManager: timelineManager,
+            messageStore: repositories.messageStore
+        )
 
         return ManagerSet(
-            timelineManager: TimelineManager(
-                workspaceRoot: workspaceRoot,
-                workspaceCreator: WorkspaceFactory(connectionManager: connectionManager)
+            timelineManager: timelineManager,
+            toolRouter: toolRouter,
+            agentInstanceManager: AgentInstanceManager(
+                repository: agentWorkspaceService,
+                stores: .init(
+                    instanceStore: repositories.agentInstanceStore,
+                    timelineStore: repositories.timelinePersistence,
+                    messageStore: repositories.messageStore,
+                    workspaceStore: repositories.workspacePersistence
+                )
             ),
-            toolRouter: ToolRouter(),
-            agentInstanceManager: AgentInstanceManager(repository: agentWorkspaceService),
             workspaceManager: WorkspaceManager(
                 repository: agentWorkspaceService,
                 workspaceCreator: WorkspaceFactory(connectionManager: connectionManager)
             )
         )
-    }
-
-    // MARK: - Dependency Configuration
-
-    private static func configureDependencies(
-        _ deps: inout DependencyValues,
-        from components: ServerComponents
-    ) {
-        let repos = components.repositories
-        deps.databaseManager = components.databaseManager
-        deps.agentInstanceStore = repos.agentInstanceStore
-        deps.requestOriginStore = repos.requestOriginStore
-        deps.agentTemplateStore = repos.agentTemplateStore
-        deps.memoryStore = repos.memoryStore
-        deps.messageStore = repos.messageStore
-        deps.timelinePersistence = repos.timelinePersistence
-        deps.toolPersistence = repos.toolPersistence
-        deps.workspacePersistence = repos.workspacePersistence
-
-        let svcs = components.services
-        deps.llmService = svcs.llmService
-        deps.embeddingService = svcs.embeddingService
-        deps.vectorStore = svcs.vectorStore
-        deps.keyValueStore = svcs.keyValueStore
-
-        let mgrs = components.managers
-        deps.timelineManager = mgrs.timelineManager
-        deps.toolRouter = mgrs.toolRouter
-        deps.agentInstanceManager = mgrs.agentInstanceManager
-        deps.workspaceManager = mgrs.workspaceManager
     }
 
     /// Default workspace path

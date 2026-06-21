@@ -33,42 +33,30 @@ import Testing
 
     func createSessionCreatesDedicatedWorkspace() async throws {
         let persistenceService = try #require(persistenceService)
-        let embeddingService = try #require(embeddingService)
-        let llmService = try #require(llmService)
         let workspaceRoot = try #require(workspaceRoot)
-        try await TestDependencies()
-            .withMocks()
-            .with {
-                $0.workspacePersistence = persistenceService.workspaceStore
-                $0.timelinePersistence = persistenceService.timelineStore
-                $0.toolPersistence = persistenceService.toolStore
-                $0.memoryStore = persistenceService.memoryStore
-                $0.messageStore = persistenceService.messageStore
-                $0.agentTemplateStore = persistenceService.agentTemplateStore
-                $0.requestOriginStore = persistenceService.requestOriginStore
-                $0.agentInstanceStore = persistenceService.agentInstanceStore
-                $0.embeddingService = embeddingService
-                $0.llmService = llmService
-            }
-            .run {
-                let timelineManager = TimelineManager(
-                    workspaceRoot: workspaceRoot
-                )
+        let timelineManager = TimelineManager(
+            stores: .init(
+                timelineStore: persistenceService.timelineStore,
+                messageStore: persistenceService.messageStore,
+                workspaceStore: persistenceService.workspaceStore,
+                toolPersistence: persistenceService.toolStore
+            ),
+            workspaceRoot: workspaceRoot
+        )
 
-                // Act
-                let session = try await timelineManager.createTimeline(title: "Workspace Test Session")
+        // Act
+        let session = try await timelineManager.createTimeline(title: "Workspace Test Session")
 
-                // Assert
-                try #require(!session.attachedWorkspaceIds.isEmpty)
+        // Assert
+        try #require(!session.attachedWorkspaceIds.isEmpty)
 
-                // Verify workspace exists in DB
-                let workspace = try await persistenceService.dbQueue.read { db in
-                    try WorkspaceReference.fetchOne(db, key: session.attachedWorkspaceIds.first)
-                }
+        // Verify workspace exists in DB
+        let workspace = try await persistenceService.dbQueue.read { db in
+            try WorkspaceReference.fetchOne(db, key: session.attachedWorkspaceIds.first)
+        }
 
-                try #require(workspace != nil)
-                #expect(workspace?.location == .runtime)
-                #expect(workspace?.uri.path == "/timelines/\(session.id.uuidString)")
-            }
+        try #require(workspace != nil)
+        #expect(workspace?.location == .runtime)
+        #expect(workspace?.uri.path == "/timelines/\(session.id.uuidString)")
     }
 }

@@ -25,7 +25,9 @@ struct ChatControllerTests {
             .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
             .withOrchestration(workspaceRoot: workspace.root)
             .run { mocks in
-                @Dependency(\.timelineManager) var timelineManager
+                let timelineManager = try #require(mocks.overrides.timelineManager)
+                let toolRouter = try #require(mocks.overrides.toolRouter)
+                let agentInstanceStore = persistence
 
                 let session = try await timelineManager.createTimeline()
 
@@ -39,7 +41,12 @@ struct ChatControllerTests {
                 await timelineManager.deleteTimeline(id: session.id)
 
                 let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>(chat: mocks.buildCoreChat())
+                let controller = ChatAPIController<BasicRequestContext>(
+                    chat: mocks.buildCoreChat(),
+                    timelineManager: timelineManager,
+                    agentInstanceStore: agentInstanceStore,
+                    toolRouter: toolRouter
+                )
                 controller.addRoutes(to: router.group("/sessions"))
                 let app = Application(router: router)
 
@@ -70,7 +77,9 @@ struct ChatControllerTests {
             .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
             .withOrchestration(workspaceRoot: workspace.root)
             .run { mocks in
-                @Dependency(\.timelineManager) var timelineManager
+                let timelineManager = try #require(mocks.overrides.timelineManager)
+                let toolRouter = try #require(mocks.overrides.toolRouter)
+                let agentInstanceStore = persistence
 
                 let session = try await timelineManager.createTimeline()
 
@@ -84,7 +93,12 @@ struct ChatControllerTests {
                 await timelineManager.deleteTimeline(id: session.id)
 
                 let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>(chat: mocks.buildCoreChat())
+                let controller = ChatAPIController<BasicRequestContext>(
+                    chat: mocks.buildCoreChat(),
+                    timelineManager: timelineManager,
+                    agentInstanceStore: agentInstanceStore,
+                    toolRouter: toolRouter
+                )
                 controller.addRoutes(to: router.group("/sessions"))
                 let app = Application(router: router)
 

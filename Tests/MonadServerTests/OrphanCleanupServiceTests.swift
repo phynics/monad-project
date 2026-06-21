@@ -41,7 +41,11 @@ import Testing
         let session = Timeline(id: UUID(), title: "Test", attachedWorkspaceIds: [activeId])
         mockPersistence.timelines = [session]
 
-        let service = OrphanCleanupService(workspaceRoot: workspaceRoot)
+        let service = OrphanCleanupService(
+            workspaceRoot: workspaceRoot,
+            workspaceStore: mockPersistence,
+            timelineStore: mockPersistence
+        )
 
         // Act
         let mockPersistence = try #require(mockPersistence)
@@ -78,7 +82,11 @@ import Testing
         mockPersistence.workspaces = [wsUser]
         mockPersistence.timelines = [] // No sessions, so it is technically "orphaned"
 
-        let service = OrphanCleanupService(workspaceRoot: workspaceRoot)
+        let service = OrphanCleanupService(
+            workspaceRoot: workspaceRoot,
+            workspaceStore: mockPersistence,
+            timelineStore: mockPersistence
+        )
 
         // Act
         let mockPersistence = try #require(mockPersistence)

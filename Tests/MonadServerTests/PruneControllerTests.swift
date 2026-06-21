@@ -29,7 +29,11 @@ struct PruneControllerTests {
             $0.messageStore = persistence.messageStore
         } operation: {
             let router = Router()
-            let controller = PruneAPIController<BasicRequestContext>()
+            let controller = PruneAPIController<BasicRequestContext>(
+                memoryStore: persistence.memoryStore,
+                timelineStore: persistence.timelineStore,
+                messageStore: persistence.messageStore
+            )
             controller.addRoutes(to: router.group("/prune"))
             return Application(router: router)
         }

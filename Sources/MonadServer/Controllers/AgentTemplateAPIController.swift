@@ -1,4 +1,3 @@
-import Dependencies
 import Foundation
 import HTTPTypes
 import Hummingbird
@@ -9,9 +8,15 @@ import NIOCore
 
 /// Controller for discovering available agentTemplates in the framework
 public struct AgentTemplateAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.agentTemplateStore) var agentTemplateStore
+    private let agentTemplateStore: any AgentTemplateStoreProtocol
 
-    public init() {}
+    public init(agentTemplateStore: any AgentTemplateStoreProtocol) {
+        self.agentTemplateStore = agentTemplateStore
+    }
+
+    public init() {
+        self.init(agentTemplateStore: InMemoryAgentTemplateStore())
+    }
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.get("/", use: list)

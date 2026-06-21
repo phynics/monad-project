@@ -15,10 +15,14 @@ import Testing
 
     init() async throws {
         persistence = MockPersistenceService()
+        let persistence = try #require(persistence)
         repository = try await TestDependencies()
             .withMocks(persistence: persistence)
             .run {
-                AgentWorkspaceService(workspaceRoot: URL(fileURLWithPath: NSTemporaryDirectory()))
+                AgentWorkspaceService(
+                    workspaceRoot: URL(fileURLWithPath: NSTemporaryDirectory()),
+                    workspacePersistence: persistence
+                )
             }
 
         manager = WorkspaceManager(repository: repository, workspaceCreator: WorkspaceFactory())

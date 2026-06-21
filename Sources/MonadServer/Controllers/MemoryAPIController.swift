@@ -5,13 +5,34 @@ import PositronicKit
 import PKShared
 import MonadShared
 import NIOCore
-import Dependencies
 
 public struct MemoryAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.timelineManager) var timelineManager: TimelineManager
-    @Dependency(\.memoryStore) var memoryStore: any MemoryStoreProtocol
+    private let timelineManager: TimelineManager
+    private let memoryStore: any MemoryStoreProtocol
 
-    public init() {}
+    public init(
+        timelineManager: TimelineManager,
+        memoryStore: any MemoryStoreProtocol
+    ) {
+        self.timelineManager = timelineManager
+        self.memoryStore = memoryStore
+    }
+
+    public init() {
+        let memoryStore = InMemoryMemoryStore()
+        self.init(
+            timelineManager: TimelineManager(
+                stores: .init(
+                    timelineStore: InMemoryTimelinePersistence(),
+                    messageStore: InMemoryMessageStore(),
+                    workspaceStore: InMemoryWorkspacePersistence(),
+                    toolPersistence: InMemoryToolPersistence()
+                ),
+                workspaceRoot: FileManager.default.temporaryDirectory
+            ),
+            memoryStore: memoryStore
+        )
+    }
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("/", use: create)

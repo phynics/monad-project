@@ -1,7 +1,6 @@
 import PKShared
 import MonadShared
 import ArgumentParser
-import Dependencies
 import Foundation
 import Hummingbird
 import HummingbirdWebSocket
@@ -68,10 +67,6 @@ struct MonadServer: AsyncParsableCommand {
             logger: logger
         )
 
-        try await withDependencies {
-            $0 = context.dependencies
-        } operation: {
-            try await context.serviceGroup.run()
-        }
+        try await context.serviceGroup.run()
     }
 }

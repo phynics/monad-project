@@ -1,5 +1,4 @@
 import Foundation
-import Dependencies
 import Hummingbird
 import PositronicKit
 import PKShared
@@ -7,13 +6,33 @@ import MonadShared
 import NIOCore
 
 public struct StatusAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.databaseManager) var databaseManager
-    @Dependency(\.llmService) var llmService
+    private struct NoOpDatabaseHealth: HealthCheckable {
+        func getHealthStatus() async -> HealthStatus { .ok }
+        func getHealthDetails() async -> [String: String]? { nil }
+        func checkHealth() async -> HealthStatus { .ok }
+    }
+
+    private let databaseManager: any HealthCheckable
+    private let llmService: any LLMServiceProtocol
     public let startTime: Date
     public let version = "1.0.0"
 
-    public init(startTime: Date) {
+    public init(
+        databaseManager: any HealthCheckable,
+        llmService: any LLMServiceProtocol,
+        startTime: Date
+    ) {
+        self.databaseManager = databaseManager
+        self.llmService = llmService
         self.startTime = startTime
+    }
+
+    public init(startTime: Date) {
+        self.init(
+            databaseManager: NoOpDatabaseHealth(),
+            llmService: UnconfiguredLLMService(),
+            startTime: startTime
+        )
     }
 
     public func addRoutes(to router: Router<Context>) {

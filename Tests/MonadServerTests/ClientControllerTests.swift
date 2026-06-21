@@ -23,16 +23,14 @@ struct ClientControllerTests {
     }
 
     private func makeApp() -> some ApplicationProtocol {
-        return withDependencies {
-            $0.requestOriginStore = persistence.requestOriginStore
-            $0.workspacePersistence = persistence.workspaceStore
-            $0.toolPersistence = persistence.toolStore
-        } operation: {
-            let router = Router()
-            let controller = ClientAPIController<BasicRequestContext>()
-            controller.addRoutes(to: router.group("/clients"))
-            return Application(router: router)
-        }
+        let router = Router()
+        let controller = ClientAPIController<BasicRequestContext>(
+            requestOriginStore: persistence.requestOriginStore,
+            workspaceStore: persistence.workspaceStore,
+            toolStore: persistence.toolStore
+        )
+        controller.addRoutes(to: router.group("/clients"))
+        return Application(router: router)
     }
 
     // MARK: - POST /clients/register

@@ -1,4 +1,3 @@
-import Dependencies
 import Foundation
 import Logging
 import PositronicKit
@@ -8,13 +7,27 @@ import ServiceLifecycle
 
 /// Service that cleans up orphaned workspaces
 public final class OrphanCleanupService: Service, @unchecked Sendable {
-    @Dependency(\.workspacePersistence) var workspaceStore
-    @Dependency(\.timelinePersistence) var timelineStore
+    private let workspaceStore: any WorkspacePersistenceProtocol
+    private let timelineStore: any TimelinePersistenceProtocol
     private let workspaceRoot: URL
     private let logger = Logger(label: "com.monad.orphan-cleanup")
 
-    public init(workspaceRoot: URL) {
+    public init(
+        workspaceRoot: URL,
+        workspaceStore: any WorkspacePersistenceProtocol,
+        timelineStore: any TimelinePersistenceProtocol
+    ) {
         self.workspaceRoot = workspaceRoot
+        self.workspaceStore = workspaceStore
+        self.timelineStore = timelineStore
+    }
+
+    public convenience init(workspaceRoot: URL) {
+        self.init(
+            workspaceRoot: workspaceRoot,
+            workspaceStore: InMemoryWorkspacePersistence(),
+            timelineStore: InMemoryTimelinePersistence()
+        )
     }
 
     /// Run the cleanup loop

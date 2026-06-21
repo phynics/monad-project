@@ -1,4 +1,3 @@
-import Dependencies
 import Foundation
 import GRDB
 import HTTPTypes
@@ -11,10 +10,16 @@ import NIOCore
 
 /// Controller for managing workspaces
 public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.workspacePersistence) var workspaceStore
-    @Dependency(\.toolPersistence) var toolStore
+    private let workspaceStore: any WorkspacePersistenceProtocol
+    private let toolStore: any ToolPersistenceProtocol
 
-    public init() {}
+    public init(
+        workspaceStore: any WorkspacePersistenceProtocol,
+        toolStore: any ToolPersistenceProtocol
+    ) {
+        self.workspaceStore = workspaceStore
+        self.toolStore = toolStore
+    }
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post(use: create)

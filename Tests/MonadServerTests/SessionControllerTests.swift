@@ -17,9 +17,23 @@ import Testing
         try await TestDependencies()
             .withMocks()
             .withTimelineManager(workspaceRoot: workspace.root)
-            .run {
+            .run { ctx in
+                let persistence = ctx.persistence
+                let timelineManager = ctx.overrides.timelineManager ?? TimelineManager(
+                    stores: .init(
+                        timelineStore: persistence,
+                        messageStore: persistence,
+                        workspaceStore: persistence,
+                        toolPersistence: persistence
+                    ),
+                    workspaceRoot: workspace.root
+                )
                 let router = Router()
-                let controller = TimelineAPIController<BasicRequestContext>()
+                let controller = TimelineAPIController<BasicRequestContext>(
+                    timelineManager: timelineManager,
+                    timelineStore: persistence,
+                    workspaceStore: persistence
+                )
                 controller.addRoutes(to: router.group("/sessions"))
                 let app = Application(router: router)
 
@@ -46,9 +60,22 @@ import Testing
         try await TestDependencies()
             .withMocks(persistence: persistence)
             .withTimelineManager(workspaceRoot: TestWorkspace().root)
-            .run {
+            .run { ctx in
+                let timelineManager = ctx.overrides.timelineManager ?? TimelineManager(
+                    stores: .init(
+                        timelineStore: persistence,
+                        messageStore: persistence,
+                        workspaceStore: persistence,
+                        toolPersistence: persistence
+                    ),
+                    workspaceRoot: TestWorkspace().root
+                )
                 let router = Router()
-                let controller = TimelineAPIController<BasicRequestContext>()
+                let controller = TimelineAPIController<BasicRequestContext>(
+                    timelineManager: timelineManager,
+                    timelineStore: persistence,
+                    workspaceStore: persistence
+                )
                 controller.addRoutes(to: router.group("/sessions"))
                 let app = Application(router: router)
 
@@ -79,10 +106,23 @@ import Testing
         try await TestDependencies()
             .withMocks(persistence: persistence)
             .withTimelineManager(workspaceRoot: TestWorkspace().root)
-            .run {
+            .run { ctx in
+                let timelineManager = ctx.overrides.timelineManager ?? TimelineManager(
+                    stores: .init(
+                        timelineStore: persistence,
+                        messageStore: persistence,
+                        workspaceStore: persistence,
+                        toolPersistence: persistence
+                    ),
+                    workspaceRoot: TestWorkspace().root
+                )
                 let router = Router()
                 router.add(middleware: ErrorMiddleware())
-                let controller = TimelineAPIController<BasicRequestContext>()
+                let controller = TimelineAPIController<BasicRequestContext>(
+                    timelineManager: timelineManager,
+                    timelineStore: persistence,
+                    workspaceStore: persistence
+                )
                 controller.addRoutes(to: router.group("/sessions"))
                 let app = Application(router: router)
 

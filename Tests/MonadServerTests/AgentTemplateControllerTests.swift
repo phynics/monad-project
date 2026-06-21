@@ -21,7 +21,7 @@ import Testing
             $0.agentTemplateStore = mockPersistence
         } operation: {
             let router = Router()
-            let controller = AgentTemplateAPIController<BasicRequestContext>()
+            let controller = AgentTemplateAPIController<BasicRequestContext>(agentTemplateStore: mockPersistence)
             controller.addRoutes(to: router.group("/agentTemplates"))
             let app = Application(router: router)
 

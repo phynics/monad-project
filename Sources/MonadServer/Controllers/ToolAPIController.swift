@@ -1,4 +1,3 @@
-import Dependencies
 import Foundation
 import HTTPTypes
 import Hummingbird
@@ -20,12 +19,42 @@ public struct ExecuteToolRequest: Codable, Sendable {
 }
 
 public struct ToolAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.timelineManager) var timelineManager
-    @Dependency(\.timelinePersistence) var timelineStore
-    @Dependency(\.messageStore) var messageStore
-    @Dependency(\.toolRouter) var toolRouter
+    private let timelineManager: TimelineManager
+    private let timelineStore: any TimelinePersistenceProtocol
+    private let messageStore: any MessageStoreProtocol
+    private let toolRouter: ToolRouter
 
-    public init() {}
+    public init(
+        timelineManager: TimelineManager,
+        timelineStore: any TimelinePersistenceProtocol,
+        messageStore: any MessageStoreProtocol,
+        toolRouter: ToolRouter
+    ) {
+        self.timelineManager = timelineManager
+        self.timelineStore = timelineStore
+        self.messageStore = messageStore
+        self.toolRouter = toolRouter
+    }
+
+    public init() {
+        let timelineStore = InMemoryTimelinePersistence()
+        let messageStore = InMemoryMessageStore()
+        let timelineManager = TimelineManager(
+            stores: .init(
+                timelineStore: timelineStore,
+                messageStore: messageStore,
+                workspaceStore: InMemoryWorkspacePersistence(),
+                toolPersistence: InMemoryToolPersistence()
+            ),
+            workspaceRoot: FileManager.default.temporaryDirectory
+        )
+        self.init(
+            timelineManager: timelineManager,
+            timelineStore: timelineStore,
+            messageStore: messageStore,
+            toolRouter: ToolRouter(timelineManager: timelineManager, messageStore: messageStore)
+        )
+    }
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.get("/", use: listSystemTools)

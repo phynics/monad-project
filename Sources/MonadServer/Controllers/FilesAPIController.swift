@@ -1,5 +1,4 @@
 import Foundation
-import Dependencies
 import HTTPTypes
 import Hummingbird
 import PositronicKit
@@ -8,9 +7,23 @@ import MonadShared
 import NIOCore
 
 public struct FilesAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.workspaceManager) var workspaceManager
+    private let workspaceManager: any WorkspaceManagerProtocol
 
-    public init() {}
+    public init(workspaceManager: any WorkspaceManagerProtocol) {
+        self.workspaceManager = workspaceManager
+    }
+
+    public init() {
+        self.init(
+            workspaceManager: WorkspaceManager(
+                repository: AgentWorkspaceService(
+                    workspaceRoot: FileManager.default.temporaryDirectory,
+                    workspacePersistence: InMemoryWorkspacePersistence()
+                ),
+                workspaceCreator: NullWorkspaceCreator()
+            )
+        )
+    }
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.get(use: listFiles)

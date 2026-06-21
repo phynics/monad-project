@@ -18,12 +18,19 @@ import Testing
         try await TestDependencies()
             .withMocks()
             .withOrchestration(workspaceRoot: workspace.root)
-            .run {
+            .run { ctx in
                 @Dependency(\.timelineManager) var timelineManager
+                @Dependency(\.toolRouter) var toolRouter
+                let persistence = ctx.persistence
 
                 let router = Router()
                 router.add(middleware: ErrorMiddleware())
-                let controller = ToolAPIController<BasicRequestContext>()
+                let controller = ToolAPIController<BasicRequestContext>(
+                    timelineManager: timelineManager,
+                    timelineStore: persistence,
+                    messageStore: persistence,
+                    toolRouter: toolRouter
+                )
                 controller.addRoutes(to: router.group("/tools"))
 
                 let app = Application(router: router)

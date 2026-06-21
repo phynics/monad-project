@@ -2,17 +2,33 @@ import Foundation
 import GRDB
 import Hummingbird
 import Logging
+import PositronicKit
 import PKShared
 import MonadShared
-import Dependencies
 
 /// Controller for managing client identities
 public struct ClientAPIController<Context: RequestContext>: Sendable {
-    @Dependency(\.requestOriginStore) var requestOriginStore
-    @Dependency(\.workspacePersistence) var workspaceStore
-    @Dependency(\.toolPersistence) var toolStore
+    private let requestOriginStore: any RequestOriginStoreProtocol
+    private let workspaceStore: any WorkspacePersistenceProtocol
+    private let toolStore: any ToolPersistenceProtocol
 
-    public init() {}
+    public init(
+        requestOriginStore: any RequestOriginStoreProtocol,
+        workspaceStore: any WorkspacePersistenceProtocol,
+        toolStore: any ToolPersistenceProtocol
+    ) {
+        self.requestOriginStore = requestOriginStore
+        self.workspaceStore = workspaceStore
+        self.toolStore = toolStore
+    }
+
+    public init() {
+        self.init(
+            requestOriginStore: InMemoryRequestOriginStore(),
+            workspaceStore: InMemoryWorkspacePersistence(),
+            toolStore: InMemoryToolPersistence()
+        )
+    }
 
     public func addRoutes(to group: RouterGroup<Context>) {
         group.post("register", use: register)
