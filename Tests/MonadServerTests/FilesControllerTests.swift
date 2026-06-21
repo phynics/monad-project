@@ -1,127 +1,114 @@
-import Dependencies
 import Foundation
 import Hummingbird
 import HummingbirdTesting
 import Logging
-import PositronicKit
 @testable import MonadServer
-import PKShared
 import MonadShared
-import PKTestSupport
 import NIOCore
+import PKShared
+import PKTestSupport
+import PositronicKit
 import Testing
 
-@Suite struct FilesControllerTests {
+struct FilesControllerTests {
     @Test("Test Get Nested File Content (Manual Path Extraction)")
     func getNestedFileContent() async throws {
         let persistence = MockPersistenceService()
-        let embedding = MockEmbeddingService()
-        let llmService = MockLLMService()
 
         let workspaceRoot = getTestWorkspaceRoot().appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
 
-        try await TestDependencies()
-            .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
-            .run {
-                let timelineManager = TimelineManager(
-                    stores: .init(
-                        timelineStore: persistence,
-                        messageStore: persistence,
-                        workspaceStore: persistence,
-                        toolPersistence: persistence
-                    ),
-                    workspaceRoot: workspaceRoot
-                )
+        let timelineManager = TimelineManager(
+            stores: .init(
+                timelineStore: persistence,
+                messageStore: persistence,
+                workspaceStore: persistence,
+                toolPersistence: persistence
+            ),
+            workspaceRoot: workspaceRoot
+        )
 
-                let timeline = try await timelineManager.createTimeline(title: "Files Test Session")
-                guard let workspaceId = timeline.attachedWorkspaceIds.first,
-                      let workingDirectory = timeline.workingDirectory
-                else {
-                    Issue.record("Timeline should have an attached workspace and working directory")
-                    return
-                }
+        let timeline = try await timelineManager.createTimeline(title: "Files Test Session")
+        guard let workspaceId = timeline.attachedWorkspaceIds.first,
+              let workingDirectory = timeline.workingDirectory
+        else {
+            Issue.record("Timeline should have an attached workspace and working directory")
+            return
+        }
 
-                let timelineWorkspacePath = URL(fileURLWithPath: workingDirectory)
-                let noteDir = timelineWorkspacePath.appendingPathComponent("Notes")
-                try FileManager.default.createDirectory(at: noteDir, withIntermediateDirectories: true)
+        let timelineWorkspacePath = URL(fileURLWithPath: workingDirectory)
+        let noteDir = timelineWorkspacePath.appendingPathComponent("Notes")
+        try FileManager.default.createDirectory(at: noteDir, withIntermediateDirectories: true)
 
-                let content = "# Nested Content"
-                let filePath = noteDir.appendingPathComponent("TestFile.md")
-                try content.write(to: filePath, atomically: true, encoding: .utf8)
+        let content = "# Nested Content"
+        let filePath = noteDir.appendingPathComponent("TestFile.md")
+        try content.write(to: filePath, atomically: true, encoding: .utf8)
 
-                let workspaceManager = WorkspaceManager(
-                    repository: AgentWorkspaceService(
-                        workspaceRoot: workspaceRoot,
-                        workspacePersistence: persistence
-                    ),
-                    workspaceCreator: WorkspaceFactory()
-                )
-                let router = Router()
-                let controller = FilesAPIController<BasicRequestContext>(workspaceManager: workspaceManager)
-                controller.addRoutes(to: router.group("/workspaces/:workspaceId/files"))
-                let app = Application(router: router)
+        let workspaceManager = WorkspaceManager(
+            repository: AgentWorkspaceService(
+                workspaceRoot: workspaceRoot,
+                workspacePersistence: persistence
+            ),
+            workspaceCreator: WorkspaceFactory()
+        )
+        let router = Router()
+        let controller = FilesAPIController<BasicRequestContext>(workspaceManager: workspaceManager)
+        controller.addRoutes(to: router.group("/workspaces/:workspaceId/files"))
+        let app = Application(router: router)
 
-                try await app.test(.router) { client in
-                    try await client.execute(uri: "/workspaces/\(workspaceId)/files/Notes/TestFile.md", method: .get) { response in
-                        #expect(response.status == .ok)
-                        let bodyString = String(buffer: response.body)
-                        #expect(bodyString == content)
-                    }
-                }
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/workspaces/\(workspaceId)/files/Notes/TestFile.md", method: .get) { response in
+                #expect(response.status == .ok)
+                let bodyString = String(buffer: response.body)
+                #expect(bodyString == content)
             }
+        }
     }
 
     @Test("Test List Files")
     func listFiles() async throws {
         let persistence = MockPersistenceService()
-        let embedding = MockEmbeddingService()
-        let llmService = MockLLMService()
 
         let workspaceRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: workspaceRoot) }
 
-        try await TestDependencies()
-            .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
-            .run {
-                let timelineManager = TimelineManager(
-                    stores: .init(
-                        timelineStore: persistence,
-                        messageStore: persistence,
-                        workspaceStore: persistence,
-                        toolPersistence: persistence
-                    ),
-                    workspaceRoot: workspaceRoot
-                )
+        let timelineManager = TimelineManager(
+            stores: .init(
+                timelineStore: persistence,
+                messageStore: persistence,
+                workspaceStore: persistence,
+                toolPersistence: persistence
+            ),
+            workspaceRoot: workspaceRoot
+        )
 
-                let timeline = try await timelineManager.createTimeline(title: "List Files Session")
-                guard let workspaceId = timeline.attachedWorkspaceIds.first,
-                      let workingDirectory = timeline.workingDirectory else { return }
+        let timeline = try await timelineManager.createTimeline(title: "List Files Session")
+        guard let workspaceId = timeline.attachedWorkspaceIds.first,
+              let workingDirectory = timeline.workingDirectory else { return }
 
-                let timelineWorkspacePath = URL(fileURLWithPath: workingDirectory)
-                let noteDir = timelineWorkspacePath.appendingPathComponent("Notes")
-                try FileManager.default.createDirectory(at: noteDir, withIntermediateDirectories: true)
-                try "Content".write(to: noteDir.appendingPathComponent("TestNote.md"), atomically: true, encoding: .utf8)
+        let timelineWorkspacePath = URL(fileURLWithPath: workingDirectory)
+        let noteDir = timelineWorkspacePath.appendingPathComponent("Notes")
+        try FileManager.default.createDirectory(at: noteDir, withIntermediateDirectories: true)
+        try "Content".write(to: noteDir.appendingPathComponent("TestNote.md"), atomically: true, encoding: .utf8)
 
-                let workspaceManager = WorkspaceManager(
-                    repository: AgentWorkspaceService(
-                        workspaceRoot: workspaceRoot,
-                        workspacePersistence: persistence
-                    ),
-                    workspaceCreator: WorkspaceFactory()
-                )
-                let router = Router()
-                let controller = FilesAPIController<BasicRequestContext>(workspaceManager: workspaceManager)
-                controller.addRoutes(to: router.group("/workspaces/:workspaceId/files"))
-                let app = Application(router: router)
+        let workspaceManager = WorkspaceManager(
+            repository: AgentWorkspaceService(
+                workspaceRoot: workspaceRoot,
+                workspacePersistence: persistence
+            ),
+            workspaceCreator: WorkspaceFactory()
+        )
+        let router = Router()
+        let controller = FilesAPIController<BasicRequestContext>(workspaceManager: workspaceManager)
+        controller.addRoutes(to: router.group("/workspaces/:workspaceId/files"))
+        let app = Application(router: router)
 
-                try await app.test(.router) { client in
-                    try await client.execute(uri: "/workspaces/\(workspaceId)/files", method: .get) { response in
-                        #expect(response.status == .ok)
-                        _ = try JSONDecoder().decode([String].self, from: response.body)
-                    }
-                }
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/workspaces/\(workspaceId)/files", method: .get) { response in
+                #expect(response.status == .ok)
+                _ = try JSONDecoder().decode([String].self, from: response.body)
             }
+        }
     }
 }

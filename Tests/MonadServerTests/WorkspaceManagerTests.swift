@@ -1,13 +1,12 @@
-import Dependencies
 import Foundation
-import PositronicKit
 @testable import MonadServer
-import PKShared
 import MonadShared
+import PKShared
 import PKTestSupport
+import PositronicKit
 import Testing
 
-@Suite final class WorkspaceManagerTests {
+final class WorkspaceManagerTests {
     var persistence: MockPersistenceService!
     var repository: AgentWorkspaceService!
     var manager: WorkspaceManager!
@@ -16,14 +15,10 @@ import Testing
     init() async throws {
         persistence = MockPersistenceService()
         let persistence = try #require(persistence)
-        repository = try await TestDependencies()
-            .withMocks(persistence: persistence)
-            .run {
-                AgentWorkspaceService(
-                    workspaceRoot: URL(fileURLWithPath: NSTemporaryDirectory()),
-                    workspacePersistence: persistence
-                )
-            }
+        repository = AgentWorkspaceService(
+            workspaceRoot: URL(fileURLWithPath: NSTemporaryDirectory()),
+            workspacePersistence: persistence
+        )
 
         manager = WorkspaceManager(repository: repository, workspaceCreator: WorkspaceFactory())
         testDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)

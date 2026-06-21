@@ -1,13 +1,12 @@
-import Dependencies
 import Foundation
 import Hummingbird
 import HummingbirdTesting
-import PositronicKit
 @testable import MonadServer
-import PKShared
 import MonadShared
-import PKTestSupport
 import NIOCore
+import PKShared
+import PKTestSupport
+import PositronicKit
 import Testing
 
 struct ChatControllerTests {
@@ -21,47 +20,43 @@ struct ChatControllerTests {
 
         let workspace = TestWorkspace()
 
-        try await TestDependencies()
-            .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
-            .withOrchestration(workspaceRoot: workspace.root)
-            .run { mocks in
-                let timelineManager = try #require(mocks.overrides.timelineManager)
-                let toolRouter = try #require(mocks.overrides.toolRouter)
-                let agentInstanceStore = persistence
+        let runtime = TestRuntime(workspaceRoot: workspace.root, persistence: persistence, llm: llmService, embedding: embedding)
+        let timelineManager = runtime.timelineManager
+        let toolRouter = runtime.toolRouter
+        let agentInstanceStore = persistence
 
-                let session = try await timelineManager.createTimeline()
+        let session = try await timelineManager.createTimeline()
 
-                let agentId = UUID()
-                let agent = AgentInstance(id: agentId, name: "Test Agent", description: "Test", primaryWorkspaceId: UUID(), privateTimelineId: UUID())
-                try await persistence.saveAgentInstance(agent)
-                var updatedSession = session
-                updatedSession.attachedAgentInstanceId = agentId
-                try await persistence.saveTimeline(updatedSession)
+        let agentId = UUID()
+        let agent = AgentInstance(id: agentId, name: "Test Agent", description: "Test", primaryWorkspaceId: UUID(), privateTimelineId: UUID())
+        try await persistence.saveAgentInstance(agent)
+        var updatedSession = session
+        updatedSession.attachedAgentInstanceId = agentId
+        try await persistence.saveTimeline(updatedSession)
 
-                await timelineManager.deleteTimeline(id: session.id)
+        await timelineManager.deleteTimeline(id: session.id)
 
-                let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>(
-                    chat: mocks.buildCoreChat(),
-                    timelineManager: timelineManager,
-                    agentInstanceStore: agentInstanceStore,
-                    toolRouter: toolRouter
-                )
-                controller.addRoutes(to: router.group("/sessions"))
-                let app = Application(router: router)
+        let router = Router()
+        let controller = ChatAPIController<BasicRequestContext>(
+            chat: runtime.buildCore(),
+            timelineManager: timelineManager,
+            agentInstanceStore: agentInstanceStore,
+            toolRouter: toolRouter
+        )
+        controller.addRoutes(to: router.group("/sessions"))
+        let app = Application(router: router)
 
-                let chatRequest = ChatRequest(message: "Hello")
+        let chatRequest = ChatRequest(message: "Hello")
 
-                try await app.test(.router) { client in
-                    let buffer = try ByteBuffer(bytes: JSONEncoder().encode(chatRequest))
-                    try await client.execute(uri: "/sessions/\(session.id)/chat", method: .post, body: buffer) { response in
-                        #expect(response.status == .ok)
+        try await app.test(.router) { client in
+            let buffer = try ByteBuffer(bytes: JSONEncoder().encode(chatRequest))
+            try await client.execute(uri: "/sessions/\(session.id)/chat", method: .post, body: buffer) { response in
+                #expect(response.status == .ok)
 
-                        let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: response.body)
-                        #expect(chatResponse.response == "Hello from AI")
-                    }
-                }
+                let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: response.body)
+                #expect(chatResponse.response == "Hello from AI")
             }
+        }
     }
 
     @Test("Test Chat Endpoint Unconfigured")
@@ -73,43 +68,39 @@ struct ChatControllerTests {
 
         let workspace = TestWorkspace()
 
-        try await TestDependencies()
-            .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
-            .withOrchestration(workspaceRoot: workspace.root)
-            .run { mocks in
-                let timelineManager = try #require(mocks.overrides.timelineManager)
-                let toolRouter = try #require(mocks.overrides.toolRouter)
-                let agentInstanceStore = persistence
+        let runtime = TestRuntime(workspaceRoot: workspace.root, persistence: persistence, llm: llmService, embedding: embedding)
+        let timelineManager = runtime.timelineManager
+        let toolRouter = runtime.toolRouter
+        let agentInstanceStore = persistence
 
-                let session = try await timelineManager.createTimeline()
+        let session = try await timelineManager.createTimeline()
 
-                let agentId = UUID()
-                let agent = AgentInstance(id: agentId, name: "Test Agent", description: "Test", primaryWorkspaceId: UUID(), privateTimelineId: UUID())
-                try await persistence.saveAgentInstance(agent)
-                var updatedSession = session
-                updatedSession.attachedAgentInstanceId = agentId
-                try await persistence.saveTimeline(updatedSession)
+        let agentId = UUID()
+        let agent = AgentInstance(id: agentId, name: "Test Agent", description: "Test", primaryWorkspaceId: UUID(), privateTimelineId: UUID())
+        try await persistence.saveAgentInstance(agent)
+        var updatedSession = session
+        updatedSession.attachedAgentInstanceId = agentId
+        try await persistence.saveTimeline(updatedSession)
 
-                await timelineManager.deleteTimeline(id: session.id)
+        await timelineManager.deleteTimeline(id: session.id)
 
-                let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>(
-                    chat: mocks.buildCoreChat(),
-                    timelineManager: timelineManager,
-                    agentInstanceStore: agentInstanceStore,
-                    toolRouter: toolRouter
-                )
-                controller.addRoutes(to: router.group("/sessions"))
-                let app = Application(router: router)
+        let router = Router()
+        let controller = ChatAPIController<BasicRequestContext>(
+            chat: runtime.buildCore(),
+            timelineManager: timelineManager,
+            agentInstanceStore: agentInstanceStore,
+            toolRouter: toolRouter
+        )
+        controller.addRoutes(to: router.group("/sessions"))
+        let app = Application(router: router)
 
-                let chatRequest = ChatRequest(message: "Hello")
+        let chatRequest = ChatRequest(message: "Hello")
 
-                try await app.test(.router) { client in
-                    let buffer = try ByteBuffer(bytes: JSONEncoder().encode(chatRequest))
-                    try await client.execute(uri: "/sessions/\(session.id)/chat", method: .post, body: buffer) { response in
-                        #expect(response.status != .ok)
-                    }
-                }
+        try await app.test(.router) { client in
+            let buffer = try ByteBuffer(bytes: JSONEncoder().encode(chatRequest))
+            try await client.execute(uri: "/sessions/\(session.id)/chat", method: .post, body: buffer) { response in
+                #expect(response.status != .ok)
             }
+        }
     }
 }

@@ -1,14 +1,13 @@
-import Dependencies
 import Foundation
 import GRDB
-import PositronicKit
 @testable import MonadServer
-import PKShared
 import MonadShared
+import PKShared
 import PKTestSupport
+import PositronicKit
 import Testing
 
-@Suite final class SessionWorkspaceTests {
+final class SessionWorkspaceTests {
     var persistenceService: PersistenceService!
     var embeddingService: MockEmbeddingService!
     var llmService: MockLLMService!

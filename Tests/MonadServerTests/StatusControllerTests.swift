@@ -1,16 +1,15 @@
-import Dependencies
 import Foundation
 import Hummingbird
 import HummingbirdTesting
-import PositronicKit
 @testable import MonadServer
-import PKShared
 import MonadShared
-import PKTestSupport
 import NIOCore
+import PKShared
+import PKTestSupport
+import PositronicKit
 import Testing
 
-@Suite struct StatusControllerTests {
+struct StatusControllerTests {
     @Test("Test Status Endpoint")
     func statusEndpoint() async throws {
         struct MockDatabase: HealthCheckable {

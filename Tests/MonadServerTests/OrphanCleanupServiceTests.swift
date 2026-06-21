@@ -1,13 +1,12 @@
-import Dependencies
 import Foundation
-import PositronicKit
 @testable import MonadServer
-import PKShared
 import MonadShared
+import PKShared
 import PKTestSupport
+import PositronicKit
 import Testing
 
-@Suite final class OrphanCleanupServiceTests {
+final class OrphanCleanupServiceTests {
     var workspaceRoot: URL!
     var mockPersistence: MockPersistenceService!
 
@@ -49,18 +48,14 @@ import Testing
 
         // Act
         let mockPersistence = try #require(mockPersistence)
-        try await TestDependencies()
-            .withMocks(persistence: mockPersistence)
-            .run {
-                // Internal cleanup method is private, but run() calls it once on start.
-                // We'll use Task and cancellation to run it just once.
-                let task = Task {
-                    try await service.run()
-                }
-                // Give it a moment to run the initial cleanup
-                try await Task.sleep(nanoseconds: 100 * 1_000_000)
-                task.cancel()
-            }
+        // Internal cleanup method is private, but run() calls it once on start.
+        // We'll use Task and cancellation to run it just once.
+        let task = Task {
+            try await service.run()
+        }
+        // Give it a moment to run the initial cleanup
+        try await Task.sleep(nanoseconds: 100 * 1_000_000)
+        task.cancel()
 
         // Assert
         #expect(!(FileManager.default.fileExists(atPath: orphanPath)))
@@ -90,15 +85,11 @@ import Testing
 
         // Act
         let mockPersistence = try #require(mockPersistence)
-        try await TestDependencies()
-            .withMocks(persistence: mockPersistence)
-            .run {
-                let task = Task {
-                    try await service.run()
-                }
-                try await Task.sleep(nanoseconds: 100 * 1_000_000)
-                task.cancel()
-            }
+        let task = Task {
+            try await service.run()
+        }
+        try await Task.sleep(nanoseconds: 100 * 1_000_000)
+        task.cancel()
 
         // Assert
         #expect(FileManager.default.fileExists(atPath: userWsPath))

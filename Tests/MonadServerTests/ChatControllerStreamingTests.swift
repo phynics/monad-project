@@ -1,14 +1,13 @@
-import Dependencies
 import Foundation
 import Hummingbird
 import HummingbirdTesting
-import PositronicKit
 @testable import MonadServer
-import PKShared
 import MonadShared
-import PKTestSupport
 import NIOCore
 import OpenAI
+import PKShared
+import PKTestSupport
+import PositronicKit
 import Testing
 
 struct ChatControllerStreamingTests {
@@ -22,63 +21,59 @@ struct ChatControllerStreamingTests {
 
         let workspace = TestWorkspace()
 
-        try await TestDependencies()
-            .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
-            .withOrchestration(workspaceRoot: workspace.root)
-            .run { mocks in
-                let timelineManager = try #require(mocks.overrides.timelineManager)
-                let toolRouter = try #require(mocks.overrides.toolRouter)
-                let agentInstanceStore = persistence
+        let runtime = TestRuntime(workspaceRoot: workspace.root, persistence: persistence, llm: llmService, embedding: embedding)
+        let timelineManager = runtime.timelineManager
+        let toolRouter = runtime.toolRouter
+        let agentInstanceStore = persistence
 
-                // Create Session
-                let session = try await timelineManager.createTimeline()
+        // Create Session
+        let session = try await timelineManager.createTimeline()
 
-                // Attach an agent
-                let agentId = UUID()
-                let agent = AgentInstance(
-                    id: agentId, name: "Test Agent", description: "Test",
-                    primaryWorkspaceId: UUID(), privateTimelineId: UUID()
-                )
-                try await persistence.saveAgentInstance(agent)
-                var updatedSession = session
-                updatedSession.attachedAgentInstanceId = agentId
-                try await persistence.saveTimeline(updatedSession)
+        // Attach an agent
+        let agentId = UUID()
+        let agent = AgentInstance(
+            id: agentId, name: "Test Agent", description: "Test",
+            primaryWorkspaceId: UUID(), privateTimelineId: UUID()
+        )
+        try await persistence.saveAgentInstance(agent)
+        var updatedSession = session
+        updatedSession.attachedAgentInstanceId = agentId
+        try await persistence.saveTimeline(updatedSession)
 
-                // Clear cache to force re-hydration with agent
-                await timelineManager.deleteTimeline(id: session.id)
+        // Clear cache to force re-hydration with agent
+        await timelineManager.deleteTimeline(id: session.id)
 
-                // Setup App
-                let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>(
-                    chat: mocks.buildCoreChat(),
-                    timelineManager: timelineManager,
-                    agentInstanceStore: agentInstanceStore,
-                    toolRouter: toolRouter
-                )
-                controller.addRoutes(to: router.group("/sessions"))
+        // Setup App
+        let router = Router()
+        let controller = ChatAPIController<BasicRequestContext>(
+            chat: runtime.buildCore(),
+            timelineManager: timelineManager,
+            agentInstanceStore: agentInstanceStore,
+            toolRouter: toolRouter
+        )
+        controller.addRoutes(to: router.group("/sessions"))
 
-                let app = Application(router: router)
+        let app = Application(router: router)
 
-                // Test Request
-                let chatRequest = ChatRequest(message: "Hi")
+        // Test Request
+        let chatRequest = ChatRequest(message: "Hi")
 
-                try await app.test(.router) { client in
-                    let buffer = try ByteBuffer(bytes: JSONEncoder().encode(chatRequest))
+        try await app.test(.router) { client in
+            let buffer = try ByteBuffer(bytes: JSONEncoder().encode(chatRequest))
 
-                    try await client.execute(
-                        uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer
-                    ) { response in
-                        #expect(response.status == .ok)
-                        #expect(response.headers[.contentType] == "text/event-stream")
+            try await client.execute(
+                uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer
+            ) { response in
+                #expect(response.status == .ok)
+                #expect(response.headers[.contentType] == "text/event-stream")
 
-                        // Collect body
-                        let body = String(buffer: response.body)
-                        // SSE format check
-                        #expect(body.contains("data:"))
-                        #expect(body.contains("\"streamCompleted\""))
-                    }
-                }
+                // Collect body
+                let body = String(buffer: response.body)
+                // SSE format check
+                #expect(body.contains("data:"))
+                #expect(body.contains("\"streamCompleted\""))
             }
+        }
     }
 
     @Test("Test Chat Cancellation")
@@ -91,71 +86,63 @@ struct ChatControllerStreamingTests {
 
         let workspace = TestWorkspace()
 
-        try await withDependencies {
-            $0.continuousClock = ContinuousClock()
-        } operation: {
-            try await TestDependencies()
-                .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
-                .withOrchestration(workspaceRoot: workspace.root)
-                .run { mocks in
-                let timelineManager = try #require(mocks.overrides.timelineManager)
-                let toolRouter = try #require(mocks.overrides.toolRouter)
-                let agentInstanceStore = persistence
+        let runtime = TestRuntime(workspaceRoot: workspace.root, persistence: persistence, llm: llmService, embedding: embedding)
+        let timelineManager = runtime.timelineManager
+        let toolRouter = runtime.toolRouter
+        let agentInstanceStore = persistence
 
-                let session = try await timelineManager.createTimeline()
+        let session = try await timelineManager.createTimeline()
 
-                // Attach an agent
-                let agentId = UUID()
-                let agent = AgentInstance(
-                    id: agentId, name: "Test Agent", description: "Test",
-                    primaryWorkspaceId: UUID(), privateTimelineId: UUID()
-                )
-                try await persistence.saveAgentInstance(agent)
-                var updatedSession = session
-                updatedSession.attachedAgentInstanceId = agentId
-                try await persistence.saveTimeline(updatedSession)
+        // Attach an agent
+        let agentId = UUID()
+        let agent = AgentInstance(
+            id: agentId, name: "Test Agent", description: "Test",
+            primaryWorkspaceId: UUID(), privateTimelineId: UUID()
+        )
+        try await persistence.saveAgentInstance(agent)
+        var updatedSession = session
+        updatedSession.attachedAgentInstanceId = agentId
+        try await persistence.saveTimeline(updatedSession)
 
-                // Clear cache to force re-hydration with agent
-                await timelineManager.deleteTimeline(id: session.id)
+        // Clear cache to force re-hydration with agent
+        await timelineManager.deleteTimeline(id: session.id)
 
-                let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>(
-                    chat: mocks.buildCoreChat(),
-                    timelineManager: timelineManager,
-                    agentInstanceStore: agentInstanceStore,
-                    toolRouter: toolRouter
-                )
-                controller.addRoutes(to: router.group("/sessions"))
-                let app = Application(router: router)
-                let chatRequest = ChatRequest(message: "Wait for it")
+        let router = Router()
+        let controller = ChatAPIController<BasicRequestContext>(
+            chat: runtime.buildCore(),
+            timelineManager: timelineManager,
+            agentInstanceStore: agentInstanceStore,
+            toolRouter: toolRouter
+        )
+        controller.addRoutes(to: router.group("/sessions"))
+        let app = Application(router: router)
+        let chatRequest = ChatRequest(message: "Wait for it")
 
-                try await app.test(.router) { client in
-                    let buffer = try ByteBuffer(bytes: JSONEncoder().encode(chatRequest))
+        try await app.test(.router) { client in
+            let buffer = try ByteBuffer(bytes: JSONEncoder().encode(chatRequest))
 
-                    // Start stream in background
-                    let streamTask = Task {
-                        try await client.execute(
-                            uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer
-                        ) { response in
-                            #expect(response.status == .ok)
-                            let body = String(buffer: response.body)
-                            #expect(body.contains("\"generationCancelled\""))
-                        }
-                    }
-
-                    // Wait for stream to start (enough time for timelineManager to register task)
-                    try await Task.sleep(nanoseconds: 500_000_000) // 0.5s
-
-                    // Cancel
-                    try await client.execute(
-                        uri: "/sessions/\(session.id)/chat/cancel", method: .post
-                    ) { response in
-                        #expect(response.status == .ok)
-                    }
-
-                    try await streamTask.value
+            // Start stream in background
+            let streamTask = Task {
+                try await client.execute(
+                    uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer
+                ) { response in
+                    #expect(response.status == .ok)
+                    let body = String(buffer: response.body)
+                    #expect(body.contains("\"generationCancelled\""))
                 }
-                }
+            }
+
+            // Wait for stream to start (enough time for timelineManager to register task)
+            try await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+
+            // Cancel
+            try await client.execute(
+                uri: "/sessions/\(session.id)/chat/cancel", method: .post
+            ) { response in
+                #expect(response.status == .ok)
+            }
+
+            try await streamTask.value
         }
     }
 
@@ -169,40 +156,36 @@ struct ChatControllerStreamingTests {
 
         let workspace = TestWorkspace()
 
-        try await TestDependencies()
-            .withMocks(persistence: persistence, llm: llmService, embedding: embedding)
-            .withOrchestration(workspaceRoot: workspace.root)
-            .run { mocks in
-                let timelineManager = try #require(mocks.overrides.timelineManager)
-                let toolRouter = try #require(mocks.overrides.toolRouter)
-                let agentInstanceStore = persistence
+        let runtime = TestRuntime(workspaceRoot: workspace.root, persistence: persistence, llm: llmService, embedding: embedding)
+        let timelineManager = runtime.timelineManager
+        let toolRouter = runtime.toolRouter
+        let agentInstanceStore = persistence
 
-                // Create Session
-                let session = try await timelineManager.createTimeline()
+        // Create Session
+        let session = try await timelineManager.createTimeline()
 
-                // Setup App
-                let router = Router()
-                let controller = ChatAPIController<BasicRequestContext>(
-                    chat: mocks.buildCoreChat(),
-                    timelineManager: timelineManager,
-                    agentInstanceStore: agentInstanceStore,
-                    toolRouter: toolRouter
-                )
-                controller.addRoutes(to: router.group("/sessions"))
+        // Setup App
+        let router = Router()
+        let controller = ChatAPIController<BasicRequestContext>(
+            chat: runtime.buildCore(),
+            timelineManager: timelineManager,
+            agentInstanceStore: agentInstanceStore,
+            toolRouter: toolRouter
+        )
+        controller.addRoutes(to: router.group("/sessions"))
 
-                let app = Application(router: router)
+        let app = Application(router: router)
 
-                // Test Request
-                let chatRequest = ChatRequest(message: "Hi")
+        // Test Request
+        let chatRequest = ChatRequest(message: "Hi")
 
-                try await app.test(.router) { client in
-                    let buffer = try ByteBuffer(bytes: JSONEncoder().encode(chatRequest))
-                    try await client.execute(
-                        uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer
-                    ) { response in
-                        #expect(response.status != .ok)
-                    }
-                }
+        try await app.test(.router) { client in
+            let buffer = try ByteBuffer(bytes: JSONEncoder().encode(chatRequest))
+            try await client.execute(
+                uri: "/sessions/\(session.id)/chat/stream", method: .post, body: buffer
+            ) { response in
+                #expect(response.status != .ok)
             }
+        }
     }
 }

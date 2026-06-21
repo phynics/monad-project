@@ -1,15 +1,14 @@
-import Dependencies
 import Foundation
 import Hummingbird
 import HummingbirdTesting
-import PositronicKit
 @testable import MonadServer
-import PKShared
 import MonadShared
+import PKShared
 import PKTestSupport
+import PositronicKit
 import Testing
 
-@Suite struct AgentTemplateControllerTests {
+struct AgentTemplateControllerTests {
     private func withApp(
         agentTemplates: [AgentTemplate] = [],
         operation: @escaping @Sendable (any TestClientProtocol) async throws -> Void
@@ -17,17 +16,13 @@ import Testing
         let mockPersistence = MockPersistenceService()
         mockPersistence.agentTemplates = agentTemplates
 
-        try await withDependencies {
-            $0.agentTemplateStore = mockPersistence
-        } operation: {
-            let router = Router()
-            let controller = AgentTemplateAPIController<BasicRequestContext>(agentTemplateStore: mockPersistence)
-            controller.addRoutes(to: router.group("/agentTemplates"))
-            let app = Application(router: router)
+        let router = Router()
+        let controller = AgentTemplateAPIController<BasicRequestContext>(agentTemplateStore: mockPersistence)
+        controller.addRoutes(to: router.group("/agentTemplates"))
+        let app = Application(router: router)
 
-            try await app.test(.router) { client in
-                try await operation(client)
-            }
+        try await app.test(.router) { client in
+            try await operation(client)
         }
     }
 

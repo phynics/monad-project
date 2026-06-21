@@ -1,12 +1,11 @@
-import Dependencies
 import Foundation
 import GRDB
 import Hummingbird
 import HummingbirdTesting
-import PositronicKit
 @testable import MonadServer
-import PKShared
 import MonadShared
+import PKShared
+import PositronicKit
 import Testing
 
 @Suite(.serialized)
@@ -23,20 +22,14 @@ struct PruneControllerTests {
     }
 
     private func makeApp() -> some ApplicationProtocol {
-        return withDependencies {
-            $0.memoryStore = persistence.memoryStore
-            $0.timelinePersistence = persistence.timelineStore
-            $0.messageStore = persistence.messageStore
-        } operation: {
-            let router = Router()
-            let controller = PruneAPIController<BasicRequestContext>(
-                memoryStore: persistence.memoryStore,
-                timelineStore: persistence.timelineStore,
-                messageStore: persistence.messageStore
-            )
-            controller.addRoutes(to: router.group("/prune"))
-            return Application(router: router)
-        }
+        let router = Router()
+        let controller = PruneAPIController<BasicRequestContext>(
+            memoryStore: persistence.memoryStore,
+            timelineStore: persistence.timelineStore,
+            messageStore: persistence.messageStore
+        )
+        controller.addRoutes(to: router.group("/prune"))
+        return Application(router: router)
     }
 
     // MARK: - pruneMemories

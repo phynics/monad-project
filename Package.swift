@@ -21,7 +21,6 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
         .package(url: "https://github.com/ajevans99/swift-json-schema", from: "0.11.2"),
         .package(url: "https://github.com/unum-cloud/USearch", from: "2.0.0"),
-        .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.0.0"),
         .package(url: "https://github.com/FlineDev/ErrorKit", from: "1.0.0"),
         .package(path: "../PositronicKit"),
     ],
@@ -96,7 +95,6 @@ let package = Package(
                 .product(name: "PKShared", package: "PositronicKit"),
                 .product(name: "PKTestSupport", package: "PositronicKit"),
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
-                .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "USearch", package: "USearch"),
             ],
             path: "Tests/MonadServerTests"

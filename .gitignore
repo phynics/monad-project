@@ -92,3 +92,5 @@ tmp/
 # Testing
 .test_workspaces/
 implementation-plan.md
+# Superpowers tooling state
+.superpowers/
