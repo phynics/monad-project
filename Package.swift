@@ -43,6 +43,7 @@ let package = Package(
                 .product(name: "PositronicKit", package: "PositronicKit"),
                 .product(name: "PKShared", package: "PositronicKit"),
                 .product(name: "PKPrompt", package: "PositronicKit"),
+                .product(name: "PKLocalEmbeddings", package: "PositronicKit"),
                 .product(name: "PKOpenAIProvider", package: "PositronicKit"),
                 .product(name: "PKOpenRouterProvider", package: "PositronicKit"),
                 .product(name: "PKOllamaProvider", package: "PositronicKit"),
@@ -106,7 +107,7 @@ let package = Package(
                 "MonadCLI",
                 "MonadClient",
                 "MonadShared",
-                .product(name: "PKTestSupport", package: "PositronicKit")
+                .product(name: "PKTestSupport", package: "PositronicKit"),
             ],
             path: "Tests/MonadCLITests"
         ),
@@ -116,7 +117,7 @@ let package = Package(
                 "MonadClient",
                 "MonadShared",
                 .product(name: "PositronicKit", package: "PositronicKit"),
-                .product(name: "PKTestSupport", package: "PositronicKit")
+                .product(name: "PKTestSupport", package: "PositronicKit"),
             ],
             path: "Tests/MonadClientTests"
         ),

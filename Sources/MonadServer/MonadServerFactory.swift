@@ -3,9 +3,10 @@ import GRDB
 import Hummingbird
 import HummingbirdWebSocket
 import Logging
-import PositronicKit
-import PKShared
 import MonadShared
+import PKLocalEmbeddings
+import PKShared
+import PositronicKit
 import ServiceLifecycle
 import UnixSignals
 
@@ -162,7 +163,6 @@ public struct MonadServerFactory {
             workspaceStore: repositories.workspacePersistence,
             timelineStore: repositories.timelinePersistence
         )
-
 
         return ServerComponents(
             databaseManager: databaseManager,
