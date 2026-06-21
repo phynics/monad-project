@@ -80,8 +80,7 @@ public struct MonadServerFactory {
                 memoryStore: components.repositories.memoryStore,
                 toolPersistence: components.repositories.toolPersistence,
                 agentInstanceStore: components.repositories.agentInstanceStore,
-                requestOriginStore: components.repositories.requestOriginStore,
-                agentTemplateStore: components.repositories.agentTemplateStore
+                requestOriginStore: components.repositories.requestOriginStore
             ),
             embeddingService: components.services.embeddingService,
             timelineManager: components.managers.timelineManager,
