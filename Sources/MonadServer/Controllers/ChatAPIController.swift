@@ -11,12 +11,12 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     private let timelineManager: TimelineManager
     private let agentInstanceStore: any AgentInstanceStoreProtocol
     private let toolRouter: ToolRouter
-    private let chat: PositronicKitCore
+    private let chat: PositronicKit
     public let verbose: Bool
     private let logger = Logger.module(named: "chat")
 
     public init(
-        chat: PositronicKitCore,
+        chat: PositronicKit,
         timelineManager: TimelineManager,
         agentInstanceStore: any AgentInstanceStoreProtocol,
         toolRouter: ToolRouter,

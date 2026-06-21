@@ -71,7 +71,7 @@ public struct MonadServerFactory {
         router.add(middleware: LogMiddleware())
         router.add(middleware: ErrorMiddleware())
 
-        let coreChat = PositronicKitCore(
+        let coreChat = PositronicKit(
             llmService: components.services.llmService,
             persistence: .init(
                 messageStore: components.repositories.messageStore,

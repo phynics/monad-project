@@ -66,7 +66,7 @@ extension MonadServerFactory {
     static func registerChatAndTimelineRoutes(
         on protected: RouterGroup<AppRequestContext>,
         connectionManager: WebSocketConnectionManager,
-        chat: PositronicKitCore,
+        chat: PositronicKit,
         timelineManager: TimelineManager,
         timelineStore: any TimelinePersistenceProtocol,
         workspaceStore: any WorkspacePersistenceProtocol,
