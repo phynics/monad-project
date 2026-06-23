@@ -31,6 +31,7 @@ public struct MonadServerFactory {
         let services: ServiceSet
         let managers: ManagerSet
         let orphanCleanup: OrphanCleanupService
+        let workspaceRoot: URL
     }
 
     private struct RepositorySet {
@@ -53,8 +54,6 @@ public struct MonadServerFactory {
     }
 
     private struct ManagerSet {
-        let timelineManager: TimelineManager
-        let toolRouter: ToolRouter
         let agentInstanceManager: any AgentInstanceManagerProtocol
         let workspaceManager: any WorkspaceManagerProtocol
     }
@@ -83,8 +82,10 @@ public struct MonadServerFactory {
                 requestOriginStore: components.repositories.requestOriginStore
             ),
             embeddingService: components.services.embeddingService,
-            timelineManager: components.managers.timelineManager,
-            toolRouter: components.managers.toolRouter
+            runtime: .init(
+                workspaceCreator: WorkspaceFactory(connectionManager: components.services.connectionManager),
+                workspaceRoot: components.workspaceRoot
+            )
         )
 
         registerPublicRoutes(
@@ -97,11 +98,11 @@ public struct MonadServerFactory {
             on: protected,
             connectionManager: components.services.connectionManager,
             chat: coreChat,
-            timelineManager: components.managers.timelineManager,
+            timelineManager: coreChat.timelineManager,
             timelineStore: components.repositories.timelinePersistence,
             workspaceStore: components.repositories.workspacePersistence,
             agentInstanceStore: components.repositories.agentInstanceStore,
-            toolRouter: components.managers.toolRouter,
+            toolRouter: coreChat.toolRouter,
             verbose: verbose
         )
         registerResourceRoutes(
@@ -115,8 +116,8 @@ public struct MonadServerFactory {
                 agentTemplateStore: components.repositories.agentTemplateStore,
                 requestOriginStore: components.repositories.requestOriginStore,
                 workspaceManager: components.managers.workspaceManager,
-                timelineManager: components.managers.timelineManager,
-                toolRouter: components.managers.toolRouter,
+                timelineManager: coreChat.timelineManager,
+                toolRouter: coreChat.toolRouter,
                 databaseManager: components.databaseManager,
                 llmService: components.services.llmService
             ),
@@ -168,7 +169,8 @@ public struct MonadServerFactory {
             repositories: repositories,
             services: services,
             managers: managers,
-            orphanCleanup: orphanCleanup
+            orphanCleanup: orphanCleanup,
+            workspaceRoot: workspaceRoot
         )
     }
 
@@ -253,24 +255,8 @@ public struct MonadServerFactory {
             workspaceRoot: workspaceRoot,
             workspacePersistence: repositories.workspacePersistence
         )
-        let timelineManager = TimelineManager(
-            stores: .init(
-                timelineStore: repositories.timelinePersistence,
-                messageStore: repositories.messageStore,
-                workspaceStore: repositories.workspacePersistence,
-                toolPersistence: repositories.toolPersistence
-            ),
-            workspaceRoot: workspaceRoot,
-            workspaceCreator: WorkspaceFactory(connectionManager: connectionManager)
-        )
-        let toolRouter = ToolRouter(
-            timelineManager: timelineManager,
-            messageStore: repositories.messageStore
-        )
 
         return ManagerSet(
-            timelineManager: timelineManager,
-            toolRouter: toolRouter,
             agentInstanceManager: AgentInstanceManager(
                 repository: agentWorkspaceService,
                 stores: .init(
