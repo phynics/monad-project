@@ -104,3 +104,21 @@ Monad consumes these products from `PositronicKit`:
 
 See `docs/INDEX.md` for Monad documentation.
 See `../PositronicKit/AGENTS.md` for the authoritative shared-runtime guidance.
+
+## Workflow Artifacts
+
+This repo holds **reference docs only** (`docs/` — architecture, API reference, etc.).
+Agentic-workflow scaffolding (superpowers specs/plans, decomposed tickets, brainstorm output)
+lives centrally at the workspace root under `workflow/`, namespaced by project:
+
+```text
+../workflow/
+  Monad/plans/                        # this project's plans
+  PositronicKit/plans/ specs/ tickets/
+  Shuttle/plans/ specs/
+  Yakamoz/plans/ specs/ checkpoints/ tickets/ brainstorm/
+  workspace/plans/                    # cross-cutting workspace plans
+```
+
+Put new specs/plans/tickets under `../workflow/Monad/...`, **not** back inside `docs/`.
+See the root `../CLAUDE.md` for the full layout.
