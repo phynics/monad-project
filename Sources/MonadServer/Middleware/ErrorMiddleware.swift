@@ -2,10 +2,10 @@ import Foundation
 import HTTPTypes
 import Hummingbird
 import Logging
-import PositronicKit
-import PKShared
 import MonadShared
 import NIOCore
+import PKShared
+import PositronicKit
 
 public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
     public init() {}
@@ -80,6 +80,8 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
             return ErrorClassification(status: .badRequest, code: "malformed_arguments")
         case .schemaMismatch:
             return ErrorClassification(status: .badRequest, code: "schema_mismatch")
+        case .permissionDenied:
+            return ErrorClassification(status: .forbidden, code: "permission_denied")
         }
     }
 
