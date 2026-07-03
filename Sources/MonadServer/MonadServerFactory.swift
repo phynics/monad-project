@@ -29,7 +29,7 @@ public struct MonadServerFactory {
         let databaseManager: DatabaseManager
         let repositories: RepositorySet
         let services: ServiceSet
-        let managers: ManagerSet
+        var managers: ManagerSet
         let orphanCleanup: OrphanCleanupService
         let workspaceRoot: URL
     }
@@ -54,7 +54,7 @@ public struct MonadServerFactory {
     }
 
     private struct ManagerSet {
-        let agentInstanceManager: any AgentInstanceManagerProtocol
+        var agentInstanceManager: any AgentInstanceManagerProtocol
         let workspaceManager: any WorkspaceManagerProtocol
     }
 
@@ -64,7 +64,7 @@ public struct MonadServerFactory {
         verbose: Bool = false,
         logger: Logger = Logger.module(named: "server")
     ) async throws -> ServerContext {
-        let components = try await initializeComponents(logger: logger)
+        var components = try await initializeComponents(logger: logger)
 
         let router = Router(context: AppRequestContext.self)
         router.add(middleware: LogMiddleware())
@@ -86,6 +86,25 @@ public struct MonadServerFactory {
                 workspaceCreator: WorkspaceFactory(connectionManager: components.services.connectionManager),
                 workspaceRoot: components.workspaceRoot
             )
+        )
+
+        // Reconstruct the AgentInstanceManager with the facade's TimelineManager injected
+        // so private-timeline deletion (deleteInstance) evicts the in-memory caches and
+        // prompt-history registry via the single TimelineManager.deleteTimeline(id:) seam (PKR-3).
+        // initializeComponents builds it without a TimelineManager (the facade hasn't been
+        // constructed yet); rebind here now that coreChat.timelineManager exists.
+        components.managers.agentInstanceManager = AgentInstanceManager(
+            repository: AgentWorkspaceService(
+                workspaceRoot: components.workspaceRoot,
+                workspacePersistence: components.repositories.workspacePersistence
+            ),
+            stores: .init(
+                instanceStore: components.repositories.agentInstanceStore,
+                timelineStore: components.repositories.timelinePersistence,
+                messageStore: components.repositories.messageStore,
+                workspaceStore: components.repositories.workspacePersistence
+            ),
+            timelineManager: coreChat.timelineManager
         )
 
         registerPublicRoutes(

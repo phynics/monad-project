@@ -167,10 +167,8 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.forbidden, message: "Private timelines cannot be deleted via the session API")
         }
 
-        // Remove from memory
+        // Evict in-memory caches + prompt-history registry (PKR-3), then delete the persisted row.
         await timelineManager.deleteTimeline(id: id)
-
-        // Remove from DB
         try await timelineStore.deleteTimeline(id: id)
 
         return .noContent
