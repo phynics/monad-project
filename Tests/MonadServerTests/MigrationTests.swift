@@ -161,6 +161,59 @@ struct MigrationTests {
         }
     }
 
+    @Test("v8 migration adds nullable status column to conversationMessage (MON-1)")
+    func v8Migration_addsStatusColumn() async throws {
+        let queue = try DatabaseQueue()
+        var migrator = DatabaseMigrator()
+        DatabaseSchema.registerMigrations(in: &migrator)
+        try migrator.migrate(queue)
+
+        try await queue.read { db in
+            let statusColumn = try db.columns(in: "conversationMessage").first(where: { $0.name == "status" })
+            #expect(statusColumn != nil, "v8 must add a status column to conversationMessage")
+            // Nullable: STAB-1's nil == .complete must round-trip, so the column cannot be NOT NULL.
+            #expect(statusColumn?.isNotNull == false, "status column must be nullable (nil == .complete)")
+        }
+    }
+
+    @Test("ConversationMessage status round-trips through the database (MON-1)")
+    func conversationMessageStatus_roundTrips() async throws {
+        let queue = try DatabaseQueue()
+        var migrator = DatabaseMigrator()
+        DatabaseSchema.registerMigrations(in: &migrator)
+        try migrator.migrate(queue)
+
+        let timelineStore = TimelineRepository(dbQueue: queue)
+        let messageStore = MessageRepository(dbQueue: queue)
+
+        let session = Timeline(title: "MON-1 round-trip")
+        try await timelineStore.saveTimeline(session)
+
+        // A partial (failed-stream) assistant turn must persist and reload with its tag.
+        let partial = ConversationMessage(
+            timelineId: session.id,
+            role: .assistant,
+            content: "partial response",
+            status: .partial
+        )
+        try await messageStore.saveMessage(partial)
+
+        let fetchedPartial = try await messageStore.fetchMessages(for: session.id).first(where: { $0.id == partial.id })
+        #expect(fetchedPartial?.status == .partial)
+
+        // A complete (nil-status) assistant turn round-trips as nil — byte-identical to
+        // pre-STAB-1 rows and to the success path.
+        let complete = ConversationMessage(
+            timelineId: session.id,
+            role: .assistant,
+            content: "complete response"
+        )
+        try await messageStore.saveMessage(complete)
+
+        let fetchedComplete = try await messageStore.fetchMessages(for: session.id).first(where: { $0.id == complete.id })
+        #expect(fetchedComplete?.status == nil)
+    }
+
     @Test("database reset fallback is not offered for non-integrity open failures")
     func databaseInitialization_doesNotOfferResetForOpenFailure() throws {
         let badPath = "/definitely-missing-parent-\(UUID().uuidString)/monad.sqlite"

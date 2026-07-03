@@ -101,5 +101,22 @@ public extension DatabaseSchema {
                 ifNotExists: true
             )
         }
+
+        migrator.registerMigration("v8") { db in
+            // STAB-1 added an optional `status` (`.partial`/`.failed`/`.cancelled`, nil ==
+            // `.complete`) to `ConversationMessage` in PositronicKit. The default Codable
+            // column mapping writes the property on every save, so a database without this
+            // column rejects the insert and `persistPartialAssistantIfNeeded` fails (caught +
+            // logged) — silently losing the partial turn in the running server. Add the
+            // nullable TEXT column, mirroring the `snapshotData` (v4) additive pattern. Guard
+            // on table existence (like v7's `workspaceTool` guard) so a minimal/partial schema
+            // that never created `conversationMessage` doesn't fail the migration.
+            guard try db.tableExists("conversationMessage") else { return }
+            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "status" }) {
+                try db.alter(table: "conversationMessage") { table in
+                    table.add(column: "status", .text)
+                }
+            }
+        }
     }
 }
