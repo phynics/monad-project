@@ -82,6 +82,8 @@ public struct ErrorMiddleware<Context: RequestContext>: MiddlewareProtocol {
             return ErrorClassification(status: .badRequest, code: "schema_mismatch")
         case .permissionDenied:
             return ErrorClassification(status: .forbidden, code: "permission_denied")
+        case .unmatchedToolOutput:
+            return ErrorClassification(status: .internalServerError, code: "unmatched_tool_output")
         }
     }
 
