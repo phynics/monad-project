@@ -1,7 +1,7 @@
 import Foundation
 import MonadClient
-import PKShared
 import MonadShared
+import PKShared
 
 // Needed for fflush
 #if canImport(Glibc)
@@ -87,7 +87,7 @@ extension ChatREPL {
             switch decision {
             case .proceed:
                 return true
-            case .syncLocalAgent(let agentId):
+            case let .syncLocalAgent(agentId):
                 let agent = try await client.chat.getAgentInstance(id: agentId)
                 await setAgent(agent)
                 return true
@@ -201,9 +201,13 @@ extension ChatREPL {
         switch err {
         case let .toolCallError(_, name, error):
             print(TerminalUI.red("  ✗ Tool Error (\(name)): \(error)"))
-        case let .error(message):
+        case let .error(message, identity):
             print("\n")
-            TerminalUI.printError("Stream Error: \(message)")
+            if let identity = identity {
+                TerminalUI.printError("Stream Error [\(identity.domain):\(identity.code)]: \(message)")
+            } else {
+                TerminalUI.printError("Stream Error: \(message)")
+            }
         case .generationCancelled:
             print(TerminalUI.yellow("\n[Generation cancelled]"))
         }
