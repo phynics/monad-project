@@ -12,8 +12,8 @@ Quick reference for agents working with the Monad application repository.
 ## Repository Split
 
 - `Monad` contains the app-facing targets: `MonadServer`, `MonadClient`, `MonadCLI`, and their tests.
-- `../PositronicKit` contains the shared runtime, prompt, contracts, and test-support modules consumed by Monad.
-- `Package.swift` wires Monad to `PositronicKit` via `.package(path: "../PositronicKit")`.
+- `PositronicKit` (sibling `../PositronicKit`) contains the shared runtime, prompt, contracts, and test-support modules consumed by Monad.
+- `Package.swift` wires Monad to `PositronicKit` as a **remote** SwiftPM package (`github.com/phynics/PositronicKit.git`, branch `main`). To test a local PositronicKit change before pushing, temporarily swap the dependency to `.package(path: "../PositronicKit")` and `swift package resolve`; revert before committing. See the root `../CLAUDE.md` "Local-dev override" section.
 
 ## Working Boundary
 

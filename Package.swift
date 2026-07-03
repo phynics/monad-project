@@ -22,7 +22,7 @@ let package = Package(
         .package(url: "https://github.com/ajevans99/swift-json-schema", from: "0.11.2"),
         .package(url: "https://github.com/unum-cloud/USearch", from: "2.0.0"),
         .package(url: "https://github.com/FlineDev/ErrorKit", from: "1.0.0"),
-        .package(path: "../PositronicKit"),
+        .package(url: "https://github.com/phynics/PositronicKit.git", branch: "main"),
     ],
     targets: [
         .target(

@@ -24,7 +24,7 @@ struct ClientToolExecutor {
             // Standard shared tools
             guard let tool = instantiateTool(name: call.name, rootPath: rootPath) else {
                 submissions.append(ToolOutputSubmission(
-                    toolCallId: call.id.uuidString,
+                    toolCallId: call.id,
                     output: "Error: Tool '\(call.name)' not found or not supported on this client."
                 ))
                 continue
@@ -34,12 +34,12 @@ struct ClientToolExecutor {
                 let dict = call.arguments.mapValues { $0.value }
                 let result = try await tool.execute(parameters: dict)
                 submissions.append(ToolOutputSubmission(
-                    toolCallId: call.id.uuidString,
+                    toolCallId: call.id,
                     output: result.output
                 ))
             } catch {
                 submissions.append(ToolOutputSubmission(
-                    toolCallId: call.id.uuidString,
+                    toolCallId: call.id,
                     output: "Error executing tool: \(error.localizedDescription)"
                 ))
             }
@@ -57,7 +57,7 @@ struct ClientToolExecutor {
 
         guard answer else {
             return ToolOutputSubmission(
-                toolCallId: toolCall.id.uuidString,
+                toolCallId: toolCall.id,
                 output: "User denied write access."
             )
         }
@@ -76,12 +76,12 @@ struct ClientToolExecutor {
             )
 
             return ToolOutputSubmission(
-                toolCallId: toolCall.id.uuidString,
+                toolCallId: toolCall.id,
                 output: "Write access granted successfully. You may now use write-enabled tools."
             )
         } catch {
             return ToolOutputSubmission(
-                toolCallId: toolCall.id.uuidString,
+                toolCallId: toolCall.id,
                 output: "Error upgrading workspace trust level: \(error.localizedDescription)"
             )
         }
