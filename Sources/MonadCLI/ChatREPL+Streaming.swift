@@ -178,6 +178,11 @@ extension ChatREPL {
         case let .toolExecution(toolCallId, status):
             state.sawToolExecutionEvent = true
             handleToolExecutionDelta(toolCallId: toolCallId, status: status, state: &state)
+
+        case .sidecar:
+            // Sidecar directives (title/summary/etc.) have no CLI presentation yet; the
+            // concrete directives and their routing are Yakamoz-side (SID-1/SID-2).
+            break
         }
     }
 
@@ -220,6 +225,9 @@ extension ChatREPL {
         case let .toolExecution(_, status):
             handleToolExecutionCompletion(status: status)
         case .streamCompleted:
+            break
+        case .sidecarsCompleted:
+            // No CLI presentation yet; see the note in handleDeltaEvent's .sidecar case.
             break
         }
     }
