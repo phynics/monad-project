@@ -1,7 +1,7 @@
 import Foundation
-import PositronicKit
-import PKShared
 import MonadShared
+import PKShared
+import PositronicKit
 
 /// Implementation of WorkspaceProtocol for workspaces hosted on the local server filesystem
 public actor LocalWorkspace: WorkspaceProtocol {
@@ -57,12 +57,12 @@ public actor LocalWorkspace: WorkspaceProtocol {
             throw WorkspaceError.accessDenied
         }
 
-        // Recursive listing
+        // Recursive listing, scoped to the requested subdirectory (not always the workspace root).
         var files: [String] = []
         let rootPath = rootURL.resolvingSymlinksInPath().path
 
         if let enumerator = FileManager.default.enumerator(
-            at: rootURL, includingPropertiesForKeys: [.isRegularFileKey],
+            at: targetURL, includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
         ) {
             while let fileURL = enumerator.nextObject() as? URL {
