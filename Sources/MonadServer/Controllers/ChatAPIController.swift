@@ -54,14 +54,14 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         }
         let availableTools = await resolveTools(timelineId: id, attachedTools: chatRequest.attachedTools)
 
-        let stream = try await chat.run(
+        let stream = try await chat.run(ChatRunRequest(
             timelineId: id,
             message: chatRequest.message,
             tools: availableTools,
             toolOutputs: chatRequest.toolOutputs,
             systemInstructions: MonadSystemInstructions.system(),
             agentInstanceId: agent.id
-        )
+        ))
 
         var fullResponse = ""
         for try await event in stream {
@@ -115,14 +115,14 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         let toolCountStr = ANSIColors.colorize("\(availableTools.count)", color: ANSIColors.green)
         logger.info("Resolved \(toolCountStr) tools for timeline \(sid)")
 
-        return try await chat.run(
+        return try await chat.run(ChatRunRequest(
             timelineId: timelineId,
             message: chatRequest.message,
             tools: availableTools,
             toolOutputs: chatRequest.toolOutputs,
             systemInstructions: MonadSystemInstructions.system(),
             agentInstanceId: agent.id
-        )
+        ))
     }
 
     private func buildSSEStream(
