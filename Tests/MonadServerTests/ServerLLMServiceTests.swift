@@ -1,10 +1,10 @@
 import Foundation
-import PositronicKit
 @testable import MonadServer
-import PKShared
 import MonadShared
-import PKTestSupport
 import OpenAI
+import PKShared
+import PKTestSupport
+import PositronicKit
 import Testing
 
 struct ServerLLMServiceTests {
@@ -81,7 +81,11 @@ struct ServerLLMServiceTests {
         let mockClient = MockLLMClient()
         let service = LLMService(storage: storage, client: mockClient, utilityClient: mockClient, fastClient: mockClient)
 
-        mockClient.nextResponse = "Test Conversation"
+        mockClient.nextResponse = """
+        {
+            "title": "Test Conversation"
+        }
+        """
 
         let messages: [Message] = [
             Message(content: "Hello", role: .user),

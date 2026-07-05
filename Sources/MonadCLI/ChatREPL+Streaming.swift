@@ -222,6 +222,10 @@ extension ChatREPL {
         switch completion {
         case let .generationCompleted(msg, meta):
             handleGenerationCompleted(message: msg, metadata: meta, state: &state)
+        case let .completedEmpty(finishReason):
+            state.sawGenerationCompleted = true
+            let reason = finishReason.map { " (\($0))" } ?? ""
+            print(TerminalUI.dim("\n[Model produced an empty response\(reason)]"))
         case let .toolExecution(_, status):
             handleToolExecutionCompletion(status: status)
         case .streamCompleted:
