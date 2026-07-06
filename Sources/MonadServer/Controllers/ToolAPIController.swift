@@ -111,7 +111,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
                 name: $0.name,
                 description: $0.description,
                 isEnabled: true,
-                source: $0.provenance ?? "System"
+                source: $0.provenance.displayName
             )
         }
     }

@@ -217,7 +217,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
         for ref in attachedTools ?? [] where !knownIDs.contains(ref.toolId) {
             var tool = AnyTool(DeferredAttachedTool(reference: ref))
-            tool.provenance = "Attached"
+            tool.provenance = .named("Attached")
             availableTools.append(tool)
         }
 

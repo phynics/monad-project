@@ -26,10 +26,6 @@ public actor LocalWorkspace: WorkspaceProtocol {
         return reference.tools
     }
 
-    public func executeTool(id _: String, parameters _: [String: AnyCodable]) async throws -> ToolResult {
-        throw WorkspaceError.toolExecutionNotSupported
-    }
-
     public func readFile(path: String) async throws -> String {
         let fileURL = rootURL.appendingPathComponent(path)
         guard fileURL.path.hasPrefix(rootURL.path) else {
