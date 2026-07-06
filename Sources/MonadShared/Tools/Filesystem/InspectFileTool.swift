@@ -38,9 +38,6 @@ public struct InspectFileTool: Tool, Sendable {
                 JSONString().description("The path to the file to inspect")
             }
             .required()
-            JSONProperty(key: "workspaceID") {
-                JSONString().description("The UUID of the workspace to target (optional)")
-            }
         }.schema
     }
 
