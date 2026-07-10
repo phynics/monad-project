@@ -9,10 +9,10 @@ import MonadClient
 #endif
 
 // swiftlint:disable:next todo
-/// Shell command generation subcommand: `monad cmd find all TODO comments`
-struct Command: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
-        commandName: "cmd",
+/// Shell command generation subcommand: `monad command find all TODO comments`
+public struct Command: AsyncParsableCommand {
+    public static let configuration = CommandConfiguration(
+        commandName: "command",
         abstract: "Generate shell command from natural language"
     )
 
@@ -31,7 +31,9 @@ struct Command: AsyncParsableCommand {
     @Argument(parsing: .remaining, help: "Description of the task")
     var task: [String]
 
-    func run() async throws {
+    public init() {}
+
+    public func run() async throws {
         let taskText = task.joined(separator: " ")
         guard !taskText.isEmpty else {
             print("Usage: monad cmd <description>")

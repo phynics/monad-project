@@ -1,5 +1,5 @@
 import Foundation
-@testable import MonadCLI
+@testable import MonadCLICore
 import Testing
 
 /// Tests for `SlashCommandRegistry` — command lookup, alias resolution, and deduplication.

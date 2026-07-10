@@ -5,7 +5,7 @@ import Testing
 import Hummingbird
 import HummingbirdTesting
 import Foundation
-@testable import MonadServer
+@testable import MonadServerCore
 import NIOCore
 
 @Suite struct AuthMiddlewareTests {

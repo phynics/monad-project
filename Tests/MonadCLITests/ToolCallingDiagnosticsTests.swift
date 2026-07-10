@@ -1,5 +1,5 @@
 import Foundation
-@testable import MonadCLI
+@testable import MonadCLICore
 import Testing
 
 @Suite struct ToolCallingDiagnosticsTests {

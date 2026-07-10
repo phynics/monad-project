@@ -1,5 +1,5 @@
 import Testing
-@testable import MonadCLI
+@testable import MonadCLICore
 
 #if canImport(Darwin)
 import Darwin

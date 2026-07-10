@@ -2,7 +2,7 @@
 import Foundation
 @testable import PKShared
 import MonadShared
-@testable import MonadServer
+@testable import MonadServerCore
 
 public final class MockClientStore: RequestOriginStoreProtocol, @unchecked Sendable {
     public var origins: [RequestOriginIdentity] = []

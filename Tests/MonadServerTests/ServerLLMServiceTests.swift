@@ -1,5 +1,5 @@
 import Foundation
-@testable import MonadServer
+@testable import MonadServerCore
 import MonadShared
 import OpenAI
 import PKShared

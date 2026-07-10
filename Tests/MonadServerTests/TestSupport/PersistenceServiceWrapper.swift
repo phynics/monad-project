@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 import PositronicKit
-import MonadServer
+import MonadServerCore
 import PKShared
 import MonadShared
 

@@ -1,7 +1,7 @@
 import PKShared
 import MonadShared
 import PositronicKit
-@testable import MonadServer
+@testable import MonadServerCore
 import Testing
 import Foundation
 

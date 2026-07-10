@@ -1,6 +1,6 @@
 import Foundation
 import GRDB
-@testable import MonadServer
+@testable import MonadServerCore
 import MonadShared
 import PKShared
 import PKTestSupport

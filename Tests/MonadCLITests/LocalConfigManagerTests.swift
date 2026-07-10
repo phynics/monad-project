@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import MonadCLI
+@testable import MonadCLICore
 
 @Suite final class LocalConfigManagerTests {
     var tempFileURL: URL!

@@ -6,10 +6,10 @@ import MonadClient
     import Darwin
 #endif
 
-/// Quick one-shot query subcommand: `monad q what is the capital of France`
-struct Query: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
-        commandName: "q",
+/// Quick one-shot query subcommand: `monad query what is the capital of France`
+public struct Query: AsyncParsableCommand {
+    public static let configuration = CommandConfiguration(
+        commandName: "query",
         abstract: "Quick one-shot query without entering REPL"
     )
 
@@ -28,7 +28,9 @@ struct Query: AsyncParsableCommand {
     @Argument(parsing: .remaining, help: "The question to ask")
     var question: [String]
 
-    func run() async throws {
+    public init() {}
+
+    public func run() async throws {
         let questionText = question.joined(separator: " ")
         guard !questionText.isEmpty else {
             print("Usage: monad q <question>")

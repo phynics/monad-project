@@ -9,8 +9,7 @@ let package = Package(
     products: [
         .library(name: "MonadShared", targets: ["MonadShared"]),
         .library(name: "MonadClient", targets: ["MonadClient"]),
-        .executable(name: "MonadServer", targets: ["MonadServer"]),
-        .executable(name: "MonadCLI", targets: ["MonadCLI"]),
+        .executable(name: "monad", targets: ["monad"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
@@ -35,8 +34,8 @@ let package = Package(
             ],
             path: "Sources/MonadShared"
         ),
-        .executableTarget(
-            name: "MonadServer",
+        .target(
+            name: "MonadServerCore",
             dependencies: [
                 "MonadShared",
                 .product(name: "PositronicKit", package: "PositronicKit"),
@@ -67,8 +66,8 @@ let package = Package(
             ],
             path: "Sources/MonadClient"
         ),
-        .executableTarget(
-            name: "MonadCLI",
+        .target(
+            name: "MonadCLICore",
             dependencies: [
                 "MonadClient",
                 "MonadShared",
@@ -77,6 +76,11 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MonadCLI"
+        ),
+        .executableTarget(
+            name: "monad",
+            dependencies: ["MonadServerCore", "MonadCLICore"],
+            path: "Sources/monad"
         ),
         .testTarget(
             name: "MonadSharedTests",
@@ -89,7 +93,7 @@ let package = Package(
         .testTarget(
             name: "MonadServerTests",
             dependencies: [
-                "MonadServer",
+                "MonadServerCore",
                 "MonadShared",
                 .product(name: "PositronicKit", package: "PositronicKit"),
                 .product(name: "PKShared", package: "PositronicKit"),
@@ -102,12 +106,17 @@ let package = Package(
         .testTarget(
             name: "MonadCLITests",
             dependencies: [
-                "MonadCLI",
+                "MonadCLICore",
                 "MonadClient",
                 "MonadShared",
                 .product(name: "PKTestSupport", package: "PositronicKit"),
             ],
             path: "Tests/MonadCLITests"
+        ),
+        .testTarget(
+            name: "MonadCommandTests",
+            dependencies: ["monad", "MonadCLICore", "MonadServerCore"],
+            path: "Tests/MonadCommandTests"
         ),
         .testTarget(
             name: "MonadClientTests",

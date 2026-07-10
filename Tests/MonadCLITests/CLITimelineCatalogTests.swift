@@ -1,6 +1,6 @@
 import Foundation
 import MonadShared
-@testable import MonadCLI
+@testable import MonadCLICore
 import PKShared
 import Testing
 

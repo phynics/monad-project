@@ -1,5 +1,5 @@
 import Testing
-@testable import MonadCLI
+@testable import MonadCLICore
 
 @Suite struct CLIInputTests {
     @Test("confirmation parser accepts yes variants")

@@ -4,7 +4,7 @@ import PositronicKit
 import Foundation
 import GRDB
 import Testing
-import MonadServer
+import MonadServerCore
 
 @Suite(.serialized)
 @MainActor

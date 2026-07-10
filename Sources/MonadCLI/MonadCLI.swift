@@ -5,9 +5,8 @@ import MonadClient
 import PKShared
 import MonadShared
 
-@main
-struct MonadCLI: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
+public struct MonadCLI: AsyncParsableCommand {
+    public static let configuration = CommandConfiguration(
         commandName: "monad",
         abstract: "Monad AI Assistant CLI",
         discussion: """
@@ -40,10 +39,12 @@ struct MonadCLI: AsyncParsableCommand {
         subcommands: [Chat.self, Status.self, Query.self, Command.self],
         defaultSubcommand: Chat.self
     )
+
+    public init() {}
 }
 
-struct Chat: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
+public struct Chat: AsyncParsableCommand {
+    public static let configuration = CommandConfiguration(
         commandName: "chat",
         abstract: "Start an interactive chat timeline (Default)"
     )
@@ -60,7 +61,9 @@ struct Chat: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "Timeline ID to resume")
     var timeline: String?
 
-    func run() async throws {
+    public init() {}
+
+    public func run() async throws {
         initializeLogging()
 
         let buildResult = try await buildAndVerifyClient()

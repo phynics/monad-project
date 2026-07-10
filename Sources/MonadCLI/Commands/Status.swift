@@ -2,8 +2,8 @@ import ArgumentParser
 import Foundation
 import MonadClient
 
-struct Status: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
+public struct Status: AsyncParsableCommand {
+    public static let configuration = CommandConfiguration(
         commandName: "status",
         abstract: "Show server and component status"
     )
@@ -17,7 +17,9 @@ struct Status: AsyncParsableCommand {
     @Flag(name: .long, help: "Enable verbose debug logging")
     var verbose: Bool = false
 
-    func run() async throws {
+    public init() {}
+
+    public func run() async throws {
         // Load local config
         let localConfig = LocalConfigManager.shared.getConfig()
 

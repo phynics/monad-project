@@ -9,20 +9,19 @@ import PositronicKit
 import ServiceLifecycle
 import UnixSignals
 
-@main
 @available(macOS 14.0, *)
-struct MonadServer: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
-        commandName: "monad-server",
+public struct Server: AsyncParsableCommand {
+    public static let configuration = CommandConfiguration(
+        commandName: "server",
         abstract: "Monad AI Assistant Server",
         discussion: """
         A REST API server for the Monad AI Assistant.
 
         EXAMPLES:
-          monad-server                          Start on default port 8080
-          monad-server --port 3000              Start on port 3000
-          monad-server -h 0.0.0.0 -p 8080       Bind to all interfaces
-          monad-server --verbose                Enable verbose logging
+          monad server                          Start on default port 8080
+          monad server --port 3000              Start on port 3000
+          monad server -h 0.0.0.0 -p 8080       Bind to all interfaces
+          monad server --verbose                Enable verbose logging
 
         API ENDPOINTS:
           GET  /health                          Health check
@@ -42,15 +41,17 @@ struct MonadServer: AsyncParsableCommand {
     )
 
     @Option(name: .shortAndLong, help: "Hostname to bind to")
-    var hostname: String = "127.0.0.1"
+    public var hostname: String = "127.0.0.1"
 
     @Option(name: .shortAndLong, help: "Port to listen on")
-    var port: Int = 8080
+    public var port: Int = 8080
 
     @Flag(name: .long, help: "Enable verbose debug logging")
-    var verbose: Bool = false
+    public var verbose: Bool = false
 
-    func run() async throws {
+    public init() {}
+
+    public func run() async throws {
         // Initialize Logging
         LoggingSystem.bootstrap { label in
             var handler = PKLogHandler(label: label)

@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 import Hummingbird
 import HummingbirdTesting
-@testable import MonadServer
+@testable import MonadServerCore
 import MonadShared
 import PKShared
 import PositronicKit

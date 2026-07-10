@@ -2,7 +2,7 @@ import PKShared
 import MonadShared
 import PositronicKit
 import Foundation
-@testable import MonadServer
+@testable import MonadServerCore
 import Testing
 
 @Suite struct ConfigPersistenceTests {

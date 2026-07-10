@@ -4,7 +4,7 @@ import PositronicKit
 import Foundation
 import Hummingbird
 import HummingbirdTesting
-@testable import MonadServer
+@testable import MonadServerCore
 import Testing
 
 @Suite struct ErrorHandlingTests {

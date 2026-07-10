@@ -1,5 +1,5 @@
 import Foundation
-@testable import MonadCLI
+@testable import MonadCLICore
 import ArgumentParser
 import MonadClient
 import MonadShared

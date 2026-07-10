@@ -1,7 +1,7 @@
 import Foundation
 import Hummingbird
 import HummingbirdTesting
-@testable import MonadServer
+@testable import MonadServerCore
 import MonadShared
 import PKShared
 import PKTestSupport

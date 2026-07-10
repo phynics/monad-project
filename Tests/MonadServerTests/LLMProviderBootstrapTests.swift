@@ -1,5 +1,5 @@
 import PKShared
-@testable import MonadServer
+@testable import MonadServerCore
 import Testing
 
 @Suite struct LLMProviderBootstrapTests {

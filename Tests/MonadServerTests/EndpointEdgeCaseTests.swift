@@ -2,7 +2,7 @@ import Foundation
 import HTTPTypes
 import Hummingbird
 import HummingbirdTesting
-@testable import MonadServer
+@testable import MonadServerCore
 import MonadShared
 import NIOCore
 import PKShared

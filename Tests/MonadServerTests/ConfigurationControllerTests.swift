@@ -6,7 +6,7 @@ import Hummingbird
 import HummingbirdTesting
 import Foundation
 import PKTestSupport
-@testable import MonadServer
+@testable import MonadServerCore
 import NIOCore
 
 @Suite struct ConfigurationControllerTests {
