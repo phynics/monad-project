@@ -2,8 +2,8 @@ import ArgumentParser
 import Foundation
 import Logging
 import MonadClient
-import PKShared
 import MonadShared
+import PKShared
 
 public struct MonadCLI: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
@@ -46,10 +46,20 @@ public struct MonadCLI: AsyncParsableCommand {
 public struct Chat: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "chat",
-        abstract: "Start an interactive chat timeline (Default)"
+        abstract: "Start an interactive chat timeline (default command)",
+        discussion: """
+        Connects to an already-running Monad server; this command never starts,
+        stops, or manages a server process. If no server responds, start one
+        first in another terminal:
+          monad server
+
+        Use --server to pick which server to connect to (otherwise falls back
+        to saved config, then network auto-discovery, then http://127.0.0.1:8080).
+        Run `monad status` to check connectivity before starting a chat.
+        """
     )
 
-    @Option(name: .long, help: "Server URL (defaults to auto-discovery or localhost)")
+    @Option(name: .long, help: "Server URL to connect to (does not start a server; defaults to auto-discovery or localhost)")
     var server: String?
 
     @Option(name: .long, help: "API key for authentication")

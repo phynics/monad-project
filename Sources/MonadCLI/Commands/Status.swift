@@ -1,14 +1,27 @@
 import ArgumentParser
+import ErrorKit
 import Foundation
 import MonadClient
+import MonadShared
+import PKShared
 
 public struct Status: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "status",
-        abstract: "Show server and component status"
+        abstract: "Show which server the client is configured to use, and whether it's reachable",
+        discussion: """
+        Reports, without starting or stopping anything:
+          - the server URL the client would use for `monad chat`/`monad query`/`monad command`
+          - whether that server responds to a health check
+          - whether an API key is configured on the client side
+          - whether the server's active LLM provider is configured and reachable
+
+        This never starts a server. If nothing responds, start one yourself first:
+          monad server
+        """
     )
 
-    @Option(name: .long, help: "Server URL")
+    @Option(name: .long, help: "Server URL to check (defaults to auto-detected/local config value)")
     var server: String?
 
     @Option(name: .long, help: "API key for authentication")
@@ -20,75 +33,89 @@ public struct Status: AsyncParsableCommand {
     public init() {}
 
     public func run() async throws {
-        // Load local config
         let localConfig = LocalConfigManager.shared.getConfig()
+
+        let resolvedApiKey = apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"] ?? localConfig.apiKey
 
         let config = await ClientConfiguration.autoDetect(
             explicitURL: CLICommandSupport.resolvedServerURL(serverFlag: server, localConfig: localConfig),
-            apiKey: apiKey ?? ProcessInfo.processInfo.environment["MONAD_API_KEY"]
-                ?? localConfig.apiKey,
+            apiKey: resolvedApiKey,
             verbose: verbose
         )
 
         let client = MonadClient(configuration: config)
 
-        TerminalUI.printLoading("Fetching server status from \(config.baseURL.absoluteString)...")
+        TerminalUI.printLoading("Checking Monad server at \(config.baseURL.absoluteString)...")
 
-        do {
-            let status = try await client.getStatus()
+        let report = await Self.buildReport(
+            client: client,
+            serverURL: config.baseURL.absoluteString,
+            apiKeyConfigured: (resolvedApiKey?.isEmpty == false)
+        )
 
-            print("")
-            print(TerminalUI.bold("Monad Server Status"))
-            print("─────────────────────────────────────────")
+        print("")
+        for line in StatusReportFormatter.format(report) {
+            print(line)
+        }
+        print("")
 
-            let overallStatus = formatStatus(status.status)
-            print("Overall:  \(overallStatus)")
-            print("Version:  \(status.version)")
-
-            // Format uptime if > 0
-            if status.uptime > 0 {
-                print("Uptime:   \(formatDuration(status.uptime))")
-            }
-
-            print("\n" + TerminalUI.bold("Components:"))
-            for (name, component) in status.components.sorted(by: { $0.key < $1.key }) {
-                let compStatus = formatStatus(component.status)
-                let namePadded = name.padding(toLength: 12, withPad: " ", startingAt: 0)
-                print("  \(namePadded) \(compStatus)")
-
-                if let details = component.details, !details.isEmpty {
-                    for (key, value) in details.sorted(by: { $0.key < $1.key }) {
-                        print("    \(TerminalUI.dim("\(key): \(value)"))")
-                    }
-                }
-            }
-            print("─────────────────────────────────────────")
-            print("")
-
-        } catch {
-            TerminalUI.printError("Failed to fetch status: \(error.localizedDescription)")
-            if verbose {
-                print("Error details: \(error)")
-            }
+        if case .unreachable = report.reachability {
             throw ExitCode.failure
         }
     }
 
-    private func formatStatus(_ status: HealthStatus) -> String {
-        switch status {
-        case .ok:
-            return TerminalUI.green("ONLINE")
-        case .degraded:
-            return TerminalUI.yellow("DEGRADED")
-        case .down:
-            return TerminalUI.red("OFFLINE")
+    /// Fetches server status/configuration and assembles a `StatusReport`. Split out from
+    /// `run()` so the pure formatting/classification logic in `StatusReportFormatter` and the
+    /// `ConfigurationReadiness` classification below can be exercised independently of a live
+    /// server (see `StatusReportTests`), while this method stays the thin part that talks to
+    /// the network.
+    static func buildReport(
+        client: MonadClient,
+        serverURL: String,
+        apiKeyConfigured: Bool
+    ) async -> StatusReport {
+        let reachability: StatusReport.ServerReachability
+        do {
+            let status = try await client.getStatus()
+            reachability = .reachable(status)
+        } catch {
+            reachability = .unreachable(message: ErrorKit.userFriendlyMessage(for: error))
         }
+
+        let configurationReadiness: StatusReport.ConfigurationReadiness
+        switch reachability {
+        case .unreachable:
+            configurationReadiness = .unknown(message: "server unreachable")
+        case let .reachable(status):
+            do {
+                let llmConfig = try await client.getConfiguration()
+                configurationReadiness = Self.classifyConfiguration(config: llmConfig, status: status)
+            } catch {
+                configurationReadiness = .unknown(message: ErrorKit.userFriendlyMessage(for: error))
+            }
+        }
+
+        return StatusReport(
+            serverURL: serverURL,
+            apiKeyConfigured: apiKeyConfigured,
+            reachability: reachability,
+            configuration: configurationReadiness
+        )
     }
 
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = [.day, .hour, .minute, .second]
-        formatter.unitsStyle = .full
-        return formatter.string(from: duration) ?? "\(duration)s"
+    static func classifyConfiguration(
+        config: LLMConfiguration,
+        status: StatusResponse
+    ) -> StatusReport.ConfigurationReadiness {
+        guard config.isValid else {
+            return .needsSetup(reason: "no valid provider configuration (missing model name or API key)")
+        }
+
+        let aiStatus = status.components["ai_provider"]?.status
+        guard aiStatus == .ok else {
+            return .needsSetup(reason: "provider \(config.activeProvider.rawValue) configured but not reachable")
+        }
+
+        return .ready
     }
 }

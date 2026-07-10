@@ -1,10 +1,10 @@
-import PKShared
-import MonadShared
 import ArgumentParser
 import Foundation
 import Hummingbird
 import HummingbirdWebSocket
 import Logging
+import MonadShared
+import PKShared
 import PositronicKit
 import ServiceLifecycle
 import UnixSignals
@@ -16,6 +16,12 @@ public struct Server: AsyncParsableCommand {
         abstract: "Monad AI Assistant Server",
         discussion: """
         A REST API server for the Monad AI Assistant.
+
+        This starts and runs the server process itself (binding --hostname/--port
+        and serving until interrupted) — it is a separate, long-running process
+        from the client commands (`monad chat`/`query`/`command`/`status`), which
+        only ever connect to a server, never start one. Run this in its own
+        terminal, then point client commands at it with `--server <url>`.
 
         EXAMPLES:
           monad server                          Start on default port 8080
