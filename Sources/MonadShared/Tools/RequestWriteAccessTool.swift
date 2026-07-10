@@ -1,11 +1,12 @@
 import Foundation
+import struct JSONSchema.Schema
 import JSONSchemaBuilder
 import PKShared
 
 /// A legacy tool used by the LLM to request permission to modify files in the active workspace.
 /// When executed downstream, this triggers a user prompt to upgrade the workspace trust level.
 public struct RequestWriteAccessTool: Tool {
-    public let id = "request_write_access"
+    public let callName = "request_write_access"
     public let name = "Request Write Access"
     public let description =
         "Request permission from the user to modify files in the active workspace. " +
@@ -19,7 +20,7 @@ public struct RequestWriteAccessTool: Tool {
         true
     }
 
-    public var parametersSchema: [String: AnyCodable] {
+    public var parametersSchema: Schema {
         ToolParameterSchema.object {
             JSONProperty(key: "reason") {
                 JSONString().description(
@@ -27,10 +28,10 @@ public struct RequestWriteAccessTool: Tool {
                 )
             }
             .required()
-        }.schema
+        }.schemaDefinition
     }
 
-    public func execute(parameters _: [String: Any]) async throws -> ToolResult {
+    public func execute(parameters _: [String: AnyCodable]) async throws -> ToolResult {
         .failure("This tool requires downstream handling")
     }
 }

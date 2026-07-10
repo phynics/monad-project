@@ -16,7 +16,7 @@ public enum ClientConstants {
                 id: "inspect_file",
                 name: "Inspect File",
                 description: "Determine file type and basic metadata using the unix 'file' command.",
-                parametersSchema: InspectFileTool().parametersSchema
+                parametersSchema: InspectFileTool().parametersSchema.asDictionary
             )
         ),
         .custom(
@@ -26,7 +26,7 @@ public enum ClientConstants {
                 description: "Request permission from the user to modify files in the active workspace. "
                     + "Call this tool when you need to create, write, edit, or delete files "
                     + "but the workspace is currently in read-only mode.",
-                parametersSchema: RequestWriteAccessTool().parametersSchema
+                parametersSchema: RequestWriteAccessTool().parametersSchema.asDictionary
             )
         ),
         .custom(

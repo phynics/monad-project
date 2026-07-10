@@ -1,8 +1,8 @@
 import Foundation
 import GRDB
-import PositronicKit
-import PKShared
 import MonadShared
+import PKShared
+import PositronicKit
 
 public extension DatabaseSchema {
     /// Register all migrations
@@ -47,7 +47,7 @@ public extension DatabaseSchema {
         }
 
         migrator.registerMigration("v5") { db in
-            if try db.tableExists("clientIdentity") && !(try db.tableExists("requestOrigin")) {
+            if try db.tableExists("clientIdentity") && !(db.tableExists("requestOrigin")) {
                 try db.execute(sql: "ALTER TABLE clientIdentity RENAME TO requestOrigin")
             }
 
@@ -57,11 +57,11 @@ public extension DatabaseSchema {
 
             let workspaceColumns = try db.columns(in: "workspace").map(\.name)
 
-            if workspaceColumns.contains("hostType") && !workspaceColumns.contains("location") {
+            if workspaceColumns.contains("hostType"), !workspaceColumns.contains("location") {
                 try db.execute(sql: "ALTER TABLE workspace RENAME COLUMN hostType TO location")
             }
 
-            if workspaceColumns.contains("ownerId") && !workspaceColumns.contains("originId") {
+            if workspaceColumns.contains("ownerId"), !workspaceColumns.contains("originId") {
                 try db.execute(sql: "ALTER TABLE workspace RENAME COLUMN ownerId TO originId")
             }
         }
@@ -115,6 +115,36 @@ public extension DatabaseSchema {
             if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "status" }) {
                 try db.alter(table: "conversationMessage") { table in
                     table.add(column: "status", .text)
+                }
+            }
+        }
+
+        migrator.registerMigration("v9") { db in
+            // PositronicKit 2.0.0 renames `Message.think` to `Message.reasoning`, and
+            // `ConversationMessage` now encodes/decodes `reasoning`. Add the nullable TEXT
+            // column and migrate any existing `think` values forward.
+            guard try db.tableExists("conversationMessage") else { return }
+            if try !db.columns(in: "conversationMessage").contains(where: { $0.name == "reasoning" }) {
+                try db.alter(table: "conversationMessage") { table in
+                    table.add(column: "reasoning", .text)
+                }
+            }
+            if try db.columns(in: "conversationMessage").contains(where: { $0.name == "think" }) {
+                try db.execute(sql: """
+                UPDATE "conversationMessage"
+                SET "reasoning" = "think"
+                WHERE "reasoning" IS NULL
+                """)
+            }
+        }
+
+        migrator.registerMigration("v10") { db in
+            // PKAPI-014: PositronicKit 2.0.0 removed the untyped, never-read `metadata`
+            // field from `WorkspaceReference`. Drop the now-dead column.
+            guard try db.tableExists("workspace") else { return }
+            if try db.columns(in: "workspace").contains(where: { $0.name == "metadata" }) {
+                try db.alter(table: "workspace") { table in
+                    table.drop(column: "metadata")
                 }
             }
         }

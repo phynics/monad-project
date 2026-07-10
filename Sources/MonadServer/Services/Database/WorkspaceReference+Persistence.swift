@@ -28,14 +28,6 @@ extension WorkspaceReference: @retroactive FetchableRecord, @retroactive Persist
         container["trustLevel"] = trustLevel.rawValue
         container["lastModifiedBy"] = lastModifiedBy
         container["status"] = status.rawValue
-
-        if let metadataData = try? JSONEncoder().encode(metadata),
-           let metadataString = String(data: metadataData, encoding: .utf8) {
-            container["metadata"] = metadataString
-        } else {
-            container["metadata"] = "{}"
-        }
-
         container["createdAt"] = createdAt
     }
 }
@@ -76,16 +68,6 @@ public extension WorkspaceReference {
         let statusString: String = row["status"]
         let status = WorkspaceStatus(rawValue: statusString) ?? .active
 
-        let metadataString: String? = row.hasColumn("metadata")
-            ? row["metadata"] : nil
-        let metadata: [String: AnyCodable]
-        if let metaStr = metadataString, !metaStr.isEmpty {
-            let metaData = metaStr.data(using: .utf8) ?? Data()
-            metadata = (try? JSONDecoder().decode([String: AnyCodable].self, from: metaData)) ?? [:]
-        } else {
-            metadata = [:]
-        }
-
         let createdAt: Date = row["createdAt"]
 
         self.init(
@@ -98,7 +80,6 @@ public extension WorkspaceReference {
             trustLevel: trustLevel,
             lastModifiedBy: lastModifiedBy,
             status: status,
-            metadata: metadata,
             createdAt: createdAt
         )
     }

@@ -74,8 +74,8 @@ class MockURLProtocol: URLProtocol, @unchecked Sendable {
     @Test
     func testSSEStreamReader_SingleMessage() async throws {
         MockURLProtocol.mockEvents = [
-            (0, "data: {\"delta\":{\"event\":{\"generation\":{\"text\":\"Hello\"}}}}\n\n"),
-            (0, "data: {\"completion\":{\"event\":\"streamCompleted\"}}\n\n"),
+            (0, "data: {\"delta\":{\"_0\":{\"generation\":{\"text\":\"Hello\"}}}}\n\n"),
+            (0, "data: {\"completion\":{\"_0\":{\"streamCompleted\":{}}}}\n\n"),
             (0, nil)
         ]
 
@@ -97,10 +97,10 @@ class MockURLProtocol: URLProtocol, @unchecked Sendable {
     @Test
     func testSSEStreamReader_MultipleChunks() async throws {
         MockURLProtocol.mockEvents = [
-            (0, "data: {\"delta\":{\"event\":{\"generation\":{\"text\":\"Hel\"}}}}\n"),
+            (0, "data: {\"delta\":{\"_0\":{\"generation\":{\"text\":\"Hel\"}}}}\n"),
             (0.01, "\n"),
-            (0.01, "data: {\"delta\":{\"event\":{\"generation\":{\"text\":\"lo\"}}}}\n\n"),
-            (0, "data: {\"completion\":{\"event\":\"streamCompleted\"}}\n\n"),
+            (0.01, "data: {\"delta\":{\"_0\":{\"generation\":{\"text\":\"lo\"}}}}\n\n"),
+            (0, "data: {\"completion\":{\"_0\":{\"streamCompleted\":{}}}}\n\n"),
             (0, nil)
         ]
 

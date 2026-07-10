@@ -65,7 +65,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
     }
 
     @Sendable func listSystemTools(_: Request, context _: Context) async throws -> [ToolInfo] {
-        currentSystemTools().map { ToolInfo(id: $0.id, name: $0.name, description: $0.description) }
+        currentSystemTools().map { ToolInfo(id: $0.callName, name: $0.name, description: $0.description) }
     }
 
     @Sendable func enable(_: Request, context: Context) async throws -> HTTPResponse.Status {
@@ -107,7 +107,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         let tools = await toolManager.getEnabledTools()
         return tools.map {
             ToolInfo(
-                id: $0.id,
+                id: $0.callName,
                 name: $0.name,
                 description: $0.description,
                 isEnabled: true,

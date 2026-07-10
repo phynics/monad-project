@@ -1,6 +1,8 @@
 import Foundation
 import HTTPTypes
 import Hummingbird
+import JSONSchema
+import JSONSchemaBuilder
 import Logging
 import PositronicKit
 import PKShared
@@ -213,7 +215,7 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         }
 
         var availableTools = await toolManager.getEnabledTools()
-        let knownIDs = Set(availableTools.map(\.id))
+        let knownIDs = Set(availableTools.map(\.callName))
 
         for ref in attachedTools ?? [] where !knownIDs.contains(ref.toolId) {
             var tool = AnyTool(DeferredAttachedTool(reference: ref))
@@ -240,7 +242,7 @@ private struct DeferredAttachedTool: PKShared.Tool, ToolReferenceProviding {
         toolReference = reference
     }
 
-    var id: String { toolReference.toolId }
+    var callName: String { toolReference.toolId }
 
     var name: String {
         switch toolReference {
@@ -270,16 +272,16 @@ private struct DeferredAttachedTool: PKShared.Tool, ToolReferenceProviding {
         }
     }
 
-    var parametersSchema: [String: AnyCodable] {
+    var parametersSchema: Schema {
         switch toolReference {
-        case .known: return [:]
-        case let .custom(definition): return definition.parametersSchema
+        case .known: return ToolParameterSchema.object {}.schemaDefinition
+        case let .custom(definition): return Schema(definition.parametersSchema)
         }
     }
 
     func canExecute() async -> Bool { true }
 
-    func execute(parameters _: [String: Any]) async throws -> ToolResult {
+    func execute(parameters _: [String: AnyCodable]) async throws -> ToolResult {
         .failure("Attached workspace tools are routed externally")
     }
 }

@@ -31,8 +31,7 @@ struct ClientToolExecutor {
             }
 
             do {
-                let dict = call.arguments.mapValues { $0.value }
-                let result = try await tool.execute(parameters: dict)
+                let result = try await tool.execute(parameters: call.arguments)
                 submissions.append(ToolOutputSubmission(
                     toolCallId: call.id,
                     output: result.output

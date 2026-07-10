@@ -13,10 +13,10 @@ public actor TimelineRepository: TimelinePersistenceProtocol {
         self.dbQueue = dbQueue
     }
 
-    public func saveTimeline(_ session: Timeline) async throws {
-        logger.debug("Saving session: \(session.id)")
+    public func saveTimeline(_ timeline: Timeline) async throws {
+        logger.debug("Saving timeline: \(timeline.id)")
         try await dbQueue.write { db in
-            try session.save(db)
+            try timeline.save(db)
         }
     }
 

@@ -1,10 +1,11 @@
 import Foundation
+import struct JSONSchema.Schema
 import JSONSchemaBuilder
 import PKShared
 
 /// Tool to inspect file metadata and type (similar to unix 'file' command)
 public struct InspectFileTool: Tool, Sendable {
-    public let id = "inspect_file"
+    public let callName = "inspect_file"
     public let name = "Inspect File"
     public let description = "Determine file type and basic metadata using the unix 'file' command."
     public let requiresPermission = false
@@ -32,16 +33,16 @@ public struct InspectFileTool: Tool, Sendable {
         true
     }
 
-    public var parametersSchema: [String: AnyCodable] {
+    public var parametersSchema: Schema {
         ToolParameterSchema.object {
             JSONProperty(key: "path") {
                 JSONString().description("The path to the file to inspect")
             }
             .required()
-        }.schema
+        }.schemaDefinition
     }
 
-    public func execute(parameters: [String: Any]) async throws -> ToolResult {
+    public func execute(parameters: [String: AnyCodable]) async throws -> ToolResult {
         let params = ToolParameters(parameters)
         let pathString: String
         do {

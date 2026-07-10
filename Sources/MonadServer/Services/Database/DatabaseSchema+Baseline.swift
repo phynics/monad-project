@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
-import PKShared
 import MonadShared
+import PKShared
 
 extension DatabaseSchema {
     // MARK: - Workspace Tables
@@ -28,7 +28,6 @@ extension DatabaseSchema {
             table.column("trustLevel", .text).notNull().defaults(to: "full")
             table.column("lastModifiedBy", .blob)
             table.column("status", .text).notNull().defaults(to: "active")
-            table.column("metadata", .text).notNull().defaults(to: "{}")
             table.column("createdAt", .datetime).notNull()
         }
 
@@ -90,7 +89,7 @@ extension DatabaseSchema {
             table.column("timestamp", .datetime).notNull()
             table.column("recalledMemories", .text).notNull().defaults(to: "[]")
             table.column("parentId", .blob).references("conversationMessage", onDelete: .setNull)
-            table.column("think", .text)
+            table.column("reasoning", .text)
             table.column("toolCalls", .text).notNull().defaults(to: "[]")
             table.column("toolCallId", .text)
             table.column("agentInstanceId", .blob)

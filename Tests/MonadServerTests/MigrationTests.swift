@@ -1,16 +1,15 @@
-import PKShared
-import MonadShared
-import PositronicKit
 import Foundation
 import GRDB
-import Testing
 import MonadServer
+import MonadShared
+import PKShared
+import PositronicKit
+import Testing
 
 @Suite(.serialized)
 struct MigrationTests {
-
     @Test("Verify v2 migration adds embedding column to existing v1 database")
-    func testV2Migration() async throws {
+    func v2Migration() async throws {
         // 1. Setup in-memory DB
         let queue = try DatabaseQueue()
 
@@ -81,7 +80,7 @@ struct MigrationTests {
 
         try await queue.read { db in
             #expect(try db.tableExists("requestOrigin"))
-            #expect(!(try db.tableExists("clientIdentity")))
+            #expect(try !(db.tableExists("clientIdentity")))
 
             let workspaceColumns = try db.columns(in: "workspace").map(\.name)
             #expect(workspaceColumns.contains("location"))
@@ -158,6 +157,73 @@ struct MigrationTests {
         try await queue.read { db in
             let workspace = try #require(try WorkspaceReference.fetchOne(db))
             #expect(workspace.originId == nil)
+        }
+    }
+
+    @Test("v10 migration drops the dead workspace.metadata column (PKAPI-014)")
+    func v10Migration_dropsWorkspaceMetadataColumn() async throws {
+        let queue = try DatabaseQueue()
+
+        var oldMigrator = DatabaseMigrator()
+        oldMigrator.registerMigration("v1") { db in
+            try db.create(table: "requestOrigin") { table in
+                table.column("id", .blob).primaryKey()
+                table.column("hostname", .text).notNull()
+                table.column("displayName", .text).notNull()
+                table.column("platform", .text).notNull()
+                table.column("registeredAt", .datetime).notNull()
+                table.column("lastSeenAt", .datetime)
+            }
+            try db.create(table: "workspace") { table in
+                table.column("id", .blob).primaryKey()
+                table.column("uri", .text).notNull().unique()
+                table.column("location", .text).notNull()
+                table.column("originId", .blob).references("requestOrigin", onDelete: .setNull)
+                table.column("tools", .text).notNull().defaults(to: "[]")
+                table.column("rootPath", .text)
+                table.column("trustLevel", .text).notNull().defaults(to: "full")
+                table.column("lastModifiedBy", .blob)
+                table.column("status", .text).notNull().defaults(to: "active")
+                table.column("metadata", .text).notNull().defaults(to: "{}")
+                table.column("createdAt", .datetime).notNull()
+            }
+            // Minimal versions of the other v1 tables so later migrations (v2, v4, v9)
+            // that alter them don't fail with "no such table".
+            try db.create(table: "memory") { t in
+                t.primaryKey("id", .blob).notNull()
+                t.column("title", .text).notNull()
+                t.column("content", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+                t.column("tags", .text).notNull().defaults(to: "")
+                t.column("metadata", .text).notNull().defaults(to: "")
+            }
+            try db.create(table: "timeline") { t in
+                t.primaryKey("id", .blob).notNull()
+                t.column("isArchived", .boolean).notNull().defaults(to: false)
+            }
+            try db.create(table: "conversationMessage") { t in
+                t.primaryKey("id", .blob).notNull()
+                t.column("timelineId", .blob).notNull().references("timeline")
+                t.column("role", .text).notNull().defaults(to: "user")
+                t.column("content", .text).notNull().defaults(to: "")
+                t.column("timestamp", .datetime).notNull().defaults(to: Date())
+            }
+        }
+        try oldMigrator.migrate(queue)
+
+        try await queue.read { db in
+            let hasMetadata = try db.columns(in: "workspace").contains(where: { $0.name == "metadata" })
+            #expect(hasMetadata)
+        }
+
+        var migrator = DatabaseMigrator()
+        DatabaseSchema.registerMigrations(in: &migrator)
+        try migrator.migrate(queue)
+
+        try await queue.read { db in
+            let hasMetadata = try db.columns(in: "workspace").contains(where: { $0.name == "metadata" })
+            #expect(!hasMetadata)
         }
     }
 
@@ -297,7 +363,7 @@ struct MigrationTests {
 
         try await manager.dbQueue.read { db in
             #expect(try db.tableExists("requestOrigin"))
-            #expect(!(try db.tableExists("clientIdentity")))
+            #expect(try !(db.tableExists("clientIdentity")))
             let workspaces = try WorkspaceReference.fetchCount(db)
             #expect(workspaces == 0)
         }

@@ -24,8 +24,8 @@ struct MonadSharedModelsTests {
 
     @Test("MonadShared exports Monad-only tool definitions")
     func toolDefinitionsRemainAvailable() {
-        #expect(InspectFileTool().id == "inspect_file")
-        #expect(RequestWriteAccessTool().id == "request_write_access")
+        #expect(InspectFileTool().callName == "inspect_file")
+        #expect(RequestWriteAccessTool().callName == "request_write_access")
     }
 
     @Test("MonadShared exports PKLogHandler")

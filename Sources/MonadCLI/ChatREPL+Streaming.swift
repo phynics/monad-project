@@ -149,7 +149,7 @@ extension ChatREPL {
 
     private func handleDeltaEvent(_ delta: ChatEvent.DeltaEvent, state: inout StreamState) {
         switch delta {
-        case let .thinking(thought):
+        case let .reasoning(thought):
             if !state.assistantStartPrinted {
                 print(TerminalUI.dim("🤔 Thinking..."))
                 state.assistantStartPrinted = true
@@ -282,7 +282,7 @@ extension ChatREPL {
             printToolResult(result.output)
         case let .failed(_, error):
             print(TerminalUI.red("  ✗ \(error)"))
-        case let .failure(error):
+        case let .executionError(error):
             print(TerminalUI.red("  ✗ \(error)"))
         default:
             break

@@ -94,3 +94,4 @@ tmp/
 implementation-plan.md
 # Superpowers tooling state
 .superpowers/
+.worktrees/

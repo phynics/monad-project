@@ -13,26 +13,18 @@ public struct StatusAPIController<Context: RequestContext>: Sendable {
     }
 
     private let databaseManager: any HealthCheckable
-    private let llmService: any LLMServiceProtocol
+    private let llmService: any LLMStreamClient & LLMConfigStore & LLMUtilityClient & HealthCheckable
     public let startTime: Date
     public let version = "1.0.0"
 
     public init(
         databaseManager: any HealthCheckable,
-        llmService: any LLMServiceProtocol,
+        llmService: any LLMStreamClient & LLMConfigStore & LLMUtilityClient & HealthCheckable,
         startTime: Date
     ) {
         self.databaseManager = databaseManager
         self.llmService = llmService
         self.startTime = startTime
-    }
-
-    public init(startTime: Date) {
-        self.init(
-            databaseManager: NoOpDatabaseHealth(),
-            llmService: UnconfiguredLLMService(),
-            startTime: startTime
-        )
     }
 
     public func addRoutes(to router: Router<Context>) {

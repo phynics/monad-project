@@ -46,7 +46,7 @@ public struct MonadServerFactory {
     }
 
     private struct ServiceSet {
-        let llmService: any LLMServiceProtocol
+        let llmService: any LLMStreamClient & LLMConfigStore & LLMUtilityClient & HealthCheckable
         let embeddingService: any EmbeddingServiceProtocol
         let vectorStore: (any VectorStoreProtocol)?
         let keyValueStore: DatabaseKeyValueStore
@@ -54,7 +54,6 @@ public struct MonadServerFactory {
     }
 
     private struct ManagerSet {
-        var agentInstanceManager: any AgentInstanceManagerProtocol
         let workspaceManager: any WorkspaceManagerProtocol
     }
 
@@ -71,40 +70,25 @@ public struct MonadServerFactory {
         router.add(middleware: ErrorMiddleware())
 
         let coreChat = PositronicKit(
-            llmService: components.services.llmService,
-            persistence: .init(
-                messageStore: components.repositories.messageStore,
-                timelinePersistence: components.repositories.timelinePersistence,
-                workspacePersistence: components.repositories.workspacePersistence,
-                memoryStore: components.repositories.memoryStore,
-                toolPersistence: components.repositories.toolPersistence,
-                agentInstanceStore: components.repositories.agentInstanceStore,
-                requestOriginStore: components.repositories.requestOriginStore
-            ),
-            embeddingService: components.services.embeddingService,
-            runtime: .init(
-                workspaceCreator: WorkspaceFactory(connectionManager: components.services.connectionManager),
-                workspaceRoot: components.workspaceRoot
+            configuration: .init(
+                provider: .init(
+                    llmService: components.services.llmService,
+                    embeddingService: components.services.embeddingService
+                ),
+                persistence: .init(
+                    messageStore: components.repositories.messageStore,
+                    timelinePersistence: components.repositories.timelinePersistence,
+                    workspacePersistence: components.repositories.workspacePersistence,
+                    memoryStore: components.repositories.memoryStore,
+                    toolPersistence: components.repositories.toolPersistence,
+                    agentInstanceStore: components.repositories.agentInstanceStore,
+                    requestOriginStore: components.repositories.requestOriginStore
+                ),
+                runtime: .init(
+                    workspaceCreator: WorkspaceFactory(connectionManager: components.services.connectionManager),
+                    workspaceRoot: components.workspaceRoot
+                )
             )
-        )
-
-        // Reconstruct the AgentInstanceManager with the facade's TimelineManager injected
-        // so private-timeline deletion (deleteInstance) evicts the in-memory caches and
-        // prompt-history registry via the single TimelineManager.deleteTimeline(id:) seam (PKR-3).
-        // initializeComponents builds it without a TimelineManager (the facade hasn't been
-        // constructed yet); rebind here now that coreChat.timelineManager exists.
-        components.managers.agentInstanceManager = AgentInstanceManager(
-            repository: AgentWorkspaceService(
-                workspaceRoot: components.workspaceRoot,
-                workspacePersistence: components.repositories.workspacePersistence
-            ),
-            stores: .init(
-                instanceStore: components.repositories.agentInstanceStore,
-                timelineStore: components.repositories.timelinePersistence,
-                messageStore: components.repositories.messageStore,
-                workspaceStore: components.repositories.workspacePersistence
-            ),
-            timelineManager: coreChat.timelineManager
         )
 
         registerPublicRoutes(
@@ -140,7 +124,7 @@ public struct MonadServerFactory {
                 databaseManager: components.databaseManager,
                 llmService: components.services.llmService
             ),
-            agentInstanceManager: components.managers.agentInstanceManager
+            agentInstanceManager: coreChat.agentInstanceManager
         )
 
         let serviceGroup = buildServiceGroup(
@@ -276,15 +260,6 @@ public struct MonadServerFactory {
         )
 
         return ManagerSet(
-            agentInstanceManager: AgentInstanceManager(
-                repository: agentWorkspaceService,
-                stores: .init(
-                    instanceStore: repositories.agentInstanceStore,
-                    timelineStore: repositories.timelinePersistence,
-                    messageStore: repositories.messageStore,
-                    workspaceStore: repositories.workspacePersistence
-                )
-            ),
             workspaceManager: WorkspaceManager(
                 repository: agentWorkspaceService,
                 workspaceCreator: WorkspaceFactory(connectionManager: connectionManager)

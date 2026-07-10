@@ -7,9 +7,9 @@ import NIOCore
 import HTTPTypes
 
 public struct ConfigurationAPIController<Context: RequestContext>: Sendable {
-    public let llmService: any LLMServiceProtocol
+    public let llmService: any LLMStreamClient & LLMConfigStore & LLMUtilityClient
 
-    public init(llmService: any LLMServiceProtocol) {
+    public init(llmService: any LLMStreamClient & LLMConfigStore & LLMUtilityClient) {
         self.llmService = llmService
     }
 

@@ -170,11 +170,9 @@ struct ConfigCommand: SlashCommand {
     private func parseToolFormat(_ value: String) -> ToolCallFormat? {
         switch value.lowercased() {
         case "openai", "native": return .openAI
-        case "json": return .json
-        case "xml": return .xml
         default:
             TerminalUI.printError("Unknown tool format: \(value)")
-            print("  Available: openai, native, json, xml")
+            print("  Available: openai, native")
             return nil
         }
     }
