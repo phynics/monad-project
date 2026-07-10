@@ -1,8 +1,8 @@
 import Foundation
 @testable import MonadClient
-import PositronicKit
-import PKShared
 import MonadShared
+import PKShared
+import PositronicKit
 import Testing
 
 // MARK: - Helpers
@@ -19,7 +19,7 @@ private func makePaginatedSessions(_ items: [TimelineResponse] = []) throws -> D
     return try encoder.encode(response)
 }
 
-@Suite struct RequestEncodingTests {
+struct RequestEncodingTests {
     private func makeClient() -> (MonadClient, MockSession) {
         let mockSession = MockSession()
         let config = ClientConfiguration(
@@ -175,6 +175,87 @@ private func makePaginatedSessions(_ items: [TimelineResponse] = []) throws -> D
         let req = await mockSession.lastRequest
         #expect(req?.url?.path == "/api/memories/\(memId.uuidString)")
         #expect(req?.httpMethod == "DELETE")
+    }
+
+    // MARK: - Workspaces
+
+    private func makeWorkspaceData(_ workspace: WorkspaceReference) throws -> Data {
+        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        return try encoder.encode(workspace)
+    }
+
+    @Test("createWorkspace sends contextInjection and tools in body")
+    func createWorkspace_sendsContextInjectionAndTools() async throws {
+        let (client, mockSession) = makeClient()
+        let timelineId = UUID()
+        let uri = WorkspaceURI.timelineWorkspace(timelineId)
+        let workspace = WorkspaceReference(uri: uri, location: .runtime)
+        try await mockSession.setMockData(makeWorkspaceData(workspace))
+
+        _ = try await client.workspace.createWorkspace(
+            uri: uri,
+            location: .runtime,
+            originId: nil,
+            rootPath: nil,
+            trustLevel: nil,
+            tools: [.known("bash")],
+            contextInjection: "Injected"
+        )
+        let req = await mockSession.lastRequest
+        #expect(req?.url?.path == "/api/workspaces")
+        #expect(req?.httpMethod == "POST")
+        let body = try #require(req?.httpBody)
+        let decoded = try JSONDecoder().decode(CreateWorkspaceRequest.self, from: body)
+        #expect(decoded.contextInjection == "Injected")
+        #expect(decoded.tools == [.known("bash")])
+    }
+
+    @Test("updateWorkspace sends contextInjection; clear flag defaults to false")
+    func updateWorkspace_sendsContextInjection() async throws {
+        let (client, mockSession) = makeClient()
+        let workspaceId = UUID()
+        let workspace = WorkspaceReference(
+            id: workspaceId, uri: .timelineWorkspace(workspaceId), location: .runtime
+        )
+        try await mockSession.setMockData(makeWorkspaceData(workspace))
+
+        _ = try await client.workspace.updateWorkspace(id: workspaceId, contextInjection: "New value")
+        let req = await mockSession.lastRequest
+        #expect(req?.url?.path == "/api/workspaces/\(workspaceId.uuidString)")
+        #expect(req?.httpMethod == "PATCH")
+        let body = try #require(req?.httpBody)
+        let decoded = try JSONDecoder().decode(UpdateWorkspaceRequest.self, from: body)
+        #expect(decoded.contextInjection == "New value")
+        #expect(decoded.clearContextInjection == false)
+        #expect(decoded.rootPath == nil)
+    }
+
+    @Test("updateWorkspace sends clearContextInjection flag")
+    func updateWorkspace_sendsClearFlag() async throws {
+        let (client, mockSession) = makeClient()
+        let workspaceId = UUID()
+        let workspace = WorkspaceReference(
+            id: workspaceId, uri: .timelineWorkspace(workspaceId), location: .runtime
+        )
+        try await mockSession.setMockData(makeWorkspaceData(workspace))
+
+        _ = try await client.workspace.updateWorkspace(id: workspaceId, clearContextInjection: true)
+        let req = await mockSession.lastRequest
+        let body = try #require(req?.httpBody)
+        let decoded = try JSONDecoder().decode(UpdateWorkspaceRequest.self, from: body)
+        #expect(decoded.clearContextInjection == true)
+        #expect(decoded.contextInjection == nil)
+    }
+
+    @Test("UpdateWorkspaceRequest decodes omitted clearContextInjection as false")
+    func updateWorkspaceRequest_decodesOmittedClearAsFalse() throws {
+        let json = #"{"rootPath": "/tmp"}"#
+        let decoded = try JSONDecoder().decode(
+            UpdateWorkspaceRequest.self, from: Data(json.utf8)
+        )
+        #expect(decoded.clearContextInjection == false)
+        #expect(decoded.contextInjection == nil)
+        #expect(decoded.rootPath == "/tmp")
     }
 
     // MARK: - System

@@ -1,8 +1,8 @@
 import Foundation
 import GRDB
-import PositronicKit
-import PKShared
 import MonadShared
+import PKShared
+import PositronicKit
 
 // MARK: - Persistence
 
@@ -18,7 +18,8 @@ extension WorkspaceReference: @retroactive FetchableRecord, @retroactive Persist
         container["originId"] = originId
 
         if let toolsData = try? JSONEncoder().encode(tools),
-           let toolsString = String(data: toolsData, encoding: .utf8) {
+           let toolsString = String(data: toolsData, encoding: .utf8)
+        {
             container["tools"] = toolsString
         } else {
             container["tools"] = "[]"
@@ -28,6 +29,7 @@ extension WorkspaceReference: @retroactive FetchableRecord, @retroactive Persist
         container["trustLevel"] = trustLevel.rawValue
         container["lastModifiedBy"] = lastModifiedBy
         container["status"] = status.rawValue
+        container["contextInjection"] = contextInjection
         container["createdAt"] = createdAt
     }
 }
@@ -68,6 +70,8 @@ public extension WorkspaceReference {
         let statusString: String = row["status"]
         let status = WorkspaceStatus(rawValue: statusString) ?? .active
 
+        let contextInjection: String? = row.hasColumn("contextInjection") ? row["contextInjection"] : nil
+
         let createdAt: Date = row["createdAt"]
 
         self.init(
@@ -80,6 +84,7 @@ public extension WorkspaceReference {
             trustLevel: trustLevel,
             lastModifiedBy: lastModifiedBy,
             status: status,
+            contextInjection: contextInjection,
             createdAt: createdAt
         )
     }

@@ -3,10 +3,10 @@ import GRDB
 import HTTPTypes
 import Hummingbird
 import Logging
-import PositronicKit
-import PKShared
 import MonadShared
 import NIOCore
+import PKShared
+import PositronicKit
 
 /// Controller for managing workspaces
 public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
@@ -51,6 +51,7 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
             originId: input.originId,
             rootPath: input.rootPath,
             trustLevel: input.trustLevel ?? .full,
+            contextInjection: input.contextInjection,
             createdAt: now
         )
 
@@ -117,6 +118,12 @@ public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
         }
         if let trustLevel = input.trustLevel {
             workspace.trustLevel = trustLevel
+        }
+        // Clearing takes precedence; a nil contextInjection means "leave unchanged".
+        if input.clearContextInjection {
+            workspace.contextInjection = nil
+        } else if let contextInjection = input.contextInjection {
+            workspace.contextInjection = contextInjection
         }
 
         try await workspaceStore.saveWorkspace(workspace)

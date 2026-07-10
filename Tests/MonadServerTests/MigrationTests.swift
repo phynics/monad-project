@@ -368,4 +368,39 @@ struct MigrationTests {
             #expect(workspaces == 0)
         }
     }
+
+    @Test("v11 migration adds contextInjection column and it round-trips")
+    func v11Migration_contextInjectionRoundTrips() async throws {
+        let queue = try DatabaseQueue()
+        var migrator = DatabaseMigrator()
+        DatabaseSchema.registerMigrations(in: &migrator)
+        try migrator.migrate(queue)
+
+        try await queue.read { db in
+            let columns = try db.columns(in: "workspace").map(\.name)
+            #expect(columns.contains("contextInjection"))
+        }
+
+        // Round-trip through the real repository.
+        let store = WorkspaceDataRepository(dbQueue: queue)
+        let workspaceId = UUID()
+        let workspace = WorkspaceReference(
+            id: workspaceId,
+            uri: .timelineWorkspace(workspaceId),
+            location: .runtime,
+            contextInjection: "Round-trip me"
+        )
+        try await store.saveWorkspace(workspace)
+
+        let fetched = try #require(try await store.fetchWorkspace(id: workspaceId, includeTools: false))
+        #expect(fetched.contextInjection == "Round-trip me")
+
+        // And nil stays nil.
+        let plainId = UUID()
+        try await store.saveWorkspace(
+            WorkspaceReference(id: plainId, uri: .timelineWorkspace(plainId), location: .runtime)
+        )
+        let plain = try #require(try await store.fetchWorkspace(id: plainId, includeTools: false))
+        #expect(plain.contextInjection == nil)
+    }
 }

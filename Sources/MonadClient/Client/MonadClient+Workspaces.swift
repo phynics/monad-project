@@ -1,16 +1,23 @@
 import Foundation
-import PKShared
 import MonadShared
+import PKShared
 
 public extension MonadWorkspaceClient {
     // MARK: - Workspace API
 
+    /// Creates a workspace.
+    /// - Parameters:
+    ///   - tools: Tools to register with the workspace at creation time.
+    ///   - contextInjection: Optional extra text injected into the prompt context
+    ///     when this workspace is active.
     func createWorkspace(
         uri: WorkspaceURI,
         location: WorkspaceReference.WorkspaceLocation,
         originId: UUID?,
         rootPath: String?,
-        trustLevel: WorkspaceTrustLevel?
+        trustLevel: WorkspaceTrustLevel?,
+        tools: [ToolReference] = [],
+        contextInjection: String? = nil
     ) async throws -> WorkspaceReference {
         var request = try await client.buildRequest(path: "/api/workspaces", method: "POST")
         request.httpBody = try await client.encode(
@@ -19,7 +26,9 @@ public extension MonadWorkspaceClient {
                 location: location,
                 originId: originId,
                 rootPath: rootPath,
-                trustLevel: trustLevel
+                trustLevel: trustLevel,
+                tools: tools,
+                contextInjection: contextInjection
             )
         )
         return try await client.perform(request)
@@ -36,14 +45,26 @@ public extension MonadWorkspaceClient {
         return try await client.perform(request)
     }
 
+    /// Partially updates a workspace. `nil` parameters are left unchanged.
+    /// - Parameters:
+    ///   - contextInjection: New context-injection text; `nil` leaves the current value unchanged.
+    ///   - clearContextInjection: Pass `true` to clear the workspace's context injection
+    ///     to `nil` (takes precedence over `contextInjection`).
     func updateWorkspace(
         id: UUID,
         rootPath: String? = nil,
-        trustLevel: WorkspaceTrustLevel? = nil
+        trustLevel: WorkspaceTrustLevel? = nil,
+        contextInjection: String? = nil,
+        clearContextInjection: Bool = false
     ) async throws -> WorkspaceReference {
         var request = try await client.buildRequest(path: "/api/workspaces/\(id.uuidString)", method: "PATCH")
         request.httpBody = try await client.encode(
-            UpdateWorkspaceRequest(rootPath: rootPath, trustLevel: trustLevel)
+            UpdateWorkspaceRequest(
+                rootPath: rootPath,
+                trustLevel: trustLevel,
+                contextInjection: contextInjection,
+                clearContextInjection: clearContextInjection
+            )
         )
         return try await client.perform(request)
     }

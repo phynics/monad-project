@@ -148,5 +148,16 @@ public extension DatabaseSchema {
                 }
             }
         }
+
+        migrator.registerMigration("v11") { db in
+            // MON-API-1: persist `WorkspaceReference.contextInjection` so it
+            // round-trips through the workspace create/update APIs.
+            guard try db.tableExists("workspace") else { return }
+            if try !db.columns(in: "workspace").contains(where: { $0.name == "contextInjection" }) {
+                try db.alter(table: "workspace") { table in
+                    table.add(column: "contextInjection", .text)
+                }
+            }
+        }
     }
 }
