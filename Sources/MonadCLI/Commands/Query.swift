@@ -33,8 +33,8 @@ public struct Query: AsyncParsableCommand {
     public func run() async throws {
         let questionText = question.joined(separator: " ")
         guard !questionText.isEmpty else {
-            print("Usage: monad q <question>")
-            print("Example: monad q what is the capital of France")
+            print("Usage: monad query <question>")
+            print("Example: monad query what is the capital of France")
             throw ExitCode.failure
         }
 

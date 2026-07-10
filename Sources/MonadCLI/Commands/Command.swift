@@ -36,8 +36,8 @@ public struct Command: AsyncParsableCommand {
     public func run() async throws {
         let taskText = task.joined(separator: " ")
         guard !taskText.isEmpty else {
-            print("Usage: monad cmd <description>")
-            print("Example: monad cmd find all TODO comments in Swift files")
+            print("Usage: monad command <description>")
+            print("Example: monad command find all TODO comments in Swift files")
             throw ExitCode.failure
         }
 

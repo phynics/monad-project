@@ -22,7 +22,7 @@ help:
 
 # Build the project
 build:
-	@echo "Building MonadServer..."
+	@echo "Building monad..."
 	@swift build
 
 # Clean build artifacts
@@ -35,21 +35,21 @@ clean:
 
 # Run the server
 run-server:
-	@echo "Running MonadServer..."
-	@exec swift run MonadServer
+	@echo "Running monad server..."
+	@exec swift run monad server
 
 # Run the CLI (interactive chat)
 run-cli:
-	@echo "Running MonadCLI..."
-	@exec env MONAD_API_KEY=monad-secret swift run MonadCLI $(ARGS)
+	@echo "Running monad chat..."
+	@exec env MONAD_API_KEY=monad-secret swift run monad chat $(ARGS)
 
 # Quick query
 query:
-	@MONAD_API_KEY=monad-secret swift run MonadCLI query $(Q)
+	@MONAD_API_KEY=monad-secret swift run monad query $(Q)
 
 # Generate command
 command:
-	@MONAD_API_KEY=monad-secret swift run MonadCLI command $(T)
+	@MONAD_API_KEY=monad-secret swift run monad command $(T)
 
 # Run tests
 test:
@@ -66,9 +66,9 @@ server: run-server
 
 # Install CLI
 install:
-	@echo "Installing MonadCLI..."
+	@echo "Installing monad..."
 	@swift build -c release
-	@cp -f .build/release/MonadCLI /usr/local/bin/monad
+	@cp -f .build/release/monad /usr/local/bin/monad
 
 # Lint project
 lint:
