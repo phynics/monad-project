@@ -42,6 +42,6 @@ Monad documentation for the post-refactor architecture.
 ```bash
 swift build
 swift test
-swift run MonadServer
-swift run MonadCLI chat
+swift run monad server
+swift run monad chat
 ```

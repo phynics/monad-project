@@ -28,8 +28,8 @@ Quick reference for agents working with the Monad application repository.
 swift build                                # Build Monad app targets
 swift test                                 # Run Monad tests
 swift test --filter MonadServerTests       # Run specific Monad test target
-swift run MonadServer                      # Start server
-swift run MonadCLI chat                    # Interactive CLI
+swift run monad server                     # Start server
+swift run monad chat                       # Interactive CLI (default)
 ```
 
 For shared-runtime work in `../PositronicKit`:

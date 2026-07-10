@@ -23,10 +23,10 @@ swift build
 swift build -c release
 
 # Run Server
-swift run MonadServer
+swift run monad server
 
 # Run CLI (Interactive Chat)
-swift run MonadCLI chat
+swift run monad chat
 
 # Run Tests
 swift test

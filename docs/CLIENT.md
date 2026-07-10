@@ -77,10 +77,10 @@ The interactive REPL and command-line tool for Monad.
 ### Starting the CLI
 
 ```bash
-swift run MonadCLI chat                    # Interactive REPL (default)
-swift run MonadCLI chat --server http://...  # Explicit server URL
-swift run MonadCLI chat --timeline <id>    # Resume a specific timeline
-swift run MonadCLI status                  # Check server health
+swift run monad chat                       # Interactive REPL (default)
+swift run monad chat --server http://...   # Explicit server URL
+swift run monad chat --timeline <id>       # Resume a specific timeline
+swift run monad status                     # Check server health
 ```
 
 ### Startup Sequence

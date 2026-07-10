@@ -25,8 +25,8 @@ Use Monad for transport, persistence wiring, and app-specific behavior. Use `Pos
 ```bash
 swift build
 swift test
-swift run MonadServer
-swift run MonadCLI chat
+swift run monad server
+swift run monad chat
 ```
 
 ## Working With PositronicKit
