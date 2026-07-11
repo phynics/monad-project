@@ -21,8 +21,12 @@ let client = MonadClient(configuration: config)
 
 **Auto-detection order:**
 1. Explicit URL (flag or local config)
-2. Bonjour/mDNS discovery (finds servers on local network)
-3. Fallback to `localhost:8080`
+2. `MONAD_SERVER_URL` environment variable
+3. Bonjour/mDNS discovery (finds servers on local network)
+4. Fallback to `http://127.0.0.1:8080`
+
+`autoDetect` never starts a server. If no endpoint responds, the CLI reports the configured
+endpoint and suggests starting one with `swift run monad server` or passing `--server`.
 
 ### Client Facades
 

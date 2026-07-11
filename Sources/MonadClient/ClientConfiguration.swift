@@ -71,7 +71,8 @@ public struct ClientConfiguration: Sendable {
         explicitURL: URL? = nil,
         apiKey: String? = nil,
         verbose: Bool = false,
-        timeout: TimeInterval = 2.0
+        timeout: TimeInterval = 2.0,
+        environment: [String: String] = ProcessInfo.processInfo.environment
     ) async -> ClientConfiguration {
         // 1. Explicit URL
         if let url = explicitURL {
@@ -79,7 +80,7 @@ public struct ClientConfiguration: Sendable {
         }
 
         // 2. Environment
-        if let envURLString = ProcessInfo.processInfo.environment["MONAD_SERVER_URL"],
+        if let envURLString = environment["MONAD_SERVER_URL"],
             let envURL = URL(string: envURLString) {
             return ClientConfiguration(baseURL: envURL, apiKey: apiKey, verbose: verbose)
         }
