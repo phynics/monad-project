@@ -4,9 +4,8 @@
 
 Monad is the application host around the shared `PositronicKit` runtime.
 
-- `MonadServer` provides the Hummingbird HTTP/SSE/WebSocket host and GRDB-backed persistence.
-- `MonadClient` provides the Swift client API for talking to the server.
-- `MonadCLI` provides the interactive terminal interface.
+- The `monad` executable provides the server and interactive CLI subcommands.
+- `MonadClient` is the importable Swift client API for future app integrations.
 - `../PositronicKit` provides the shared runtime, prompt system, contracts, and test support used by this repo.
 
 ## Architecture
@@ -27,6 +26,7 @@ swift build
 swift test
 swift run monad server
 swift run monad chat
+# `swift run monad` defaults to chat; it never auto-starts a server.
 ```
 
 ## Working With PositronicKit

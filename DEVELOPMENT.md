@@ -22,10 +22,10 @@ swift build
 # Release build
 swift build -c release
 
-# Run Server
+# Run the server explicitly
 swift run monad server
 
-# Run CLI (Interactive Chat)
+# Run interactive chat (the default subcommand)
 swift run monad chat
 
 # Run Tests
@@ -44,12 +44,12 @@ The project includes a `Makefile` for convenience:
 
 ```bash
 make build         # Build the server
-make run-server    # Run the server
-make run-cli       # Interactive chat mode
+make run-server    # Run `swift run monad server`
+make run-cli       # Run `swift run monad chat`
 make test          # Run tests
 make clean         # Clean build artifacts
 make lint          # Run swiftlint
-make install       # Install MonadCLI to /usr/local/bin/monad
+make install       # Install the monad executable to /usr/local/bin/monad
 ```
 
 ### Xcode Development
