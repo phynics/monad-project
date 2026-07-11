@@ -13,7 +13,7 @@ Quick reference for agents working with the Monad application repository.
 
 - `Monad` contains the app-facing targets: `MonadServer`, `MonadClient`, `MonadCLI`, and their tests.
 - `PositronicKit` (sibling `../PositronicKit`) contains the shared runtime, prompt, contracts, and test-support modules consumed by Monad.
-- `Package.swift` wires Monad to `PositronicKit` as a **remote** SwiftPM package (`github.com/phynics/PositronicKit.git`, branch `main`). To test a local PositronicKit change before pushing, temporarily swap the dependency to `.package(path: "../PositronicKit")` and `swift package resolve`; revert before committing. See the root `../CLAUDE.md` "Local-dev override" section.
+- `Package.swift` wires Monad to `PositronicKit` as a **remote** SwiftPM package (`github.com/phynics/PositronicKit.git`) pinned to a released semver — `Package.swift` is the source of truth for the current pin. To test a local PositronicKit change before pushing, temporarily swap the dependency to `.package(path: "../PositronicKit")` and `swift package resolve`; revert before committing. See the root `../CLAUDE.md` "Local-dev override" section.
 
 ## Working Boundary
 
@@ -48,28 +48,17 @@ Monad defines three main app targets:
 2. `MonadClient` — Client-side networking and shared API consumption.
 3. `MonadCLI` — Command-line interface built on top of `MonadClient`.
 
-Monad consumes these products from `PositronicKit`:
-
-1. `PositronicKit` — Shared runtime orchestration (`ChatEngine`, `TimelineManager`, `ContextManager`, `ToolRouter`, agent services, LLM services).
-2. `PKShared` — Shared API/runtime contracts and utility models.
-3. `PKPrompt` — Prompt DSL, prompt assembly artifacts, and token/compression primitives.
-4. `PKTestSupport` — Reusable test helpers and fixtures.
+Monad consumes several `PositronicKit` products — the core runtime (`PositronicKit`), contracts (`PKShared`), prompt system (`PKPrompt`), embeddings (`PKLocalEmbeddings`), provider adapters, and test support (`PKTestSupport`). `Package.swift` is the source of truth for the exact product list.
 
 ## PositronicKit Guidance
 
-- Treat `PositronicKit` as the agent-building toolkit centered on timelines, workspaces, agents, tools, pipelines, and orchestration stages.
+`../PositronicKit/AGENTS.md` is authoritative for shared-runtime modules, invariants, and
+extension points — read it before changing anything upstream. The Monad-relevant rules:
+
 - Keep concrete transport, RPC, and client/server hosting concerns downstream in Monad unless the abstraction is clearly reusable.
-- Prefer neutral seams like persistence protocols, workspace creators, prompt section providers, and tool routers over embedding Monad-specific deployment details in shared runtime code.
-- `TimelineManager`, `WorkspaceManager`, `ToolRouter`, `ChatEngine`, and prompt/context pipeline code should remain transport-neutral.
-- Preserve stable core concepts such as `Timeline`, `WorkspaceReference`, `AgentInstance`, tool metadata, and prompt artifacts. Avoid leaking host-specific terminology into shared APIs when a neutral alternative exists.
-
-## Prompt And Pipeline Guidance
-
-- Both context gathering and prompt assembly use the generic `Pipeline<Context, Event>` pattern in shared runtime code.
-- `ContextManager` delegates to a `ContextPipeline`; `PromptBuilder` delegates to a `PromptAssemblyPipeline`.
-- Build custom pipelines with the corresponding DSL/builders or per-request overrides instead of hard-coding branching logic into `ChatEngine`.
-- In prompt work, treat prompt IR and assembled prompt artifacts as owned by the shared prompt module. Monad should consume them, not reimplement prompt-tree semantics locally.
-- Preserve both requested compression strategy and realized compression outcome when changing token-budgeting behavior.
+- Prefer neutral seams (persistence protocols, workspace creators, prompt section providers, tool routers) over embedding Monad-specific deployment details in shared runtime code. Avoid leaking host-specific terminology into shared APIs when a neutral alternative exists.
+- Drive the runtime through the `PositronicKit` facade and its public seams; `ChatEngine` and the turn pipeline are internal implementation details of the shared runtime.
+- Treat prompt IR and assembled prompt artifacts as owned by `PKPrompt`. Monad consumes them; it does not reimplement prompt-tree semantics locally.
 
 ## Critical Conventions
 
