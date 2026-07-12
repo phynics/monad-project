@@ -59,19 +59,6 @@ struct ConfigurationScreen {
             prompt: "Fast Model (empty = use main) [\(fastDefault)]:", default: fastDefault)
         config.fastModel = fastInput.isEmpty ? config.modelName : fastInput
 
-        // Tool Format selection
-        print("\nSelect Tool Calling Format:")
-        let toolFormats = ToolCallFormat.allCases
-        for (index, format) in toolFormats.enumerated() {
-            let isDefault = format == config.toolFormat ? " (current)" : ""
-            print("\(index + 1). \(format.rawValue)\(isDefault)")
-        }
-        guard let formatSelection = readInt(min: 1, max: toolFormats.count) else {
-            throw CancellationError()
-        }
-        let formatIndex = formatSelection - 1
-        config.toolFormat = toolFormats[formatIndex]
-
         // Update Config
         TerminalUI.printLoading("Updating configuration...")
         do {
