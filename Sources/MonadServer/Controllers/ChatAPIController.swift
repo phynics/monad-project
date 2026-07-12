@@ -35,6 +35,25 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         group.post("/{id}/chat", use: chat)
         group.post("/{id}/chat/stream", use: chatStream)
         group.post("/{id}/chat/cancel", use: cancel)
+        group.get("/{id}/turn-inspection", use: turnInspectionAvailability)
+    }
+
+    /// Reports whether completed-turn prompt inspection artifacts can be retrieved.
+    ///
+    /// Monad does not capture the compose-time prompt inspection hook, so this endpoint
+    /// has a stable unavailable response for all three artifact classes. It is separate
+    /// from the streaming endpoint because the artifacts are not `ChatEvent` payloads.
+    @Sendable func turnInspectionAvailability(
+        _: Request,
+        context: Context
+    ) async throws -> TurnInspectionAvailabilityResponse {
+        let idString = try context.parameters.require("id")
+        guard let timelineId = UUID(uuidString: idString) else {
+            throw HTTPError(.badRequest)
+        }
+
+        try await timelineManager.hydrateTimeline(id: timelineId)
+        return TurnInspectionAvailabilityResponse(timelineId: timelineId)
     }
 
     @Sendable func chat(_ request: Request, context: Context) async throws -> ChatResponse {

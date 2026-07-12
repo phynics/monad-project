@@ -130,6 +130,38 @@ Each event parses into a `ChatEvent` object:
 - `streamCompleted`: The very last event. Closes the connection.
 - `error`: Indicates a failure. Includes an `error` string.
 
+### Completed-turn Prompt Inspection Availability
+`GET /sessions/:id/turn-inspection`
+
+Returns the availability contract for prompt-section trees, provider payloads, and
+prompt-journal diffs for completed turns in the session. Monad does not install the
+PositronicKit compose-time prompt inspector or persist these artifacts, so all three are
+currently a terminal, non-retryable unavailable state. They are deliberately not inferred
+from chat history or streamed `ChatEvent`s.
+
+```json
+{
+  "timelineId": "8A34D6D3-6E37-4BD7-87B2-2E5EAA2336D7",
+  "inspectionScope": "completedTurns",
+  "promptSectionTree": {
+    "availability": "permanentlyUnavailable",
+    "reason": "notCapturedByMonad"
+  },
+  "sentProviderPayload": {
+    "availability": "permanentlyUnavailable",
+    "reason": "notCapturedByMonad"
+  },
+  "journalDiffs": {
+    "availability": "permanentlyUnavailable",
+    "reason": "notCapturedByMonad"
+  }
+}
+```
+
+Clients should render this as permanently unavailable, not as a loading or future-data
+placeholder. A future server implementation would require explicit capture and persistence
+of the compose-time artifacts; it must not synthesize them from persisted messages.
+
 ### Timeline Workspaces
 - `GET /sessions/:id/workspaces` — List workspaces attached to timeline
 - `POST /sessions/:id/workspaces` — Attach a workspace to timeline (body: `{ "workspaceId": "uuid" }`)

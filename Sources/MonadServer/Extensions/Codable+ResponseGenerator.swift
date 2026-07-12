@@ -48,6 +48,8 @@ extension StatusResponse: ResponseGenerator {}
 
 extension ChatResponse: ResponseGenerator {}
 
+extension TurnInspectionAvailabilityResponse: ResponseGenerator {}
+
 extension TimelineWorkspacesResponse: ResponseGenerator {}
 
 extension APIErrorResponse: ResponseGenerator {}
