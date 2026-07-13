@@ -1,7 +1,7 @@
 import Foundation
 import MonadClient
-import PKShared
 import MonadShared
+import PKShared
 
 // Needed for fflush
 #if canImport(Glibc)
@@ -80,14 +80,15 @@ extension ChatREPL {
 
             print(TerminalUI.dim("─────────────────────────────────────────"))
 
+            let providerConfig = config.activeProviderConfiguration
             let providerName = config.activeProvider.rawValue
             print(TerminalUI.dim("🤖 Provider: \(providerName)"))
-            print(TerminalUI.dim("   Main:    \(config.modelName)"))
-            if !config.utilityModel.isEmpty {
-                print(TerminalUI.dim("   Utility: \(config.utilityModel)"))
+            print(TerminalUI.dim("   Main:    \(providerConfig.modelName)"))
+            if !providerConfig.utilityModel.isEmpty {
+                print(TerminalUI.dim("   Utility: \(providerConfig.utilityModel)"))
             }
-            if !config.fastModel.isEmpty, config.fastModel != config.utilityModel {
-                print(TerminalUI.dim("   Fast:    \(config.fastModel)"))
+            if !providerConfig.fastModel.isEmpty, providerConfig.fastModel != providerConfig.utilityModel {
+                print(TerminalUI.dim("   Fast:    \(providerConfig.fastModel)"))
             }
 
             if !memories.isEmpty {
@@ -118,7 +119,8 @@ extension ChatREPL {
             printMissingWorkspacesSummary(workspacesToRestore)
 
             if let input = lineReader.readLine(prompt: "", completion: nil)?
-                .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y" {
+                .trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), input == "y"
+            {
                 await restoreWorkspaces(workspacesToRestore)
             } else {
                 print("Skipping restoration.")

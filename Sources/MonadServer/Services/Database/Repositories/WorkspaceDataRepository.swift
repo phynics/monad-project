@@ -4,7 +4,7 @@ import PositronicKit
 import PKShared
 import MonadShared
 
-public actor WorkspaceDataRepository: WorkspacePersistenceProtocol {
+public actor WorkspaceDataRepository: WorkspaceStore {
     private let dbQueue: DatabaseQueue
 
     public init(dbQueue: DatabaseQueue) {

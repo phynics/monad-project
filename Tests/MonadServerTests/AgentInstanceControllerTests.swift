@@ -14,7 +14,7 @@ struct AgentInstanceControllerTests {
         let workspace = TestWorkspace()
 
         let agentInstanceManager = AgentInstanceManager(
-            repository: AgentWorkspaceService(workspaceRoot: workspace.root)
+            repository: DefaultWorkspaceCatalog(workspaceRoot: workspace.root)
         )
 
         let router = Router()

@@ -8,19 +8,19 @@ import Testing
 
 final class WorkspaceManagerTests {
     var persistence: MockPersistenceService!
-    var repository: AgentWorkspaceService!
-    var manager: WorkspaceManager!
+    var repository: DefaultWorkspaceCatalog!
+    var manager: DefaultWorkspaceResolver!
     var testDir: URL!
 
     init() async throws {
         persistence = MockPersistenceService()
         let persistence = try #require(persistence)
-        repository = AgentWorkspaceService(
+        repository = DefaultWorkspaceCatalog(
             workspaceRoot: URL(fileURLWithPath: NSTemporaryDirectory()),
             workspacePersistence: persistence
         )
 
-        manager = WorkspaceManager(repository: repository, workspaceCreator: WorkspaceFactory())
+        manager = DefaultWorkspaceResolver(repository: repository, workspaceCreator: LocalWorkspaceFactory())
         testDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: testDir, withIntermediateDirectories: true)
     }

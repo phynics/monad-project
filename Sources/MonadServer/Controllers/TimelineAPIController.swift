@@ -9,12 +9,12 @@ import PositronicKit
 public struct TimelineAPIController<Context: RequestContext>: Sendable {
     private let timelineManager: TimelineManager
     private let timelineStore: any TimelinePersistenceProtocol
-    private let workspaceStore: any WorkspacePersistenceProtocol
+    private let workspaceStore: any WorkspaceStore
 
     public init(
         timelineManager: TimelineManager,
         timelineStore: any TimelinePersistenceProtocol,
-        workspaceStore: any WorkspacePersistenceProtocol
+        workspaceStore: any WorkspaceStore
     ) {
         self.timelineManager = timelineManager
         self.timelineStore = timelineStore
@@ -259,13 +259,10 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound)
         }
 
-        guard let toolManager = await timelineManager.getToolManager(for: timelineId) else {
-            throw HTTPError(.notFound)
-        }
-
-        if let workspace = try await timelineManager.workspaceManager.getWorkspace(id: wsId) {
-            await toolManager.registerWorkspace(workspace)
-        }
+        // attachWorkspace is idempotent on the persisted attachment (already attached, since
+        // the membership check above passed) and re-registers the workspace's tools into the
+        // timeline's live tool manager — exactly what "restore" needs after hydration.
+        try await timelineManager.attachWorkspace(wsId, to: timelineId)
 
         return .ok
     }

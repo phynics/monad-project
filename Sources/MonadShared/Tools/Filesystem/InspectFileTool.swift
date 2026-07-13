@@ -2,6 +2,7 @@ import Foundation
 import struct JSONSchema.Schema
 import JSONSchemaBuilder
 import PKShared
+import PKUtilities
 
 /// Tool to inspect file metadata and type (similar to unix 'file' command)
 public struct InspectFileTool: Tool, Sendable {

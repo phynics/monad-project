@@ -3,8 +3,8 @@ import Foundation
 import PKShared
 import MonadShared
 
-/// Implementation of WorkspaceProtocol that forwards requests to a remote client via RPC/WebSocket
-public actor RemoteWorkspace: WorkspaceProtocol {
+/// Implementation of Workspace that forwards requests to a remote client via RPC/WebSocket
+public actor RemoteWorkspace: Workspace {
     public let reference: WorkspaceReference
     public let clientId: UUID
 

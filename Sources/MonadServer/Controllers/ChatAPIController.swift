@@ -7,6 +7,7 @@ import Logging
 import MonadShared
 import NIOCore
 import PKShared
+import PKUtilities
 import PositronicKit
 
 public struct ChatAPIController<Context: RequestContext>: Sendable {
@@ -229,16 +230,11 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     // MARK: - Tool Resolution (Server-Layer Concern)
 
     private func resolveTools(timelineId: UUID, attachedTools: [ToolReference]?) async -> [AnyTool] {
-        guard let toolManager = await timelineManager.getToolManager(for: timelineId) else {
-            return []
-        }
-
-        var availableTools = await toolManager.getEnabledTools()
+        var availableTools = await timelineManager.enabledTools(for: timelineId)
         let knownIDs = Set(availableTools.map(\.callName))
 
         for ref in attachedTools ?? [] where !knownIDs.contains(ref.toolId) {
-            var tool = AnyTool(DeferredAttachedTool(reference: ref))
-            tool.provenance = .named("Attached")
+            let tool = AnyTool(DeferredAttachedTool(reference: ref), origin: .named("Attached"))
             availableTools.append(tool)
         }
 
@@ -256,11 +252,15 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     }
 }
 
-private struct DeferredAttachedTool: PKShared.Tool, ToolReferenceProviding {
+private struct DeferredAttachedTool: PKShared.Tool {
     let toolReference: ToolReference
 
     init(reference: ToolReference) {
         toolReference = reference
+    }
+
+    var identity: ToolReference {
+        toolReference
     }
 
     var callName: String {

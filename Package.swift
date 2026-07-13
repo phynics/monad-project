@@ -28,6 +28,7 @@ let package = Package(
             name: "MonadShared",
             dependencies: [
                 .product(name: "PKShared", package: "PositronicKit"),
+                .product(name: "PKUtilities", package: "PositronicKit"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "JSONSchema", package: "swift-json-schema"),
                 .product(name: "JSONSchemaBuilder", package: "swift-json-schema"),
@@ -40,6 +41,7 @@ let package = Package(
                 "MonadShared",
                 .product(name: "PositronicKit", package: "PositronicKit"),
                 .product(name: "PKShared", package: "PositronicKit"),
+                .product(name: "PKUtilities", package: "PositronicKit"),
                 .product(name: "PKPrompt", package: "PositronicKit"),
                 .product(name: "PKLocalEmbeddings", package: "PositronicKit"),
                 .product(name: "PKOpenAIProvider", package: "PositronicKit"),
@@ -71,6 +73,8 @@ let package = Package(
             dependencies: [
                 "MonadClient",
                 "MonadShared",
+                .product(name: "PKShared", package: "PositronicKit"),
+                .product(name: "PKUtilities", package: "PositronicKit"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "ErrorKit", package: "ErrorKit"),
                 .product(name: "Logging", package: "swift-log"),
