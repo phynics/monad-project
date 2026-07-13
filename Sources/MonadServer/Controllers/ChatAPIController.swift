@@ -4,10 +4,10 @@ import Hummingbird
 import JSONSchema
 import JSONSchemaBuilder
 import Logging
-import PositronicKit
-import PKShared
 import MonadShared
 import NIOCore
+import PKShared
+import PositronicKit
 
 public struct ChatAPIController<Context: RequestContext>: Sendable {
     private let timelineManager: TimelineManager
@@ -198,13 +198,13 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
     private func describe(event: ChatEvent) -> String {
         switch event {
-        case .meta(let meta):
+        case let .meta(meta):
             return "meta=\(String(reflecting: meta))"
-        case .delta(let delta):
+        case let .delta(delta):
             return "delta=\(String(reflecting: delta))"
-        case .error(let error):
+        case let .error(error):
             return "error=\(String(reflecting: error))"
-        case .completion(let completion):
+        case let .completion(completion):
             return "completion=\(String(reflecting: completion))"
         }
     }
@@ -246,8 +246,10 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     }
 
     private func attachedAgent(for timelineId: UUID) async throws -> AgentInstance? {
-        guard let timeline = await timelineManager.getTimeline(id: timelineId),
-              let agentId = timeline.attachedAgentInstanceId else {
+        await timelineManager.touchTimeline(id: timelineId)
+        guard let timeline = await timelineManager.timeline(id: timelineId),
+              let agentId = timeline.attachedAgentInstanceId
+        else {
             return nil
         }
         return try await agentInstanceStore.fetchAgentInstance(id: agentId)
@@ -261,7 +263,9 @@ private struct DeferredAttachedTool: PKShared.Tool, ToolReferenceProviding {
         toolReference = reference
     }
 
-    var callName: String { toolReference.toolId }
+    var callName: String {
+        toolReference.toolId
+    }
 
     var name: String {
         switch toolReference {
@@ -298,7 +302,9 @@ private struct DeferredAttachedTool: PKShared.Tool, ToolReferenceProviding {
         }
     }
 
-    func canExecute() async -> Bool { true }
+    func canExecute() async -> Bool {
+        true
+    }
 
     func execute(parameters _: [String: AnyCodable]) async throws -> ToolResult {
         .failure("Attached workspace tools are routed externally")
