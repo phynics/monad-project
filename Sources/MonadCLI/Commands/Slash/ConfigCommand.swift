@@ -117,7 +117,7 @@ struct ConfigCommand: SlashCommand {
         "fast-model": "fast", "fast": "fast",
         "endpoint": "endpoint", "url": "endpoint",
         "memory-limit": "memory", "memory": "memory",
-        "document-limit": "document", "document": "document"
+        "document-limit": "document", "document": "document",
     ]
 
     private func applyConfigValue(
@@ -129,15 +129,15 @@ struct ConfigCommand: SlashCommand {
 
         switch normalizedKey {
         case "apiKey":
-            config.apiKey = value
+            config.providers[config.activeProvider]?.apiKey = value
         case "model":
-            config.modelName = value
+            config.providers[config.activeProvider]?.modelName = value
         case "utility":
-            config.utilityModel = value
+            config.providers[config.activeProvider]?.utilityModel = value
         case "fast":
-            config.fastModel = value
+            config.providers[config.activeProvider]?.fastModel = value
         case "endpoint":
-            config.endpoint = value
+            config.providers[config.activeProvider]?.endpoint = value
         case "memory", "document":
             return applyIntegerLimit(normalizedKey, value: value, config: &config)
         default:
