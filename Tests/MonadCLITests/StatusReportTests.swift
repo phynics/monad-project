@@ -7,10 +7,9 @@ import Testing
 struct StatusReportTests {
     @Test("valid config with healthy ai_provider is ready")
     func classifyConfiguration_readyWhenValidAndHealthy() {
-        var config = LLMConfiguration.default
-        config.activeProvider = .openAI
-        config.modelName = "gpt-test"
-        config.apiKey = "sk-test"
+        var config = LLMConfiguration(activeProvider: .openAI)
+        config.providers[.openAI]?.modelName = "gpt-test"
+        config.providers[.openAI]?.apiKey = "sk-test"
 
         let status = StatusResponse(
             status: .ok,
@@ -26,10 +25,9 @@ struct StatusReportTests {
 
     @Test("invalid config (missing API key) needs setup")
     func classifyConfiguration_needsSetupWhenInvalid() {
-        var config = LLMConfiguration.default
-        config.activeProvider = .openAI
-        config.modelName = ""
-        config.apiKey = ""
+        var config = LLMConfiguration(activeProvider: .openAI)
+        config.providers[.openAI]?.modelName = ""
+        config.providers[.openAI]?.apiKey = ""
 
         let status = StatusResponse(
             status: .ok,
@@ -48,10 +46,9 @@ struct StatusReportTests {
 
     @Test("valid config but degraded ai_provider component needs setup")
     func classifyConfiguration_needsSetupWhenProviderUnhealthy() {
-        var config = LLMConfiguration.default
-        config.activeProvider = .openAI
-        config.modelName = "gpt-test"
-        config.apiKey = "sk-test"
+        var config = LLMConfiguration(activeProvider: .openAI)
+        config.providers[.openAI]?.modelName = "gpt-test"
+        config.providers[.openAI]?.apiKey = "sk-test"
 
         let status = StatusResponse(
             status: .degraded,

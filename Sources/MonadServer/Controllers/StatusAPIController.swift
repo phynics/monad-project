@@ -13,13 +13,13 @@ public struct StatusAPIController<Context: RequestContext>: Sendable {
     }
 
     private let databaseManager: any HealthCheckable
-    private let llmService: any LLMStreamClient & LLMConfigStore & LLMUtilityClient & HealthCheckable
+    private let llmService: any LanguageModel & HealthCheckable
     public let startTime: Date
     public let version = "1.0.0"
 
     public init(
         databaseManager: any HealthCheckable,
-        llmService: any LLMStreamClient & LLMConfigStore & LLMUtilityClient & HealthCheckable,
+        llmService: any LanguageModel & HealthCheckable,
         startTime: Date
     ) {
         self.databaseManager = databaseManager

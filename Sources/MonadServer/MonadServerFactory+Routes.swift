@@ -22,7 +22,7 @@ extension MonadServerFactory {
         let timelineManager: TimelineManager
         let toolRouter: ToolRouter
         let databaseManager: any HealthCheckable
-        let llmService: any LLMStreamClient & LLMConfigStore & LLMUtilityClient & HealthCheckable
+        let llmService: any LanguageModel & HealthCheckable
     }
 
     // MARK: - Route Registration
@@ -30,7 +30,7 @@ extension MonadServerFactory {
     static func registerPublicRoutes(
         on router: Router<AppRequestContext>,
         databaseManager: any HealthCheckable,
-        llmService: any LLMStreamClient & LLMConfigStore & LLMUtilityClient & HealthCheckable
+        llmService: any LanguageModel & HealthCheckable
     ) {
         router.get("/health") { _, _ -> String in
             return "OK"

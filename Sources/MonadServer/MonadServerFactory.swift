@@ -47,7 +47,7 @@ public struct MonadServerFactory {
     }
 
     private struct ServiceSet {
-        let llmService: any LLMStreamClient & LLMConfigStore & LLMUtilityClient & HealthCheckable
+        let llmService: any LanguageModel & HealthCheckable
         let embeddingService: any EmbeddingServiceProtocol
         let vectorStore: (any VectorStoreProtocol)?
         let keyValueStore: DatabaseKeyValueStore
@@ -73,7 +73,7 @@ public struct MonadServerFactory {
         let coreChat = PositronicKit(
             configuration: .init(
                 provider: .init(
-                    llmService: components.services.llmService,
+                    languageModel: components.services.llmService,
                     embeddingService: components.services.embeddingService
                 ),
                 persistence: .init(
