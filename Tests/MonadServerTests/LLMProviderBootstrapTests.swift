@@ -1,15 +1,29 @@
+import PKOllamaProvider
+import PKOpenAIProvider
+import PKOpenRouterProvider
 import PKShared
 @testable import MonadServerCore
 import Testing
 
 @Suite struct LLMProviderBootstrapTests {
-    @Test("registerBuiltIns exposes factories for bundled providers")
-    func registerBuiltIns_exposesFactories() {
-        LLMProviderBootstrap.registerBuiltIns()
+    @Test("makeClientFactory builds clients for bundled providers")
+    func makeClientFactory_buildsClients() {
+        let factory = LLMProviderBootstrap.makeClientFactory()
 
-        #expect(ExternalLLMProviderRegistry.factory(for: .openAI) != nil)
-        #expect(ExternalLLMProviderRegistry.factory(for: .openAICompatible) != nil)
-        #expect(ExternalLLMProviderRegistry.factory(for: .openRouter) != nil)
-        #expect(ExternalLLMProviderRegistry.factory(for: .ollama) != nil)
+        let openAIConfig = LLMConfiguration(activeProvider: .openAI)
+        let openAIClients = factory?(openAIConfig)
+        #expect(openAIClients?.main != nil)
+
+        let openRouterConfig = LLMConfiguration(activeProvider: .openRouter)
+        let openRouterClients = factory?(openRouterConfig)
+        #expect(openRouterClients?.main != nil)
+
+        let ollamaConfig = LLMConfiguration(activeProvider: .ollama)
+        let ollamaClients = factory?(ollamaConfig)
+        #expect(ollamaClients?.main != nil)
+
+        let anthropicConfig = LLMConfiguration(activeProvider: .anthropic)
+        let anthropicClients = factory?(anthropicConfig)
+        #expect(anthropicClients?.main != nil)
     }
 }

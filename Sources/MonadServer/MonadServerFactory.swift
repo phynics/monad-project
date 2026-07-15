@@ -215,11 +215,11 @@ public struct MonadServerFactory {
         )
     }
 
-    private static func initializeServices(
+private static func initializeServices(
         dbQueue: DatabaseQueue,
         logger: Logger
     ) async throws -> ServiceSet {
-        LLMProviderBootstrap.registerBuiltIns()
+        let clientFactory = LLMProviderBootstrap.makeClientFactory()
 
         let embeddingService: any EmbeddingServiceProtocol = LocalEmbeddingService()
         logger.info("Using Local Embedding Service")
@@ -238,7 +238,7 @@ public struct MonadServerFactory {
         let configURL = appSupportDir.appendingPathComponent("config.json")
         let storage = ConfigurationStorage(configURL: configURL)
         await storage.migrateIfNeeded()
-        let llmService = LLMService(storage: storage)
+        let llmService = LLMService(storage: storage, clientFactory: clientFactory)
         await llmService.loadConfiguration()
 
         return ServiceSet(
