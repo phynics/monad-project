@@ -73,13 +73,37 @@ public struct ClientConfiguration: Sendable {
         verbose: Bool = false,
         timeout: TimeInterval = 2.0
     ) async -> ClientConfiguration {
+        await autoDetect(
+            explicitURL: explicitURL,
+            apiKey: apiKey,
+            verbose: verbose,
+            timeout: timeout,
+            environment: ProcessInfo.processInfo.environment,
+            discover: { timeout in
+                let logger = Logger(label: "com.monad.client.discovery")
+                return await discoverServer(timeout: timeout, logger: logger)
+            }
+        )
+    }
+
+    /// Testable implementation of the public server-selection contract. Keeping the
+    /// environment and discovery operation injectable lets clients verify precedence
+    /// without mutating process-global environment state or touching the network.
+    static func autoDetect(
+        explicitURL: URL? = nil,
+        apiKey: String? = nil,
+        verbose: Bool = false,
+        timeout: TimeInterval = 2.0,
+        environment: [String: String],
+        discover: @Sendable (TimeInterval) async -> URL?
+    ) async -> ClientConfiguration {
         // 1. Explicit URL
         if let url = explicitURL {
             return ClientConfiguration(baseURL: url, apiKey: apiKey, verbose: verbose)
         }
 
         // 2. Environment
-        if let envURLString = ProcessInfo.processInfo.environment["MONAD_SERVER_URL"],
+        if let envURLString = environment["MONAD_SERVER_URL"],
             let envURL = URL(string: envURLString) {
             return ClientConfiguration(baseURL: envURL, apiKey: apiKey, verbose: verbose)
         }
@@ -89,8 +113,18 @@ public struct ClientConfiguration: Sendable {
         // 3. Discovery
         logger.info("No server URL configured. Searching for Monad Server on local network...")
 
-        let discovery = ServerDiscovery(logger: logger)
-        let stream = discovery.startDiscovery()
+        if let url = await discover(timeout) {
+            logger.info("Discovered server at \(url). Using this endpoint.")
+            return ClientConfiguration(baseURL: url, apiKey: apiKey, verbose: verbose)
+        }
+
+        logger.info("No server found via discovery. Using default localhost.")
+        return ClientConfiguration(apiKey: apiKey, verbose: verbose)
+    }
+
+    private static func discoverServer(timeout: TimeInterval, logger: Logger) async -> URL? {
+        let serverDiscovery = ServerDiscovery(logger: logger)
+        let stream = serverDiscovery.startDiscovery()
 
         let discoveredURL: URL? = await withTaskGroup(of: URL?.self) { group in
             group.addTask {
@@ -112,15 +146,7 @@ public struct ClientConfiguration: Sendable {
             return result ?? nil
         }
 
-        discovery.stop()
-
-        if let url = discoveredURL {
-            logger.info("Discovered server at \(url). Using this endpoint.")
-            return ClientConfiguration(baseURL: url, apiKey: apiKey, verbose: verbose)
-        }
-
-        logger.info("No server found via discovery. Using default localhost.")
-        // Fallback to default
-        return ClientConfiguration(apiKey: apiKey, verbose: verbose)
+        serverDiscovery.stop()
+        return discoveredURL
     }
 }

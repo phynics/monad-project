@@ -12,7 +12,7 @@
 
 ```swift
 let config = await ClientConfiguration.autoDetect(
-    explicitURL: url,       // nil = auto-discover via Bonjour
+    explicitURL: url,       // nil = check environment, then Bonjour
     apiKey: "sk-...",
     verbose: false
 )
@@ -20,9 +20,14 @@ let client = MonadClient(configuration: config)
 ```
 
 **Auto-detection order:**
-1. Explicit URL (flag or local config)
-2. Bonjour/mDNS discovery (finds servers on local network)
-3. Fallback to `localhost:8080`
+1. Explicit URL supplied by the caller (for the CLI, `--server` or its resolved local config)
+2. `MONAD_SERVER_URL` from the process environment
+3. Bonjour/mDNS discovery (finds an already-running server on the local network)
+4. Fallback to `http://127.0.0.1:8080`
+
+This selection order is a `MonadClient` library contract, not server lifecycle management.
+Neither `ClientConfiguration.autoDetect`, `monad chat`, nor `monad status` starts a server.
+Start one separately with `monad server`, or pass the correct endpoint explicitly.
 
 ### Client Facades
 
@@ -86,7 +91,7 @@ swift run monad status                     # Check server health
 ### Startup Sequence
 
 1. Load local config (`LocalConfigManager`)
-2. Auto-detect server URL (flag → local config → Bonjour → localhost)
+2. Auto-detect server URL (flag/local config → `MONAD_SERVER_URL` → Bonjour → localhost)
 3. Health check server
 4. Register the local request origin (idempotent)
 5. Check/show configuration screen if LLM not configured
