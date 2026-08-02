@@ -10,6 +10,49 @@ import PositronicKit
 import Testing
 
 struct ChatControllerTests {
+    @Test("Turn inspection endpoint declares unavailable prompt artifacts")
+    func turnInspectionEndpointDeclaresUnavailablePromptArtifacts() async throws {
+        let persistence = MockPersistenceService()
+        let workspace = TestWorkspace()
+        let runtime = TestRuntime(
+            workspaceRoot: workspace.root,
+            persistence: persistence,
+            llm: MockLLMService(),
+            embedding: MockEmbeddingService()
+        )
+        let timeline = try await runtime.timelineManager.createTimeline()
+
+        let router = Router()
+        ChatAPIController<BasicRequestContext>(
+            chat: runtime.buildCore(),
+            timelineManager: runtime.timelineManager,
+            agentInstanceStore: persistence,
+            toolRouter: runtime.toolRouter
+        ).addRoutes(to: router.group("/sessions"))
+        let app = Application(router: router)
+
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/sessions/\(timeline.id)/turn-inspection", method: .get) { response in
+                #expect(response.status == .ok)
+
+                let inspection = try JSONDecoder().decode(
+                    TurnInspectionAvailabilityResponse.self,
+                    from: response.body
+                )
+                #expect(inspection.timelineId == timeline.id)
+                #expect(inspection.inspectionScope == .completedTurns)
+                for artifact in [
+                    inspection.promptSectionTree,
+                    inspection.sentProviderPayload,
+                    inspection.journalDiffs,
+                ] {
+                    #expect(artifact.availability == .permanentlyUnavailable)
+                    #expect(artifact.reason == .notCapturedByMonad)
+                }
+            }
+        }
+    }
+
     @Test("Test Chat Endpoint")
     func chatEndpoint() async throws {
         // Setup Deps

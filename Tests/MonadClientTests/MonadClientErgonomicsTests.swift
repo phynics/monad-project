@@ -47,6 +47,26 @@ public actor MockSession: URLSessionProtocol {
 }
 
 @Suite struct MonadClientErgonomicsTests {
+    @Test("autoDetect prefers an explicit URL over environment configuration")
+    func explicitURLWins() async throws {
+        let explicit = try #require(URL(string: "http://explicit.test"))
+        let environment = ["MONAD_SERVER_URL": "http://environment.test"]
+        let config = await ClientConfiguration.autoDetect(
+            explicitURL: explicit,
+            environment: environment
+        )
+        #expect(config.baseURL == explicit)
+    }
+
+    @Test("autoDetect uses MONAD_SERVER_URL before Bonjour discovery")
+    func environmentURLWinsBeforeDiscovery() async throws {
+        let environmentURL = try #require(URL(string: "http://environment.test"))
+        let config = await ClientConfiguration.autoDetect(
+            environment: ["MONAD_SERVER_URL": environmentURL.absoluteString]
+        )
+        #expect(config.baseURL == environmentURL)
+    }
+
     @Test("Test Client Route Mappings for recent extensions")
     func clientErgonomics() async throws {
         let mockSession = MockSession()

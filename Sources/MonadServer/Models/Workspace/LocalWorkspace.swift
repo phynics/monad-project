@@ -3,8 +3,8 @@ import MonadShared
 import PKShared
 import PositronicKit
 
-/// Implementation of WorkspaceProtocol for workspaces hosted on the local server filesystem
-public actor LocalWorkspace: WorkspaceProtocol {
+/// Implementation of Workspace for workspaces hosted on the local server filesystem
+public actor LocalWorkspace: Workspace {
     public let reference: WorkspaceReference
 
     public nonisolated let id: UUID

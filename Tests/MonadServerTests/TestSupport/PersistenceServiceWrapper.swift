@@ -120,7 +120,7 @@ public final class PersistenceService: HealthCheckable, @unchecked Sendable {
         try await timelineStore.pruneTimelines(olderThan: timeInterval, excluding: excludedTimelineIds, dryRun: dryRun)
     }
 
-    // MARK: - WorkspacePersistenceProtocol
+    // MARK: - WorkspaceStore
 
     public func saveWorkspace(_ workspace: WorkspaceReference) async throws {
         try await workspaceStore.saveWorkspace(workspace)

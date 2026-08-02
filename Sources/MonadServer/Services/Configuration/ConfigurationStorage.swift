@@ -184,7 +184,10 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
                 var apiKey: String
                 var version: Int
                 var provider: LLMProvider
-                var toolFormat: ToolCallFormat
+                // Retain the legacy key as an opaque string so old JSON values such as
+                // "JSON"/"XML" remain decodable after the dead format choices were removed.
+                // The migrated configuration always uses PositronicKit's sole supported format.
+                var toolFormat: String?
                 var memoryContextLimit: Int
                 var documentContextLimit: Int
             }
@@ -207,7 +210,7 @@ public actor ConfigurationStorage: ConfigurationServiceProtocol {
                     modelName: oldConfig.modelName,
                     utilityModel: oldConfig.utilityModel,
                     fastModel: oldConfig.fastModel,
-                    toolFormat: oldConfig.toolFormat
+                    toolFormat: .openAI
                 )
 
                 let newConfig = LLMConfiguration(

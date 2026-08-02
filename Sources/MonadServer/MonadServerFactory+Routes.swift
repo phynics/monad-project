@@ -14,11 +14,11 @@ extension MonadServerFactory {
         let memoryStore: any MemoryStoreProtocol
         let messageStore: any MessageStoreProtocol
         let timelineStore: any TimelinePersistenceProtocol
-        let workspaceStore: any WorkspacePersistenceProtocol
+        let workspaceStore: any WorkspaceStore
         let toolStore: any ToolPersistenceProtocol
         let agentTemplateStore: any AgentTemplateStoreProtocol
         let requestOriginStore: any RequestOriginStoreProtocol
-        let workspaceManager: any WorkspaceManagerProtocol
+        let workspaceManager: any WorkspaceResolver
         let timelineManager: TimelineManager
         let toolRouter: ToolRouter
         let databaseManager: any HealthCheckable
@@ -69,7 +69,7 @@ extension MonadServerFactory {
         chat: PositronicKit,
         timelineManager: TimelineManager,
         timelineStore: any TimelinePersistenceProtocol,
-        workspaceStore: any WorkspacePersistenceProtocol,
+        workspaceStore: any WorkspaceStore,
         agentInstanceStore: any AgentInstanceStoreProtocol,
         toolRouter: ToolRouter,
         verbose: Bool

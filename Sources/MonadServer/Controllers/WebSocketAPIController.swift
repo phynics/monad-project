@@ -10,6 +10,7 @@ import ServiceLifecycle
 
 struct WebSocketAPIController<Context: WebSocketRequestContext & RequestContext>: Sendable {
     let connectionManager: WebSocketConnectionManager
+    private let logger = Logger(label: "com.monad.server.websocket.controller")
 
     func addRoutes(to group: RouterGroup<Context>) {
         group.ws("/v1/connect", onUpgrade: { inbound, outbound, context in
@@ -41,19 +42,17 @@ struct WebSocketAPIController<Context: WebSocketRequestContext & RequestContext>
 
         do {
             try await cancelWhenGracefulShutdown {
-                // Read loop
+                // Read loop — server-initiated RPC: clients send RPCResponse frames back.
                 for try await frame in inbound {
                     switch frame.opcode {
                     case .text:
                         let text = String(buffer: frame.data)
-                        // Handle incoming message (RPC Response)
                         if let data = text.data(using: .utf8) {
                             do {
                                 let response = try JSONDecoder().decode(RPCResponse.self, from: data)
                                 await connectionManager.handleResponse(response: response)
                             } catch {
-                                // If it's not a response, maybe it's a request?
-                                // For now, log and ignore.
+                                logger.warning("Failed to decode inbound WebSocket frame as RPCResponse: \(error)")
                             }
                         }
                     case .binary:

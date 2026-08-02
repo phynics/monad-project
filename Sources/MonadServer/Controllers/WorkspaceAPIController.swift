@@ -10,11 +10,11 @@ import PositronicKit
 
 /// Controller for managing workspaces
 public struct WorkspaceAPIController<Context: RequestContext>: Sendable {
-    private let workspaceStore: any WorkspacePersistenceProtocol
+    private let workspaceStore: any WorkspaceStore
     private let toolStore: any ToolPersistenceProtocol
 
     public init(
-        workspaceStore: any WorkspacePersistenceProtocol,
+        workspaceStore: any WorkspaceStore,
         toolStore: any ToolPersistenceProtocol
     ) {
         self.workspaceStore = workspaceStore

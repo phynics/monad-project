@@ -9,12 +9,12 @@ import MonadShared
 /// Controller for managing client identities
 public struct ClientAPIController<Context: RequestContext>: Sendable {
     private let requestOriginStore: any RequestOriginStoreProtocol
-    private let workspaceStore: any WorkspacePersistenceProtocol
+    private let workspaceStore: any WorkspaceStore
     private let toolStore: any ToolPersistenceProtocol
 
     public init(
         requestOriginStore: any RequestOriginStoreProtocol,
-        workspaceStore: any WorkspacePersistenceProtocol,
+        workspaceStore: any WorkspaceStore,
         toolStore: any ToolPersistenceProtocol
     ) {
         self.requestOriginStore = requestOriginStore

@@ -65,13 +65,11 @@ struct ConfigCommand: SlashCommand {
               endpoint      API endpoint URL
               memory        Memory context limit (number)
               document      Document context limit (number)
-              format        Tool calling format (openai, native, json, xml)
 
             \(TerminalUI.bold("Examples:"))
               /config set model gpt-4o
               /config set api-key
               /config provider openrouter
-              /config set format json
 
             """
         )
@@ -90,7 +88,6 @@ struct ConfigCommand: SlashCommand {
                 print("  \(TerminalUI.dim("Model:"))        \(providerConfig.modelName)")
                 print("  \(TerminalUI.dim("Utility:"))      \(providerConfig.utilityModel)")
                 print("  \(TerminalUI.dim("Fast:"))         \(providerConfig.fastModel)")
-                print("  \(TerminalUI.dim("Tool Format:"))  \(providerConfig.toolFormat.rawValue)")
             }
 
             print("")
@@ -121,7 +118,6 @@ struct ConfigCommand: SlashCommand {
         "endpoint": "endpoint", "url": "endpoint",
         "memory-limit": "memory", "memory": "memory",
         "document-limit": "document", "document": "document",
-        "tool-format": "format", "format": "format"
     ]
 
     private func applyConfigValue(
@@ -133,20 +129,17 @@ struct ConfigCommand: SlashCommand {
 
         switch normalizedKey {
         case "apiKey":
-            config.apiKey = value
+            config.providers[config.activeProvider]?.apiKey = value
         case "model":
-            config.modelName = value
+            config.providers[config.activeProvider]?.modelName = value
         case "utility":
-            config.utilityModel = value
+            config.providers[config.activeProvider]?.utilityModel = value
         case "fast":
-            config.fastModel = value
+            config.providers[config.activeProvider]?.fastModel = value
         case "endpoint":
-            config.endpoint = value
+            config.providers[config.activeProvider]?.endpoint = value
         case "memory", "document":
             return applyIntegerLimit(normalizedKey, value: value, config: &config)
-        case "format":
-            guard let format = parseToolFormat(value) else { return false }
-            config.toolFormat = format
         default:
             TerminalUI.printError("Unknown config key: \(key)")
             return false
@@ -165,16 +158,6 @@ struct ConfigCommand: SlashCommand {
             config.documentContextLimit = limit
         }
         return true
-    }
-
-    private func parseToolFormat(_ value: String) -> ToolCallFormat? {
-        switch value.lowercased() {
-        case "openai", "native": return .openAI
-        default:
-            TerminalUI.printError("Unknown tool format: \(value)")
-            print("  Available: openai, native")
-            return nil
-        }
     }
 
     private func setConfig(key: String, value: String, context: ChatContext) async {
@@ -294,26 +277,6 @@ private extension ConfigCommand {
         if let input = CLIInput.readLine(prompt: "Document Limit [\(config.documentContextLimit)]: "), !input.isEmpty {
             if let limit = Int(input) {
                 config.documentContextLimit = limit
-            }
-        }
-
-        // Tool Format
-        promptToolFormat(providerConfig: &providerConfig)
-    }
-
-    func promptToolFormat(providerConfig: inout ProviderConfiguration) {
-        print("\nSelect Tool Calling Format:")
-        let toolFormats = ToolCallFormat.allCases
-        for (index, format) in toolFormats.enumerated() {
-            let isDefault = format == providerConfig.toolFormat ? " (current)" : ""
-            print("\(index + 1). \(format.rawValue)\(isDefault)")
-        }
-        if let input = CLIInput.readLine(
-            prompt: "Selection [1-\(toolFormats.count), Enter to skip]: ",
-            default: ""
-        ), !input.isEmpty {
-            if let idx = Int(input), idx >= 1, idx <= toolFormats.count {
-                providerConfig.toolFormat = toolFormats[idx - 1]
             }
         }
     }

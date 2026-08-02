@@ -4,10 +4,11 @@ import Hummingbird
 import JSONSchema
 import JSONSchemaBuilder
 import Logging
-import PositronicKit
-import PKShared
 import MonadShared
 import NIOCore
+import PKShared
+import PKUtilities
+import PositronicKit
 
 public struct ChatAPIController<Context: RequestContext>: Sendable {
     private let timelineManager: TimelineManager
@@ -35,6 +36,25 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
         group.post("/{id}/chat", use: chat)
         group.post("/{id}/chat/stream", use: chatStream)
         group.post("/{id}/chat/cancel", use: cancel)
+        group.get("/{id}/turn-inspection", use: turnInspectionAvailability)
+    }
+
+    /// Reports whether completed-turn prompt inspection artifacts can be retrieved.
+    ///
+    /// Monad does not capture the compose-time prompt inspection hook, so this endpoint
+    /// has a stable unavailable response for all three artifact classes. It is separate
+    /// from the streaming endpoint because the artifacts are not `ChatEvent` payloads.
+    @Sendable func turnInspectionAvailability(
+        _: Request,
+        context: Context
+    ) async throws -> TurnInspectionAvailabilityResponse {
+        let idString = try context.parameters.require("id")
+        guard let timelineId = UUID(uuidString: idString) else {
+            throw HTTPError(.badRequest)
+        }
+
+        try await timelineManager.hydrateTimeline(id: timelineId)
+        return TurnInspectionAvailabilityResponse(timelineId: timelineId)
     }
 
     @Sendable func chat(_ request: Request, context: Context) async throws -> ChatResponse {
@@ -179,13 +199,13 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
 
     private func describe(event: ChatEvent) -> String {
         switch event {
-        case .meta(let meta):
+        case let .meta(meta):
             return "meta=\(String(reflecting: meta))"
-        case .delta(let delta):
+        case let .delta(delta):
             return "delta=\(String(reflecting: delta))"
-        case .error(let error):
+        case let .error(error):
             return "error=\(String(reflecting: error))"
-        case .completion(let completion):
+        case let .completion(completion):
             return "completion=\(String(reflecting: completion))"
         }
     }
@@ -210,16 +230,11 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     // MARK: - Tool Resolution (Server-Layer Concern)
 
     private func resolveTools(timelineId: UUID, attachedTools: [ToolReference]?) async -> [AnyTool] {
-        guard let toolManager = await timelineManager.getToolManager(for: timelineId) else {
-            return []
-        }
-
-        var availableTools = await toolManager.getEnabledTools()
+        var availableTools = await timelineManager.enabledTools(for: timelineId)
         let knownIDs = Set(availableTools.map(\.callName))
 
         for ref in attachedTools ?? [] where !knownIDs.contains(ref.toolId) {
-            var tool = AnyTool(DeferredAttachedTool(reference: ref))
-            tool.provenance = .named("Attached")
+            let tool = AnyTool(DeferredAttachedTool(reference: ref), origin: .named("Attached"))
             availableTools.append(tool)
         }
 
@@ -227,22 +242,30 @@ public struct ChatAPIController<Context: RequestContext>: Sendable {
     }
 
     private func attachedAgent(for timelineId: UUID) async throws -> AgentInstance? {
-        guard let timeline = await timelineManager.getTimeline(id: timelineId),
-              let agentId = timeline.attachedAgentInstanceId else {
+        await timelineManager.touchTimeline(id: timelineId)
+        guard let timeline = await timelineManager.timeline(id: timelineId),
+              let agentId = timeline.attachedAgentInstanceId
+        else {
             return nil
         }
         return try await agentInstanceStore.fetchAgentInstance(id: agentId)
     }
 }
 
-private struct DeferredAttachedTool: PKShared.Tool, ToolReferenceProviding {
+private struct DeferredAttachedTool: PKShared.Tool {
     let toolReference: ToolReference
 
     init(reference: ToolReference) {
         toolReference = reference
     }
 
-    var callName: String { toolReference.toolId }
+    var identity: ToolReference {
+        toolReference
+    }
+
+    var callName: String {
+        toolReference.toolId
+    }
 
     var name: String {
         switch toolReference {
@@ -279,7 +302,9 @@ private struct DeferredAttachedTool: PKShared.Tool, ToolReferenceProviding {
         }
     }
 
-    func canExecute() async -> Bool { true }
+    func canExecute() async -> Bool {
+        true
+    }
 
     func execute(parameters _: [String: AnyCodable]) async throws -> ToolResult {
         .failure("Attached workspace tools are routed externally")

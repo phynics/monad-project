@@ -7,14 +7,14 @@ import ServiceLifecycle
 
 /// Service that cleans up orphaned workspaces
 public final class OrphanCleanupService: Service, @unchecked Sendable {
-    private let workspaceStore: any WorkspacePersistenceProtocol
+    private let workspaceStore: any WorkspaceStore
     private let timelineStore: any TimelinePersistenceProtocol
     private let workspaceRoot: URL
     private let logger = Logger(label: "com.monad.orphan-cleanup")
 
     public init(
         workspaceRoot: URL,
-        workspaceStore: any WorkspacePersistenceProtocol,
+        workspaceStore: any WorkspaceStore,
         timelineStore: any TimelinePersistenceProtocol
     ) {
         self.workspaceRoot = workspaceRoot

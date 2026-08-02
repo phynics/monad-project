@@ -71,14 +71,15 @@ public struct ClientConfiguration: Sendable {
         explicitURL: URL? = nil,
         apiKey: String? = nil,
         verbose: Bool = false,
-        timeout: TimeInterval = 2.0
+        timeout: TimeInterval = 2.0,
+        environment: [String: String] = ProcessInfo.processInfo.environment
     ) async -> ClientConfiguration {
         await autoDetect(
             explicitURL: explicitURL,
             apiKey: apiKey,
             verbose: verbose,
             timeout: timeout,
-            environment: ProcessInfo.processInfo.environment,
+            environment: environment,
             discover: { timeout in
                 let logger = Logger(label: "com.monad.client.discovery")
                 return await discoverServer(timeout: timeout, logger: logger)

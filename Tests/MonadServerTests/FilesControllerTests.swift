@@ -44,12 +44,12 @@ struct FilesControllerTests {
         let filePath = noteDir.appendingPathComponent("TestFile.md")
         try content.write(to: filePath, atomically: true, encoding: .utf8)
 
-        let workspaceManager = WorkspaceManager(
-            repository: AgentWorkspaceService(
+        let workspaceManager = DefaultWorkspaceResolver(
+            repository: DefaultWorkspaceCatalog(
                 workspaceRoot: workspaceRoot,
                 workspacePersistence: persistence
             ),
-            workspaceCreator: WorkspaceFactory()
+            workspaceCreator: LocalWorkspaceFactory()
         )
         let router = Router()
         let controller = FilesAPIController<BasicRequestContext>(workspaceManager: workspaceManager)
@@ -92,12 +92,12 @@ struct FilesControllerTests {
         try FileManager.default.createDirectory(at: noteDir, withIntermediateDirectories: true)
         try "Content".write(to: noteDir.appendingPathComponent("TestNote.md"), atomically: true, encoding: .utf8)
 
-        let workspaceManager = WorkspaceManager(
-            repository: AgentWorkspaceService(
+        let workspaceManager = DefaultWorkspaceResolver(
+            repository: DefaultWorkspaceCatalog(
                 workspaceRoot: workspaceRoot,
                 workspacePersistence: persistence
             ),
-            workspaceCreator: WorkspaceFactory()
+            workspaceCreator: LocalWorkspaceFactory()
         )
         let router = Router()
         let controller = FilesAPIController<BasicRequestContext>(workspaceManager: workspaceManager)

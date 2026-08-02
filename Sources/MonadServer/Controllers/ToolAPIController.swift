@@ -1,10 +1,11 @@
 import Foundation
 import HTTPTypes
 import Hummingbird
-import PositronicKit
-import PKShared
 import MonadShared
 import NIOCore
+import PKShared
+import PKUtilities
+import PositronicKit
 
 public struct ExecuteToolRequest: Codable, Sendable {
     public let timelineId: UUID
@@ -73,11 +74,10 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         let name = try context.parameters.require("name")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
-        guard let toolManager = await timelineManager.getToolManager(for: id) else {
+        guard await timelineManager.enableTool(id: name, for: id) else {
             throw HTTPError(.notFound)
         }
 
-        await toolManager.enableTool(id: name)
         return .ok
     }
 
@@ -86,11 +86,10 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
         let name = try context.parameters.require("name")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
-        guard let toolManager = await timelineManager.getToolManager(for: id) else {
+        guard await timelineManager.disableTool(id: name, for: id) else {
             throw HTTPError(.notFound)
         }
 
-        await toolManager.disableTool(id: name)
         return .ok
     }
 
@@ -100,11 +99,7 @@ public struct ToolAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.badRequest)
         }
 
-        guard let toolManager = await timelineManager.getToolManager(for: id) else {
-            throw HTTPError(.notFound)
-        }
-
-        let tools = await toolManager.getEnabledTools()
+        let tools = await timelineManager.enabledTools(for: id)
         return tools.map {
             ToolInfo(
                 id: $0.callName,

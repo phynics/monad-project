@@ -1,20 +1,20 @@
 import Foundation
 import HTTPTypes
 import Hummingbird
-import PositronicKit
-import PKShared
 import MonadShared
 import NIOCore
+import PKShared
+import PositronicKit
 
 public struct TimelineAPIController<Context: RequestContext>: Sendable {
     private let timelineManager: TimelineManager
     private let timelineStore: any TimelinePersistenceProtocol
-    private let workspaceStore: any WorkspacePersistenceProtocol
+    private let workspaceStore: any WorkspaceStore
 
     public init(
         timelineManager: TimelineManager,
         timelineStore: any TimelinePersistenceProtocol,
-        workspaceStore: any WorkspacePersistenceProtocol
+        workspaceStore: any WorkspaceStore
     ) {
         self.timelineManager = timelineManager
         self.timelineStore = timelineStore
@@ -114,7 +114,8 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         let idString = try context.parameters.require("id")
         guard let id = UUID(uuidString: idString) else { throw HTTPError(.badRequest) }
 
-        guard let timeline = await timelineManager.getTimeline(id: id) else {
+        await timelineManager.touchTimeline(id: id)
+        guard let timeline = await timelineManager.timeline(id: id) else {
             // Fallback to DB if not in memory
             if let dbTimeline = try? await timelineStore.fetchTimeline(id: id) {
                 return TimelineResponse(
@@ -249,7 +250,8 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
         try await timelineManager.hydrateTimeline(id: timelineId)
 
         guard let workspaces = await timelineManager.getWorkspaces(for: timelineId),
-              ([workspaces.primary?.id].compactMap { $0 } + workspaces.attached.map(\.id)).contains(wsId) else {
+              ([workspaces.primary?.id].compactMap { $0 } + workspaces.attached.map(\.id)).contains(wsId)
+        else {
             throw HTTPError(.notFound)
         }
 
@@ -257,13 +259,10 @@ public struct TimelineAPIController<Context: RequestContext>: Sendable {
             throw HTTPError(.notFound)
         }
 
-        guard let toolManager = await timelineManager.getToolManager(for: timelineId) else {
-            throw HTTPError(.notFound)
-        }
-
-        if let workspace = try await timelineManager.workspaceManager.getWorkspace(id: wsId) {
-            await toolManager.registerWorkspace(workspace)
-        }
+        // attachWorkspace is idempotent on the persisted attachment (already attached, since
+        // the membership check above passed) and re-registers the workspace's tools into the
+        // timeline's live tool manager — exactly what "restore" needs after hydration.
+        try await timelineManager.attachWorkspace(wsId, to: timelineId)
 
         return .ok
     }

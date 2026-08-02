@@ -14,6 +14,11 @@ Monad documentation for the post-refactor architecture.
 - `ARCHITECTURE.md` — current Monad/PositronicKit split and data flow
 - `API_REFERENCE.md` — MonadServer HTTP API
 - `CLIENT.md` — MonadClient and MonadCLI behavior
+
+The only user-facing executable is `monad`. Run `swift run monad` (defaults to chat),
+`swift run monad server`, or `swift run monad status`; the server is never auto-started.
+`MonadServerCore` and `MonadCLICore` are internal implementation targets, while
+`MonadClient` remains the importable client surface for app integrations.
 - `WORKSPACE.md` — workspace registration, trust, and routing concepts
 - `AGENT.md` — agent and template concepts
 - `TIMELINE.md` — timeline model and lifecycle

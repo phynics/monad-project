@@ -7,16 +7,16 @@ import MonadShared
 import NIOCore
 
 public struct FilesAPIController<Context: RequestContext>: Sendable {
-    private let workspaceManager: any WorkspaceManagerProtocol
+    private let workspaceManager: any WorkspaceResolver
 
-    public init(workspaceManager: any WorkspaceManagerProtocol) {
+    public init(workspaceManager: any WorkspaceResolver) {
         self.workspaceManager = workspaceManager
     }
 
     public init() {
         self.init(
-            workspaceManager: WorkspaceManager(
-                repository: AgentWorkspaceService(
+            workspaceManager: DefaultWorkspaceResolver(
+                repository: DefaultWorkspaceCatalog(
                     workspaceRoot: FileManager.default.temporaryDirectory,
                     workspacePersistence: InMemoryWorkspacePersistence()
                 ),

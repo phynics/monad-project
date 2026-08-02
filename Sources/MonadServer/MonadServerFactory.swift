@@ -6,6 +6,7 @@ import Logging
 import MonadShared
 import PKLocalEmbeddings
 import PKShared
+import PKUtilities
 import PositronicKit
 import ServiceLifecycle
 import UnixSignals
@@ -54,7 +55,7 @@ public struct MonadServerFactory {
     }
 
     private struct ManagerSet {
-        let workspaceManager: any WorkspaceManagerProtocol
+        let workspaceManager: any WorkspaceResolver
     }
 
     public static func createServerContext(
@@ -85,7 +86,7 @@ public struct MonadServerFactory {
                     requestOriginStore: components.repositories.requestOriginStore
                 ),
                 runtime: .init(
-                    workspaceCreator: WorkspaceFactory(connectionManager: components.services.connectionManager),
+                    workspaceCreator: LocalWorkspaceFactory(connectionManager: components.services.connectionManager),
                     workspaceRoot: components.workspaceRoot
                 )
             )
@@ -214,11 +215,11 @@ public struct MonadServerFactory {
         )
     }
 
-    private static func initializeServices(
+private static func initializeServices(
         dbQueue: DatabaseQueue,
         logger: Logger
     ) async throws -> ServiceSet {
-        LLMProviderBootstrap.registerBuiltIns()
+        let clientFactory = LLMProviderBootstrap.makeClientFactory()
 
         let embeddingService: any EmbeddingServiceProtocol = LocalEmbeddingService()
         logger.info("Using Local Embedding Service")
@@ -237,7 +238,7 @@ public struct MonadServerFactory {
         let configURL = appSupportDir.appendingPathComponent("config.json")
         let storage = ConfigurationStorage(configURL: configURL)
         await storage.migrateIfNeeded()
-        let llmService = LLMService(storage: storage)
+        let llmService = LLMService(storage: storage, clientFactory: clientFactory)
         await llmService.loadConfiguration()
 
         return ServiceSet(
@@ -254,15 +255,15 @@ public struct MonadServerFactory {
         workspaceRoot: URL,
         connectionManager: WebSocketConnectionManager
     ) -> ManagerSet {
-        let agentWorkspaceService = AgentWorkspaceService(
+        let agentWorkspaceService = DefaultWorkspaceCatalog(
             workspaceRoot: workspaceRoot,
             workspacePersistence: repositories.workspacePersistence
         )
 
         return ManagerSet(
-            workspaceManager: WorkspaceManager(
+            workspaceManager: DefaultWorkspaceResolver(
                 repository: agentWorkspaceService,
-                workspaceCreator: WorkspaceFactory(connectionManager: connectionManager)
+                workspaceCreator: LocalWorkspaceFactory(connectionManager: connectionManager)
             )
         )
     }
