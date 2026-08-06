@@ -6,18 +6,18 @@ Quick reference for agents working with the Monad application repository.
 
 - **Language:** Swift 6.0 (macOS 15+)
 - **Build System:** Swift Package Manager
-- **Architecture:** Monad is now primarily an application host around the shared runtime modules in `../PositronicKit`
+- **Architecture:** Monad is now primarily an application host around the shared runtime modules in `PositronicKit` (a standalone repo).
 - **Key Tech:** Hummingbird (REST/SSE), GRDB/SQLite, swift-service-lifecycle, ErrorKit
 
 ## Repository Split
 
 - `Monad` contains the app-facing targets: `MonadServer`, `MonadClient`, `MonadCLI`, and their tests.
-- `PositronicKit` (sibling `../PositronicKit`) contains the shared runtime, prompt, contracts, and test-support modules consumed by Monad.
-- `Package.swift` wires Monad to `PositronicKit` as a **remote** SwiftPM package (`github.com/phynics/PositronicKit.git`) pinned to a released semver — `Package.swift` is the source of truth for the current pin. To test a local PositronicKit change before pushing, temporarily swap the dependency to `.package(path: "../PositronicKit")` and `swift package resolve`; revert before committing. See the root `../CLAUDE.md` "Local-dev override" section.
+- `PositronicKit` (standalone repo at `/Volumes/Development/PositronicKit`, upstream `github.com/phynics/PositronicKit`) contains the shared runtime, prompt, contracts, and test-support modules consumed by Monad.
+- `Package.swift` wires Monad to `PositronicKit` as a **remote** SwiftPM package (`github.com/phynics/PositronicKit.git`) pinned to a released semver — `Package.swift` is the source of truth for the current pin. To test a local PositronicKit change before pushing, temporarily swap the dependency to a path pointing at `/Volumes/Development/PositronicKit` (e.g. `.package(path: "../../PositronicKit")`) and `swift package resolve`; revert before committing. See the root `../CLAUDE.md` "Local-dev override" section.
 
 ## Working Boundary
 
-- If the change is about chat orchestration, timelines, agents, tools, prompt assembly, context gathering, shared contracts, or test-support infrastructure, inspect `../PositronicKit` first. That is the source of truth now.
+- If the change is about chat orchestration, timelines, agents, tools, prompt assembly, context gathering, shared contracts, or test-support infrastructure, inspect the `PositronicKit` repo (`/Volumes/Development/PositronicKit`) first. That is the source of truth now.
 - If the change is about HTTP APIs, GRDB-backed persistence wiring, CLI flows, client networking, app bootstrapping, or Monad-specific hosting behavior, it likely belongs in this repository.
 - Prefer fixing shared abstractions in `PositronicKit` rather than re-implementing them in Monad.
 - Keep Monad transport- and host-specific. Keep reusable runtime logic in `PositronicKit`.
@@ -32,7 +32,7 @@ swift run monad server                     # Start server
 swift run monad chat                       # Interactive CLI (default)
 ```
 
-For shared-runtime work in `../PositronicKit`:
+For shared-runtime work in `PositronicKit` (`/Volumes/Development/PositronicKit`):
 
 ```bash
 swift build                                # Build current package
